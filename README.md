@@ -995,19 +995,25 @@ development machine is macOS-only with no Windows access, so the
 `dist/signal-agent` binary checked in here is a real, functioning macOS
 build, verified below -- it is not a stand-in for Windows.
 
-**Closing the Windows gap: `.github/workflows/build-exe.yml`.** A CI
+**Windows gap: closed via CI.** `.github/workflows/build-exe.yml` is a CI
 matrix workflow (at the repo root, one level above `collector_framework/`)
-builds and smoke-tests `signal-agent` on both a real `windows-latest` and
-a real `macos-latest` GitHub Actions runner -- actual Windows/macOS VMs,
-not an emulation shortcut -- on every push to `main` that touches this
-package, or on manual dispatch. Each job runs `package/build_exe.py`,
+that builds and smoke-tests `signal-agent` on both a real `windows-latest`
+and a real `macos-latest` GitHub Actions runner -- actual Windows/macOS
+VMs, not an emulation shortcut -- on every push to `main` that touches
+this package, or on manual dispatch. Each job runs `package/build_exe.py`,
 then actually executes the frozen binary's `version` and `scan` commands
 on that platform as a smoke test (a build that produces a broken/dead
 binary fails CI, not just "builds successfully"), then uploads the binary
-as a build artifact. This workflow is written and ready, but **has not
-run yet** as of this writing -- this repository is not yet pushed to
-GitHub. Once pushed, the first workflow run will produce the first real,
-CI-verified Windows `signal-agent.exe` this project has ever had.
+as a build artifact.
+
+This has now run for real: pushing this repository to
+[`malhar-sovereign/project-signal`](https://github.com/malhar-sovereign/project-signal)
+triggered [run #31673336569](https://github.com/malhar-sovereign/project-signal/actions/runs/31673336569),
+and both jobs passed --
+`build (macos-latest, ...)` in 26s and `build (windows-latest, ...)` in
+53s -- producing the first real, CI-verified `signal-agent.exe` this
+project has had, downloadable as a workflow artifact alongside the macOS
+build.
 
 ### Real output from the actual frozen binary on this machine
 
