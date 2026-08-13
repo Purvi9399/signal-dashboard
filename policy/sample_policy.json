@@ -1,0 +1,35 @@
+{
+  "_comment": "Policy Engine config. JSON has no native comment syntax, so every rule below carries its own required 'reason' field instead -- that field IS the audit trail, not documentation on the side. This underscore-prefixed key is ignored by PolicyConfig (not a recognized field) and exists purely so a human opening this file sees the convention immediately.",
+
+  "default_mode": "allow",
+  "default_reason": "no explicit deny rule matched; this specific deployment's policy is 'allow everything Discovery Engine finds viable except what's explicitly called out below' -- a deliberate, recorded choice by this policy file's author, distinct from PolicyConfig.default()'s built-in engine-level default-deny fallback that applies only when NO policy file has been loaded at all. See README.md 'Policy Engine' section for the distinction.",
+
+  "agent_rules": {
+    "antigravity": {
+      "allowed": false,
+      "reason": "Antigravity is the newest and least mature integration in this project: antigravity_otel.py's own detect() confirms OTel is an architecturally dead end for this agent (no-op tracer, telemetry goes to Google-proprietary Clearcut channels), and antigravity_hooks.py documents unresolved double-counting between global+workspace hooks.json scopes with only best-effort content-hash dedup. Denying the whole agent org-wide until (a) the dedup problem has a real fix and (b) at least one more verification round has run, rather than approving individual techniques piecemeal against a mechanism still known to double-report."
+    }
+  },
+
+  "technique_rules": [
+    {
+      "agent": "*",
+      "technique": "mcp_proxy",
+      "allowed": false,
+      "reason": "MCP Proxy is the most invasive technique across every agent it's implemented for: it sits on the JSON-RPC wire and captures full tool call arguments and results verbatim (see copilot_mcp_proxy.py / antigravity_mcp_proxy.py / codex_mcp_proxy.py / cursor_mcp_proxy.py, all of which record complete request/response payloads, not just metadata). That includes whatever an operator pastes into a tool call -- file contents, credentials-shaped strings, anything -- with zero redaction at the collector layer (redaction is explicitly a later Policy/Normalizer-stage concern per core.py, not yet built). Denied everywhere pending a security review of what a redaction stage in front of this specific technique needs to look like, before any MCP Proxy collector is allowed to activate on a real machine.",
+      "_precedent": "mirrors the real, already-documented MCP Proxy delegation-blindness gap in the collector framework's own README (invoke_subagent-style delegation never crosses this transport for Antigravity/Codex either) -- this technique already has more open questions than the others, on both coverage and exposure."
+    },
+    {
+      "agent": "cursor",
+      "technique": "cli_wrapper",
+      "allowed": false,
+      "reason": "cursor_cli_wrapper.py's own detect() docstring flags this UNVERIFIED: no Cursor_CLIWrapper/ research folder exists and no confirmed headless `cursor` CLI invocation was ever tested, unlike its Codex/Copilot/Antigravity/Claude Code siblings which all have a dedicated *_CLIWrapper/RESULTS.md. Not denying the agent (Cursor's Hooks/OTel/MCP-proxy-adjacent techniques are fine), just this one specific unverified technique."
+    },
+    {
+      "agent": "codex",
+      "technique": "otel",
+      "allowed": false,
+      "reason": "codex_otel.py's own detect()/capture() docs (Codex_OTel/RESULTS.md) document a confirmed user_email/user_account_id PII leak in the real OTLP export payload and a hardcoded success:\"true\" bug that makes the exported data actively misleading about tool-call outcomes. Denied until the upstream Codex OTel exporter itself is fixed or a redaction stage exists in front of it -- this is a data-quality/PII decision, not a maturity one, which is why only this one technique for Codex is denied rather than the whole agent."
+    }
+  ]
+}
