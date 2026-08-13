@@ -1013,7 +1013,20 @@ and both jobs passed --
 `build (macos-latest, ...)` in 26s and `build (windows-latest, ...)` in
 53s -- producing the first real, CI-verified `signal-agent.exe` this
 project has had, downloadable as a workflow artifact alongside the macOS
-build.
+build (`gh run download <run-id> --repo malhar-sovereign/project-signal`,
+or via the run page's "Artifacts" section in the GitHub UI).
+
+**Another real architecture detail this surfaced:** GitHub's
+`macos-latest` runners are Apple Silicon (arm64) as of late 2025, while
+`dist/signal-agent` checked into this repo was built locally on an Intel
+(x86_64) Mac. Confirmed with `file` on both binaries -- they are genuinely
+different architectures, and the CI-built arm64 binary will not run on an
+Intel Mac (`bad CPU type in executable`), and vice versa. This isn't a
+bug, just a real fact to account for when deciding which binary to
+actually deploy to which Mac fleet -- an Intel-fleet Jamf rollout needs
+the locally-built `dist/signal-agent`, an Apple Silicon fleet needs the
+CI-built artifact (or a `--target-arch universal2` PyInstaller build,
+not yet configured here).
 
 ### Real output from the actual frozen binary on this machine
 
