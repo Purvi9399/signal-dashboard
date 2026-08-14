@@ -987,24 +987,38 @@ python3 package/build_exe.py
 
 Produces `dist/signal-agent` (or `dist/signal-agent.exe` on Windows).
 
-**Honest limitation -- no cross-compilation.** PyInstaller does not
-cross-compile: running `build_exe.py` on macOS produces a macOS binary,
-on Windows a Windows `.exe`, on Linux a Linux binary. Since Intune targets
-Windows and Jamf targets macOS, a real rollout needs both. This
-development machine is macOS-only with no Windows access, so the
-`dist/signal-agent` binary checked in here is a real, functioning macOS
-build, verified below -- it is not a stand-in for Windows.
+**Honest limitation -- no OS-level cross-compilation.** PyInstaller does
+not cross-compile across operating systems: running `build_exe.py` on
+macOS produces a macOS binary, on Windows a Windows `.exe`, on Linux a
+Linux binary. Since Intune targets Windows and Jamf targets macOS, a real
+rollout still needs both OS builds. This development machine is macOS-only
+with no Windows access, so the `dist/signal-agent` binary checked in here
+is a real, functioning macOS build, verified below -- it is not a
+stand-in for Windows.
+
+**macOS Intel and Apple Silicon: one binary.** On Darwin,
+`build_exe.py` always passes `--target-arch universal2` and then runs
+`lipo -info` on the result, failing the build if either `x86_64` or
+`arm64` is missing. The same Mac file therefore runs on Intel and Apple
+Silicon without picking a flavor. That requires a universal2 Python
+(python.org's macOS installer ships one; Homebrew and
+`actions/setup-python` typically do not). The previous Intel-only
+`dist/signal-agent` (thin x86_64) and the CI `macos-latest` arm64-only
+artifact are replaced by this fat binary -- a Mac user does not need to
+know which chip they have.
 
 **Windows gap: closed via CI.** `.github/workflows/build-exe.yml` is a CI
 matrix workflow (at the repo root, one level above `collector_framework/`)
 that builds and smoke-tests `signal-agent` on both a real `windows-latest`
 and a real `macos-latest` GitHub Actions runner -- actual Windows/macOS
 VMs, not an emulation shortcut -- on every push to `main` that touches
-this package, or on manual dispatch. Each job runs `package/build_exe.py`,
-then actually executes the frozen binary's `version` and `scan` commands
-on that platform as a smoke test (a build that produces a broken/dead
-binary fails CI, not just "builds successfully"), then uploads the binary
-as a build artifact.
+this package, or on manual dispatch. The macOS job installs python.org's
+universal2 CPython (not `actions/setup-python`'s thin interpreter) so
+the freeze is x86_64+arm64; `lipo` is checked in CI the same way it is
+locally. Each job runs `package/build_exe.py`, then actually executes
+the frozen binary's `version` and `scan` commands on that platform as a
+smoke test (a build that produces a broken/dead binary fails CI, not
+just "builds successfully"), then uploads the binary as a build artifact.
 
 This has now run for real: pushing this repository to
 [`malhar-sovereign/project-signal`](https://github.com/malhar-sovereign/project-signal)
@@ -1014,19 +1028,10 @@ and both jobs passed --
 53s -- producing the first real, CI-verified `signal-agent.exe` this
 project has had, downloadable as a workflow artifact alongside the macOS
 build (`gh run download <run-id> --repo malhar-sovereign/project-signal`,
-or via the run page's "Artifacts" section in the GitHub UI).
-
-**Another real architecture detail this surfaced:** GitHub's
-`macos-latest` runners are Apple Silicon (arm64) as of late 2025, while
-`dist/signal-agent` checked into this repo was built locally on an Intel
-(x86_64) Mac. Confirmed with `file` on both binaries -- they are genuinely
-different architectures, and the CI-built arm64 binary will not run on an
-Intel Mac (`bad CPU type in executable`), and vice versa. This isn't a
-bug, just a real fact to account for when deciding which binary to
-actually deploy to which Mac fleet -- an Intel-fleet Jamf rollout needs
-the locally-built `dist/signal-agent`, an Apple Silicon fleet needs the
-CI-built artifact (or a `--target-arch universal2` PyInstaller build,
-not yet configured here).
+or via the run page's "Artifacts" section in the GitHub UI). That first
+CI macOS artifact was arm64-only; subsequent builds using this
+universal2 path are the ones to deploy to mixed Intel / Apple Silicon
+Jamf fleets.
 
 ### Real output from the actual frozen binary on this machine
 
@@ -1035,8 +1040,8 @@ Every command below ran against the real `dist/signal-agent` binary, not
 
 ```
 $ ./dist/signal-agent version
-installed version digest (baked in at build time): 78b262d65082a33c
-tracked files at build time: 55
+installed version digest (baked in at build time): 15494e229a2da2b2
+tracked files at build time: 56
 
 $ ./dist/signal-agent decide
 claude_code hooks        APPROVED   (default) ...

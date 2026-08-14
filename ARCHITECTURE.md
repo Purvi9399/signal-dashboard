@@ -74,10 +74,13 @@ keep itself updated, all packaged into one deployable executable.
                                           ▼
                     ┌─────────────────────────────────────────────────────┐
                     │      package/build_exe.py  (PyInstaller)             │
-                    │  -> dist/signal-agent (macOS, built locally)         │
+                    │  -> dist/signal-agent (macOS universal2:             │
+                    │     x86_64 + arm64, one binary for Intel + Apple     │
+                    │     Silicon)                                         │
                     │  -> .github/workflows/build-exe.yml (CI matrix:      │
                     │     windows-latest + macos-latest, builds + smoke-   │
-                    │     tests both, not yet run -- repo not pushed)      │
+                    │     tests both; macOS job uses python.org universal  │
+                    │     Python so the freeze is universal2)              │
                     └─────────────────────────────────────────────────────┘
 ```
 

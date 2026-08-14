@@ -24,10 +24,17 @@ Usage:
     python3 package/build_exe.py
 
 Produces (relative to this file's parent, i.e. collector_framework/):
-    dist/signal-agent           (the frozen executable for THIS platform)
+    dist/signal-agent           (macOS: universal2 x86_64+arm64; else this platform)
+    dist/signal-agent.exe       (Windows)
     build/                      (PyInstaller's intermediate build artifacts)
     signal-agent.spec           (the generated spec file, safe to commit
                                   and hand-edit for future builds)
+
+On macOS this always passes --target-arch universal2 so one binary runs on
+both Intel and Apple Silicon. That requires a universal2 Python (python.org
+installers ship one; arch-specific Homebrew / actions/setup-python builds
+do not). The script verifies the result with lipo and fails if either
+slice is missing, rather than silently shipping a thin binary.
 """
 
 from __future__ import annotations
@@ -71,6 +78,7 @@ def main() -> int:
         sys.executable,
         "-m",
         "PyInstaller",
+        "--noconfirm",
         "--name",
         "signal-agent",
         "--onefile",
@@ -91,8 +99,15 @@ def main() -> int:
         # "ModuleNotFoundError: No module named 'collectors'").
         "--collect-submodules",
         "collectors",
-        str(cli_entry),
     ]
+
+    if sys.platform == "darwin":
+        # One Mac binary for Intel and Apple Silicon. Requires a universal2
+        # Python (this machine's python.org 3.10 framework is one; a
+        # thin arm64-only CI Python is not -- see build-exe.yml).
+        cmd.extend(["--target-arch", "universal2"])
+
+    cmd.append(str(cli_entry))
 
     print("Running:", " ".join(cmd))
     result = subprocess.run(cmd, cwd=str(COLLECTOR_FRAMEWORK_ROOT))
@@ -103,6 +118,22 @@ def main() -> int:
     print()
     print(f"Built: {dist_bin}")
     print(f"Platform: {sys.platform}")
+
+    if sys.platform == "darwin":
+        lipo = subprocess.run(["lipo", "-info", str(dist_bin)], capture_output=True, text=True)
+        info = (lipo.stdout or lipo.stderr).strip()
+        print(f"Architectures: {info}")
+        has_intel = "x86_64" in info
+        has_arm = "arm64" in info
+        if not (has_intel and has_arm):
+            print(
+                "ERROR: macOS binary is not universal2 "
+                f"(need both x86_64 and arm64, got: {info}). "
+                "Use a universal2 Python (python.org macOS installer) and rebuild.",
+                file=sys.stderr,
+            )
+            return 1
+
     print("Run it with e.g.:")
     print(f"  {dist_bin} scan")
     print(f"  {dist_bin} run --live")
