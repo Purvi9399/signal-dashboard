@@ -58,22 +58,43 @@ fabricate a signal the raw data doesn't structurally provide.
 from __future__ import annotations
 
 import datetime
-import fcntl
 import getpass
 import json
 import os
-import pty
 import select
 import shutil
 import signal
 import socket
 import struct
 import sys
-import termios
 import threading
 from pathlib import Path
 from queue import Empty, Queue
-from typing import Iterator, List, Optional
+from typing import Any, Iterator, List, Optional
+
+# fcntl/pty/termios are POSIX-only; importing them at module level (as this
+# file originally did) raises ModuleNotFoundError on Windows before detect()
+# ever runs (see GitHub Issue #1). Guard them so the module always imports;
+# the POSIX-only helpers/branches below are simply never called on Windows.
+if sys.platform != "win32":
+    import fcntl
+    import pty
+    import termios
+
+# Windows PTY backend: pywinpty (wraps the native ConPTY API). This is the
+# project's first non-stdlib dependency (see requirements-windows.txt) and is
+# only imported on Windows. If it's missing, detect() honestly reports the
+# technique as not viable instead of silently falling back to a
+# non-PTY subprocess (which would change how the wrapped CLI behaves under
+# isatty() checks and produce a non-equivalent capture).
+_PYWINPTY_AVAILABLE = False
+if sys.platform == "win32":
+    try:
+        from winpty import PtyProcess as _WinPtyProcess
+
+        _PYWINPTY_AVAILABLE = True
+    except ImportError:
+        _WinPtyProcess = None  # type: ignore[assignment]
 
 import sys as _sys
 from pathlib import Path as _Path
@@ -141,6 +162,7 @@ class ClaudeCodeCLIWrapperCollector(Collector):
         self._child_pid: Optional[int] = None
         self._master_fd: Optional[int] = None
         self._pump_thread: Optional[threading.Thread] = None
+        self._winpty_proc: Optional[Any] = None
 
     @property
     def collector_id(self) -> str:
@@ -153,16 +175,27 @@ class ClaudeCodeCLIWrapperCollector(Collector):
         wrapper technique (per cli_wrapper_demo/README.md's "Why it
         matters" section) does not depend on any hook config or env var
         being set correctly, only on the target being spawnable.
+
+        On Windows, this technique additionally depends on pywinpty being
+        installed (see module-level import guard above). If it isn't,
+        report not-viable honestly here rather than crashing later in
+        activate() or silently degrading to a non-PTY capture.
         """
+        if sys.platform == "win32" and not _PYWINPTY_AVAILABLE:
+            return False
         return shutil.which("claude") is not None
 
     def activate(self) -> None:
         """In replay mode, a no-op besides marking activated. In live mode,
         forks+execs the wrapped command under a pty; see _spawn_and_pump()
-        (a direct port of cli_wrapper_demo/wrapper.py's main()).
+        (a direct port of cli_wrapper_demo/wrapper.py's main()) on POSIX,
+        or _spawn_and_pump_windows() (pywinpty/ConPTY) on Windows.
         """
         if self._replay_events is None:
-            self._spawn_and_pump()
+            if sys.platform == "win32":
+                self._spawn_and_pump_windows()
+            else:
+                self._spawn_and_pump()
         self._activated = True
 
     def _emit(self, stream: str, chunk_bytes: bytes) -> None:
@@ -257,6 +290,63 @@ class ClaudeCodeCLIWrapperCollector(Collector):
         self._pump_thread = threading.Thread(target=pump_loop, daemon=True)
         self._pump_thread.start()
 
+    def _emit_windows(self, text: str) -> None:
+        """Windows counterpart of _emit(). ConPTY (via pywinpty) merges the
+        child's stdout/stderr into a single stream -- unlike the POSIX path
+        above, which pipes stderr separately. Rather than fabricating a
+        stderr split that doesn't actually happen on Windows, every
+        Windows-sourced event is tagged stream="stdout" plus an explicit
+        platform="windows" marker so downstream consumers can tell the two
+        capture paths apart."""
+        self._queue.put(
+            {
+                "timestamp": datetime.datetime.now().isoformat(),
+                "stream": "stdout",
+                "platform": "windows",
+                "content": text,
+                "wrapped_command": " ".join(self._command),
+                "operator_username": operator_username(),
+                "hostname": collector_hostname(),
+            }
+        )
+
+    def _spawn_and_pump_windows(self) -> None:
+        """Windows PTY backend: spawns the wrapped command under a real
+        ConPTY via pywinpty (https://github.com/andfoy/pywinpty), the
+        closest Windows equivalent of the POSIX pty.openpty()/os.fork()
+        machinery in _spawn_and_pump() above. A real PTY (not plain pipes)
+        matters here because these wrapped CLIs behave differently under
+        isatty() checks -- a subprocess.Popen pipe fallback would silently
+        produce a non-equivalent, degraded capture.
+        """
+        if not _PYWINPTY_AVAILABLE:
+            raise RuntimeError(
+                f"{self.collector_id}: pywinpty is not installed; cannot spawn on Windows "
+                "(detect() should have already reported this technique as not viable)"
+            )
+
+        proc = _WinPtyProcess.spawn(self._command, encoding="utf-8", errors="replace")
+        self._winpty_proc = proc
+
+        def pump_loop():
+            try:
+                while True:
+                    try:
+                        data = proc.read(CHUNK_SIZE)
+                    except EOFError:
+                        break
+                    except Exception:
+                        break
+                    if data:
+                        self._emit_windows(data)
+                    if not proc.isalive():
+                        break
+            finally:
+                self._queue.put(None)
+
+        self._pump_thread = threading.Thread(target=pump_loop, daemon=True)
+        self._pump_thread.start()
+
     def capture(self) -> Iterator[RawEvent]:
         if not self._activated:
             raise RuntimeError(f"{self.collector_id}: capture() called before activate()")
@@ -288,6 +378,16 @@ class ClaudeCodeCLIWrapperCollector(Collector):
             )
 
     def deactivate(self) -> None:
+        if sys.platform == "win32":
+            if self._winpty_proc is not None:
+                try:
+                    self._winpty_proc.terminate(force=True)
+                except Exception:
+                    pass
+                self._winpty_proc = None
+            self._activated = False
+            return
+
         if self._child_pid is not None:
             try:
                 os.kill(self._child_pid, signal.SIGTERM)

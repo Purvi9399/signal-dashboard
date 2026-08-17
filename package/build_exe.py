@@ -3,12 +3,21 @@ Freezes package/cli.py into a single-file, standalone executable using
 PyInstaller.
 
 WHY PYINSTALLER: it's the standard, actively-maintained tool for freezing
-a Python program (interpreter + this package's own modules + any real
-third-party deps -- there are currently none, this package uses only the
-standard library) into one binary an end-user machine does not need a
+a Python program (interpreter + this package's own modules + real
+third-party deps) into one binary an end-user machine does not need a
 Python install to run. That's the actual requirement for "deploy on
 enterprise devices via Intune/Jamf" -- MDM tools push binaries/installers,
 not source trees + a Python runtime.
+
+DEPENDENCIES: this package is stdlib-only on macOS/Linux. On Windows it
+additionally needs `pywinpty` (see requirements-windows.txt and GitHub
+Issue #1 -- the three real cli_wrapper collectors need a Windows PTY
+backend, since POSIX's pty/fcntl/termios have no Windows equivalent).
+This script passes `--collect-all pywinpty` on Windows because PyInstaller's
+static import-graph analysis is known to miss native-extension packages'
+internals, the same class of problem `--collect-submodules collectors`
+below already works around for this project's own dynamically-imported
+collector modules.
 
 HONEST LIMITATION -- NO CROSS-COMPILATION: PyInstaller does not
 cross-compile. Running this script on macOS produces a macOS binary;
@@ -106,6 +115,15 @@ def main() -> int:
         # Python (this machine's python.org 3.10 framework is one; a
         # thin arm64-only CI Python is not -- see build-exe.yml).
         cmd.extend(["--target-arch", "universal2"])
+
+    if sys.platform == "win32":
+        # pywinpty ships a compiled extension; PyInstaller's static
+        # analysis can miss its internals the same way it misses this
+        # project's own dynamically-imported collectors module (see
+        # --collect-submodules collectors above). --collect-all is the
+        # broad, safe fix: bundle all of pywinpty's submodules/data/
+        # binaries rather than guessing which specific ones are needed.
+        cmd.extend(["--collect-all", "pywinpty"])
 
     cmd.append(str(cli_entry))
 

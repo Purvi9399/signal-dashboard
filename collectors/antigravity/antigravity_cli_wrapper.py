@@ -48,21 +48,43 @@ events is a later pipeline stage's job, not this collector's.
 from __future__ import annotations
 
 import datetime
-import fcntl
 import json
 import os
-import pty
 import select
 import shutil
 import signal
 import struct
 import sys
-import termios
 import threading
-import tty
 from pathlib import Path
 from queue import Queue
-from typing import Iterator, List, Optional
+from typing import Any, Iterator, List, Optional
+
+# fcntl/pty/termios are POSIX-only; importing them at module level (as this
+# file originally did) raises ModuleNotFoundError on Windows before detect()
+# ever runs (see GitHub Issue #1). Guard them so the module always imports;
+# the POSIX-only helpers/branches below are simply never called on Windows.
+# (The original unused `import tty` is dropped, not ported to the guard --
+# it was never referenced anywhere in this file.)
+if sys.platform != "win32":
+    import fcntl
+    import pty
+    import termios
+
+# Windows PTY backend: pywinpty (wraps the native ConPTY API). This is the
+# project's first non-stdlib dependency (see requirements-windows.txt) and is
+# only imported on Windows. If it's missing, detect() honestly reports the
+# technique as not viable instead of silently falling back to a
+# non-PTY subprocess (which would change how the wrapped CLI behaves under
+# isatty() checks and produce a non-equivalent capture).
+_PYWINPTY_AVAILABLE = False
+if sys.platform == "win32":
+    try:
+        from winpty import PtyProcess as _WinPtyProcess
+
+        _PYWINPTY_AVAILABLE = True
+    except ImportError:
+        _WinPtyProcess = None  # type: ignore[assignment]
 
 import sys as _sys
 from pathlib import Path as _Path
@@ -134,6 +156,7 @@ class AntigravityCLIWrapperCollector(Collector):
         self._activated = False
         self._child_pid: Optional[int] = None
         self._master_fd: Optional[int] = None
+        self._winpty_proc: Optional[Any] = None
         self._queue: "Queue[Optional[dict]]" = Queue()
 
     @property
@@ -146,7 +169,14 @@ class AntigravityCLIWrapperCollector(Collector):
         Homebrew-cask (`antigravity-cli`) install, symlinked onto PATH as
         `agy`, NOT bundled inside Antigravity.app. This is the same
         heuristic antigravity_hooks.py uses for its `agy`-on-PATH check.
+
+        On Windows, this technique additionally depends on pywinpty being
+        installed (see module-level import guard above). If it isn't,
+        report not-viable honestly here rather than crashing later in
+        activate() or silently degrading to a non-PTY capture.
         """
+        if sys.platform == "win32" and not _PYWINPTY_AVAILABLE:
+            return False
         return shutil.which("agy") is not None
 
     def activate(self) -> None:
@@ -156,12 +186,17 @@ class AntigravityCLIWrapperCollector(Collector):
         stream-json`), mirroring Antigravity_CLIWrapper/wrapper.py's
         fork+pty+dup2 setup exactly (same pattern as
         cli_wrapper_demo/wrapper.py, generalized there and specialized for
-        `agy` in the real test)."""
+        `agy` in the real test) on POSIX, or a pywinpty/ConPTY spawn (see
+        _activate_windows()) on Windows."""
         if self._replay_path is not None:
             self._activated = True
             return
 
         cmd = self._command or ["agy", "--output-format", RECOMMENDED_OUTPUT_FORMAT]
+
+        if sys.platform == "win32":
+            self._activate_windows(cmd)
+            return
 
         master_fd, slave_fd = pty.openpty()
         if sys.stdout.isatty():
@@ -192,10 +227,31 @@ class AntigravityCLIWrapperCollector(Collector):
         self._master_fd = master_fd
         self._activated = True
 
+    def _activate_windows(self, cmd: List[str]) -> None:
+        """Windows PTY backend: spawns `cmd` under a real ConPTY via
+        pywinpty (https://github.com/andfoy/pywinpty), the closest Windows
+        equivalent of the POSIX pty.openpty()/os.fork() machinery above.
+        A real PTY (not plain pipes) matters here because `agy` (see
+        module docstring) is exercised the same way it's really deployed --
+        a subprocess.Popen pipe fallback risks changing its output shape
+        under isatty() checks.
+        """
+        if not _PYWINPTY_AVAILABLE:
+            raise RuntimeError(
+                f"{self.collector_id}: pywinpty is not installed; cannot spawn on Windows "
+                "(detect() should have already reported this technique as not viable)"
+            )
+        self._winpty_proc = _WinPtyProcess.spawn(cmd, encoding="utf-8", errors="replace")
+        self._activated = True
+
     def _iter_live_chunks(self) -> Iterator[dict]:
         """Drain the pty master until the child exits, emitting captured
         records in the exact real shape (RESULTS.md's wrapper.py `emit()`).
         """
+        if sys.platform == "win32":
+            yield from self._iter_live_chunks_windows()
+            return
+
         assert self._master_fd is not None
         wrapped_command = " ".join(self._command or ["agy", "--output-format", RECOMMENDED_OUTPUT_FORMAT])
         while True:
@@ -222,6 +278,33 @@ class AntigravityCLIWrapperCollector(Collector):
                 if done_pid == self._child_pid:
                     break
 
+    def _iter_live_chunks_windows(self) -> Iterator[dict]:
+        """Windows counterpart of _iter_live_chunks(). ConPTY already
+        merges stdout/stderr into one stream (same as the POSIX branch
+        above, which dup2's stderr into the same slave fd), so the payload
+        shape here is unchanged; a "platform": "windows" marker is added
+        purely for traceability of which backend produced the event."""
+        assert self._winpty_proc is not None
+        proc = self._winpty_proc
+        wrapped_command = " ".join(self._command or ["agy", "--output-format", RECOMMENDED_OUTPUT_FORMAT])
+        while True:
+            try:
+                data = proc.read(CHUNK_SIZE)
+            except EOFError:
+                break
+            except Exception:
+                break
+            if data:
+                yield {
+                    "timestamp": datetime.datetime.now().isoformat(),
+                    "stream": "stdout",
+                    "platform": "windows",
+                    "content": data,
+                    "wrapped_command": wrapped_command,
+                }
+            if not proc.isalive():
+                break
+
     def capture(self) -> Iterator[RawEvent]:
         if not self._activated:
             raise RuntimeError(f"{self.collector_id}: capture() called before activate()")
@@ -245,6 +328,16 @@ class AntigravityCLIWrapperCollector(Collector):
             )
 
     def deactivate(self) -> None:
+        if sys.platform == "win32":
+            if self._winpty_proc is not None:
+                try:
+                    self._winpty_proc.terminate(force=True)
+                except Exception:
+                    pass
+                self._winpty_proc = None
+            self._activated = False
+            return
+
         if self._master_fd is not None:
             try:
                 os.close(self._master_fd)
