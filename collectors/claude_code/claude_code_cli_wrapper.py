@@ -325,7 +325,12 @@ class ClaudeCodeCLIWrapperCollector(Collector):
                 "(detect() should have already reported this technique as not viable)"
             )
 
-        proc = _WinPtyProcess.spawn(self._command, encoding="utf-8", errors="replace")
+        # pywinpty's PtyProcess.spawn() (verified against the actual
+        # installed API: winpty/ptyprocess.py's spawn(argv, cwd=None,
+        # env=None, dimensions=(24, 80), backend=None)) takes no
+        # encoding/errors kwargs -- read() already decodes to str
+        # internally, so nothing further to configure here.
+        proc = _WinPtyProcess.spawn(self._command)
         self._winpty_proc = proc
 
         def pump_loop():
