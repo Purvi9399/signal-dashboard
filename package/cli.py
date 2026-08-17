@@ -121,10 +121,26 @@ def cmd_run(args: argparse.Namespace) -> int:
     events = list(registry.merged_capture()) if mode == "live" else []
     registry.deactivate_all()
 
+    # registry.failures covers detect/activate/capture/deactivate failures
+    # that WiringResult itself has no field for (e.g. a collector whose
+    # detect() said yes but whose activate() then raised, like a Codex
+    # install with hook trust not yet granted). Without this, those
+    # failures were only ever visible as a stray print() mixed into stdout
+    # ahead of the JSON blob -- invisible to any --json consumer that
+    # parses stdout as a single JSON document. Surfacing them here keeps
+    # the "activated" list and this list mutually consistent: a collector
+    # missing from "activated" should always be explainable from failures
+    # (or from having failed detect(), which registry.failures also covers).
+    failures = [
+        {"collector_id": f.collector_id, "stage": f.stage, "error": f.error}
+        for f in registry.failures
+    ]
+
     data = {
         "mode": mode,
         "wiring": wiring_result.to_dict(),
         "events_captured": len(events),
+        "failures": failures,
     }
 
     def human(_d: Dict[str, Any]) -> None:
@@ -137,6 +153,10 @@ def cmd_run(args: argparse.Namespace) -> int:
                 print(f"  - {agent}.{technique}: {reason}")
         if wiring_result.construction_errors:
             print(f"construction_errors: {wiring_result.construction_errors}")
+        if failures:
+            print(f"failures ({len(failures)}):")
+            for f in failures:
+                print(f"  - {f['collector_id']} failed at {f['stage']}: {f['error']}")
         print(f"events captured this run: {len(events)}")
 
     _emit(data, args.json, human)

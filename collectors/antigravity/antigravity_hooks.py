@@ -208,7 +208,8 @@ class AntigravityHooksCollector(Collector):
                 f"-- every hook (and side effect) runs twice. This "
                 f"collector applies best-effort content-hash dedup "
                 f"(dedup={self._dedup}); see class docstring KNOWN "
-                f"LIMITATION for why this is not guaranteed-exact."
+                f"LIMITATION for why this is not guaranteed-exact.",
+                file=_sys.stderr,
             )
         self._activated = True
 

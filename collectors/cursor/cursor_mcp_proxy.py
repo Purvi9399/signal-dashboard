@@ -300,7 +300,8 @@ class CursorMCPProxyCollector(Collector):
                 f"spawn/manage that external mitmproxy process itself. "
                 f"mitmproxy importable on this machine: {mitmproxy_available}. "
                 f"capture() will yield 0 events in live mode; use "
-                f"replay_flows= to exercise the real ported parsing logic."
+                f"replay_flows= to exercise the real ported parsing logic.",
+                file=_sys.stderr,
             )
         self._activated = True
 

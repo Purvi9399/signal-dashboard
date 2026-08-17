@@ -8,6 +8,7 @@ never takes down the others.
 from __future__ import annotations
 
 import itertools
+import sys
 import traceback
 from dataclasses import dataclass, field
 from typing import Dict, Iterator, List, Optional
@@ -42,7 +43,11 @@ class CollectorRegistry:
     def _record_failure(self, collector_id: str, stage: str, exc: Exception) -> None:
         msg = f"{type(exc).__name__}: {exc}"
         self._failures.append(CollectorFailure(collector_id, stage, msg))
-        print(f"[registry] {collector_id} failed at {stage}: {msg}")
+        # stderr, not stdout: callers running `signal-agent --json run` rely
+        # on stdout being nothing but the final JSON payload (see cli.py's
+        # docstring contract). A diagnostic here must never land in that
+        # stream, or downstream JSON parsing breaks.
+        print(f"[registry] {collector_id} failed at {stage}: {msg}", file=sys.stderr)
 
     def run_detection(self) -> Dict[str, bool]:
         """Run detect() on every registered collector. Isolates exceptions --

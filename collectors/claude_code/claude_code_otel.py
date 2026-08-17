@@ -195,7 +195,8 @@ class ClaudeCodeOTelCollector(Collector):
                 f"whether Claude Code emits OTel data at all. Additionally, no "
                 f"captured OTLP sample export exists anywhere in this project "
                 f"for Claude Code (checked, unlike Codex_OTel/Antigravity_OTel), "
-                f"so capture() will yield 0 events unless fed replay_events."
+                f"so capture() will yield 0 events unless fed replay_events.",
+                file=_sys.stderr,
             )
         self._activated = True
 

@@ -209,7 +209,8 @@ class AntigravityLocalHooksCollector(Collector):
                 f"see Antigravity_LocalHooks/vsix_rebuild/); this Python "
                 f"collector has no such live listener wired up standalone. "
                 f"Use replay_path= to exercise capture() against real "
-                f"captured_ide_events.jsonl data."
+                f"captured_ide_events.jsonl data.",
+                file=_sys.stderr,
             )
         self._activated = True
 

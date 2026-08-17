@@ -176,7 +176,8 @@ class CursorOTelCollector(Collector):
             f"(cursor_proxy2.py / cursor_mcp_proxy.py), neither of which is "
             f"OTLP. This collector's capture() will yield real events only "
             f"if fed synthetic replay_events; it has no live OTLP stream to "
-            f"drain and no real captured sample to replay."
+            f"drain and no real captured sample to replay.",
+            file=_sys.stderr,
         )
         self._activated = True
 

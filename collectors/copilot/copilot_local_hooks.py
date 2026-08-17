@@ -210,13 +210,15 @@ class CopilotLocalHooksCollector(Collector):
             f"[{self.collector_id}] NOTE: onDidCloseTerminal is confirmed to "
             f"never fire in real testing (0/1 in the captured session) -- do "
             f"not build logic that depends on it firing. "
-            f"(Copilot_LocalHooks/RESULTS.md section a.)"
+            f"(Copilot_LocalHooks/RESULTS.md section a.)",
+            file=_sys.stderr,
         )
         print(
             f"[{self.collector_id}] NOTE: the accept-heuristic only detects "
             f"Tab-driven inline-suggestion accepts; mouse-click acceptance is "
             f"structurally invisible to this collector by design, not a bug. "
-            f"(Copilot_LocalHooks/RESULTS.md section b.)"
+            f"(Copilot_LocalHooks/RESULTS.md section b.)",
+            file=_sys.stderr,
         )
         self._activated = True
 

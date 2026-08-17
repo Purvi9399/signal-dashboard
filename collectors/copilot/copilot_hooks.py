@@ -252,7 +252,8 @@ class CopilotHooksCollector(Collector):
                     f"{actual!r}, expected exact string {required_value!r}. "
                     f"In live deployment this makes Copilot hooks fail "
                     f"COMPLETELY SILENTLY (no error, zero events) -- "
-                    f"confirmed in Copilot/RESULTS.md section 5-6."
+                    f"confirmed in Copilot/RESULTS.md section 5-6.",
+                    file=_sys.stderr,
                 )
 
         self._activated = True

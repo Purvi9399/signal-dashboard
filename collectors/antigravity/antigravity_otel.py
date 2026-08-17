@@ -169,7 +169,8 @@ class AntigravityOTelCollector(Collector):
             f"is reachable by a self-hosted collector. See "
             f"Antigravity_OTel/RESULTS.md. This collector's capture() will "
             f"yield real events only if fed synthetic replay_events; it "
-            f"has no live OTLP stream to drain."
+            f"has no live OTLP stream to drain.",
+            file=_sys.stderr,
         )
         self._activated = True
 

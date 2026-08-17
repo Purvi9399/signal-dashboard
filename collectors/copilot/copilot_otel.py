@@ -192,7 +192,8 @@ class CopilotOTelCollector(Collector):
                 f"the CLI/CLI-session OTel path to export anything -- and per "
                 f"Copilot/copilot_test/RESULTS.md, plain Copilot Chat's own "
                 f"github.copilot.chat.otel.* settings do NOT substitute for it "
-                f"(confirmed to have zero effect in real testing)."
+                f"(confirmed to have zero effect in real testing).",
+                file=_sys.stderr,
             )
         self._activated = True
 
