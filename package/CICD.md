@@ -198,7 +198,19 @@ Acceptance: stakeholders agree stages 0–6 and the approval gate on promote.
 - [x] Open questions decided (approvers, supersedence, build triggers, Graph app)
 - [x] Phase 1 workflow implemented (`release.yml` + `package/release_manifest.py` + TDD)
 - [x] Phase 2 packaging implemented (Win32 `.intunewin` + macOS PKG + pinned `detect.ps1`)
-- [ ] Phase 3 Graph promote implemented
+- [x] Phase 3 Graph promote implemented (`promote.yml` + `package/intune_promote/` + TDD)
+- [ ] Phase 3 live tenant dry-run / first promote validated on pilot
+
+### Phase 3 how to run
+
+1. Create Entra app registration `project-signal-cicd` in `AITechEthics1` with application permission `DeviceManagementApps.ReadWrite.All` (+ `Group.Read.All` to resolve `signal-pilot-windows`) and admin consent.
+2. In GitHub repo → Settings → Environments → **`intune-prod`**:
+   - Required reviewers: manager (and optionally eng)
+   - Secrets: `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET`
+3. Ensure a GitHub Release exists for the tag (Phase 1–2 assets including `install.intunewin`, `detect.ps1`, `version.json`).
+4. Actions → **Promote to Intune** → tag `vX.Y.Z` → start with **dry_run=true**.
+5. After approval + dry-run OK, re-run with **dry_run=false**.
+6. Complete the auto-opened post-promote smoke issue on Windows; macOS PKG remains manual portal/install for Phase 3.
 
 ### Phase 1–2 how to run
 
