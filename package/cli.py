@@ -24,7 +24,7 @@ Commands:
   update check --candidate DIR         -- diff the running install against a candidate release dir.
   update apply --candidate DIR --backup DIR   -- apply + auto-verify + auto-rollback-on-failure.
   update rollback --backup DIR         -- reverse a specific prior apply (uses backup/apply_result.json).
-  version                 -- print this install's manifest digest (its real, verifiable "version").
+  version                 -- print semver + manifest digest (see package/SEMVER.md).
 
 Every command exits 0 on success, non-zero on failure, and prints
 JSON when --json is passed -- so an MDM/orchestration layer can script
@@ -65,6 +65,13 @@ try:
 except ImportError:
     BAKED_VERSION_DIGEST = None
     BAKED_TRACKED_FILES = None
+
+try:
+    from package._baked_version import BAKED_SEMVER  # noqa: E402
+except ImportError:
+    BAKED_SEMVER = None
+
+from package.semver import default_version_path, load_semver_file  # noqa: E402
 
 DEFAULT_POLICY_PATH = COLLECTOR_FRAMEWORK_ROOT / "policy" / "sample_policy.json"
 
@@ -163,31 +170,41 @@ def cmd_run(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_version(args: argparse.Namespace) -> int:
-    if FROZEN and BAKED_VERSION_DIGEST is not None:
-        # A frozen exe's own Python modules are embedded in the binary, not
-        # present as real files to hash at runtime -- see build_exe.py,
-        # which computes this digest from the real source tree at BUILD
-        # time and bakes it in, so `version` still reports something real
-        # and verifiable rather than nothing.
-        data = {"digest": BAKED_VERSION_DIGEST, "tracked_files": BAKED_TRACKED_FILES, "root": "(baked in at build time; this is a frozen executable)"}
+def _print_version_human(data: Dict[str, Any]) -> None:
+    print(f"semver: {data['semver']}")
+    print(f"installed version digest: {data['digest']}")
+    print(f"tracked files: {data['tracked_files']}")
+    if data.get("root"):
+        print(f"root: {data['root']}")
 
-        def human(_d: Dict[str, Any]) -> None:
-            print(f"installed version digest (baked in at build time): {BAKED_VERSION_DIGEST}")
-            print(f"tracked files at build time: {BAKED_TRACKED_FILES}")
 
-        _emit(data, args.json, human)
-        return 0
+def _baked_version_payload() -> Optional[Dict[str, Any]]:
+    if not FROZEN or BAKED_VERSION_DIGEST is None or BAKED_SEMVER is None:
+        return None
+    return {
+        "semver": BAKED_SEMVER,
+        "digest": BAKED_VERSION_DIGEST,
+        "tracked_files": BAKED_TRACKED_FILES,
+        "root": "(baked in at build time; this is a frozen executable)",
+    }
 
+
+def _live_version_payload() -> Dict[str, Any]:
+    semver = load_semver_file(default_version_path(COLLECTOR_FRAMEWORK_ROOT))
     manifest = UpdateEngine().snapshot(COLLECTOR_FRAMEWORK_ROOT)
-    data = {"digest": manifest.digest(), "tracked_files": len(manifest.files), "root": manifest.root}
+    return {
+        "semver": semver,
+        "digest": manifest.digest(),
+        "tracked_files": len(manifest.files),
+        "root": manifest.root,
+    }
 
-    def human(_d: Dict[str, Any]) -> None:
-        print(f"installed version digest: {manifest.digest()}")
-        print(f"tracked files: {len(manifest.files)}")
-        print(f"root: {manifest.root}")
 
-    _emit(data, args.json, human)
+def cmd_version(args: argparse.Namespace) -> int:
+    # Frozen builds report bake-time identity; unfrozen builds read VERSION
+    # and snapshot the live source tree (see package/SEMVER.md).
+    data = _baked_version_payload() or _live_version_payload()
+    _emit(data, args.json, _print_version_human)
     return 0
 
 
@@ -309,7 +326,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_run.add_argument("--allow-live-hazards", action="store_true", help="permit constructing collectors documented as live-process-spawning hazards")
     p_run.set_defaults(func=cmd_run)
 
-    p_version = sub.add_parser("version", help="print this install's manifest digest")
+    p_version = sub.add_parser("version", help="print semver + this install's manifest digest")
     p_version.set_defaults(func=cmd_version)
 
     p_update = sub.add_parser("update", help="Update Engine operations")
