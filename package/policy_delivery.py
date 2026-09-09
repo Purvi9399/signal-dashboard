@@ -1,4 +1,4 @@
-"""Intune Windows policy delivery: paths, hashing, detect/remediate script render.
+"""Intune policy delivery: Windows remediations + macOS shell deploy scripts.
 
 See package/POLICY_DELIVERY.md. Keeps cyclomatic complexity low (pure helpers).
 """
@@ -11,6 +11,8 @@ from pathlib import Path
 
 WINDOWS_POLICY_PATH = r"C:\ProgramData\ProjectSignal\policy.json"
 WINDOWS_POLICY_DIR = r"C:\ProgramData\ProjectSignal"
+MACOS_POLICY_PATH = "/Library/Application Support/ProjectSignal/policy.json"
+MACOS_POLICY_DIR = "/Library/Application Support/ProjectSignal"
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -70,6 +72,37 @@ exit 0
 """
 
 
+def render_macos_deploy_sh(policy_text: str, expected_hash: str) -> str:
+    """Intune macOS shell script: idempotent hash-check + write."""
+    b64 = base64.b64encode(policy_text.encode("utf-8")).decode("ascii")
+    return f"""#!/bin/bash
+# Project Signal — Intune macOS shell script (policy.json)
+# Idempotent: exit 0 if hash matches; otherwise write exact UTF-8 bytes.
+# Generated from package/policy_delivery.py — regenerate after editing org_policy.json.
+
+set -euo pipefail
+POLICY_DIR="{MACOS_POLICY_DIR}"
+POLICY_PATH="{MACOS_POLICY_PATH}"
+EXPECTED_HASH="{expected_hash}"
+B64="{b64}"
+
+/bin/mkdir -p "$POLICY_DIR"
+
+if [[ -f "$POLICY_PATH" ]]; then
+  actual="$(/usr/bin/shasum -a 256 "$POLICY_PATH" | /usr/bin/awk '{{print $1}}')"
+  if [[ "$actual" == "$EXPECTED_HASH" ]]; then
+    echo "policy compliant: $POLICY_PATH"
+    exit 0
+  fi
+fi
+
+echo "$B64" | /usr/bin/base64 -D > "$POLICY_PATH"
+/bin/chmod 644 "$POLICY_PATH"
+echo "policy written: $POLICY_PATH"
+exit 0
+"""
+
+
 def write_windows_policy_scripts(org_policy_path: Path, out_dir: Path) -> None:
     """Write detect.ps1 + remediate.ps1 aligned to org_policy_path bytes."""
     raw = org_policy_path.read_bytes()
@@ -83,11 +116,27 @@ def write_windows_policy_scripts(org_policy_path: Path, out_dir: Path) -> None:
     )
 
 
-def _default_policy_dir() -> Path:
+def write_macos_policy_script(org_policy_path: Path, out_dir: Path) -> None:
+    """Write deploy-policy.sh aligned to org_policy_path bytes."""
+    raw = org_policy_path.read_bytes()
+    text = raw.decode("utf-8")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    (out_dir / "deploy-policy.sh").write_text(
+        render_macos_deploy_sh(text, sha256_bytes(raw)), encoding="utf-8"
+    )
+
+
+def _windows_policy_dir() -> Path:
     return Path(__file__).resolve().parent / "intune" / "windows" / "policy"
 
 
+def _macos_policy_dir() -> Path:
+    return Path(__file__).resolve().parent / "intune" / "macos" / "policy"
+
+
 if __name__ == "__main__":
-    policy_dir = _default_policy_dir()
-    write_windows_policy_scripts(policy_dir / "org_policy.json", policy_dir)
-    print(f"Wrote detect.ps1 + remediate.ps1 under {policy_dir}")
+    org = _windows_policy_dir() / "org_policy.json"
+    write_windows_policy_scripts(org, _windows_policy_dir())
+    write_macos_policy_script(org, _macos_policy_dir())
+    print(f"Wrote Windows scripts under {_windows_policy_dir()}")
+    print(f"Wrote macOS deploy-policy.sh under {_macos_policy_dir()}")

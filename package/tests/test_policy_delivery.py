@@ -23,6 +23,14 @@ class PolicyPathTests(unittest.TestCase):
             r"C:\ProgramData\ProjectSignal\policy.json",
         )
 
+    def test_macos_policy_path(self) -> None:
+        from package.policy_delivery import MACOS_POLICY_PATH
+
+        self.assertEqual(
+            MACOS_POLICY_PATH,
+            "/Library/Application Support/ProjectSignal/policy.json",
+        )
+
 
 class Sha256Tests(unittest.TestCase):
     def test_sha256_bytes_lowercase_hex(self) -> None:
@@ -91,6 +99,34 @@ class WriteScriptsTests(unittest.TestCase):
             pin = sha256_bytes(ORG_POLICY.read_bytes())
             self.assertIn(pin, detect)
             self.assertIn("ProjectSignal", remediate)
+
+    def test_write_macos_deploy_aligns_hash(self) -> None:
+        from package.policy_delivery import sha256_bytes, write_macos_policy_script
+
+        with tempfile.TemporaryDirectory() as tmp:
+            out_dir = Path(tmp)
+            write_macos_policy_script(ORG_POLICY, out_dir)
+            script = (out_dir / "deploy-policy.sh").read_text(encoding="utf-8")
+            pin = sha256_bytes(ORG_POLICY.read_bytes())
+            self.assertIn(pin, script)
+            self.assertIn("/Library/Application Support/ProjectSignal/policy.json", script)
+
+
+class MacosRenderTests(unittest.TestCase):
+    def test_macos_deploy_embeds_policy_bytes(self) -> None:
+        import base64
+
+        from package.policy_delivery import render_macos_deploy_sh, sha256_bytes
+
+        text = ORG_POLICY.read_text(encoding="utf-8")
+        pin_hash = sha256_bytes(ORG_POLICY.read_bytes())
+        script = render_macos_deploy_sh(policy_text=text, expected_hash=pin_hash)
+        self.assertIn("base64", script)
+        marker = 'B64="'
+        start = script.index(marker) + len(marker)
+        end = script.index('"', start)
+        decoded = base64.b64decode(script[start:end]).decode("utf-8")
+        self.assertEqual(decoded, text)
 
 
 if __name__ == "__main__":

@@ -8,7 +8,10 @@ Status: Configuration phase. **Does not** rebuild Win32/PKG. Policy is a separat
 
 ### 1.1 Goal
 
-Deliver an organization `policy.json` to enrolled Windows pilot devices via Intune **Proactive Remediation** (detect + remediate scripts), so operators can change policy without rebuilding or redeploying `signal-agent`.
+Deliver an organization `policy.json` to enrolled pilot devices so operators can change policy without rebuilding or redeploying `signal-agent`:
+
+- **Windows:** Intune **Remediations** (detect + remediate PowerShell)
+- **macOS:** Intune **macOS shell script** (single idempotent deploy script: hash-check, write if needed)
 
 The installed agent already supports:
 
@@ -21,7 +24,6 @@ signal-agent --json run --policy <path>
 
 - Intune Settings Catalog / CSP for policy content (wrong tool for arbitrary JSON)
 - Rebuilding Win32 `.intunewin` or macOS PKG
-- macOS shell-script delivery (follow-up; same path contract)
 - Changing CLI default when `--policy` is omitted (follow-up)
 - Graph API automation of script upload (follow-up / CI-CD design)
 - SSO, scheduling `--live`, LaunchDaemon
@@ -31,47 +33,61 @@ signal-agent --json run --policy <path>
 | Platform | Path |
 |---|---|
 | Windows | `C:\ProgramData\ProjectSignal\policy.json` |
-| macOS (reserved) | `/Library/Application Support/ProjectSignal/policy.json` |
+| macOS | `/Library/Application Support/ProjectSignal/policy.json` |
 
-Directory is created by remediate if missing. File is world-readable; write is SYSTEM/admin (Intune remediation runs as SYSTEM).
+Directory is created by the deploy/remediate script if missing. File is world-readable; write runs as SYSTEM (Windows) or root (macOS Intune shell script).
 
 ### 1.4 Source of truth (repo)
 
 | Item | Path |
 |---|---|
-| Org policy JSON | `package/intune/windows/policy/org_policy.json` |
-| Detect script | `package/intune/windows/policy/detect.ps1` |
-| Remediat script | `package/intune/windows/policy/remediate.ps1` |
+| Org policy JSON (canonical) | `package/intune/windows/policy/org_policy.json` |
+| Windows detect / remediate | `package/intune/windows/policy/detect.ps1`, `remediate.ps1` |
+| macOS deploy script | `package/intune/macos/policy/deploy-policy.sh` |
 | Renderer | `package/policy_delivery.py` |
 
 `org_policy.json` must be loadable by `PolicyConfig.load` (same schema as `policy/sample_policy.json`).
 
-Detect script pins **SHA-256** (lowercase hex) of the exact UTF-8 bytes of `org_policy.json` (no BOM). Remediat must write those same bytes.
+Scripts pin **SHA-256** (lowercase hex) of the exact UTF-8 bytes of `org_policy.json` (no BOM) and write those same bytes.
 
-### 1.5 Intune Proactive Remediation contract
+### 1.5 Intune contracts
+
+**Windows Remediations**
 
 | Script | Compliant behavior | Non-compliant |
 |---|---|---|
 | Detect | Exit `0` when file exists and SHA-256 matches pin | Exit `1` (triggers remediate) |
 | Remediat | Create directory; write policy bytes; exit `0` on success | Non-zero on failure |
 
-Intune settings (operator):
+- Run as: System · Assign: `signal-pilot-windows`
 
-- Run as: System
-- Run on: signal-pilot-windows (pilot)
-- Schedule: as needed for pilot (e.g. hourly or once daily)
+**macOS shell script** (single idempotent script)
+
+| Behavior | Exit |
+|---|---|
+| File present + SHA-256 matches | `0` (no write) |
+| Missing or hash mismatch → write bytes | `0` on success |
+| Write failure | non-zero |
+
+- Run as: root · Assign: `signal-pilot-macos` · Frequency: as available in Intune (e.g. every 1 hour / every 15 minutes)
 
 ### 1.6 Agent usage after delivery
 
-On the pilot VM (no package rebuild):
+Windows:
 
 ```powershell
 & "C:\Program Files\ProjectSignal\signal-agent.exe" --json decide --policy "C:\ProgramData\ProjectSignal\policy.json"
 ```
 
+macOS:
+
+```bash
+signal-agent --json decide --policy "/Library/Application Support/ProjectSignal/policy.json"
+```
+
 ### 1.7 Complexity constraint
 
-All new/changed Python callables: **McCabe ≤ 5**. PowerShell scripts: linear flow, early exit, no nested branches beyond one level.
+All new/changed Python callables: **McCabe ≤ 5**. Shell/PowerShell: linear flow, early exit, no nested branches beyond one level.
 
 ---
 
@@ -99,19 +115,27 @@ Tests under `package/tests/test_policy_delivery.py`:
 3. Generate/check in `detect.ps1` + `remediate.ps1`
 4. Tests green; radon CC ≤ 5 on new module
 
-### Phase D — Follow-ups (not this change)
+### Phase D — macOS mirror (this change)
 
-- macOS Intune shell script
+1. Extend tests for macOS path + `deploy-policy.sh` render/write
+2. Implement `render_macos_deploy_sh` / `write_macos_policy_script`
+3. Generate `package/intune/macos/policy/deploy-policy.sh` from canonical `org_policy.json`
+4. `__main__` regenerates Windows + macOS artifacts
+
+### Phase E — Follow-ups
+
 - CLI default: prefer MDM path when present
 - Graph upload automation
 
 ### Acceptance checklist
 
-- [x] Unittest suite for policy delivery passes
+- [x] Unittest suite for policy delivery passes (Windows)
 - [x] `detect.ps1` / `remediate.ps1` present and hash-aligned with `org_policy.json`
 - [x] `PolicyConfig.load` accepts `org_policy.json`
 - [x] No Win32/PKG rebuild required
 - [x] Touched Python functions CC ≤ 5 (all grade A / CC 1)
+- [x] macOS `deploy-policy.sh` present and hash-aligned with same `org_policy.json`
+- [x] macOS path tests green; CC ≤ 5
 
 ### Regenerate scripts after editing org policy
 
@@ -120,14 +144,21 @@ cd collector_framework
 python3 -m package.policy_delivery
 ```
 
-### Intune operator steps (Windows pilot)
+### Intune operator steps (Windows pilot) — validated
 
-1. Endpoint security / Devices → Remediations → Create script package
-2. Detect: paste `package/intune/windows/policy/detect.ps1`
-3. Remediat: paste `package/intune/windows/policy/remediate.ps1`
-4. Run as System; assign `signal-pilot-windows`
-5. On device, confirm file then:
+1. Devices → Remediations → Create script package
+2. Detect / Remediat: paste `detect.ps1` / `remediate.ps1`
+3. Run as System; assign `signal-pilot-windows`
 
-```powershell
-& "C:\Program Files\ProjectSignal\signal-agent.exe" --json decide --policy "C:\ProgramData\ProjectSignal\policy.json"
+### Intune operator steps (macOS pilot)
+
+1. Devices → macOS → Shell scripts → Add
+2. Upload / paste `package/intune/macos/policy/deploy-policy.sh`
+3. Run script as: **root**
+4. Assign: `signal-pilot-macos`
+5. On device:
+
+```bash
+shasum -a 256 "/Library/Application Support/ProjectSignal/policy.json"
+signal-agent --json decide --policy "/Library/Application Support/ProjectSignal/policy.json"
 ```
