@@ -117,6 +117,9 @@ def _cmd_write_manifest(args: argparse.Namespace) -> int:
         artifacts={
             "windows_exe": "signal-agent.exe",
             "macos_bin": "signal-agent-macos",
+            "windows_intunewin": "install.intunewin",
+            "macos_pkg": "ProjectSignal.pkg",
+            "windows_detect_ps1": "detect.ps1",
         },
     )
     write_version_manifest(Path(args.out), data)

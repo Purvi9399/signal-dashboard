@@ -197,16 +197,19 @@ Acceptance: stakeholders agree stages 0–6 and the approval gate on promote.
 - [x] TDD units listed for implementation
 - [x] Open questions decided (approvers, supersedence, build triggers, Graph app)
 - [x] Phase 1 workflow implemented (`release.yml` + `package/release_manifest.py` + TDD)
-- [ ] Phase 2–3 implemented
+- [x] Phase 2 packaging implemented (Win32 `.intunewin` + macOS PKG + pinned `detect.ps1`)
+- [ ] Phase 3 Graph promote implemented
 
-### Phase 1 how to run
+### Phase 1–2 how to run
 
-1. Ensure `collector_framework/VERSION` is the semver you want (e.g. `1.0.0`).
-2. Either:
-   - `git tag v1.0.0 && git push origin v1.0.0`, or
-   - Actions → **Release signal-agent** → Run workflow → semver `1.0.0`
-3. Confirm GitHub Release assets: `signal-agent.exe`, `signal-agent-macos`, `version.json`.
+1. Ensure `collector_framework/VERSION` matches the release semver.
+2. Tag `vX.Y.Z` and push, or Actions → **Release signal-agent** → dispatch.
+3. Confirm GitHub Release assets:
+   - `signal-agent.exe`, `signal-agent-macos`, `version.json`
+   - `install.intunewin`, `ProjectSignal.pkg`, `detect.ps1`
 4. Do **not** Intune-promote yet (Phase 3).
+
+Still **no** Intune upload — paste `detect.ps1` / upload packages manually or wait for Phase 3.
 
 ### Manager one-liner
 
