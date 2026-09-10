@@ -52,6 +52,7 @@ class Win32PayloadTests(unittest.TestCase):
         rule = build_powershell_detection_rule(script)
         decoded = base64.b64decode(rule["scriptContent"]).decode("utf-8")
         self.assertEqual(decoded, script)
+        self.assertNotIn("runAsAccount", rule)
 
     def test_assignment_body(self) -> None:
         from package.intune_promote.payloads import build_required_assignment

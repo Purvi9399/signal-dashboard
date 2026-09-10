@@ -16,14 +16,17 @@ UNINSTALL_CMD = (
 
 
 def build_powershell_detection_rule(script: str) -> Dict[str, Any]:
-    """Win32 PowerShell detection rule (exit 0 + STDOUT = detected)."""
+    """Win32 PowerShell detection rule (exit 0 + STDOUT = detected).
+
+    Do not set runAsAccount: Graph rejects it on detection script rules
+    (allowed on installExperience only).
+    """
     encoded = base64.b64encode(script.encode("utf-8")).decode("ascii")
     return {
         "@odata.type": "#microsoft.graph.win32LobAppPowerShellScriptRule",
         "ruleType": "detection",
         "enforceSignatureCheck": False,
         "runAs32Bit": False,
-        "runAsAccount": "system",
         "scriptContent": encoded,
         "operationType": "notConfigured",
         "operator": "notConfigured",
