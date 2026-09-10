@@ -10,7 +10,7 @@ import json
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Mapping
+from typing import Any, Dict, Mapping, Optional
 
 from package.semver import load_semver_file, normalize_semver
 
@@ -45,13 +45,28 @@ def assert_baked_semver(version_json: Mapping[str, Any], expected_semver: str) -
         )
 
 
+def assert_platforms_compatible(a: Mapping[str, Any], b: Mapping[str, Any]) -> None:
+    """Fail if platform version payloads disagree on release identity.
+
+    Digests are allowed to differ across OS: Manifest path keys use the
+    native separator, and Windows checkouts may normalize line endings.
+    Top-level release digest is always the Windows pin (Intune Win32).
+    """
+    if a.get("semver") != b.get("semver"):
+        raise ValueError(
+            f"platform version mismatch on semver: {a.get('semver')!r} vs {b.get('semver')!r}"
+        )
+    if a.get("tracked_files") != b.get("tracked_files"):
+        raise ValueError(
+            "platform version mismatch on tracked_files: "
+            f"{a.get('tracked_files')!r} vs {b.get('tracked_files')!r}"
+        )
+
+
+# Back-compat alias for older imports/tests.
 def assert_digests_agree(a: Mapping[str, Any], b: Mapping[str, Any]) -> None:
-    """Fail if two platform version payloads disagree on identity fields."""
-    for key in ("semver", "digest", "tracked_files"):
-        if a.get(key) != b.get(key):
-            raise ValueError(
-                f"platform version mismatch on {key}: {a.get(key)!r} vs {b.get(key)!r}"
-            )
+    """Deprecated: digests are not required to match across platforms."""
+    assert_platforms_compatible(a, b)
 
 
 def build_version_manifest(
@@ -62,9 +77,10 @@ def build_version_manifest(
     git_sha: str,
     built_at: str,
     artifacts: Dict[str, str],
+    platforms: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Build the release version.json object (CICD.md §1.6)."""
-    return {
+    data: Dict[str, Any] = {
         "semver": semver,
         "digest": digest,
         "tracked_files": tracked_files,
@@ -72,6 +88,9 @@ def build_version_manifest(
         "git_sha": git_sha,
         "built_at": built_at,
     }
+    if platforms is not None:
+        data["platforms"] = platforms
+    return data
 
 
 def write_version_manifest(path: Path, data: Mapping[str, Any]) -> None:
@@ -105,7 +124,7 @@ def _cmd_check_baked(args: argparse.Namespace) -> int:
 def _cmd_write_manifest(args: argparse.Namespace) -> int:
     win = json.loads(Path(args.windows_json).read_text(encoding="utf-8"))
     mac = json.loads(Path(args.macos_json).read_text(encoding="utf-8"))
-    assert_digests_agree(win, mac)
+    assert_platforms_compatible(win, mac)
     assert_baked_semver(win, normalize_semver(args.expected_semver))
     built_at = args.built_at or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
     data = build_version_manifest(
@@ -120,6 +139,16 @@ def _cmd_write_manifest(args: argparse.Namespace) -> int:
             "windows_intunewin": "install.intunewin",
             "macos_pkg": "ProjectSignal.pkg",
             "windows_detect_ps1": "detect.ps1",
+        },
+        platforms={
+            "windows": {
+                "digest": win["digest"],
+                "tracked_files": int(win["tracked_files"]),
+            },
+            "macos": {
+                "digest": mac["digest"],
+                "tracked_files": int(mac["tracked_files"]),
+            },
         },
     )
     write_version_manifest(Path(args.out), data)

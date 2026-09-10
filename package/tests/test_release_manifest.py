@@ -92,22 +92,32 @@ class BuildVersionManifestTests(unittest.TestCase):
             self.assertEqual(loaded, data)
 
 
-class AssertDigestsAgreeTests(unittest.TestCase):
-    def test_ok_when_same(self) -> None:
-        from package.release_manifest import assert_digests_agree
+class AssertPlatformsCompatibleTests(unittest.TestCase):
+    def test_ok_when_semver_and_tracked_match(self) -> None:
+        from package.release_manifest import assert_platforms_compatible
 
-        assert_digests_agree(
+        # Digests may differ across OS; that must not fail the release.
+        assert_platforms_compatible(
             {"digest": "aa", "tracked_files": 1, "semver": "1.0.0"},
-            {"digest": "aa", "tracked_files": 1, "semver": "1.0.0"},
+            {"digest": "bb", "tracked_files": 1, "semver": "1.0.0"},
         )
 
-    def test_raises_when_digest_differs(self) -> None:
-        from package.release_manifest import assert_digests_agree
+    def test_raises_when_semver_differs(self) -> None:
+        from package.release_manifest import assert_platforms_compatible
 
         with self.assertRaises(ValueError):
-            assert_digests_agree(
+            assert_platforms_compatible(
                 {"digest": "aa", "tracked_files": 1, "semver": "1.0.0"},
-                {"digest": "bb", "tracked_files": 1, "semver": "1.0.0"},
+                {"digest": "aa", "tracked_files": 1, "semver": "1.0.1"},
+            )
+
+    def test_raises_when_tracked_files_differ(self) -> None:
+        from package.release_manifest import assert_platforms_compatible
+
+        with self.assertRaises(ValueError):
+            assert_platforms_compatible(
+                {"digest": "aa", "tracked_files": 1, "semver": "1.0.0"},
+                {"digest": "aa", "tracked_files": 2, "semver": "1.0.0"},
             )
 
 
