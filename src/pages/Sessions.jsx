@@ -327,10 +327,6 @@ export default function Sessions({ rows, onOpen }) {
   }), [matched, scoped, subject]);
 
   /* Tokens and elapsed time attach to a session, not to a single action:
-     a file write carries no token count. Across sessions these are the
-     cost of the work surrounding a capability. Within one session they
-
-  /* Tokens and elapsed time attach to a session, not to a single action:
      a file write carries no token count. Across sessions these describe
      the work surrounding a capability. Within one session they are that
      session's own figures. */
@@ -503,56 +499,6 @@ export default function Sessions({ rows, onOpen }) {
         <Chart question="What follows from it?"
                note="Consequences recorded alongside" data={charts.implications}
                empty="Nothing of consequence recorded alongside this activity." />
-      </div>
-
-      <div>
-        <h2 className="text-sm mb-1">Resources and latency</h2>
-        <p className="text-xs mb-3 max-w-3xl" style={{ color: C.mute }}>
-          {session === "all"
-            ? `Measured across the ${num(resource.sessions)} sessions in which ${subject.label.toLowerCase()} appears. Tokens and elapsed time attach to a session rather than to a single action, so these describe the work surrounding this capability rather than the capability alone.`
-            : "This session's own consumption. At single-session scope the figures are exact rather than surrounding context."}
-        </p>
-
-        <div className="flex flex-wrap mb-4"
-             style={{ background: C.panel, border: `1px solid ${C.rule}` }}>
-          {[
-            ["Tokens", num(resource.tokens),
-              resource.sessions ? `${num(resource.tokens / resource.sessions)} per session` : ""],
-            ["Spend", "$" + resource.cost.toFixed(2),
-              resource.estimated ? "part derived from tokens" : "as billed"],
-            ["Hours", resource.hours.toFixed(1), "of agent time"],
-            ["Median action", resource.median ? num(resource.median) + " ms" : "\u2014",
-              resource.timed ? `${num(resource.p95)} ms at the 95th percentile` : "no durations reported"],
-            ["Stalls", num(resource.stalls), "silence while still running"],
-          ].map(([l, v, sub], i) => (
-            <div key={l} className="px-5 py-4 flex-1 min-w-40"
-                 style={{ borderLeft: i ? `1px solid ${C.rule}` : "none" }}>
-              <div className="text-xs mb-1.5" style={{ color: C.mute }}>{l}</div>
-              <div className="text-xl leading-none tabular-nums">{v}</div>
-              <div className="text-xs mt-1.5" style={{ color: C.body }}>{sub}</div>
-            </div>
-          ))}
-        </div>
-
-        <div className="grid gap-4"
-             style={{ gridTemplateColumns: "repeat(auto-fit,minmax(330px,1fr))" }}>
-          <Chart question="Token consumption over time"
-                 note={session === "all" ? "Across sessions using this capability" : "Within this session"}
-                 data={resource.trend} kind="area"
-                 empty="No usage reported by the agents here." />
-          <Chart question="Spend by agent"
-                 note="Where cost is reported or can be derived"
-                 data={resource.costByAgent}
-                 empty="No cost reported or derivable here." />
-          <Chart question="Hours by agent"
-                 note="Elapsed time from first to last event"
-                 data={resource.hoursByAgent}
-                 empty="No durations recorded." />
-          <Chart question="Latency by tool"
-                 note="Mean duration of an action, milliseconds"
-                 data={resource.latencyByTool}
-                 empty="No action durations reported by these agents." />
-        </div>
       </div>
 
       <div>

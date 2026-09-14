@@ -29,6 +29,7 @@ const NAV = [
 
 export default function App() {
   const [page, setPage] = useState("overview");
+  const [seen, setSeen] = useState({ overview: true });
   const [openSession, setOpenSession] = useState(null);
   const [rows, setRows] = useState([]);
   const [status, setStatus] = useState("loading");
@@ -72,7 +73,8 @@ export default function App() {
           {NAV.map(([id, label, hint]) => {
             const on = page === id;
             return (
-              <button key={id} onClick={() => setPage(id)}
+              <button key={id}
+                      onClick={() => { setPage(id); setSeen((s) => ({ ...s, [id]: true })); }}
                       className="w-full text-left px-5 py-2.5 block"
                       style={{ background: on ? C.soft : "transparent",
                                borderLeft: `2px solid ${on ? C.accent : "transparent"}` }}>
@@ -92,13 +94,28 @@ export default function App() {
         {status !== "ready" ? (
           <p className="text-sm" style={{ color: C.body }}>{status}</p>
         ) : (
-          page === "overview" ? <Overview rows={rows} />
-            : page === "sessions" ? <Sessions rows={rows} onOpen={setOpenSession} />
-            : page === "insights" ? <Insights rows={rows} />
-            : page === "sessionobs" ? <SessionObservability rows={rows} onOpen={setOpenSession} />
-            : <div className="p-8" style={{ background: C.panel, border: `1px solid ${C.rule}` }}>
-                <p className="text-sm" style={{ color: C.body }}>{page} is next.</p>
+          <>
+            {seen.overview && (
+              <div style={{ display: page === "overview" ? "block" : "none" }}>
+                <Overview rows={rows} />
               </div>
+            )}
+            {seen.sessions && (
+              <div style={{ display: page === "sessions" ? "block" : "none" }}>
+                <Sessions rows={rows} onOpen={setOpenSession} />
+              </div>
+            )}
+            {seen.insights && (
+              <div style={{ display: page === "insights" ? "block" : "none" }}>
+                <Insights rows={rows} />
+              </div>
+            )}
+            {seen.sessionobs && (
+              <div style={{ display: page === "sessionobs" ? "block" : "none" }}>
+                <SessionObservability rows={rows} onOpen={setOpenSession} />
+              </div>
+            )}
+          </>
         )}
       </main>
     </div>
