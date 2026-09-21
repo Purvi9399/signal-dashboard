@@ -12,7 +12,7 @@ The system shall not invent a second normalizer.
 
 ## 2. Scope
 
-### 2.1 In scope (Phases 1–2)
+### 2.1 In scope (Phases 1–4)
 
 - Vendor `signal_curate.py` and `precedence_map.py`
 - Adapter from RawEvent JSONL / `source_events` into curator loaded tuples
@@ -21,12 +21,16 @@ The system shall not invent a second normalizer.
 - Thin Codex / Copilot hooks extractors when Purvi has no dedicated function
 - MCP Proxy adapters: stdio JSON-RPC wire (copilot/codex/antigravity/claude-code)
   via Purvi `extract_row`; Cursor network token capture → `model_request`
+- FS Watcher adapters: watchdog `created`/`modified`/`deleted`/`moved*` → file_* /
+  `transcript_appended`; Claude transcript JSONL lines → `transcript_appended`
+- OTel adapters: flat Loki/attrs + OTLP `resourceLogs` → Purvi `extract_otel`
+  (batches expand to multiple tuples)
 - CLI `curate` and on-device curate during `upload-jsonl` / `run --live --upload`
 - Upsert into `observables` (direct sink or Edge)
 
 ### 2.2 Out of scope (later phases)
 
-- FS Watcher, OTel, CLI wrapper adapters (Phases 3–5)
+- CLI wrapper adapters (Phase 5)
 - Rewrite of merge / precedence logic
 - Extend full `PRECEDENCE` for antigravity/codex/copilot (use resolve fallback)
 - Re-upsert `source_events` from curation
@@ -50,6 +54,12 @@ The system shall not invent a second normalizer.
 | FR-C11 | Stdio MCP Proxy RawEvents (`tools/call`, call results, `tools/list` results) shall adapt to `mcp_request` / `mcp_result` / `mcp_discovery`. |
 | FR-C12 | Cursor `network_context_capture` MCP-proxy RawEvents with usage tokens shall adapt to `model_request`. |
 | FR-C13 | Untyped MCP wire noise (`initialize`, null `parsed`) shall be skipped. |
+| FR-C14 | FS Watcher RawEvents with `created`/`modified`/`deleted`/`moved*` shall adapt to `file_create` / `file_modify` / `file_delete` (or `transcript_appended` for transcript paths). |
+| FR-C15 | Claude-code FS Watcher transcript JSONL lines shall adapt to `transcript_appended` with usage tokens when present. |
+| FR-C16 | Untyped FS Watcher noise (unknown `event_type`, missing `path`) shall be skipped. |
+| FR-C17 | OTel RawEvents with known `event.name` short-names shall adapt via Purvi `extract_otel` to non-`other` types. |
+| FR-C18 | OTLP `resourceLogs` batches shall expand to one curator tuple per typed log record. |
+| FR-C19 | Untyped OTel noise (unknown event name, empty attrs) shall be skipped. |
 
 ## 4. Non-functional
 
@@ -80,7 +90,7 @@ python -m package.cli curate --from-batch INGEST_BATCH_ID --supabase
 
 | Lens | Assessment |
 |---|---|
-| Functional suitability | Hooks + MCP Proxy adapters produce typed observables for five agents from RawEvent JSONL. |
+| Functional suitability | Hooks, MCP Proxy, FS Watcher, and OTel adapters produce typed observables for five agents from RawEvent JSONL. |
 | Compatibility | Reuses colleague `curate()` / extractors and existing `observables` enums. |
 | Security | Observables write uses operator service role or Edge secret; no fleet bake-in of service role. |
 | Maintainability | Vendored code isolated; new modules stay small (CC ≤ 5); phased collector coverage. |
@@ -90,6 +100,8 @@ python -m package.cli curate --from-batch INGEST_BATCH_ID --supabase
 
 1. Unit tests for all five tools’ hooks adapters pass (synthetic fixtures).
 2. Unit tests for MCP Proxy adapters pass (stdio four agents + Cursor network).
-3. Antigravity live sample dry-run still yields `tool=antigravity` and non-`other` types.
-4. Mixed synthetic dry-run yields curated tools across the five agents.
-5. Offline export tests remain green.
+3. Unit tests for FS Watcher adapters pass (watchdog five agents + Claude transcript lines).
+4. Unit tests for OTel adapters pass (flat attrs + resourceLogs expand).
+5. Antigravity live sample dry-run still yields `tool=antigravity` and non-`other` types.
+6. Mixed synthetic dry-run yields curated tools across the five agents.
+7. Offline export tests remain green.

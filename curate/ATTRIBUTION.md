@@ -14,6 +14,8 @@ Project Signal additions in this package:
 - `adapter_source_events.py` — RawEvent / `source_events` → curator loaded tuples
 - `extract_codex_copilot.py` — thin Codex/Copilot hooks extractors (Phase 1)
 - `extract_mcp_stdio.py` — MCP Proxy stdio wire + Cursor network (Phase 2)
+- `extract_fs_watcher.py` — FS Watcher watchdog + Claude transcript lines (Phase 3)
+- `extract_otel_raw.py` — OTel flat/OTLP reshape → Purvi `extract_otel` (Phase 4)
 - `observables_sink.py` — upsert `observables` only (no re-write of `source_events`)
 - CLI: `signal-agent curate ...`
 - Live path: `export/live_curate.py` used by `upload-jsonl` / `run --live --upload`

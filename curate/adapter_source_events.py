@@ -5,6 +5,8 @@ Output shape matches colleague signal_curate.load_all entries:
 
 Phase 1: hooks / local_hooks for antigravity, claude-code, cursor, codex, copilot.
 Phase 2: mcp_proxy (stdio JSON-RPC + Cursor network token capture).
+Phase 3: fs_watcher (watchdog records + Claude transcript lines).
+Phase 4: otel (flat attrs + OTLP resourceLogs → Purvi extract_otel).
 """
 
 from __future__ import annotations
@@ -13,14 +15,16 @@ import json
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
+from typing import Any, Dict, Iterator, List, Mapping, Optional, Sequence, Tuple
 
 from curate.extract_codex_copilot import extract_codex_hook, extract_copilot_hook
+from curate.extract_fs_watcher import extract_fs_watcher
 from curate.extract_mcp_stdio import (
     extract_cursor_network_proxy,
     extract_mcp_stdio_wire,
     is_stdio_mcp_wire,
 )
+from curate.extract_otel_raw import iter_otel_field_dicts
 from curate.signal_curate import extract_claude_hook, extract_cursor_hook
 from export.mapping import map_collector, map_tool
 
@@ -29,6 +33,8 @@ LoadedTuple = Tuple[str, Dict[str, Any], Any]
 _FILE_WRITE_TOOLS = frozenset({"write_to_file", "replace_file_content"})
 _HOOKS = "local_hooks"
 _MCP = "mcp_proxy"
+_FS = "fs_watcher"
+_OTEL = "otel"
 
 
 def _as_mapping(value: Any) -> Mapping[str, Any]:
@@ -226,6 +232,12 @@ def _fields_for_mcp(
     return None
 
 
+def _fields_for_fs(
+    tool: str, raw: Mapping[str, Any], when: Optional[datetime]
+) -> Optional[Dict[str, Any]]:
+    return extract_fs_watcher(raw, when, tool=tool)
+
+
 def _envelope_parts(
     event: Mapping[str, Any],
 ) -> Tuple[str, str, Mapping[str, Any], Optional[datetime]]:
@@ -251,36 +263,63 @@ def _typed_fields(fields: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
 
 def adapt_raw_event(event: Mapping[str, Any]) -> Optional[LoadedTuple]:
     """Map one RawEvent envelope to a curator tuple, or None to skip."""
+    for triple in iter_adapted_raw_events(event):
+        return triple
+    return None
+
+
+def iter_adapted_raw_events(event: Mapping[str, Any]) -> Iterator[LoadedTuple]:
+    """Yield zero or more curator tuples for one RawEvent (OTLP may expand)."""
     tool, collector, raw, when = _envelope_parts(event)
-    fields = None
-    if collector == _HOOKS:
-        fields = _fields_for_hooks(tool, raw, when)
-    elif collector == _MCP:
-        fields = _fields_for_mcp(tool, raw, when)
+    if collector == _OTEL:
+        yield from _iter_otel_tuples(tool, raw, when)
+        return
+    fields = _fields_for_collector(collector, tool, raw, when)
     fields = _typed_fields(fields)
     if fields is None:
-        return None
+        return
     fields["tool"] = tool
-    return (collector, fields, raw)
+    yield (collector, fields, raw)
+
+
+def _iter_otel_tuples(
+    tool: str, raw: Mapping[str, Any], when: Optional[datetime]
+) -> Iterator[LoadedTuple]:
+    for fields in iter_otel_field_dicts(raw, when, tool=tool):
+        typed = _typed_fields(fields)
+        if typed is None:
+            continue
+        typed["tool"] = tool
+        yield (_OTEL, typed, raw)
+
+
+def _fields_for_collector(
+    collector: str,
+    tool: str,
+    raw: Mapping[str, Any],
+    when: Optional[datetime],
+) -> Optional[Dict[str, Any]]:
+    if collector == _HOOKS:
+        return _fields_for_hooks(tool, raw, when)
+    if collector == _MCP:
+        return _fields_for_mcp(tool, raw, when)
+    if collector == _FS:
+        return _fields_for_fs(tool, raw, when)
+    return None
 
 
 def adapt_source_event_row(row: Mapping[str, Any]) -> Optional[LoadedTuple]:
     """Map a public.source_events-shaped row (payload envelope) to a tuple."""
-    payload = row.get("payload")
-    if isinstance(payload, Mapping) and (
-        "raw_payload" in payload or "collector_id" in payload
-    ):
-        return adapt_raw_event(payload)
-    if "raw_payload" in row:
-        return adapt_raw_event(row)
+    for triple in iter_adapted_source_event_rows([row]):
+        return triple
     return None
 
 
-def _parse_jsonl_line(text: str) -> Optional[LoadedTuple]:
+def _parse_jsonl_line(text: str) -> List[LoadedTuple]:
     event = json.loads(text)
     if not isinstance(event, Mapping):
-        return None
-    return adapt_raw_event(event)
+        return []
+    return list(iter_adapted_raw_events(event))
 
 
 def load_jsonl(path: Path | str) -> List[LoadedTuple]:
@@ -291,16 +330,29 @@ def load_jsonl(path: Path | str) -> List[LoadedTuple]:
             text = line.strip()
             if not text:
                 continue
-            triple = _parse_jsonl_line(text)
-            if triple is not None:
-                loaded.append(triple)
+            loaded.extend(_parse_jsonl_line(text))
     return loaded
 
 
-def adapt_source_event_rows(rows: Sequence[Mapping[str, Any]]) -> List[LoadedTuple]:
-    out: List[LoadedTuple] = []
+def _row_as_raw_event(row: Mapping[str, Any]) -> Optional[Mapping[str, Any]]:
+    payload = row.get("payload")
+    if isinstance(payload, Mapping) and (
+        "raw_payload" in payload or "collector_id" in payload
+    ):
+        return payload
+    if "raw_payload" in row:
+        return row
+    return None
+
+
+def iter_adapted_source_event_rows(
+    rows: Sequence[Mapping[str, Any]],
+) -> Iterator[LoadedTuple]:
     for row in rows:
-        triple = adapt_source_event_row(row)
-        if triple is not None:
-            out.append(triple)
-    return out
+        event = _row_as_raw_event(row)
+        if event is not None:
+            yield from iter_adapted_raw_events(event)
+
+
+def adapt_source_event_rows(rows: Sequence[Mapping[str, Any]]) -> List[LoadedTuple]:
+    return list(iter_adapted_source_event_rows(rows))
