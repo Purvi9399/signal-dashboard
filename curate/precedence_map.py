@@ -10,12 +10,14 @@ Order matters: first entry that has a value wins. Later entries are still
 recorded in `contributing`, and a mismatch sets collectors_agree = false.
 
 Verified against real captures on Claude Code 2.1.220 and Cursor 3.13.25,
-July and August 2026. Entries marked UNVERIFIED are reasoned from the field
+July and August 2026. Codex, Copilot and Antigravity added September 2026,
+each entry tagged with its basis; see EXTENDED below. Entries marked UNVERIFIED are reasoned from the field
 existing, not from having seen it arrive.
 
     python3 precedence_map.py              # readable table
     python3 precedence_map.py --json       # machine readable
     python3 precedence_map.py --gaps       # fields no collector supplies
+    python3 precedence_map.py --evidence codex   # basis for each entry
 """
 
 import json
@@ -216,6 +218,304 @@ COLLECTOR_NAMES = {
 }
 
 
+
+# ==========================================================================
+# Codex, Copilot and Antigravity
+#
+# Added September 2026. Built from the test_runs capture bundle (fifty
+# sessions, ten prompts across five tools, second operator) and from our
+# own Codex and Copilot runs. Kept separate from the entries above so the
+# Claude Code and Cursor mapping is untouched and this can be reviewed as
+# one change.
+#
+# Each entry carries its basis:
+#   seen     the field arrived in captured payloads from that collector
+#   raw      present in the raw payload, our extractor does not read it yet
+#   absent   the condition arose across several sessions, nothing arrived
+#   contract stated in the vendor's own hook documentation
+#   reasoned inferred from the payload shape, not yet seen to arrive
+# ==========================================================================
+
+EXTENDED = {
+  # field:        {tool: ([collectors], basis, note)}
+  "session_id": {
+    "codex":       ([H, O, F], "seen", "hooks session_id, OTel conversation.id, rollout session_meta"),
+    "copilot":     ([H, O, W], "seen", "sessionId on every hook post"),
+    "antigravity": ([H, W],    "seen", "conversationId in hooks, conversation_id in stream-json"),
+  },
+  "conversation_id": {
+    "codex":       ([H, O], "seen",     "OTel names it conversation.id, not session.id"),
+    "copilot":     ([H],    "reasoned", "reuses sessionId"),
+    "antigravity": ([H, W], "seen",     "same value as session_id"),
+  },
+  "turn_id": {
+    "codex":       ([H],    "reasoned", "hook payloads follow Claude Code's shape"),
+    "copilot":     ([O, H], "reasoned", "traceparent on hook posts can join to OTel spans"),
+    "antigravity": ([H],    "seen",     "stepIdx; a step, not a user turn"),
+  },
+  "tool_use_id": {
+    "codex":       ([H], "reasoned", "pairs PreToolUse with PostToolUse"),
+    "copilot":     ([O], "reasoned", "span id"),
+    "antigravity": ([H], "reasoned", "toolCall.id where present"),
+  },
+  "sequence_num": {
+    "codex": ([D], "reasoned", "order by timestamp"),
+    "copilot": ([D], "reasoned", "order by timestamp"),
+    "antigravity": ([H, D], "seen", "stepIdx gives a native order"),
+  },
+  "agent_id": {
+    "codex":       ([H],  "seen",     "on hook payloads, including SubagentStart"),
+    "copilot":     ([H],  "seen",     "agentId on hook posts; thin in our captures"),
+    "antigravity": ([],   "reasoned", "no agent identity field observed"),
+  },
+  "agent_type": {
+    "codex":       ([H], "seen",     "SubagentStart fires"),
+    "copilot":     ([H], "seen",     "agentName and agentType on hook posts"),
+    "antigravity": ([],  "reasoned", "none observed"),
+  },
+  "parent_agent_id": {
+    "codex": ([D], "reasoned", "derive from subagent nesting"),
+    "copilot": ([], "reasoned", ""), "antigravity": ([], "reasoned", ""),
+  },
+  "operator_email": {
+    "codex": ([], "absent", "OTel carries auth mode, not identity"),
+    "copilot": ([], "reasoned", "likely only on an enterprise tenant"),
+    "antigravity": ([], "reasoned", ""),
+  },
+  "workspace": {
+    "codex":       ([H, F], "seen", "cwd in hooks and rollout session_meta"),
+    "copilot":     ([H],    "seen", "cwd on hook posts"),
+    "antigravity": ([H, W], "seen", "workspacePaths; init cwd in stream-json"),
+  },
+  "cwd": {
+    "codex": ([H, W, F], "seen", ""), "copilot": ([H, W], "seen", ""),
+    "antigravity": ([W, H], "seen", ""),
+  },
+  "tool_version": {
+    "codex":       ([O, F], "seen",     "OTel service.version; rollout cli_version"),
+    "copilot":     ([O],    "reasoned", "service.version on github-copilot"),
+    "antigravity": ([],     "absent",   "not in any payload; only on the binary"),
+  },
+  "prompt_text": {
+    "codex":       ([H, F], "seen",     "UserPromptSubmit"),
+    "copilot":     ([H, O], "seen",     "prompt on submission posts, which carry no hookName"),
+    "antigravity": ([W],    "reasoned", "hooks carry no prompt; only the terminal sees it"),
+  },
+  "prompt_length": {
+    "codex": ([D], "reasoned", ""), "copilot": ([D], "absent", "derive from text"),
+    "antigravity": ([D], "reasoned", ""),
+  },
+  "permission_mode": {
+    "codex": ([H], "reasoned", ""), "copilot": ([], "reasoned", ""),
+    "antigravity": ([], "contract", "the capture ran with permissions skipped; untestable"),
+  },
+  "response_text": {
+    "codex":       ([F, H], "raw",      "in the rollout; extractor does not read it yet"),
+    "copilot":     ([O, F], "reasoned", ""),
+    "antigravity": ([W, F], "reasoned", "stream-json step updates"),
+  },
+  "reasoning_text": {
+    "codex":       ([F],    "raw",  "reasoning tokens counted; content not yet extracted"),
+    "copilot":     ([O],    "raw",  "present in OTel; extractor does not read it yet"),
+    "antigravity": ([W],    "seen", "stream-json step_update text"),
+  },
+  "model": {
+    "codex":       ([F, O], "seen", "rollout turn_context.model"),
+    "copilot":     ([O],    "raw",  "present in OTel spans"),
+    "antigravity": ([H, W], "seen", "modelName; stream-json init"),
+  },
+  "model_id": {
+    "codex": ([F], "seen", ""), "copilot": ([O], "raw", ""), "antigravity": ([H], "seen", ""),
+  },
+  "input_tokens": {
+    "codex":       ([F], "seen", "rollout event_msg token_count, last_token_usage"),
+    "copilot":     ([O], "raw",  "present in OTel; extractor does not read it yet"),
+    "antigravity": ([W], "seen", "stream-json result.usage"),
+  },
+  "output_tokens": {
+    "codex": ([F], "seen", ""), "copilot": ([O], "raw", ""), "antigravity": ([W], "seen", ""),
+  },
+  "cache_read_tokens": {
+    "codex":       ([F], "seen", "cached_input_tokens"),
+    "copilot":     ([O], "raw",  ""),
+    "antigravity": ([W], "seen", "result.usage.cache_read_tokens"),
+  },
+  "cache_write_tokens": {
+    "codex": ([F], "seen", "cache_write_input_tokens"),
+    "copilot": ([O], "reasoned", ""), "antigravity": ([], "reasoned", ""),
+  },
+  "total_tokens": {
+    "codex":       ([F, D], "seen",   ""),
+    "copilot":     ([O, D], "absent", "total not sent; derive from input and output"),
+    "antigravity": ([W, D], "seen",   "result.usage.total_tokens"),
+  },
+  "cost_usd": {
+    "codex":       ([D],    "absent",   "no cost emitted; derive from tokens"),
+    "copilot":     ([O, D], "raw",      "present in OTel"),
+    "antigravity": ([D],    "reasoned", "derive from tokens"),
+  },
+  "request_latency_ms": {
+    "codex":       ([O], "seen",     "codex.api_request duration_ms, sent as a string"),
+    "copilot":     ([O], "reasoned", "span duration"),
+    "antigravity": ([],  "absent",   "OTel emits nothing on this tool"),
+  },
+  "time_to_first_token": {
+    "codex": ([], "reasoned", ""), "copilot": ([O], "reasoned", ""),
+    "antigravity": ([], "absent", ""),
+  },
+  "stop_reason": {
+    "codex":       ([], "absent", "across 26 sessions, nothing arrived"),
+    "copilot":     ([], "absent", "across 25 sessions, nothing arrived"),
+    "antigravity": ([H, W], "seen", "Stop.terminationReason; result.status"),
+  },
+  "thinking_blocks": {
+    "codex":       ([F], "seen", "reasoning_output_tokens above zero"),
+    "copilot":     ([O], "raw",  ""),
+    "antigravity": ([W], "seen", "result.usage.thinking_tokens"),
+  },
+  "tool_name": {
+    "codex":       ([H, O], "seen", ""),
+    "copilot":     ([H, O], "seen", "toolName on permission requests"),
+    "antigravity": ([H],    "seen", "toolCall.name, lowercased step type"),
+  },
+  "tool_arguments": {
+    "codex":       ([H, P], "seen", ""),
+    "copilot":     ([H, O], "seen", "toolInput"),
+    "antigravity": ([H, P], "seen", "toolCall.args"),
+  },
+  "tool_result": {
+    "codex":       ([H, P], "reasoned", "too few sessions to call it absent"),
+    "copilot":     ([O, P], "reasoned", "too few sessions to call it absent"),
+    "antigravity": ([P],    "contract", "PostToolUse carries stepIdx and error only"),
+  },
+  "tool_duration_ms": {
+    "codex": ([O], "reasoned", ""), "copilot": ([O], "reasoned", ""),
+    "antigravity": ([], "contract", "not in the hook payload"),
+  },
+  "mcp_server": {
+    "codex": ([P, H], "seen", ""), "copilot": ([P], "reasoned", ""),
+    "antigravity": ([P], "seen", "handshake only; tool calls do not route through MCP"),
+  },
+  "mcp_tool": {
+    "codex": ([P, H], "seen", ""), "copilot": ([P], "reasoned", ""),
+    "antigravity": ([P], "seen", "handshake only"),
+  },
+  "command": {
+    "codex": ([H, W], "seen", ""), "copilot": ([H, W], "seen", ""),
+    "antigravity": ([H], "seen", "toolCall.args.CommandLine"),
+  },
+  "exit_code": {
+    "codex":       ([W, H], "reasoned", ""),
+    "copilot":     ([W],    "seen",     ""),
+    "antigravity": ([H, D], "contract", "PostToolUse error reads 'exit status 1'"),
+  },
+  "stdout": {
+    "codex": ([H, W], "reasoned", ""), "copilot": ([W], "absent", "terminal only"),
+    "antigravity": ([W], "contract", "not in the hook payload"),
+  },
+  "stderr": {
+    "codex": ([H, W], "reasoned", ""), "copilot": ([W], "absent", "terminal only"),
+    "antigravity": ([W], "contract", "not in the hook payload"),
+  },
+  "sandboxed": {
+    "codex":       ([], "absent", "across 49 sessions, nothing arrived"),
+    "copilot":     ([], "absent", "across 25 sessions, nothing arrived"),
+    "antigravity": ([], "absent", "across 10 sessions, nothing arrived"),
+  },
+  "file_path": {
+    "codex": ([H, F], "seen", ""), "copilot": ([H, F], "seen", ""),
+    "antigravity": ([H, F], "seen",
+                    "deliverables land in ~/.gemini/antigravity-cli/scratch, "
+                    "outside the workspace; point the watcher there too"),
+  },
+  "old_content": {
+    "codex": ([F], "reasoned", ""), "copilot": ([], "reasoned", ""),
+    "antigravity": ([], "reasoned", ""),
+  },
+  "new_content": {
+    "codex": ([F], "reasoned", ""), "copilot": ([], "reasoned", ""),
+    "antigravity": ([], "reasoned", ""),
+  },
+  "permission_decision": {
+    "codex":       ([], "reasoned", ""),
+    "copilot":     ([], "absent",   "requests arrive, decisions do not"),
+    "antigravity": ([], "contract", "the decision field is the hook's answer, not the vendor's"),
+  },
+  "permission_options": {
+    "codex": ([], "reasoned", ""),
+    "copilot": ([H], "seen", "permissionSuggestions"),
+    "antigravity": ([], "reasoned", ""),
+  },
+  "loop_count": {
+    "codex":       ([], "absent", "across 2 sessions, nothing arrived; thin"),
+    "copilot":     ([], "reasoned", ""),
+    "antigravity": ([H], "seen", "stepIdx and invocationNum"),
+  },
+  "compaction_reason": {
+    "codex": ([], "reasoned", ""), "copilot": ([], "reasoned", ""),
+    "antigravity": ([], "reasoned", "no session ran long enough to test"),
+  },
+  "background_tasks": {
+    "codex": ([], "reasoned", ""), "copilot": ([], "reasoned", ""),
+    "antigravity": ([H], "seen", "Stop.fullyIdle"),
+  },
+  "instructions_loaded": {
+    "codex":       ([F], "reasoned", "AGENTS.md"),
+    "copilot":     ([F], "reasoned", "copilot-instructions.md"),
+    "antigravity": ([F], "reasoned", ".agents/ customisation root"),
+  },
+  "raw_ref": {
+    "codex":       ([H, F], "seen",     "rollout file path"),
+    "copilot":     ([F],    "reasoned", ""),
+    "antigravity": ([H],    "seen",     "transcriptPath and artifactDirectoryPath"),
+  },
+}
+
+# Fields whose source is the same whatever the tool: computed ones, the
+# ones only the file watcher or wrapper can see, and the git collector.
+_SAME_FOR_ALL = {
+  "is_multi_agent": [D], "delegation_depth": [D], "prompt_word_count": [D],
+  "slash_command": [D], "tool_result_size": [D], "tool_is_builtin": [D],
+  "risk_markers": [D], "outside_workspace": [D], "sensitivity_tier": [D],
+  "violation_count": [D], "escalation_flag": [D], "secret_detected": [D],
+  "injection_markers": [D], "turn_count": [D], "chars_added": [D],
+  "chars_removed": [D], "lines_added": [D], "lines_removed": [D],
+  "operator_username": [W, F], "hostname": [W],
+  "git_branch": [F, W], "git_commit": [F, K],
+  "file_change_kind": [F], "content_hash": [F], "reverted_to_earlier": [F],
+  "file_size": [F], "is_binary": [F], "is_config_file": [F, D],
+  "is_dependency_manifest": [F], "is_lockfile": [F],
+  "hung_seconds": [W], "is_developer_command": [W],
+  "mcp_tools_available": [P], "mcp_server_version": [P], "mcp_transport": [P],
+}
+
+NEW_TOOLS = ("codex", "copilot", "antigravity")
+EVIDENCE = {}   # (field, tool) -> (basis, note)
+
+for _field, (_tools, _note) in PRECEDENCE.items():
+    for _t in NEW_TOOLS:
+        if _field in EXTENDED and _t in EXTENDED[_field]:
+            order, basis, why = EXTENDED[_field][_t]
+        elif _field in _SAME_FOR_ALL:
+            order, basis, why = list(_SAME_FOR_ALL[_field]), "reasoned", \
+                "same source on every tool"
+        else:
+            order, basis, why = [], "reasoned", "no collector known to supply it"
+        _tools[_t] = order
+        EVIDENCE[(_field, _t)] = (basis, why)
+
+
+def coverage(tool):
+    """Fields a tool can supply at all, and on what basis."""
+    out = {"seen": 0, "raw": 0, "absent": 0, "contract": 0, "reasoned": 0,
+           "supplied": 0, "total": len(PRECEDENCE)}
+    for f, (tools, _n) in PRECEDENCE.items():
+        if tools.get(tool):
+            out["supplied"] += 1
+        if (f, tool) in EVIDENCE:
+            out[EVIDENCE[(f, tool)][0]] += 1
+    return out
+
 def main():
     if "--json" in sys.argv:
         print(json.dumps({k: {"sources": v[0], "note": v[1]}
@@ -266,5 +566,24 @@ def main():
     return 0
 
 
+def _print_evidence(tool):
+    print(f"\n{tool}: precedence and basis\n")
+    print(f"{'field':<24}{'collectors':<34}{'basis':<10}note")
+    print("-" * 110)
+    for f, (tools, _n) in PRECEDENCE.items():
+        order = tools.get(tool, [])
+        basis, why = EVIDENCE.get((f, tool), ("original", ""))
+        print(f"{f:<24}{(', '.join(order) or '—'):<34}{basis:<10}{why[:60]}")
+    c = coverage(tool)
+    print(f"\n{c['supplied']} of {c['total']} fields have a source. "
+          f"seen {c['seen']}, in raw but unread {c['raw']}, "
+          f"confirmed absent {c['absent']}, from vendor docs {c['contract']}, "
+          f"reasoned {c['reasoned']}")
+
+
 if __name__ == "__main__":
+    if "--evidence" in sys.argv:
+        _i = sys.argv.index("--evidence")
+        _print_evidence(sys.argv[_i + 1] if _i + 1 < len(sys.argv) else "codex")
+        sys.exit(0)
     sys.exit(main())

@@ -2,12 +2,16 @@
 
 Vendored from Purvi’s offline curation toolchain (Project Signal colleague).
 
+Source of truth: [`Purvi9399/signal-dashboard`](https://github.com/Purvi9399/signal-dashboard)
+`collector/signal_curate.py` and `collector/precedence_map.py`.
+
 | File | Role |
 |---|---|
 | `signal_curate.py` | Extract, group, precedence resolve, derive |
-| `precedence_map.py` | Per-field collector preference order |
+| `precedence_map.py` | Per-field collector preference order (CC, Cursor, Codex, Copilot, Antigravity; `--evidence`) |
 
 **Do not** rewrite merge keys, `curate()`, or `PRECEDENCE` without her review.
+Re-sync from her `collector/` rather than editing locally.
 
 Project Signal additions in this package:
 
@@ -21,12 +25,5 @@ Project Signal additions in this package:
 - CLI: `signal-agent curate ...`
 - Live path: `export/live_curate.py` used by `upload-jsonl` / `run --live --upload`
 
-Received into this repo: 2026-09-18.
-
-## Ping Purvi (follow-up)
-
-Please confirm:
-
-1. OK to keep these files vendored under `collector_framework/curate/`.
-2. Whether antigravity (and codex/copilot) PRECEDENCE entries exist elsewhere
-   to merge later — v1 uses `resolve()` fallback when the tool key is missing.
+First received: 2026-09-18. Re-synced from signal-dashboard `collector/`: 2026-09-21
+(precedence now covers Codex, Copilot, Antigravity with evidence tags).
