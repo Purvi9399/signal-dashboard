@@ -1,0 +1,23 @@
+# captured activity: real prompts, paths, and at least one live key
+signal_sessions/
+data/
+*.jsonl
+curated.jsonl
+observables_out.jsonl
+status.csv
+field_capability.json
+
+# credentials of any kind
+.env
+.env.*
+*.key
+*secret*
+
+# personal and generated
+notes/
+notes.txt
+*.bak
+*.OLD*
+__pycache__/
+*.pyc
+.venv/
