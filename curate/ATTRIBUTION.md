@@ -16,6 +16,7 @@ Project Signal additions in this package:
 - `extract_mcp_stdio.py` — MCP Proxy stdio wire + Cursor network (Phase 2)
 - `extract_fs_watcher.py` — FS Watcher watchdog + Claude transcript lines (Phase 3)
 - `extract_otel_raw.py` — OTel flat/OTLP reshape → Purvi `extract_otel` (Phase 4)
+- `extract_cli_wrapper.py` — CLI Wrapper pty stdin/stall/session (Phase 5)
 - `observables_sink.py` — upsert `observables` only (no re-write of `source_events`)
 - CLI: `signal-agent curate ...`
 - Live path: `export/live_curate.py` used by `upload-jsonl` / `run --live --upload`

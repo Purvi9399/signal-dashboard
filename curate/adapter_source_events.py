@@ -7,6 +7,7 @@ Phase 1: hooks / local_hooks for antigravity, claude-code, cursor, codex, copilo
 Phase 2: mcp_proxy (stdio JSON-RPC + Cursor network token capture).
 Phase 3: fs_watcher (watchdog records + Claude transcript lines).
 Phase 4: otel (flat attrs + OTLP resourceLogs → Purvi extract_otel).
+Phase 5: cli_wrapper (pty stdin / stall / session → Purvi extract_row).
 """
 
 from __future__ import annotations
@@ -17,6 +18,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Mapping, Optional, Sequence, Tuple
 
+from curate.extract_cli_wrapper import extract_cli_wrapper
 from curate.extract_codex_copilot import extract_codex_hook, extract_copilot_hook
 from curate.extract_fs_watcher import extract_fs_watcher
 from curate.extract_mcp_stdio import (
@@ -35,6 +37,7 @@ _HOOKS = "local_hooks"
 _MCP = "mcp_proxy"
 _FS = "fs_watcher"
 _OTEL = "otel"
+_CLI = "cli_wrapper"
 
 
 def _as_mapping(value: Any) -> Mapping[str, Any]:
@@ -305,6 +308,8 @@ def _fields_for_collector(
         return _fields_for_mcp(tool, raw, when)
     if collector == _FS:
         return _fields_for_fs(tool, raw, when)
+    if collector == _CLI:
+        return extract_cli_wrapper(raw, when, tool=tool)
     return None
 
 
