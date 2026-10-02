@@ -36,10 +36,18 @@ from typing import Iterator, List, Optional
 import sys as _sys
 from pathlib import Path as _Path
 _sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
+from collectors.claude_code.hook_settings import (  # noqa: E402
+    install_claude_http_hooks,
+    restore_settings_file,
+)
+from collectors.live_http import HookHTTPServer, LiveEventFeed  # noqa: E402
 from core import Collector, RawEvent
 
 AGENT_NAME = "claude_code"
 COLLECTOR_ID = "claude_code.hooks"
+WEBHOOK_PATH = "/webhook/claude/event"
+_DEFAULT_HOST = "127.0.0.1"
+_DEFAULT_PORT = 8000
 
 # The real hook event names Claude Code fires, taken verbatim from
 # projectsetup/.claude/settings.json.
@@ -83,9 +91,28 @@ class ClaudeCodeHooksCollector(Collector):
     into projectsetup/backend/events/*.jsonl without a live session.
     """
 
-    def __init__(self, replay_events: Optional[List[dict]] = None) -> None:
+    def __init__(
+        self,
+        replay_events: Optional[List[dict]] = None,
+        settings_path: Optional[Path] = None,
+        listen_host: str = _DEFAULT_HOST,
+        listen_port: int = _DEFAULT_PORT,
+        install_hooks: Optional[bool] = None,
+    ) -> None:
         self._replay_events = replay_events
+        self._settings_path = settings_path
+        self._listen_host = listen_host
+        self._listen_port = listen_port
+        self._install_hooks = install_hooks
         self._activated = False
+        self._live_feed: Optional[LiveEventFeed] = None
+        self._server: Optional[HookHTTPServer] = None
+        self._settings_backup: Optional[bytes] = None
+        self._bound_port = listen_port
+
+    @property
+    def listen_port(self) -> int:
+        return self._bound_port
 
     @property
     def collector_id(self) -> str:
@@ -127,27 +154,41 @@ class ClaudeCodeHooksCollector(Collector):
         return found_any
 
     def activate(self) -> None:
-        """In a live deployment this would start/attach to the local HTTP
-        listener that Claude Code's hooks POST to (per settings.json's
-        `"type": "http", "url": "http://localhost:8000/webhook/claude/event"`)
-        and begin queueing incoming events. Here we just flip a flag --
-        the actual event source (replay list) is supplied at construction
-        time for this demo build.
+        """Live: start HTTP listener and merge Claude settings.json hooks.
+        Replay: flag only (no port, no settings write). See LIVE_HOOKS.md.
         """
         self._activated = True
+        if self._replay_events is not None:
+            return
+        self._start_live()
+
+    def _start_live(self) -> None:
+        feed = LiveEventFeed()
+        server = HookHTTPServer(
+            self._listen_host, self._listen_port, WEBHOOK_PATH, feed
+        )
+        self._live_feed = feed
+        self._server = server
+        self._bound_port = server.start()
+        self._maybe_install_hooks()
+
+    def _maybe_install_hooks(self) -> None:
+        if self._install_hooks is False:
+            return
+        path = self._settings_path or (Path.home() / ".claude" / "settings.json")
+        url = f"http://{self._listen_host}:{self._bound_port}{WEBHOOK_PATH}"
+        self._settings_path = path
+        self._settings_backup = install_claude_http_hooks(
+            path, url, KNOWN_HOOK_EVENTS
+        )
 
     def capture(self) -> Iterator[RawEvent]:
         if not self._activated:
             raise RuntimeError(f"{self.collector_id}: capture() called before activate()")
-
-        if self._replay_events is None:
-            # Live mode placeholder: nothing queued because no live HTTP
-            # listener is wired up in this standalone demo build. A real
-            # deployment would `yield` off a thread-safe queue fed by the
-            # HTTP handler as events arrive.
+        source = self._event_source()
+        if source is None:
             return
-
-        for payload in self._replay_events:
+        for payload in source:
             yield RawEvent(
                 timestamp=RawEvent.now_iso(),
                 collector_id=self.collector_id,
@@ -155,5 +196,27 @@ class ClaudeCodeHooksCollector(Collector):
                 raw_payload=payload,  # untouched, exact shape from source
             )
 
+    def _event_source(self):
+        if self._replay_events is not None:
+            return self._replay_events
+        return self._live_feed
+
     def deactivate(self) -> None:
         self._activated = False
+        self._stop_server()
+        self._restore_hooks()
+
+    def _stop_server(self) -> None:
+        server = self._server
+        self._server = None
+        if server is not None:
+            server.stop()
+
+    def _restore_hooks(self) -> None:
+        if self._replay_events is not None:
+            return
+        path = self._settings_path
+        if path is None:
+            return
+        restore_settings_file(path, self._settings_backup)
+        self._settings_backup = None

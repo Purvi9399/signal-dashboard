@@ -140,7 +140,7 @@ def _capture_live_events(args: argparse.Namespace):
     mode = "live" if args.live else "replay"
     engine = ActivationEngine(mode=mode, allow_live_hazards=args.allow_live_hazards)
     registry, wiring_result = engine.wire(decision_report)
-    events = list(registry.merged_capture()) if mode == "live" else []
+    events = _live_events(mode, registry, getattr(args, "listen_seconds", None))
     registry.deactivate_all()
     failures = [
         {"collector_id": f.collector_id, "stage": f.stage, "error": f.error}
@@ -185,6 +185,14 @@ def _print_run_human(
         print(f"export: {data['export']}")
     if "upload" in data:
         print(f"upload: {data['upload']}")
+
+
+def _live_events(mode: str, registry: Any, listen_seconds: Optional[float]):
+    if mode != "live":
+        return []
+    from package.live_capture import drain_until_stop
+
+    return drain_until_stop(registry, listen_seconds)
 
 
 def cmd_run(args: argparse.Namespace) -> int:
@@ -529,6 +537,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--upload",
         action="store_true",
         help="after live capture, upload events via SIGNAL_UPLOAD_MODE (requires --live)",
+    )
+    p_run.add_argument(
+        "--listen-seconds",
+        type=float,
+        default=None,
+        help="stop live capture after N seconds (see LIVE_HOOKS.md); default: until SIGINT/SIGTERM",
     )
     p_run.set_defaults(func=cmd_run)
 
