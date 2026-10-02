@@ -102,10 +102,14 @@ from typing import Iterator, List, Optional
 import sys as _sys
 from pathlib import Path as _Path
 _sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
+from collectors.live_http import HookHTTPServer, LiveEventFeed  # noqa: E402
 from core import Collector, RawEvent
 
 AGENT_NAME = "cursor"
 COLLECTOR_ID = "cursor.mcp_proxy"
+WEBHOOK_PATH = "/webhook/cursor/mcp"
+_DEFAULT_HOST = "127.0.0.1"
+_DEFAULT_PORT = 8000
 
 # Verbatim from cursor_proxy2.py.
 TARGET_HOST = "cursor.sh"
@@ -245,15 +249,29 @@ class CursorMCPProxyCollector(Collector):
     mitmproxy process or real Cursor network traffic.
     """
 
-    def __init__(self, replay_flows: Optional[List[dict]] = None) -> None:
+    def __init__(
+        self,
+        replay_flows: Optional[List[dict]] = None,
+        listen_host: str = _DEFAULT_HOST,
+        listen_port: int = _DEFAULT_PORT,
+    ) -> None:
         self._replay_flows = replay_flows
+        self._listen_host = listen_host
+        self._listen_port = listen_port
         self._activated = False
+        self._live_feed: Optional[LiveEventFeed] = None
+        self._server: Optional[HookHTTPServer] = None
+        self._bound_port = listen_port
         self._encoding = None
         if TIKTOKEN_AVAILABLE:
             try:
                 self._encoding = tiktoken.get_encoding("o200k_base")
             except Exception:
                 self._encoding = None
+
+    @property
+    def listen_port(self) -> int:
+        return self._bound_port
 
     @property
     def collector_id(self) -> str:
@@ -286,58 +304,66 @@ class CursorMCPProxyCollector(Collector):
         the same honest-gap note every time (this collector does not
         manage a real mitmproxy child process -- see class docstring).
         """
-        if self._replay_flows is None:
-            try:
-                import mitmproxy  # noqa: F401
-                mitmproxy_available = True
-            except ImportError:
-                mitmproxy_available = False
-            print(
-                f"[{self.collector_id}] NOTE: live mode would require running "
-                f"as a mitmproxy addon (`mitmdump -s cursor_proxy2.py -p 8080` "
-                f"is the real, currently-deployed invocation) with Cursor.app's "
-                f"traffic actually routed through it -- this framework does not "
-                f"spawn/manage that external mitmproxy process itself. "
-                f"mitmproxy importable on this machine: {mitmproxy_available}. "
-                f"capture() will yield 0 events in live mode; use "
-                f"replay_flows= to exercise the real ported parsing logic.",
-                file=_sys.stderr,
-            )
         self._activated = True
+        if self._replay_flows is not None:
+            return
+        self._start_live()
+
+    def _start_live(self) -> None:
+        feed = LiveEventFeed()
+        server = HookHTTPServer(
+            self._listen_host, self._listen_port, WEBHOOK_PATH, feed
+        )
+        self._live_feed = feed
+        self._server = server
+        self._bound_port = server.start()
 
     def capture(self) -> Iterator[RawEvent]:
         if not self._activated:
             raise RuntimeError(f"{self.collector_id}: capture() called before activate()")
-
-        if self._replay_flows is None:
+        source = self._event_source()
+        if source is None:
             return
-
-        for flow in self._replay_flows:
-            route = flow.get("route", "")
-
-            # Verbatim IGNORE_ROUTES guard from cursor_proxy2.py's response().
-            if any(ignore in route for ignore in IGNORE_ROUTES):
-                continue
-
-            payload = build_network_capture_payload(
-                route=route,
-                session_id=flow.get("session_id"),
-                request_body=flow.get("request_body", ""),
-                response_body=flow.get("response_body", ""),
-                encoding=self._encoding,
-            )
+        for flow in source:
+            payload = self._payload_from(flow)
             if payload is None:
                 continue
-
             yield RawEvent(
                 timestamp=RawEvent.now_iso(),
                 collector_id=self.collector_id,
                 agent=AGENT_NAME,
-                raw_payload=payload,  # untouched, exact shape cursor_proxy2.py posts
+                raw_payload=payload,
             )
+
+    def _event_source(self):
+        if self._replay_flows is not None:
+            return self._replay_flows
+        return self._live_feed
+
+    def _payload_from(self, flow: dict) -> Optional[dict]:
+        if flow.get("event_type") == NETWORK_CAPTURE_EVENT_TYPE:
+            return flow
+        route = flow.get("route", "")
+        if any(ignore in route for ignore in IGNORE_ROUTES):
+            return None
+        return build_network_capture_payload(
+            route=route,
+            session_id=flow.get("session_id"),
+            request_body=flow.get("request_body", ""),
+            response_body=flow.get("response_body", ""),
+            encoding=self._encoding,
+        )
 
     def deactivate(self) -> None:
         self._activated = False
+        server = self._server
+        self._server = None
+        if server is not None:
+            server.stop()
+            return
+        feed = self._live_feed
+        if feed is not None:
+            feed.stop()
 
 
 def _sample_flows_for_demo() -> List[dict]:

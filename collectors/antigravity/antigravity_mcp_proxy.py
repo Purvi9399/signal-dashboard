@@ -53,18 +53,15 @@ section 6.
 from __future__ import annotations
 
 import json
-import os
 import shutil
-import subprocess
-import sys
-import threading
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterator, List, Optional
 
 import sys as _sys
 from pathlib import Path as _Path
 _sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
+from collectors.live_http import LiveEventFeed  # noqa: E402
+from collectors.live_mcp import LiveStdioProxy  # noqa: E402
 from core import Collector, RawEvent
 
 AGENT_NAME = "antigravity"
@@ -158,13 +155,18 @@ class AntigravityMCPProxyCollector(Collector):
         self,
         server_command: Optional[List[str]] = None,
         replay_path: Optional[Path] = None,
+        replay_events: Optional[List[dict]] = None,
+        client_in=None,
+        client_out=None,
     ) -> None:
         self._server_command = server_command
         self._replay_path = replay_path
+        self._replay_events = replay_events
+        self._client_in = client_in
+        self._client_out = client_out
         self._activated = False
-        self._proc: Optional[subprocess.Popen] = None
-        self._captured: List[dict] = []
-        self._lock = threading.Lock()
+        self._live_feed: Optional[LiveEventFeed] = None
+        self._proxy: Optional[LiveStdioProxy] = None
 
     @property
     def collector_id(self) -> str:
@@ -192,64 +194,32 @@ class AntigravityMCPProxyCollector(Collector):
         ready. Otherwise spawns the real server_command as a subprocess
         with piped stdin/stdout, exactly as mcp_proxy.py's
         subprocess.Popen(..., stdin=PIPE, stdout=PIPE) does."""
-        if self._replay_path is not None:
-            self._activated = True
-            return
-
-        if self._server_command:
-            self._proc = subprocess.Popen(
-                self._server_command,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=sys.stderr,
-            )
         self._activated = True
+        if self._is_replay():
+            return
+        self._start_live()
 
-    def _log_event(self, direction: str, raw_line: str) -> dict:
-        """Mirrors mcp_proxy.py's log_event() exactly: same field names
-        (timestamp, direction, raw, parsed), same best-effort JSON parse
-        with parsed=None on failure."""
-        record: dict = {
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "direction": direction,
-            "raw": raw_line,
-        }
-        try:
-            record["parsed"] = json.loads(raw_line)
-        except json.JSONDecodeError:
-            record["parsed"] = None
-        return record
+    def _is_replay(self) -> bool:
+        return self._replay_path is not None or self._replay_events is not None
+
+    def _start_live(self) -> None:
+        feed = LiveEventFeed()
+        self._live_feed = feed
+        if self._server_command is None:
+            return
+        proxy = LiveStdioProxy(
+            self._server_command, feed, self._client_in, self._client_out
+        )
+        proxy.start()
+        self._proxy = proxy
 
     def capture(self) -> Iterator[RawEvent]:
         if not self._activated:
             raise RuntimeError(f"{self.collector_id}: capture() called before activate()")
-
-        if self._replay_path is not None:
-            for payload in _load_jsonl(self._replay_path):
-                yield RawEvent(
-                    timestamp=RawEvent.now_iso(),
-                    collector_id=self.collector_id,
-                    agent=AGENT_NAME,
-                    raw_payload=payload,  # untouched, exact captured shape
-                )
+        source = self._event_source()
+        if source is None:
             return
-
-        if self._proc is None or self._proc.stdout is None:
-            # No real MCP server subprocess wired up in this standalone
-            # demo build without an explicit server_command -- live mode
-            # placeholder, same pattern as antigravity_hooks.py's capture()
-            # when no replay data / no live listener is configured.
-            return
-
-        # Drain server_to_client traffic (the direction most useful to a
-        # passive collector -- what real MCP-backed tools returned).
-        for raw_line in iter(self._proc.stdout.readline, b""):
-            if not raw_line:
-                break
-            decoded = raw_line.decode("utf-8", errors="replace").rstrip("\n")
-            if not decoded.strip():
-                continue
-            payload = self._log_event("server_to_client", decoded)
+        for payload in source:
             yield RawEvent(
                 timestamp=RawEvent.now_iso(),
                 collector_id=self.collector_id,
@@ -257,14 +227,23 @@ class AntigravityMCPProxyCollector(Collector):
                 raw_payload=payload,
             )
 
+    def _event_source(self):
+        if self._replay_events is not None:
+            return self._replay_events
+        if self._replay_path is not None:
+            return _load_jsonl(self._replay_path)
+        return self._live_feed
+
     def deactivate(self) -> None:
-        if self._proc is not None:
-            try:
-                self._proc.terminate()
-            except OSError:
-                pass
-            self._proc = None
         self._activated = False
+        proxy = self._proxy
+        self._proxy = None
+        if proxy is not None:
+            proxy.stop()
+            return
+        feed = self._live_feed
+        if feed is not None:
+            feed.stop()
 
 
 if __name__ == "__main__":

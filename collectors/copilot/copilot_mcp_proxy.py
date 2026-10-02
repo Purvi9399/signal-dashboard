@@ -56,17 +56,14 @@ from __future__ import annotations
 
 import json
 import shutil
-import subprocess
-import sys
-import threading
-from datetime import datetime, timezone
 from pathlib import Path
-from queue import Empty, Queue
 from typing import Iterator, List, Optional
 
 import sys as _sys
 from pathlib import Path as _Path
 _sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
+from collectors.live_http import LiveEventFeed  # noqa: E402
+from collectors.live_mcp import LiveStdioProxy  # noqa: E402
 from core import Collector, RawEvent
 
 AGENT_NAME = "copilot"
@@ -74,25 +71,6 @@ COLLECTOR_ID = "copilot.mcp_proxy"
 
 DIRECTION_CLIENT_TO_SERVER = "client_to_server"
 DIRECTION_SERVER_TO_CLIENT = "server_to_client"
-
-
-def _build_log_record(direction: str, raw_line: str) -> dict:
-    """Direct port of mcp_proxy.py's log_event() record-construction logic
-    (timestamp, direction, raw, best-effort parsed JSON) -- kept as its own
-    function so capture()'s live-mode path and this module's replay path
-    share identical record shape, matching the real captured_mcp_events_*
-    files exactly.
-    """
-    record = {
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "direction": direction,
-        "raw": raw_line,
-    }
-    try:
-        record["parsed"] = json.loads(raw_line)
-    except json.JSONDecodeError:
-        record["parsed"] = None
-    return record
 
 
 def is_connection_failure_record(records: List[dict]) -> bool:
@@ -138,13 +116,16 @@ class CopilotMCPProxyCollector(Collector):
         self,
         server_command: Optional[List[str]] = None,
         replay_records: Optional[List[dict]] = None,
+        client_in=None,
+        client_out=None,
     ) -> None:
         self._server_command = server_command
         self._replay_records = replay_records
+        self._client_in = client_in
+        self._client_out = client_out
         self._activated = False
-        self._proc: Optional[subprocess.Popen] = None
-        self._queue: "Queue" = Queue()
-        self._threads: List[threading.Thread] = []
+        self._live_feed: Optional[LiveEventFeed] = None
+        self._proxy: Optional[LiveStdioProxy] = None
 
     @property
     def collector_id(self) -> str:
@@ -197,91 +178,51 @@ class CopilotMCPProxyCollector(Collector):
         threads that shuttle+log JSON-RPC lines, matching mcp_proxy.py's
         `pump()` in both directions.
         """
-        if self._replay_records is None and self._server_command is not None:
-            self._spawn_and_pump()
         self._activated = True
+        if self._replay_records is not None:
+            return
+        self._start_live()
 
-    def _spawn_and_pump(self) -> None:
-        """Port of mcp_proxy.py's main(): spawn the real server, then run
-        two daemon pump threads shuttling stdin<->server_stdin and
-        server_stdout->stdout, logging every non-empty line via
-        _build_log_record() -- identical record shape to the real captured
-        files this collector replays against.
-        """
-        self._proc = subprocess.Popen(
-            self._server_command,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=sys.stderr,
+    def _start_live(self) -> None:
+        feed = LiveEventFeed()
+        self._live_feed = feed
+        if self._server_command is None:
+            return
+        proxy = LiveStdioProxy(
+            self._server_command, feed, self._client_in, self._client_out
         )
-
-        def pump(src_stream, dst_stream, direction: str):
-            for raw_line in iter(src_stream.readline, b""):
-                if not raw_line:
-                    break
-                decoded = raw_line.decode("utf-8", errors="replace").rstrip("\n")
-                if decoded.strip():
-                    self._queue.put(_build_log_record(direction, decoded))
-                dst_stream.write(raw_line)
-                dst_stream.flush()
-            self._queue.put(None)  # sentinel: this pump direction is done
-
-        t_client_to_server = threading.Thread(
-            target=pump,
-            args=(sys.stdin.buffer, self._proc.stdin, DIRECTION_CLIENT_TO_SERVER),
-            daemon=True,
-        )
-        t_server_to_client = threading.Thread(
-            target=pump,
-            args=(self._proc.stdout, sys.stdout.buffer, DIRECTION_SERVER_TO_CLIENT),
-            daemon=True,
-        )
-        t_client_to_server.start()
-        t_server_to_client.start()
-        self._threads = [t_client_to_server, t_server_to_client]
+        proxy.start()
+        self._proxy = proxy
 
     def capture(self) -> Iterator[RawEvent]:
         if not self._activated:
             raise RuntimeError(f"{self.collector_id}: capture() called before activate()")
-
-        if self._replay_records is not None:
-            for record in self._replay_records:
-                # raw_payload is the exact {timestamp, direction, raw,
-                # parsed} shape from the real captured_mcp_events_*.jsonl
-                # files -- untouched, including the connection-failure
-                # run's single lonely `initialize` line with no reply
-                # (see is_connection_failure_record()'s docstring).
-                yield RawEvent(
-                    timestamp=RawEvent.now_iso(),
-                    collector_id=self.collector_id,
-                    agent=AGENT_NAME,
-                    raw_payload=record,
-                )
+        source = self._event_source()
+        if source is None:
             return
-
-        sentinels_seen = 0
-        while sentinels_seen < len(self._threads):
-            try:
-                item = self._queue.get(timeout=1.0)
-            except Empty:
-                continue
-            if item is None:
-                sentinels_seen += 1
-                continue
+        for record in source:
             yield RawEvent(
                 timestamp=RawEvent.now_iso(),
                 collector_id=self.collector_id,
                 agent=AGENT_NAME,
-                raw_payload=item,
+                raw_payload=record,
             )
 
+    def _event_source(self):
+        if self._replay_records is not None:
+            return self._replay_records
+        return self._live_feed
+
     def deactivate(self) -> None:
-        if self._proc is not None:
-            try:
-                self._proc.terminate()
-            except OSError:
-                pass
         self._activated = False
+        proxy = self._proxy
+        self._proxy = None
+        if proxy is not None:
+            proxy.stop()
+            return
+        feed = self._live_feed
+        if feed is not None:
+            feed.stop()
 
 
 if __name__ == "__main__":

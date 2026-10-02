@@ -38,6 +38,8 @@ from typing import Iterator, List, Optional
 import sys as _sys
 from pathlib import Path as _Path
 _sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
+from collectors.live_http import LiveEventFeed  # noqa: E402
+from collectors.live_mcp import LiveStdioProxy  # noqa: E402
 from core import Collector, RawEvent
 
 AGENT_NAME = "codex"
@@ -95,9 +97,17 @@ class CodexMCPProxyCollector(Collector):
     def __init__(
         self,
         replay_events: Optional[List[dict]] = None,
+        server_command: Optional[List[str]] = None,
+        client_in=None,
+        client_out=None,
     ) -> None:
         self._replay_events = replay_events
+        self._server_command = server_command
+        self._client_in = client_in
+        self._client_out = client_out
         self._activated = False
+        self._live_feed: Optional[LiveEventFeed] = None
+        self._proxy: Optional[LiveStdioProxy] = None
 
     @property
     def collector_id(self) -> str:
@@ -150,47 +160,50 @@ class CodexMCPProxyCollector(Collector):
         of time.
         """
         self._activated = True
+        if self._replay_events is not None:
+            return
+        self._start_live()
+
+    def _start_live(self) -> None:
+        feed = LiveEventFeed()
+        self._live_feed = feed
+        if self._server_command is None:
+            return
+        proxy = LiveStdioProxy(
+            self._server_command, feed, self._client_in, self._client_out
+        )
+        proxy.start()
+        self._proxy = proxy
 
     def capture(self) -> Iterator[RawEvent]:
         if not self._activated:
             raise RuntimeError(f"{self.collector_id}: capture() called before activate()")
-
-        if self._replay_events is None:
-            # Live mode placeholder: no live proxy subprocess spawned in
-            # this standalone demo build.
+        source = self._event_source()
+        if source is None:
             return
-
-        for payload in self._replay_events:
-            # DOCUMENTED, CONFIRMED SHAPE/QUIRKS -- preserved exactly:
-            #
-            #  1. Real record shape is EXACTLY {"timestamp": ..., "direction":
-            #     "client_to_server"|"server_to_client", "raw": <exact JSON-RPC
-            #     line as sent on the wire>, "parsed": <json.loads(raw)  or
-            #     null on decode failure>} -- confirmed against mcp_proxy.py's
-            #     own log_event() function. We do not re-parse or promote
-            #     `parsed` fields up a level.
-            #
-            #  2. `tools/call` request params carry the undocumented
-            #     `_meta.x-codex-turn-metadata` block (see CODEX_META_KEY
-            #     above) on every call, to every configured server --
-            #     passed through unmodified, not redacted here.
-            #
-            #  3. Connection-failure captures (captured_mcp_events_connfail.jsonl)
-            #     show `client_to_server` `initialize` requests with NO
-            #     matching `server_to_client` response ever arriving -- this
-            #     collector does not synthesize a missing response or a
-            #     synthetic error event; the absence itself, visible only by
-            #     a caller diffing request/response ids, is the real signal
-            #     (Codex_MCPProxy/RESULTS.md section 5).
+        for payload in source:
             yield RawEvent(
                 timestamp=RawEvent.now_iso(),
                 collector_id=self.collector_id,
                 agent=AGENT_NAME,
-                raw_payload=payload,  # untouched, exact shape from source
+                raw_payload=payload,
             )
+
+    def _event_source(self):
+        if self._replay_events is not None:
+            return self._replay_events
+        return self._live_feed
 
     def deactivate(self) -> None:
         self._activated = False
+        proxy = self._proxy
+        self._proxy = None
+        if proxy is not None:
+            proxy.stop()
+            return
+        feed = self._live_feed
+        if feed is not None:
+            feed.stop()
 
 
 def correlate_with_hooks(
