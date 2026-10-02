@@ -97,10 +97,20 @@ from typing import Any, Dict, Iterator, List, Optional
 import sys as _sys
 from pathlib import Path as _Path
 _sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
+from collectors.live_http import LiveEventFeed  # noqa: E402
+from collectors.live_otel import (  # noqa: E402
+    DEFAULT_HOST,
+    DEFAULT_PORT,
+    LiveOTLPServer,
+    apply_required_env,
+    otlp_base,
+    restore_env,
+)
 from core import Collector, RawEvent
 
 AGENT_NAME = "claude_code"
 COLLECTOR_ID = "claude_code.otel"
+OTLP_PREFIX = "/otel/claude"
 
 # TODO: unverified against a live capture in THIS repo (no Claude_Code_OTel/
 # folder exists here, unlike Codex_OTel/Antigravity_OTel). Sourced from
@@ -147,9 +157,24 @@ class ClaudeCodeOTelCollector(Collector):
     OTLP-shaped export/records list.
     """
 
-    def __init__(self, replay_events: Optional[List[Dict[str, Any]]] = None) -> None:
+    def __init__(
+        self,
+        replay_events: Optional[List[Dict[str, Any]]] = None,
+        listen_host: str = DEFAULT_HOST,
+        listen_port: int = DEFAULT_PORT,
+    ) -> None:
         self._replay_events = replay_events
+        self._listen_host = listen_host
+        self._listen_port = listen_port
         self._activated = False
+        self._live_feed: Optional[LiveEventFeed] = None
+        self._server: Optional[LiveOTLPServer] = None
+        self._env_backup: Optional[dict] = None
+        self._bound_port = listen_port
+
+    @property
+    def listen_port(self) -> int:
+        return self._bound_port
 
     @property
     def collector_id(self) -> str:
@@ -199,27 +224,57 @@ class ClaudeCodeOTelCollector(Collector):
                 file=_sys.stderr,
             )
         self._activated = True
+        if self._replay_events is not None:
+            return
+        self._start_live()
+
+    def _live_env(self) -> Dict[str, str]:
+        base = otlp_base(self._listen_host, self._bound_port, "claude")
+        return {
+            "CLAUDE_CODE_ENABLE_TELEMETRY": "1",
+            "OTEL_EXPORTER_OTLP_ENDPOINT": base,
+            "OTEL_EXPORTER_OTLP_PROTOCOL": "http/json",
+        }
+
+    def _start_live(self) -> None:
+        feed = LiveEventFeed()
+        server = LiveOTLPServer(
+            self._listen_host, self._listen_port, OTLP_PREFIX, feed
+        )
+        self._live_feed = feed
+        self._server = server
+        self._bound_port = server.start()
+        self._env_backup = apply_required_env(self._live_env())
 
     def capture(self) -> Iterator[RawEvent]:
         if not self._activated:
             raise RuntimeError(f"{self.collector_id}: capture() called before activate()")
-
-        if not self._replay_events:
-            # Honest empty stream: no live OTLP collector wired up in this
-            # standalone build, and no real captured sample exists in this
-            # repo for Claude Code to replay (see module docstring).
+        source = self._event_source()
+        if source is None:
             return
-
-        for payload in self._replay_events:
+        for payload in source:
             yield RawEvent(
                 timestamp=RawEvent.now_iso(),
                 collector_id=self.collector_id,
                 agent=AGENT_NAME,
-                raw_payload=payload,  # untouched, whatever OTLP shape supplied
+                raw_payload=payload,
             )
+
+    def _event_source(self):
+        if self._replay_events is not None:
+            return self._replay_events
+        return self._live_feed
 
     def deactivate(self) -> None:
         self._activated = False
+        server = self._server
+        self._server = None
+        if server is not None:
+            server.stop()
+        backup = self._env_backup
+        self._env_backup = None
+        if backup is not None:
+            restore_env(backup)
 
 
 if __name__ == "__main__":

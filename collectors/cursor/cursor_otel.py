@@ -88,10 +88,13 @@ from typing import Iterator, List, Optional
 import sys as _sys
 from pathlib import Path as _Path
 _sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
+from collectors.live_http import LiveEventFeed  # noqa: E402
+from collectors.live_otel import DEFAULT_HOST, DEFAULT_PORT, LiveOTLPServer  # noqa: E402
 from core import Collector, RawEvent
 
 AGENT_NAME = "cursor"
 COLLECTOR_ID = "cursor.otel"
+OTLP_PREFIX = "/otel/cursor"
 
 # Standard OTLP env vars. No evidence anywhere in this project (CSV or
 # repo grep) that Cursor's IDE or backend reads/honors these -- included
@@ -118,12 +121,23 @@ class CursorOTelCollector(Collector):
     documented dead ends/gaps) rather than a working data source.
     """
 
-    def __init__(self, replay_events: Optional[List[dict]] = None) -> None:
-        # No real captured OTLP payload for Cursor exists anywhere in this
-        # project -- replay_events is only for a hypothetical future
-        # exporter, never populated from real data by this build.
+    def __init__(
+        self,
+        replay_events: Optional[List[dict]] = None,
+        listen_host: str = DEFAULT_HOST,
+        listen_port: int = DEFAULT_PORT,
+    ) -> None:
         self._replay_events = replay_events
+        self._listen_host = listen_host
+        self._listen_port = listen_port
         self._activated = False
+        self._live_feed: Optional[LiveEventFeed] = None
+        self._server: Optional[LiveOTLPServer] = None
+        self._bound_port = listen_port
+
+    @property
+    def listen_port(self) -> int:
+        return self._bound_port
 
     @property
     def collector_id(self) -> str:
@@ -180,17 +194,26 @@ class CursorOTelCollector(Collector):
             file=_sys.stderr,
         )
         self._activated = True
+        if self._replay_events is not None:
+            return
+        self._start_live()
+
+    def _start_live(self) -> None:
+        feed = LiveEventFeed()
+        server = LiveOTLPServer(
+            self._listen_host, self._listen_port, OTLP_PREFIX, feed
+        )
+        self._live_feed = feed
+        self._server = server
+        self._bound_port = server.start()
 
     def capture(self) -> Iterator[RawEvent]:
         if not self._activated:
             raise RuntimeError(f"{self.collector_id}: capture() called before activate()")
-
-        if not self._replay_events:
-            # Honest empty stream: no real captured OTLP payload for
-            # Cursor exists anywhere in this project.
+        source = self._event_source()
+        if source is None:
             return
-
-        for payload in self._replay_events:
+        for payload in source:
             yield RawEvent(
                 timestamp=RawEvent.now_iso(),
                 collector_id=self.collector_id,
@@ -198,8 +221,17 @@ class CursorOTelCollector(Collector):
                 raw_payload=payload,
             )
 
+    def _event_source(self):
+        if self._replay_events is not None:
+            return self._replay_events
+        return self._live_feed
+
     def deactivate(self) -> None:
         self._activated = False
+        server = self._server
+        self._server = None
+        if server is not None:
+            server.stop()
 
 
 if __name__ == "__main__":

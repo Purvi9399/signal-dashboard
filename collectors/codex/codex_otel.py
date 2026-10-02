@@ -32,10 +32,20 @@ from typing import Iterator, List, Optional
 import sys as _sys
 from pathlib import Path as _Path
 _sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
+from collectors.live_http import LiveEventFeed  # noqa: E402
+from collectors.live_otel import (  # noqa: E402
+    DEFAULT_HOST,
+    DEFAULT_PORT,
+    LiveOTLPServer,
+    install_codex_otel,
+    otlp_base,
+    restore_codex_otel,
+)
 from core import Collector, RawEvent
 
 AGENT_NAME = "codex"
 COLLECTOR_ID = "codex.otel"
+OTLP_PREFIX = "/otel/codex"
 
 # Real working [otel] config.toml section (Codex_OTel/config/config.toml.working_otel_section).
 # Codex requires THREE separately-pathed otlp-http endpoints -- it does NOT
@@ -138,10 +148,27 @@ class CodexOTelCollector(Collector):
         self,
         replay_events: Optional[List[dict]] = None,
         require_configured: bool = True,
+        listen_host: str = DEFAULT_HOST,
+        listen_port: int = DEFAULT_PORT,
+        codex_home: Optional[Path] = None,
+        install_config: Optional[bool] = None,
     ) -> None:
         self._replay_events = replay_events
         self._activated = False
         self._require_configured = require_configured
+        self._listen_host = listen_host
+        self._listen_port = listen_port
+        self._codex_home = codex_home
+        self._install_config = install_config
+        self._live_feed: Optional[LiveEventFeed] = None
+        self._server: Optional[LiveOTLPServer] = None
+        self._config_backup: Optional[bytes] = None
+        self._config_path: Optional[Path] = None
+        self._bound_port = listen_port
+
+    @property
+    def listen_port(self) -> int:
+        return self._bound_port
 
     @property
     def collector_id(self) -> str:
@@ -188,52 +215,67 @@ class CodexOTelCollector(Collector):
         """
         self._configured = True
         if self._require_configured:
-            codex_home = find_codex_home()
-            self._configured = check_otel_configured(codex_home)
+            home = self._codex_home or find_codex_home()
+            self._configured = check_otel_configured(home)
         self._activated = True
+        if self._replay_events is not None:
+            return
+        self._start_live()
+
+    def _start_live(self) -> None:
+        feed = LiveEventFeed()
+        server = LiveOTLPServer(
+            self._listen_host, self._listen_port, OTLP_PREFIX, feed
+        )
+        self._live_feed = feed
+        self._server = server
+        self._bound_port = server.start()
+        self._maybe_install_config()
+
+    def _maybe_install_config(self) -> None:
+        if self._install_config is False:
+            return
+        home = self._codex_home or find_codex_home()
+        path = home / "config.toml"
+        base = otlp_base(self._listen_host, self._bound_port, "codex")
+        self._config_path = path
+        self._config_backup = install_codex_otel(path, base)
 
     def capture(self) -> Iterator[RawEvent]:
         if not self._activated:
             raise RuntimeError(f"{self.collector_id}: capture() called before activate()")
-
-        if self._replay_events is None:
-            # Live mode placeholder: no live OTLP receiver/query client
-            # wired up in this standalone demo build. A real deployment
-            # would poll the configured collector's Loki/Tempo/Prometheus
-            # query APIs here (as Codex_OTel/RESULTS.md section 2 did using
-            # otelcol_receiver_accepted_*_total as ground truth) or run its
-            # own OTLP/HTTP receiver to ingest pushes directly.
+        source = self._event_source()
+        if source is None:
             return
-
-        for payload in self._replay_events:
-            # DOCUMENTED, CONFIRMED GAPS/QUIRKS -- kept exactly as captured,
-            # never patched here:
-            #
-            #  1. PII: user_email / user_account_id ride along on every
-            #     record (see PII_BEARING_ATTRS above), not just
-            #     codex.user_prompt. Passed through unmodified -- redaction
-            #     is a later pipeline stage's job per core.py's design note.
-            #
-            #  2. codex.tool_result.success is hardcoded "true" even on
-            #     confirmed exit-code-1 commands (Codex_OTel/RESULTS.md
-            #     section 5) -- we do not re-derive a corrected verdict from
-            #     the free-text `output` field.
-            #
-            #  3. Real captured records are flat attribute dicts (one per
-            #     Loki "stream" entry, e.g. sample_loki_logs.json), NOT the
-            #     nested OTLP/protobuf-JSON envelope shape -- this is what
-            #     the real test's own query layer returned, and is preserved
-            #     as-is rather than re-wrapped into a synthetic OTLP shape
-            #     we never actually observed on the wire ourselves.
+        for payload in source:
             yield RawEvent(
                 timestamp=RawEvent.now_iso(),
                 collector_id=self.collector_id,
                 agent=AGENT_NAME,
-                raw_payload=payload,  # untouched, exact shape from source
+                raw_payload=payload,
             )
+
+    def _event_source(self):
+        if self._replay_events is not None:
+            return self._replay_events
+        return self._live_feed
 
     def deactivate(self) -> None:
         self._activated = False
+        server = self._server
+        self._server = None
+        if server is not None:
+            server.stop()
+        self._restore_config()
+
+    def _restore_config(self) -> None:
+        if self._replay_events is not None:
+            return
+        path = self._config_path
+        if path is None:
+            return
+        restore_codex_otel(path, self._config_backup)
+        self._config_backup = None
 
 
 def _load_sample_loki_streams(max_events: int = 5) -> List[dict]:

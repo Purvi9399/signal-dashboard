@@ -65,10 +65,20 @@ from typing import Any, Dict, Iterator, List, Optional
 import sys as _sys
 from pathlib import Path as _Path
 _sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
+from collectors.live_http import LiveEventFeed  # noqa: E402
+from collectors.live_otel import (  # noqa: E402
+    DEFAULT_HOST,
+    DEFAULT_PORT,
+    LiveOTLPServer,
+    apply_required_env,
+    otlp_base,
+    restore_env,
+)
 from core import Collector, RawEvent
 
 AGENT_NAME = "copilot"
 COLLECTOR_ID = "copilot.otel"
+OTLP_PREFIX = "/otel/copilot"
 
 # Real, empirically-confirmed env vars that gate OTel export for the CLI /
 # CLI-session path (Copilot_VSCode_CLI/RESULTS.md section a -- read directly
@@ -140,9 +150,24 @@ class CopilotOTelCollector(Collector):
     collector deterministically against real sample data.
     """
 
-    def __init__(self, replay_otlp_export: Optional[Dict[str, Any]] = None) -> None:
+    def __init__(
+        self,
+        replay_otlp_export: Optional[Dict[str, Any]] = None,
+        listen_host: str = DEFAULT_HOST,
+        listen_port: int = DEFAULT_PORT,
+    ) -> None:
         self._replay_otlp_export = replay_otlp_export
+        self._listen_host = listen_host
+        self._listen_port = listen_port
         self._activated = False
+        self._live_feed: Optional[LiveEventFeed] = None
+        self._server: Optional[LiveOTLPServer] = None
+        self._env_backup: Optional[dict] = None
+        self._bound_port = listen_port
+
+    @property
+    def listen_port(self) -> int:
+        return self._bound_port
 
     @property
     def collector_id(self) -> str:
@@ -196,31 +221,55 @@ class CopilotOTelCollector(Collector):
                 file=_sys.stderr,
             )
         self._activated = True
+        if self._replay_otlp_export is not None:
+            return
+        self._start_live()
+
+    def _live_env(self) -> Dict[str, str]:
+        base = otlp_base(self._listen_host, self._bound_port, "copilot")
+        return {
+            "COPILOT_OTEL_ENABLED": "1",
+            "OTEL_EXPORTER_OTLP_ENDPOINT": base,
+            "OTEL_EXPORTER_OTLP_PROTOCOL": "http/json",
+        }
+
+    def _start_live(self) -> None:
+        feed = LiveEventFeed()
+        server = LiveOTLPServer(
+            self._listen_host, self._listen_port, OTLP_PREFIX, feed
+        )
+        self._live_feed = feed
+        self._server = server
+        self._bound_port = server.start()
+        self._env_backup = apply_required_env(self._live_env())
 
     def capture(self) -> Iterator[RawEvent]:
         if not self._activated:
             raise RuntimeError(f"{self.collector_id}: capture() called before activate()")
-
-        if self._replay_otlp_export is None:
-            # Live mode placeholder: no bundled OTLP collector server is
-            # wired up in this standalone demo build.
+        if self._replay_otlp_export is not None:
+            source = extract_batches(self._replay_otlp_export)
+        else:
+            source = self._live_feed
+        if source is None:
             return
-
-        for batch in extract_batches(self._replay_otlp_export):
-            # raw_payload is the untouched OTLP batch object exactly as it
-            # appeared in the real captured export (tempo_trace_full.json
-            # shape) -- resource_service_name() above is used only to decide
-            # nothing here; it exists purely as an optional human-readable
-            # helper callers may use, kept separate from raw_payload itself.
+        for payload in source:
             yield RawEvent(
                 timestamp=RawEvent.now_iso(),
                 collector_id=self.collector_id,
                 agent=AGENT_NAME,
-                raw_payload=batch,
+                raw_payload=payload,
             )
 
     def deactivate(self) -> None:
         self._activated = False
+        server = self._server
+        self._server = None
+        if server is not None:
+            server.stop()
+        backup = self._env_backup
+        self._env_backup = None
+        if backup is not None:
+            restore_env(backup)
 
 
 if __name__ == "__main__":
