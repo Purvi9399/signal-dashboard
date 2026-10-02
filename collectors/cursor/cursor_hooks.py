@@ -58,10 +58,19 @@ from typing import Iterator, List, Optional
 import sys as _sys
 from pathlib import Path as _Path
 _sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
+from collectors.cursor.hook_settings import (  # noqa: E402
+    forwarder_command,
+    install_cursor_command_hooks,
+    restore_hooks_file,
+)
+from collectors.live_http import HookHTTPServer, LiveEventFeed  # noqa: E402
 from core import Collector, RawEvent
 
 AGENT_NAME = "cursor"
 COLLECTOR_ID = "cursor.hooks"
+WEBHOOK_PATH = "/webhook/cursor/event"
+_DEFAULT_HOST = "127.0.0.1"
+_DEFAULT_PORT = 8000
 
 # Real hook event names, taken verbatim from projectsetup/.cursor/hooks.json.
 KNOWN_HOOK_EVENTS = (
@@ -91,19 +100,34 @@ def extract_session_id(payload: dict) -> str:
 class CursorHooksCollector(Collector):
     """Hooks-based collector for Cursor (the AI-native code editor).
 
-    Live mode (real deployment): Cursor's .cursor/hooks.json is configured
-    to invoke forwarder.js on each hook event, which POSTs JSON to a local
-    HTTP endpoint. As with the Claude Code collector, a full deployment's
-    activate() would start/attach to that listener and capture() would
-    drain a queue it fills.
-
-    This build supports feeding capture() from already-captured JSONL
-    event dicts to exercise it deterministically against real sample data.
+    Live: attach `/webhook/cursor/event` on the shared listener and merge
+    user `~/.cursor/hooks.json` command hooks (`forward_hook.py` POSTs
+    stdin JSON). Replay: iterate a supplied payload list. Raw JSON is
+    unmodified. See LIVE_HOOKS.md FR-H13.
     """
 
-    def __init__(self, replay_events: Optional[List[dict]] = None) -> None:
+    def __init__(
+        self,
+        replay_events: Optional[List[dict]] = None,
+        hooks_path: Optional[Path] = None,
+        listen_host: str = _DEFAULT_HOST,
+        listen_port: int = _DEFAULT_PORT,
+        install_hooks: Optional[bool] = None,
+    ) -> None:
         self._replay_events = replay_events
+        self._hooks_path = hooks_path
+        self._listen_host = listen_host
+        self._listen_port = listen_port
+        self._install_hooks = install_hooks
         self._activated = False
+        self._live_feed: Optional[LiveEventFeed] = None
+        self._server: Optional[HookHTTPServer] = None
+        self._hooks_backup: Optional[bytes] = None
+        self._bound_port = listen_port
+
+    @property
+    def listen_port(self) -> int:
+        return self._bound_port
 
     @property
     def collector_id(self) -> str:
@@ -141,22 +165,39 @@ class CursorHooksCollector(Collector):
         return found_any
 
     def activate(self) -> None:
-        """In a live deployment this would start/attach to the local HTTP
-        listener the Node forwarder POSTs to. Here we just flip a flag; the
-        event source (replay list) is supplied at construction time.
-        """
+        """Live: shared HTTP listener + merge ~/.cursor/hooks.json. Replay: flag only."""
         self._activated = True
+        if self._replay_events is not None:
+            return
+        self._start_live()
+
+    def _start_live(self) -> None:
+        feed = LiveEventFeed()
+        server = HookHTTPServer(
+            self._listen_host, self._listen_port, WEBHOOK_PATH, feed
+        )
+        self._live_feed = feed
+        self._server = server
+        self._bound_port = server.start()
+        self._maybe_install_hooks()
+
+    def _maybe_install_hooks(self) -> None:
+        if self._install_hooks is False:
+            return
+        path = self._hooks_path or (Path.home() / ".cursor" / "hooks.json")
+        url = f"http://{self._listen_host}:{self._bound_port}{WEBHOOK_PATH}"
+        self._hooks_path = path
+        self._hooks_backup = install_cursor_command_hooks(
+            path, forwarder_command(url), KNOWN_HOOK_EVENTS
+        )
 
     def capture(self) -> Iterator[RawEvent]:
         if not self._activated:
             raise RuntimeError(f"{self.collector_id}: capture() called before activate()")
-
-        if self._replay_events is None:
-            # Live mode placeholder -- no live HTTP listener wired up in
-            # this standalone demo build.
+        source = self._event_source()
+        if source is None:
             return
-
-        for payload in self._replay_events:
+        for payload in source:
             yield RawEvent(
                 timestamp=RawEvent.now_iso(),
                 collector_id=self.collector_id,
@@ -164,5 +205,27 @@ class CursorHooksCollector(Collector):
                 raw_payload=payload,  # untouched, exact shape from source
             )
 
+    def _event_source(self):
+        if self._replay_events is not None:
+            return self._replay_events
+        return self._live_feed
+
     def deactivate(self) -> None:
         self._activated = False
+        self._stop_server()
+        self._restore_hooks()
+
+    def _stop_server(self) -> None:
+        server = self._server
+        self._server = None
+        if server is not None:
+            server.stop()
+
+    def _restore_hooks(self) -> None:
+        if self._replay_events is not None:
+            return
+        path = self._hooks_path
+        if path is None:
+            return
+        restore_hooks_file(path, self._hooks_backup)
+        self._hooks_backup = None

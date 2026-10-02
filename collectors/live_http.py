@@ -1,4 +1,7 @@
-"""Shared live HTTP feed for hook collectors (LIVE_HOOKS.md)."""
+"""Shared live HTTP feed for hook collectors (LIVE_HOOKS.md).
+
+One listener per (host, port). Paths route to per-collector feeds.
+"""
 
 from __future__ import annotations
 
@@ -6,9 +9,11 @@ import json
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from queue import Queue
-from typing import Any, Dict, Iterator, Optional
+from typing import Any, Dict, Iterator, Optional, Tuple
 
 _STOP = object()
+_LOCK = threading.Lock()
+_MUXES: Dict[Tuple[str, int], "HookMux"] = {}
 
 
 class LiveEventFeed:
@@ -41,20 +46,20 @@ def _payload_from_body(raw_body: bytes) -> Optional[dict]:
     return None
 
 
-class _HookHandler(BaseHTTPRequestHandler):
-    feed: LiveEventFeed
-    webhook_path: str
+class _MuxHandler(BaseHTTPRequestHandler):
+    routes: Dict[str, LiveEventFeed]
 
     def log_message(self, fmt: str, *args: Any) -> None:
         return
 
-    def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API
+    def do_POST(self) -> None:  # noqa: N802
         length = int(self.headers.get("Content-Length", "0") or 0)
         raw_body = self.rfile.read(length) if length else b""
-        if self.path == self.webhook_path:
+        feed = self.routes.get(self.path.split("?", 1)[0])
+        if feed is not None:
             payload = _payload_from_body(raw_body)
             if payload is not None:
-                self.feed.put(payload)
+                feed.put(payload)
         body = b"{}"
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
@@ -63,36 +68,72 @@ class _HookHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
 
+class HookMux:
+    def __init__(self, host: str, port: int) -> None:
+        self.routes: Dict[str, LiveEventFeed] = {}
+        handler = type("BoundMuxHandler", (_MuxHandler,), {"routes": self.routes})
+        self._httpd = ThreadingHTTPServer((host, port), handler)
+        self._thread = threading.Thread(target=self._httpd.serve_forever, daemon=True)
+
+    @property
+    def port(self) -> int:
+        return int(self._httpd.server_address[1])
+
+    def start(self) -> None:
+        self._thread.start()
+
+    def stop(self) -> None:
+        self._httpd.shutdown()
+        self._httpd.server_close()
+
+
+def attach_hook_route(host: str, port: int, path: str, feed: LiveEventFeed) -> int:
+    """Register path on the shared listener. Return the bound port."""
+    with _LOCK:
+        mux = _MUXES.get((host, port))
+        if mux is None:
+            mux = HookMux(host, port)
+            mux.start()
+            _MUXES[(host, mux.port)] = mux
+        mux.routes[path] = feed
+        return mux.port
+
+
+def detach_hook_route(host: str, port: int, path: str) -> None:
+    with _LOCK:
+        mux = _MUXES.get((host, port))
+        if mux is None:
+            return
+        mux.routes.pop(path, None)
+        if mux.routes:
+            return
+        mux.stop()
+        _MUXES.pop((host, port), None)
+
+
 class HookHTTPServer:
+    """Per-collector handle: attach one path, stop that feed on shutdown."""
+
     def __init__(self, host: str, port: int, webhook_path: str, feed: LiveEventFeed) -> None:
         self._host = host
         self._port = port
         self._path = webhook_path
         self._feed = feed
-        self._httpd: Optional[ThreadingHTTPServer] = None
-        self._thread: Optional[threading.Thread] = None
+        self._bound: Optional[int] = None
 
     @property
     def port(self) -> int:
-        if self._httpd is None:
+        if self._bound is None:
             return self._port
-        return int(self._httpd.server_address[1])
+        return self._bound
 
     def start(self) -> int:
-        handler = type(
-            "BoundHookHandler",
-            (_HookHandler,),
-            {"feed": self._feed, "webhook_path": self._path},
-        )
-        self._httpd = ThreadingHTTPServer((self._host, self._port), handler)
-        self._thread = threading.Thread(target=self._httpd.serve_forever, daemon=True)
-        self._thread.start()
-        return self.port
+        self._bound = attach_hook_route(self._host, self._port, self._path, self._feed)
+        return self._bound
 
     def stop(self) -> None:
-        if self._httpd is None:
+        if self._bound is None:
             return
-        self._httpd.shutdown()
-        self._httpd.server_close()
-        self._httpd = None
+        detach_hook_route(self._host, self._bound, self._path)
+        self._bound = None
         self._feed.stop()

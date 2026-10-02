@@ -28,10 +28,20 @@ from typing import Iterator, List, Optional
 import sys as _sys
 from pathlib import Path as _Path
 _sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
+from collectors.copilot.hook_settings import (  # noqa: E402
+    apply_required_env,
+    install_copilot_http_hooks,
+    restore_env,
+    restore_hooks_file,
+)
+from collectors.live_http import HookHTTPServer, LiveEventFeed  # noqa: E402
 from core import Collector, RawEvent
 
 AGENT_NAME = "copilot"
 COLLECTOR_ID = "copilot.hooks"
+WEBHOOK_PATH = "/webhook/copilot/event"
+_DEFAULT_HOST = "127.0.0.1"
+_DEFAULT_PORT = 8000
 
 # The 14 documented event names Copilot's CLI accepts registrations for, in
 # EITHER casing (per Copilot/config/hooks.json, the exact config used in the
@@ -162,14 +172,34 @@ class CopilotHooksCollector(Collector):
     full deployment's activate() would start/attach to that listener and
     capture() would drain a queue it fills.
 
-    This build supports feeding capture() from already-captured JSONL event
-    dicts (Copilot/captured_events.jsonl and friends) to exercise it
-    deterministically against real sample data without a live CLI session.
+    Live: attach `/webhook/copilot/event`, set REQUIRED_ENV_VARS, merge
+    `.github/hooks/hooks.json` HTTP hooks for both casings. Replay: iterate
+    a supplied list. See LIVE_HOOKS.md FR-H14.
     """
 
-    def __init__(self, replay_events: Optional[List[dict]] = None) -> None:
+    def __init__(
+        self,
+        replay_events: Optional[List[dict]] = None,
+        hooks_path: Optional[Path] = None,
+        listen_host: str = _DEFAULT_HOST,
+        listen_port: int = _DEFAULT_PORT,
+        install_hooks: Optional[bool] = None,
+    ) -> None:
         self._replay_events = replay_events
+        self._hooks_path = hooks_path
+        self._listen_host = listen_host
+        self._listen_port = listen_port
+        self._install_hooks = install_hooks
         self._activated = False
+        self._live_feed: Optional[LiveEventFeed] = None
+        self._server: Optional[HookHTTPServer] = None
+        self._hooks_backup: Optional[bytes] = None
+        self._env_backup: Optional[dict] = None
+        self._bound_port = listen_port
+
+    @property
+    def listen_port(self) -> int:
+        return self._bound_port
 
     @property
     def collector_id(self) -> str:
@@ -223,67 +253,58 @@ class CopilotHooksCollector(Collector):
         return found_any
 
     def activate(self) -> None:
-        """Documents (and, where possible, verifies) the two real env vars
-        required for hooks to fire at all -- see REQUIRED_ENV_VARS above.
-        This does NOT set them on your behalf (that would be a surprising
-        side effect for a library to have); it only warns loudly if a live
-        deployment would silently get zero events because of them.
+        """Replay: warn if required env is wrong. Live: set env, listen, merge hooks."""
+        self._activated = True
+        if self._replay_events is not None:
+            self._warn_env()
+            return
+        self._start_live()
 
-        Also documents the real casing-registration finding: PreToolUse/
-        PostToolUse only fire under PascalCase registration, while
-        permissionRequest only fires under camelCase registration. A real
-        `.github/hooks/hooks.json` must therefore register EVERY event in
-        BOTH casings (see Copilot/config/hooks.json, the exact config used
-        in the real capture) to avoid silently missing either family --
-        this collector's capture()/extract_shape() dispatch on payload
-        shape rather than assuming one casing per event for exactly this
-        reason.
-        """
-        missing_or_wrong = []
+    def _warn_env(self) -> None:
         for var, required_value in REQUIRED_ENV_VARS.items():
             actual = os.environ.get(var)
-            if actual != required_value:
-                missing_or_wrong.append((var, required_value, actual))
+            if actual == required_value:
+                continue
+            print(
+                f"[{self.collector_id}] WARNING: env var {var!r} is "
+                f"{actual!r}, expected exact string {required_value!r}. "
+                f"In live deployment this makes Copilot hooks fail "
+                f"COMPLETELY SILENTLY (no error, zero events) -- "
+                f"confirmed in Copilot/RESULTS.md section 5-6.",
+                file=_sys.stderr,
+            )
 
-        if missing_or_wrong:
-            for var, required_value, actual in missing_or_wrong:
-                print(
-                    f"[{self.collector_id}] WARNING: env var {var!r} is "
-                    f"{actual!r}, expected exact string {required_value!r}. "
-                    f"In live deployment this makes Copilot hooks fail "
-                    f"COMPLETELY SILENTLY (no error, zero events) -- "
-                    f"confirmed in Copilot/RESULTS.md section 5-6.",
-                    file=_sys.stderr,
-                )
+    def _start_live(self) -> None:
+        self._env_backup = apply_required_env(REQUIRED_ENV_VARS)
+        feed = LiveEventFeed()
+        server = HookHTTPServer(
+            self._listen_host, self._listen_port, WEBHOOK_PATH, feed
+        )
+        self._live_feed = feed
+        self._server = server
+        self._bound_port = server.start()
+        self._maybe_install_hooks()
 
-        self._activated = True
+    def _maybe_install_hooks(self) -> None:
+        if self._install_hooks is False:
+            return
+        path = self._hooks_path or (
+            Path.cwd() / ".github" / "hooks" / "hooks.json"
+        )
+        url = f"http://{self._listen_host}:{self._bound_port}{WEBHOOK_PATH}"
+        self._hooks_path = path
+        self._hooks_backup = install_copilot_http_hooks(
+            path, url, KNOWN_HOOK_EVENTS
+        )
 
     def capture(self) -> Iterator[RawEvent]:
         if not self._activated:
             raise RuntimeError(f"{self.collector_id}: capture() called before activate()")
-
-        if self._replay_events is None:
-            # Live mode placeholder: nothing queued because no live HTTP
-            # listener is wired up in this standalone demo build.
+        source = self._event_source()
+        if source is None:
             return
-
-        for payload in self._replay_events:
-            # KNOWN DATA-QUALITY ISSUE (not a bug to "fix" here -- see
-            # Copilot/RESULTS.md section 5, finding #3): PostToolUse does
-            # NOT reliably indicate real tool failure. A failing shell
-            # command (confirmed: `ls /nonexistent`, exit code 1) still
-            # produces a PostToolUse event with
-            # tool_result.result_type == "success"; the failure text is
-            # buried inside tool_result.text_result_for_llm as free text,
-            # not a structured status field. postToolUseFailure /
-            # PostToolUseFailure never fired even once for this case in
-            # testing, despite being registered. Any downstream consumer
-            # that treats "PostToolUse fired" as "the tool call succeeded"
-            # will be wrong. We deliberately do NOT invent success-
-            # detection logic here (e.g. string-sniffing text_result_for_llm)
-            # because nothing in the real payload supports it reliably --
-            # that would be fabricating a signal the source data doesn't
-            # actually provide.
+        # PostToolUse does not reliably indicate tool failure (RESULTS.md §5).
+        for payload in source:
             yield RawEvent(
                 timestamp=RawEvent.now_iso(),
                 collector_id=self.collector_id,
@@ -291,5 +312,31 @@ class CopilotHooksCollector(Collector):
                 raw_payload=payload,  # untouched, exact shape from source
             )
 
+    def _event_source(self):
+        if self._replay_events is not None:
+            return self._replay_events
+        return self._live_feed
+
     def deactivate(self) -> None:
         self._activated = False
+        server = self._server
+        self._server = None
+        if server is not None:
+            server.stop()
+        self._restore_hooks()
+        self._restore_env()
+
+    def _restore_hooks(self) -> None:
+        if self._replay_events is not None:
+            return
+        path = self._hooks_path
+        if path is None:
+            return
+        restore_hooks_file(path, self._hooks_backup)
+        self._hooks_backup = None
+
+    def _restore_env(self) -> None:
+        backup = self._env_backup
+        self._env_backup = None
+        if backup is not None:
+            restore_env(backup)

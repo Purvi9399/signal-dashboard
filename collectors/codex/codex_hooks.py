@@ -32,10 +32,19 @@ from typing import Iterator, List, Optional
 import sys as _sys
 from pathlib import Path as _Path
 _sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
+from collectors.codex.hook_settings import (  # noqa: E402
+    forwarder_command,
+    install_codex_command_hooks,
+    restore_hooks_file,
+)
+from collectors.live_http import HookHTTPServer, LiveEventFeed  # noqa: E402
 from core import Collector, RawEvent
 
 AGENT_NAME = "codex"
 COLLECTOR_ID = "codex.hooks"
+WEBHOOK_PATH = "/webhook/codex/event"
+_DEFAULT_HOST = "127.0.0.1"
+_DEFAULT_PORT = 8000
 
 # The 11 documented hook event names (Codex/RESULTS.md section 3). Not all
 # 11 could be triggered live in testing (PermissionRequest/PreCompact/
@@ -132,10 +141,28 @@ class CodexHooksCollector(Collector):
         self,
         replay_events: Optional[List[dict]] = None,
         require_trust: bool = True,
+        hooks_path: Optional[Path] = None,
+        listen_host: str = _DEFAULT_HOST,
+        listen_port: int = _DEFAULT_PORT,
+        install_hooks: Optional[bool] = None,
+        codex_home: Optional[Path] = None,
     ) -> None:
         self._replay_events = replay_events
         self._activated = False
         self._require_trust = require_trust
+        self._hooks_path = hooks_path
+        self._listen_host = listen_host
+        self._listen_port = listen_port
+        self._install_hooks = install_hooks
+        self._codex_home = codex_home
+        self._live_feed: Optional[LiveEventFeed] = None
+        self._server: Optional[HookHTTPServer] = None
+        self._hooks_backup: Optional[bytes] = None
+        self._bound_port = listen_port
+
+    @property
+    def listen_port(self) -> int:
+        return self._bound_port
 
     @property
     def collector_id(self) -> str:
@@ -185,11 +212,11 @@ class CodexHooksCollector(Collector):
         deliberately no persisted trust state to find).
         """
         if self._require_trust:
-            codex_home = find_codex_home()
-            if not check_hook_trust_granted(codex_home):
+            home = self._codex_home or find_codex_home()
+            if not check_hook_trust_granted(home):
                 raise CodexTrustNotGrantedError(
                     f"{self.collector_id}: no evidence of hook trust found "
-                    f"in {codex_home / 'config.toml'} (expected a "
+                    f"in {home / 'config.toml'} (expected a "
                     f'"hooks.state.<key>.trusted_hash" entry, written by the '
                     f"interactive `/hooks` TUI approval flow). Without this, "
                     f"real Codex hooks fail COMPLETELY SILENTLY -- zero "
@@ -202,17 +229,40 @@ class CodexHooksCollector(Collector):
                     f"explicitly."
                 )
         self._activated = True
+        if self._replay_events is not None:
+            return
+        self._start_live()
+
+    def _start_live(self) -> None:
+        feed = LiveEventFeed()
+        server = HookHTTPServer(
+            self._listen_host, self._listen_port, WEBHOOK_PATH, feed
+        )
+        self._live_feed = feed
+        self._server = server
+        self._bound_port = server.start()
+        self._maybe_install_hooks()
+
+    def _maybe_install_hooks(self) -> None:
+        if self._install_hooks is False:
+            return
+        home = self._codex_home or find_codex_home()
+        path = self._hooks_path or (home / "hooks.json")
+        url = f"http://{self._listen_host}:{self._bound_port}{WEBHOOK_PATH}"
+        self._hooks_path = path
+        self._hooks_backup = install_codex_command_hooks(
+            path, forwarder_command(url), KNOWN_HOOK_EVENTS
+        )
 
     def capture(self) -> Iterator[RawEvent]:
         if not self._activated:
             raise RuntimeError(f"{self.collector_id}: capture() called before activate()")
 
-        if self._replay_events is None:
-            # Live mode placeholder: no live HTTP listener wired up in this
-            # standalone demo build.
+        source = self._event_source()
+        if source is None:
             return
 
-        for payload in self._replay_events:
+        for payload in source:
             # DOCUMENTED, CONFIRMED GAPS -- not bugs to "fix" here, and not
             # papered over with fabricated defaults:
             #
@@ -246,5 +296,24 @@ class CodexHooksCollector(Collector):
                 raw_payload=payload,  # untouched, exact shape from source
             )
 
+    def _event_source(self):
+        if self._replay_events is not None:
+            return self._replay_events
+        return self._live_feed
+
     def deactivate(self) -> None:
         self._activated = False
+        server = self._server
+        self._server = None
+        if server is not None:
+            server.stop()
+        self._restore_hooks()
+
+    def _restore_hooks(self) -> None:
+        if self._replay_events is not None:
+            return
+        path = self._hooks_path
+        if path is None:
+            return
+        restore_hooks_file(path, self._hooks_backup)
+        self._hooks_backup = None
