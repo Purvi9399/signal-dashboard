@@ -69,10 +69,14 @@ from typing import Iterator, List, Optional
 import sys as _sys
 from pathlib import Path as _Path
 _sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
+from collectors.live_http import HookHTTPServer, LiveEventFeed  # noqa: E402
 from core import Collector, RawEvent
 
 AGENT_NAME = "copilot"
 COLLECTOR_ID = "copilot.local_hooks"
+WEBHOOK_PATH = "/webhook/copilot/local"
+_DEFAULT_HOST = "127.0.0.1"
+_DEFAULT_PORT = 8000
 
 # The real event `type` values observed in Copilot_LocalHooks/captured_ide_events.jsonl
 # / documented in Copilot_LocalHooks/RESULTS.md section a -- listed here for
@@ -145,9 +149,23 @@ class CopilotLocalHooksCollector(Collector):
     deterministically without a live VS Code session.
     """
 
-    def __init__(self, replay_events: Optional[List[dict]] = None) -> None:
+    def __init__(
+        self,
+        replay_events: Optional[List[dict]] = None,
+        listen_host: str = _DEFAULT_HOST,
+        listen_port: int = _DEFAULT_PORT,
+    ) -> None:
         self._replay_events = replay_events
+        self._listen_host = listen_host
+        self._listen_port = listen_port
         self._activated = False
+        self._live_feed: Optional[LiveEventFeed] = None
+        self._server: Optional[HookHTTPServer] = None
+        self._bound_port = listen_port
+
+    @property
+    def listen_port(self) -> int:
+        return self._bound_port
 
     @property
     def collector_id(self) -> str:
@@ -221,24 +239,26 @@ class CopilotLocalHooksCollector(Collector):
             file=_sys.stderr,
         )
         self._activated = True
+        if self._replay_events is not None:
+            return
+        self._start_live()
+
+    def _start_live(self) -> None:
+        feed = LiveEventFeed()
+        server = HookHTTPServer(
+            self._listen_host, self._listen_port, WEBHOOK_PATH, feed
+        )
+        self._live_feed = feed
+        self._server = server
+        self._bound_port = server.start()
 
     def capture(self) -> Iterator[RawEvent]:
         if not self._activated:
             raise RuntimeError(f"{self.collector_id}: capture() called before activate()")
-
-        if self._replay_events is None:
-            # Live mode placeholder: no live extension-output tail is wired
-            # up in this standalone demo build.
+        source = self._event_source()
+        if source is None:
             return
-
-        for payload in self._replay_events:
-            # raw_payload is the untouched real event dict exactly as the
-            # signal-local-hooks extension produced it -- different `type`
-            # values carry structurally different fields (e.g.
-            # onDidChangeTextDocument's range/rangeLength/insertedLength vs.
-            # environment_snapshot's detected_ai_extensions map vs.
-            # probable_undo's originalAcceptTimestamp/msSinceAccept) and
-            # this collector does not force them into one common shape.
+        for payload in source:
             yield RawEvent(
                 timestamp=RawEvent.now_iso(),
                 collector_id=self.collector_id,
@@ -246,8 +266,21 @@ class CopilotLocalHooksCollector(Collector):
                 raw_payload=payload,
             )
 
+    def _event_source(self):
+        if self._replay_events is not None:
+            return self._replay_events
+        return self._live_feed
+
     def deactivate(self) -> None:
         self._activated = False
+        server = self._server
+        self._server = None
+        if server is not None:
+            server.stop()
+            return
+        feed = self._live_feed
+        if feed is not None:
+            feed.stop()
 
 
 if __name__ == "__main__":

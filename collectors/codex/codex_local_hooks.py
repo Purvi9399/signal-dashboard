@@ -60,10 +60,14 @@ from typing import Iterator, List, Optional
 import sys as _sys
 from pathlib import Path as _Path
 _sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
+from collectors.live_http import HookHTTPServer, LiveEventFeed  # noqa: E402
 from core import Collector, RawEvent
 
 AGENT_NAME = "codex"
 COLLECTOR_ID = "codex.local_hooks"
+WEBHOOK_PATH = "/webhook/codex/local"
+_DEFAULT_HOST = "127.0.0.1"
+_DEFAULT_PORT = 8000
 
 # Real event `type` values observed in Codex_LocalHooks/captured_ide_events.jsonl
 # (RESULTS.md section 2, 71 real events total). Each type has its OWN field
@@ -168,9 +172,20 @@ class CodexLocalHooksCollector(Collector):
     def __init__(
         self,
         replay_events: Optional[List[dict]] = None,
+        listen_host: str = _DEFAULT_HOST,
+        listen_port: int = _DEFAULT_PORT,
     ) -> None:
         self._replay_events = replay_events
+        self._listen_host = listen_host
+        self._listen_port = listen_port
         self._activated = False
+        self._live_feed: Optional[LiveEventFeed] = None
+        self._server: Optional[HookHTTPServer] = None
+        self._bound_port = listen_port
+
+    @property
+    def listen_port(self) -> int:
+        return self._bound_port
 
     @property
     def collector_id(self) -> str:
@@ -213,51 +228,48 @@ class CodexLocalHooksCollector(Collector):
         separate collector exists, not a precondition of it.
         """
         self._activated = True
+        if self._replay_events is not None:
+            return
+        self._start_live()
+
+    def _start_live(self) -> None:
+        feed = LiveEventFeed()
+        server = HookHTTPServer(
+            self._listen_host, self._listen_port, WEBHOOK_PATH, feed
+        )
+        self._live_feed = feed
+        self._server = server
+        self._bound_port = server.start()
 
     def capture(self) -> Iterator[RawEvent]:
         if not self._activated:
             raise RuntimeError(f"{self.collector_id}: capture() called before activate()")
-
-        if self._replay_events is None:
-            # Live mode placeholder: no live VS Code extension host / IPC
-            # channel wired up in this standalone demo build.
+        source = self._event_source()
+        if source is None:
             return
-
-        for payload in self._replay_events:
-            # DOCUMENTED, CONFIRMED SHAPE/QUIRKS -- preserved exactly:
-            #
-            #  1. NO single common event schema beyond {"timestamp", "type"}
-            #     -- each `type` in KNOWN_IDE_EVENT_TYPES has its own
-            #     additional fields (e.g. onDidChangeTextDocument carries
-            #     `file` + `changes: [{range, rangeLength, insertedLength}]`;
-            #     onDidOpenTerminal carries `name` which was observed EMPTY
-            #     STRING both times in the real capture -- not backfilled
-            #     with a placeholder here). Confirmed against
-            #     Codex_LocalHooks/captured_ide_events.jsonl directly.
-            #
-            #  2. onDidSaveTextDocument events CANNOT be attributed to
-            #     "manual edit" vs. "AI edit" from the event alone (same
-            #     limitation RESULTS.md section 2 notes was found in every
-            #     prior IDE-adjacent test in this project) -- this
-            #     collector does not attempt to infer authorship; that
-            #     would be normalization/enrichment, out of scope.
-            #
-            #  3. onDidCloseTerminal never fired once in the real capture
-            #     despite a real listener existing and two
-            #     onDidOpenTerminal events being captured -- documented in
-            #     RESULTS.md as "inconclusive, not a confirmed gap" (VS
-            #     Code can hide a terminal panel without disposing the
-            #     underlying object). This collector does not synthesize a
-            #     matching close event.
+        for payload in source:
             yield RawEvent(
                 timestamp=RawEvent.now_iso(),
                 collector_id=self.collector_id,
                 agent=AGENT_NAME,
-                raw_payload=payload,  # untouched, exact shape from source
+                raw_payload=payload,
             )
+
+    def _event_source(self):
+        if self._replay_events is not None:
+            return self._replay_events
+        return self._live_feed
 
     def deactivate(self) -> None:
         self._activated = False
+        server = self._server
+        self._server = None
+        if server is not None:
+            server.stop()
+            return
+        feed = self._live_feed
+        if feed is not None:
+            feed.stop()
 
 
 def _load_sample_ide_events(max_events: int = 8) -> List[dict]:
