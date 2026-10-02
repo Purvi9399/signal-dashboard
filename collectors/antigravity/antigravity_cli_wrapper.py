@@ -47,40 +47,16 @@ events is a later pipeline stage's job, not this collector's.
 
 from __future__ import annotations
 
-import datetime
 import json
-import os
-import select
 import shutil
-import signal
-import struct
 import sys
-import threading
 from pathlib import Path
-from queue import Queue
-from typing import Any, Iterator, List, Optional
+from typing import Iterator, List, Optional
 
-# fcntl/pty/termios are POSIX-only; importing them at module level (as this
-# file originally did) raises ModuleNotFoundError on Windows before detect()
-# ever runs (see GitHub Issue #1). Guard them so the module always imports;
-# the POSIX-only helpers/branches below are simply never called on Windows.
-# (The original unused `import tty` is dropped, not ported to the guard --
-# it was never referenced anywhere in this file.)
-if sys.platform != "win32":
-    import fcntl
-    import pty
-    import termios
-
-# Windows PTY backend: pywinpty (wraps the native ConPTY API). This is the
-# project's first non-stdlib dependency (see requirements-windows.txt) and is
-# only imported on Windows. If it's missing, detect() honestly reports the
-# technique as not viable instead of silently falling back to a
-# non-PTY subprocess (which would change how the wrapped CLI behaves under
-# isatty() checks and produce a non-equivalent capture).
 _PYWINPTY_AVAILABLE = False
 if sys.platform == "win32":
     try:
-        from winpty import PtyProcess as _WinPtyProcess
+        from winpty import PtyProcess as _WinPtyProcess  # noqa: F401
 
         _PYWINPTY_AVAILABLE = True
     except ImportError:
@@ -89,11 +65,12 @@ if sys.platform == "win32":
 import sys as _sys
 from pathlib import Path as _Path
 _sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
+from collectors.live_cli import LivePtySession  # noqa: E402
+from collectors.live_http import LiveEventFeed  # noqa: E402
 from core import Collector, RawEvent
 
 AGENT_NAME = "antigravity"
 COLLECTOR_ID = "antigravity.cli_wrapper"
-CHUNK_SIZE = 4096
 
 # Confirmed real (Antigravity_CLIWrapper/RESULTS.md section 4) flag that
 # unlocks structured usage/timing data. Not required for this collector to
@@ -154,10 +131,8 @@ class AntigravityCLIWrapperCollector(Collector):
         self._command = command
         self._replay_path = replay_path
         self._activated = False
-        self._child_pid: Optional[int] = None
-        self._master_fd: Optional[int] = None
-        self._winpty_proc: Optional[Any] = None
-        self._queue: "Queue[Optional[dict]]" = Queue()
+        self._live_feed: Optional[LiveEventFeed] = None
+        self._session: Optional[LivePtySession] = None
 
     @property
     def collector_id(self) -> str:
@@ -180,151 +155,28 @@ class AntigravityCLIWrapperCollector(Collector):
         return shutil.which("agy") is not None
 
     def activate(self) -> None:
-        """If a replay_path was given, activation is a no-op (replay mode
-        just marks itself ready). Otherwise, forks a real child under a
-        pty running self._command (default: `agy --output-format
-        stream-json`), mirroring Antigravity_CLIWrapper/wrapper.py's
-        fork+pty+dup2 setup exactly (same pattern as
-        cli_wrapper_demo/wrapper.py, generalized there and specialized for
-        `agy` in the real test) on POSIX, or a pywinpty/ConPTY spawn (see
-        _activate_windows()) on Windows."""
+        """If a replay_path was given, activation is a no-op. Otherwise
+        spawn under a PTY (LIVE_CLI.md)."""
+        self._activated = True
         if self._replay_path is not None:
-            self._activated = True
             return
+        self._start_live()
 
+    def _start_live(self) -> None:
+        feed = LiveEventFeed()
+        self._live_feed = feed
         cmd = self._command or ["agy", "--output-format", RECOMMENDED_OUTPUT_FORMAT]
-
-        if sys.platform == "win32":
-            self._activate_windows(cmd)
-            return
-
-        master_fd, slave_fd = pty.openpty()
-        if sys.stdout.isatty():
-            try:
-                packed = fcntl.ioctl(sys.stdout.fileno(), termios.TIOCGWINSZ, b"\x00" * 8)
-                rows, cols, xpix, ypix = struct.unpack("HHHH", packed)
-                fcntl.ioctl(slave_fd, termios.TIOCSWINSZ, struct.pack("HHHH", rows, cols, xpix, ypix))
-            except OSError:
-                pass
-
-        pid = os.fork()
-        if pid == 0:
-            os.close(master_fd)
-            os.setsid()
-            fcntl.ioctl(slave_fd, termios.TIOCSCTTY, 0)
-            os.dup2(slave_fd, 0)
-            os.dup2(slave_fd, 1)
-            os.dup2(slave_fd, 2)
-            if slave_fd > 2:
-                os.close(slave_fd)
-            try:
-                os.execvp(cmd[0], cmd)
-            except FileNotFoundError:
-                os._exit(127)
-
-        os.close(slave_fd)
-        self._child_pid = pid
-        self._master_fd = master_fd
-        self._activated = True
-
-    def _activate_windows(self, cmd: List[str]) -> None:
-        """Windows PTY backend: spawns `cmd` under a real ConPTY via
-        pywinpty (https://github.com/andfoy/pywinpty), the closest Windows
-        equivalent of the POSIX pty.openpty()/os.fork() machinery above.
-        A real PTY (not plain pipes) matters here because `agy` (see
-        module docstring) is exercised the same way it's really deployed --
-        a subprocess.Popen pipe fallback risks changing its output shape
-        under isatty() checks.
-        """
-        if not _PYWINPTY_AVAILABLE:
-            raise RuntimeError(
-                f"{self.collector_id}: pywinpty is not installed; cannot spawn on Windows "
-                "(detect() should have already reported this technique as not viable)"
-            )
-        # pywinpty's PtyProcess.spawn() (verified against the actual
-        # installed API: winpty/ptyprocess.py's spawn(argv, cwd=None,
-        # env=None, dimensions=(24, 80), backend=None)) takes no
-        # encoding/errors kwargs -- read() already decodes to str
-        # internally, so nothing further to configure here.
-        self._winpty_proc = _WinPtyProcess.spawn(cmd)
-        self._activated = True
-
-    def _iter_live_chunks(self) -> Iterator[dict]:
-        """Drain the pty master until the child exits, emitting captured
-        records in the exact real shape (RESULTS.md's wrapper.py `emit()`).
-        """
-        if sys.platform == "win32":
-            yield from self._iter_live_chunks_windows()
-            return
-
-        assert self._master_fd is not None
-        wrapped_command = " ".join(self._command or ["agy", "--output-format", RECOMMENDED_OUTPUT_FORMAT])
-        while True:
-            try:
-                rlist, _, _ = select.select([self._master_fd], [], [], 0.2)
-            except InterruptedError:
-                continue
-            if self._master_fd in rlist:
-                try:
-                    data = os.read(self._master_fd, CHUNK_SIZE)
-                except OSError:
-                    data = b""
-                if data:
-                    yield {
-                        "timestamp": datetime.datetime.now().isoformat(),
-                        "stream": "stdout",
-                        "content": data.decode("utf-8", errors="replace"),
-                        "wrapped_command": wrapped_command,
-                    }
-                else:
-                    break
-            if self._child_pid is not None:
-                done_pid, _status = os.waitpid(self._child_pid, os.WNOHANG)
-                if done_pid == self._child_pid:
-                    break
-
-    def _iter_live_chunks_windows(self) -> Iterator[dict]:
-        """Windows counterpart of _iter_live_chunks(). ConPTY already
-        merges stdout/stderr into one stream (same as the POSIX branch
-        above, which dup2's stderr into the same slave fd), so the payload
-        shape here is unchanged; a "platform": "windows" marker is added
-        purely for traceability of which backend produced the event."""
-        assert self._winpty_proc is not None
-        proc = self._winpty_proc
-        wrapped_command = " ".join(self._command or ["agy", "--output-format", RECOMMENDED_OUTPUT_FORMAT])
-        while True:
-            try:
-                data = proc.read(CHUNK_SIZE)
-            except EOFError:
-                break
-            except Exception:
-                break
-            if data:
-                yield {
-                    "timestamp": datetime.datetime.now().isoformat(),
-                    "stream": "stdout",
-                    "platform": "windows",
-                    "content": data,
-                    "wrapped_command": wrapped_command,
-                }
-            if not proc.isalive():
-                break
+        session = LivePtySession(cmd, feed, merge_stderr=True)
+        session.start()
+        self._session = session
 
     def capture(self) -> Iterator[RawEvent]:
         if not self._activated:
             raise RuntimeError(f"{self.collector_id}: capture() called before activate()")
-
-        if self._replay_path is not None:
-            for payload in _load_jsonl(self._replay_path):
-                yield RawEvent(
-                    timestamp=RawEvent.now_iso(),
-                    collector_id=self.collector_id,
-                    agent=AGENT_NAME,
-                    raw_payload=payload,  # untouched, exact captured shape
-                )
+        source = self._event_source()
+        if source is None:
             return
-
-        for payload in self._iter_live_chunks():
+        for payload in source:
             yield RawEvent(
                 timestamp=RawEvent.now_iso(),
                 collector_id=self.collector_id,
@@ -332,30 +184,21 @@ class AntigravityCLIWrapperCollector(Collector):
                 raw_payload=payload,
             )
 
-    def deactivate(self) -> None:
-        if sys.platform == "win32":
-            if self._winpty_proc is not None:
-                try:
-                    self._winpty_proc.terminate(force=True)
-                except Exception:
-                    pass
-                self._winpty_proc = None
-            self._activated = False
-            return
+    def _event_source(self):
+        if self._replay_path is not None:
+            return _load_jsonl(self._replay_path)
+        return self._live_feed
 
-        if self._master_fd is not None:
-            try:
-                os.close(self._master_fd)
-            except OSError:
-                pass
-            self._master_fd = None
-        if self._child_pid is not None:
-            try:
-                os.kill(self._child_pid, signal.SIGTERM)
-            except OSError:
-                pass
-            self._child_pid = None
+    def deactivate(self) -> None:
         self._activated = False
+        session = self._session
+        self._session = None
+        if session is not None:
+            session.stop()
+            return
+        feed = self._live_feed
+        if feed is not None:
+            feed.stop()
 
 
 if __name__ == "__main__":

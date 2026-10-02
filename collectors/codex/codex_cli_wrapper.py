@@ -41,6 +41,8 @@ from typing import Iterator, List, Optional
 import sys as _sys
 from pathlib import Path as _Path
 _sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
+from collectors.live_cli import LivePtySession  # noqa: E402
+from collectors.live_http import LiveEventFeed  # noqa: E402
 from core import Collector, RawEvent
 
 AGENT_NAME = "codex"
@@ -92,9 +94,13 @@ class CodexCLIWrapperCollector(Collector):
     def __init__(
         self,
         replay_events: Optional[List[dict]] = None,
+        command: Optional[List[str]] = None,
     ) -> None:
         self._replay_events = replay_events
+        self._command = command
         self._activated = False
+        self._live_feed: Optional[LiveEventFeed] = None
+        self._session: Optional[LivePtySession] = None
 
     @property
     def collector_id(self) -> str:
@@ -133,45 +139,48 @@ class CodexCLIWrapperCollector(Collector):
         (Codex_CLIWrapper/RESULTS.md section 1, "Wrapper transparency").
         """
         self._activated = True
+        if self._replay_events is not None:
+            return
+        self._start_live()
+
+    def _start_live(self) -> None:
+        feed = LiveEventFeed()
+        self._live_feed = feed
+        if self._command is None:
+            return
+        session = LivePtySession(self._command, feed)
+        session.start()
+        self._session = session
 
     def capture(self) -> Iterator[RawEvent]:
         if not self._activated:
             raise RuntimeError(f"{self.collector_id}: capture() called before activate()")
-
-        if self._replay_events is None:
-            # Live mode placeholder: no live pty-wrapped child process
-            # spawned in this standalone demo build.
+        source = self._event_source()
+        if source is None:
             return
-
-        for payload in self._replay_events:
-            # DOCUMENTED, CONFIRMED QUIRKS -- preserved exactly, never
-            # patched here:
-            #
-            #  1. Real captured chunk shape is EXACTLY
-            #     {"timestamp": ..., "stream": "stdout"|"stderr",
-            #      "content": <raw text, possibly with embedded JSON or
-            #      ANSI escapes>, "wrapped_command": <full invocation
-            #      string>} -- confirmed against Codex_CLIWrapper/wrapper.py's
-            #      own emit() function and every *.jsonl capture file. We do
-            #      not split/parse `content` even when it looks like JSON
-            #      (exec --json mode) -- that is a later normalization
-            #      stage's job, not this collector's.
-            #
-            #  2. Interactive TUI mode chunks carry heavy raw ANSI/escape
-            #     noise (cursor movement, OSC title-query artifacts,
-            #     character-by-character spinner redraws, SGR truecolor
-            #     codes) -- confirmed real and substantial (1173 captured
-            #     chunks / ~184KB for one ~30s session,
-            #     Codex_CLIWrapper/RESULTS.md section 2). Not stripped here.
+        for payload in source:
             yield RawEvent(
                 timestamp=RawEvent.now_iso(),
                 collector_id=self.collector_id,
                 agent=AGENT_NAME,
-                raw_payload=payload,  # untouched, exact shape from source
+                raw_payload=payload,
             )
+
+    def _event_source(self):
+        if self._replay_events is not None:
+            return self._replay_events
+        return self._live_feed
 
     def deactivate(self) -> None:
         self._activated = False
+        session = self._session
+        self._session = None
+        if session is not None:
+            session.stop()
+            return
+        feed = self._live_feed
+        if feed is not None:
+            feed.stop()
 
 
 def _load_sample_wrapper_chunks(max_events: int = 5) -> List[dict]:

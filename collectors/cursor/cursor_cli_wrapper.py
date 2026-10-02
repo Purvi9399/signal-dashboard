@@ -92,6 +92,8 @@ from typing import Iterator, List, Optional
 import sys as _sys
 from pathlib import Path as _Path
 _sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
+from collectors.live_cli import LivePtySession  # noqa: E402
+from collectors.live_http import LiveEventFeed  # noqa: E402
 from core import Collector, RawEvent
 
 AGENT_NAME = "cursor"
@@ -109,6 +111,13 @@ WRAPPER_ONLY_FIELDS = (
     "hung_seconds",        # CSV row 90 -- wrapper-only, needs timing instrumentation
     "is_developer_command",# CSV row 91 -- wrapper-only, human-typed vs agent-issued
 )
+
+
+def _cursor_extra() -> dict:
+    return {
+        "operator_username": getpass.getuser(),
+        "hostname": socket.gethostname(),
+    }
 
 
 class CursorCLIWrapperCollector(Collector):
@@ -136,9 +145,16 @@ class CursorCLIWrapperCollector(Collector):
     collector's __main__ demo is explicit that it has none.
     """
 
-    def __init__(self, replay_events: Optional[List[dict]] = None) -> None:
+    def __init__(
+        self,
+        replay_events: Optional[List[dict]] = None,
+        command: Optional[List[str]] = None,
+    ) -> None:
         self._replay_events = replay_events
+        self._command = command
         self._activated = False
+        self._live_feed: Optional[LiveEventFeed] = None
+        self._session: Optional[LivePtySession] = None
 
     @property
     def collector_id(self) -> str:
@@ -167,34 +183,52 @@ class CursorCLIWrapperCollector(Collector):
         return found_any
 
     def activate(self) -> None:
-        """No live pty-spawn implemented in this standalone demo build
-        (matching codex_cli_wrapper.py's / copilot_cli_wrapper.py's own
-        posture -- live mode is a placeholder, replay mode is what's
-        exercised here). Marking activated is all this does.
+        """Replay: no-op besides marking ready. Live: spawn only when
+        command is explicit (do not default-launch the `cursor` GUI).
         """
         self._activated = True
+        if self._replay_events is not None:
+            return
+        self._start_live()
+
+    def _start_live(self) -> None:
+        feed = LiveEventFeed()
+        self._live_feed = feed
+        if self._command is None:
+            return
+        session = LivePtySession(self._command, feed, extra_for=_cursor_extra)
+        session.start()
+        self._session = session
 
     def capture(self) -> Iterator[RawEvent]:
         if not self._activated:
             raise RuntimeError(f"{self.collector_id}: capture() called before activate()")
-
-        if self._replay_events is None:
-            # Live mode placeholder -- no live pty-wrapped child process
-            # spawned in this standalone demo build, and (unlike Codex/
-            # Copilot) no confirmed-real headless invocation of `cursor`
-            # to spawn even if it were implemented. See module docstring.
+        source = self._event_source()
+        if source is None:
             return
-
-        for payload in self._replay_events:
+        for payload in source:
             yield RawEvent(
                 timestamp=RawEvent.now_iso(),
                 collector_id=self.collector_id,
                 agent=AGENT_NAME,
-                raw_payload=payload,  # untouched, exact shape from source
+                raw_payload=payload,
             )
+
+    def _event_source(self):
+        if self._replay_events is not None:
+            return self._replay_events
+        return self._live_feed
 
     def deactivate(self) -> None:
         self._activated = False
+        session = self._session
+        self._session = None
+        if session is not None:
+            session.stop()
+            return
+        feed = self._live_feed
+        if feed is not None:
+            feed.stop()
 
 
 def _synthetic_demo_chunks() -> List[dict]:

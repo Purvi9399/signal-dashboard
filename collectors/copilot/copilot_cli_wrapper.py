@@ -58,29 +58,11 @@ signal the raw data doesn't actually provide structurally.
 
 from __future__ import annotations
 
-import datetime
 import json
-import os
-import select
 import shutil
-import signal
-import struct
 import sys
-import threading
 from pathlib import Path
-from queue import Empty, Queue
-from typing import Any, Iterator, List, Optional
-
-# fcntl/pty/termios are POSIX-only; importing them at module level (as this
-# file originally did) raises ModuleNotFoundError on Windows before detect()
-# ever runs (see GitHub Issue #1). Guard them so the module always imports;
-# the POSIX-only helpers/branches below are simply never called on Windows.
-# (The original unused `import tty` is dropped, not ported to the guard --
-# it was never referenced anywhere in this file.)
-if sys.platform != "win32":
-    import fcntl
-    import pty
-    import termios
+from typing import Iterator, List, Optional
 
 # Windows PTY backend: pywinpty (wraps the native ConPTY API). This is the
 # project's first non-stdlib dependency (see requirements-windows.txt) and is
@@ -91,7 +73,7 @@ if sys.platform != "win32":
 _PYWINPTY_AVAILABLE = False
 if sys.platform == "win32":
     try:
-        from winpty import PtyProcess as _WinPtyProcess
+        from winpty import PtyProcess as _WinPtyProcess  # noqa: F401
 
         _PYWINPTY_AVAILABLE = True
     except ImportError:
@@ -100,12 +82,12 @@ if sys.platform == "win32":
 import sys as _sys
 from pathlib import Path as _Path
 _sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
+from collectors.live_cli import LivePtySession  # noqa: E402
+from collectors.live_http import LiveEventFeed  # noqa: E402
 from core import Collector, RawEvent
 
 AGENT_NAME = "copilot"
 COLLECTOR_ID = "copilot.cli_wrapper"
-
-CHUNK_SIZE = 4096
 
 # Real footer fields the wrapped `copilot` CLI prints at the end of a `-p`
 # run, per cli_wrapper_demo/README.md's reassembled transcript -- kept here
@@ -113,16 +95,6 @@ CHUNK_SIZE = 4096
 # this collector to auto-parse/normalize raw_payload (that would violate the
 # "no normalization" contract; a later pipeline stage's job).
 KNOWN_FOOTER_MARKERS = ("AI Credits", "Tokens", "Resume", "Changes")
-
-
-def _get_win_size(fd: int):
-    packed = fcntl.ioctl(fd, termios.TIOCGWINSZ, b"\x00" * 8)
-    return struct.unpack("HHHH", packed)
-
-
-def _set_win_size(fd: int, rows: int, cols: int, xpix: int = 0, ypix: int = 0) -> None:
-    packed = struct.pack("HHHH", rows, cols, xpix, ypix)
-    fcntl.ioctl(fd, termios.TIOCSWINSZ, packed)
 
 
 class CopilotCLIWrapperCollector(Collector):
@@ -151,11 +123,8 @@ class CopilotCLIWrapperCollector(Collector):
         self._command = command or ["copilot"]
         self._replay_events = replay_events
         self._activated = False
-        self._queue: "Queue" = Queue()
-        self._child_pid: Optional[int] = None
-        self._master_fd: Optional[int] = None
-        self._pump_thread: Optional[threading.Thread] = None
-        self._winpty_proc: Optional[Any] = None
+        self._live_feed: Optional[LiveEventFeed] = None
+        self._session: Optional[LivePtySession] = None
 
     @property
     def collector_id(self) -> str:
@@ -180,224 +149,50 @@ class CopilotCLIWrapperCollector(Collector):
         return shutil.which("copilot") is not None
 
     def activate(self) -> None:
-        """In replay mode (self._replay_events set), this is a no-op besides
-        marking activated -- there is no live process to spawn. In live
-        mode, this would fork+exec the wrapped command under a pty; that
-        spawn logic is implemented in _spawn_and_pump() below (a direct
-        port of cli_wrapper_demo/wrapper.py's main()) on POSIX, or
-        _spawn_and_pump_windows() (pywinpty/ConPTY) on Windows -- only
-        invoked here, not during __init__, per the Collector contract's
-        activate() boundary.
+        """In replay mode, a no-op besides marking activated. In live mode,
+        fork+exec the wrapped command under a PTY (LIVE_CLI.md).
         """
-        if self._replay_events is None:
-            if sys.platform == "win32":
-                self._spawn_and_pump_windows()
-            else:
-                self._spawn_and_pump()
         self._activated = True
+        if self._replay_events is not None:
+            return
+        self._start_live()
 
-    def _emit(self, stream: str, chunk_bytes: bytes) -> None:
-        text = chunk_bytes.decode("utf-8", errors="replace")
-        self._queue.put(
-            {
-                "timestamp": datetime.datetime.now().isoformat(),
-                "stream": stream,
-                "content": text,
-                "wrapped_command": " ".join(self._command),
-            }
-        )
-
-    def _spawn_and_pump(self) -> None:
-        """Direct, minimally-adapted port of cli_wrapper_demo/wrapper.py's
-        pty-fork-and-pump loop. Kept as a background thread here (rather
-        than wrapper.py's blocking foreground select loop) since this
-        collector must return control to a caller's activate()/capture()
-        lifecycle rather than owning the process's stdin/stdout directly.
-        """
-        master_fd, slave_fd = pty.openpty()
-
-        if sys.stdout.isatty():
-            rows, cols, xpix, ypix = _get_win_size(sys.stdout.fileno())
-            _set_win_size(slave_fd, rows, cols, xpix, ypix)
-
-        err_r, err_w = os.pipe()
-
-        pid = os.fork()
-        if pid == 0:
-            os.close(master_fd)
-            os.close(err_r)
-            os.setsid()
-            fcntl.ioctl(slave_fd, termios.TIOCSCTTY, 0)
-            os.dup2(slave_fd, 0)
-            os.dup2(slave_fd, 1)
-            os.dup2(err_w, 2)
-            if slave_fd > 2:
-                os.close(slave_fd)
-            os.close(err_w)
-            try:
-                os.execvp(self._command[0], self._command)
-            except FileNotFoundError:
-                os._exit(127)
-
-        os.close(slave_fd)
-        os.close(err_w)
-        self._child_pid = pid
-        self._master_fd = master_fd
-
-        def pump_loop():
-            try:
-                while True:
-                    try:
-                        rlist, _, _ = select.select([master_fd, err_r], [], [], 0.2)
-                    except (InterruptedError, OSError):
-                        break
-
-                    if master_fd in rlist:
-                        try:
-                            data = os.read(master_fd, CHUNK_SIZE)
-                        except OSError:
-                            data = b""
-                        if data:
-                            self._emit("stdout", data)
-                        else:
-                            break  # child closed the pty -> exited
-
-                    if err_r in rlist:
-                        try:
-                            data = os.read(err_r, CHUNK_SIZE)
-                        except OSError:
-                            data = b""
-                        if data:
-                            self._emit("stderr", data)
-
-                    done_pid, _status = os.waitpid(pid, os.WNOHANG)
-                    if done_pid == pid:
-                        break
-            finally:
-                for fd in (master_fd, err_r):
-                    try:
-                        os.close(fd)
-                    except OSError:
-                        pass
-                self._queue.put(None)  # sentinel: pump thread finished
-
-        self._pump_thread = threading.Thread(target=pump_loop, daemon=True)
-        self._pump_thread.start()
-
-    def _emit_windows(self, text: str) -> None:
-        """Windows counterpart of _emit(). ConPTY (via pywinpty) merges the
-        child's stdout/stderr into a single stream -- unlike the POSIX path
-        above, which pipes stderr separately. Rather than fabricating a
-        stderr split that doesn't actually happen on Windows, every
-        Windows-sourced event is tagged stream="stdout" plus an explicit
-        platform="windows" marker so downstream consumers can tell the two
-        capture paths apart."""
-        self._queue.put(
-            {
-                "timestamp": datetime.datetime.now().isoformat(),
-                "stream": "stdout",
-                "platform": "windows",
-                "content": text,
-                "wrapped_command": " ".join(self._command),
-            }
-        )
-
-    def _spawn_and_pump_windows(self) -> None:
-        """Windows PTY backend: spawns the wrapped command under a real
-        ConPTY via pywinpty (https://github.com/andfoy/pywinpty), the
-        closest Windows equivalent of the POSIX pty.openpty()/os.fork()
-        machinery in _spawn_and_pump() above. A real PTY (not plain pipes)
-        matters here because the real `copilot` CLI's footer output
-        (see module docstring) only appears when it thinks it's running
-        interactively -- a subprocess.Popen pipe fallback would silently
-        produce a non-equivalent, degraded capture.
-        """
-        if not _PYWINPTY_AVAILABLE:
-            raise RuntimeError(
-                f"{self.collector_id}: pywinpty is not installed; cannot spawn on Windows "
-                "(detect() should have already reported this technique as not viable)"
-            )
-
-        # pywinpty's PtyProcess.spawn() (verified against the actual
-        # installed API: winpty/ptyprocess.py's spawn(argv, cwd=None,
-        # env=None, dimensions=(24, 80), backend=None)) takes no
-        # encoding/errors kwargs -- read() already decodes to str
-        # internally, so nothing further to configure here.
-        proc = _WinPtyProcess.spawn(self._command)
-        self._winpty_proc = proc
-
-        def pump_loop():
-            try:
-                while True:
-                    try:
-                        data = proc.read(CHUNK_SIZE)
-                    except EOFError:
-                        break
-                    except Exception:
-                        break
-                    if data:
-                        self._emit_windows(data)
-                    if not proc.isalive():
-                        break
-            finally:
-                self._queue.put(None)
-
-        self._pump_thread = threading.Thread(target=pump_loop, daemon=True)
-        self._pump_thread.start()
+    def _start_live(self) -> None:
+        feed = LiveEventFeed()
+        self._live_feed = feed
+        session = LivePtySession(self._command, feed)
+        session.start()
+        self._session = session
 
     def capture(self) -> Iterator[RawEvent]:
         if not self._activated:
             raise RuntimeError(f"{self.collector_id}: capture() called before activate()")
-
-        if self._replay_events is not None:
-            for chunk in self._replay_events:
-                # raw_payload is the exact {timestamp, stream, content,
-                # wrapped_command[, received_at]} shape from
-                # cli_wrapper_demo/captured_events.jsonl -- untouched, not
-                # reshaped to look like a hook event.
-                yield RawEvent(
-                    timestamp=RawEvent.now_iso(),
-                    collector_id=self.collector_id,
-                    agent=AGENT_NAME,
-                    raw_payload=chunk,
-                )
+        source = self._event_source()
+        if source is None:
             return
-
-        # Live mode: drain the queue the background pump thread fills,
-        # until it signals completion with the None sentinel.
-        while True:
-            try:
-                item = self._queue.get(timeout=1.0)
-            except Empty:
-                if self._pump_thread is not None and not self._pump_thread.is_alive():
-                    return
-                continue
-            if item is None:
-                return
+        for chunk in source:
             yield RawEvent(
                 timestamp=RawEvent.now_iso(),
                 collector_id=self.collector_id,
                 agent=AGENT_NAME,
-                raw_payload=item,
+                raw_payload=chunk,
             )
 
-    def deactivate(self) -> None:
-        if sys.platform == "win32":
-            if self._winpty_proc is not None:
-                try:
-                    self._winpty_proc.terminate(force=True)
-                except Exception:
-                    pass
-                self._winpty_proc = None
-            self._activated = False
-            return
+    def _event_source(self):
+        if self._replay_events is not None:
+            return self._replay_events
+        return self._live_feed
 
-        if self._child_pid is not None:
-            try:
-                os.kill(self._child_pid, signal.SIGTERM)
-            except OSError:
-                pass
+    def deactivate(self) -> None:
         self._activated = False
+        session = self._session
+        self._session = None
+        if session is not None:
+            session.stop()
+            return
+        feed = self._live_feed
+        if feed is not None:
+            feed.stop()
 
 
 if __name__ == "__main__":
