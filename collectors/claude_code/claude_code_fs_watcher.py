@@ -88,29 +88,19 @@ from __future__ import annotations
 
 import json
 import os
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterator, List, Optional
 
 import sys as _sys
 from pathlib import Path as _Path
 _sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
+from collectors.live_fs import (  # noqa: E402
+    LiveFSWatch,
+    QueuedFSHandler,
+    WATCHDOG_AVAILABLE,
+)
+from collectors.live_http import LiveEventFeed  # noqa: E402
 from core import Collector, RawEvent
-
-try:
-    from watchdog.events import FileSystemEventHandler
-    from watchdog.observers import Observer
-
-    WATCHDOG_AVAILABLE = True
-except ImportError:
-    # `watchdog` is a third-party dependency, not stdlib. Live-mode watching
-    # is best-effort and gracefully degrades (detect() still works;
-    # activate()/capture() in live mode raise a clear error) if watchdog
-    # isn't installed. Replay mode works regardless -- same pattern
-    # copilot_fs_watcher.py uses.
-    WATCHDOG_AVAILABLE = False
-    FileSystemEventHandler = object  # type: ignore[assignment,misc]
-    Observer = None  # type: ignore[assignment]
 
 AGENT_NAME = "claude_code"
 COLLECTOR_ID = "claude_code.fs_watcher"
@@ -123,17 +113,6 @@ COLLECTOR_ID = "claude_code.fs_watcher"
 CLAUDE_PROJECTS_ROOT = os.path.expanduser("~/.claude/projects")
 
 WATCH_ROOTS = [CLAUDE_PROJECTS_ROOT]
-
-
-def _safe_size(path: str) -> Optional[int]:
-    try:
-        return os.path.getsize(path)
-    except OSError:
-        return None
-
-
-def _is_transcript_file(path: str) -> bool:
-    return path.endswith(".jsonl") and CLAUDE_PROJECTS_ROOT in path
 
 
 def read_new_transcript_lines(path: str, start_offset_lines: int) -> List[dict]:
@@ -165,63 +144,6 @@ def read_new_transcript_lines(path: str, start_offset_lines: int) -> List[dict]:
     return lines_out
 
 
-if WATCHDOG_AVAILABLE:
-
-    class _QueueingHandler(FileSystemEventHandler):
-        """Adapted from Antigravity_FSWatcher/fs_watcher.py's Handler class.
-        Extended (beyond the generic mechanism) to actually tail newly
-        appended JSONL lines out of transcript files on `modified` events,
-        since a bare "file changed" stat record would throw away exactly
-        the token-usage/thinking-block content the CSV says only this
-        technique can see for Claude Code (see module docstring).
-        """
-
-        def __init__(self) -> None:
-            self.pending: List[dict] = []
-            self._line_offsets: dict = {}  # path -> lines already emitted
-
-        def _log_fs_event(self, event_type: str, path: str, is_directory: bool, extra: Optional[dict] = None) -> None:
-            record = {
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "event_type": event_type,
-                "path": path,
-                "is_directory": is_directory,
-                "size_bytes": None if is_directory else _safe_size(path),
-            }
-            if extra:
-                record.update(extra)
-            self.pending.append(record)
-
-        def on_created(self, event):
-            self._log_fs_event("created", event.src_path, event.is_directory)
-            if not event.is_directory and _is_transcript_file(event.src_path):
-                self._line_offsets[event.src_path] = 0
-                self._drain_new_lines(event.src_path)
-
-        def on_modified(self, event):
-            if not event.is_directory and _is_transcript_file(event.src_path):
-                # Transcript append: yield the actual new parsed lines
-                # (session usage/thinking/tool content), not just a stat
-                # blip -- see module docstring's "MECHANISM" section.
-                self._drain_new_lines(event.src_path)
-            else:
-                self._log_fs_event("modified", event.src_path, event.is_directory)
-
-        def on_deleted(self, event):
-            self._log_fs_event("deleted", event.src_path, event.is_directory)
-            self._line_offsets.pop(event.src_path, None)
-
-        def on_moved(self, event):
-            self._log_fs_event("moved", event.src_path, event.is_directory, extra={"dest_path": event.dest_path})
-
-        def _drain_new_lines(self, path: str) -> None:
-            offset = self._line_offsets.get(path, 0)
-            new_lines = read_new_transcript_lines(path, offset)
-            if new_lines:
-                self.pending.extend(new_lines)
-                self._line_offsets[path] = offset + len(new_lines)
-
-
 class ClaudeCodeFSWatcherCollector(Collector):
     """Filesystem-watcher collector for Claude Code's transcript directory
     (~/.claude/projects/<project-dir>/<session-id>.jsonl -- real,
@@ -241,11 +163,17 @@ class ClaudeCodeFSWatcherCollector(Collector):
     exercise it deterministically.
     """
 
-    def __init__(self, replay_events: Optional[List[dict]] = None) -> None:
+    def __init__(
+        self,
+        replay_events: Optional[List[dict]] = None,
+        watch_roots: Optional[List[str]] = None,
+    ) -> None:
         self._replay_events = replay_events
+        self._watch_roots = watch_roots or list(WATCH_ROOTS)
         self._activated = False
-        self._observer = None
-        self._handler: Optional["_QueueingHandler"] = None
+        self._live_feed: Optional[LiveEventFeed] = None
+        self._watch: Optional[LiveFSWatch] = None
+        self._line_offsets: dict = {}
 
     @property
     def collector_id(self) -> str:
@@ -258,46 +186,37 @@ class ClaudeCodeFSWatcherCollector(Collector):
         created by Claude Code itself the first time any session runs
         (same lifecycle claude_code_hooks.py's detect() relies on for
         ~/.claude existing at all)."""
-        return Path(CLAUDE_PROJECTS_ROOT).is_dir()
+        return any(Path(root).is_dir() for root in self._watch_roots)
 
     def activate(self) -> None:
-        """In replay mode, a no-op besides marking activated. In live
-        mode, requires the `watchdog` third-party package -- raises a
-        clear RuntimeError if unavailable rather than silently doing
-        nothing (same posture as copilot_fs_watcher.py)."""
-        if self._replay_events is None:
-            if not WATCHDOG_AVAILABLE:
-                raise RuntimeError(
-                    f"{self.collector_id}: live filesystem watching requires the "
-                    f"third-party `watchdog` package, which is not installed and "
-                    f"not part of this stdlib-only framework's guaranteed deps. "
-                    f"Install it, or use replay_events= for offline testing."
-                )
-            self._handler = _QueueingHandler()
-            self._observer = Observer()
-            if Path(CLAUDE_PROJECTS_ROOT).is_dir():
-                self._observer.schedule(self._handler, CLAUDE_PROJECTS_ROOT, recursive=True)
-            self._observer.start()
         self._activated = True
+        if self._replay_events is not None:
+            return
+        self._start_live()
+
+    def _start_live(self) -> None:
+        feed = LiveEventFeed()
+        handler = QueuedFSHandler(feed, tail_file=self._tail)
+        watch = LiveFSWatch(feed, handler)
+        watch.start(self._watch_roots)
+        self._live_feed = feed
+        self._watch = watch
+
+    def _tail(self, path: str) -> Optional[List[dict]]:
+        if not path.endswith(".jsonl"):
+            return None
+        offset = self._line_offsets.get(path, 0)
+        new_lines = read_new_transcript_lines(path, offset)
+        self._line_offsets[path] = offset + len(new_lines)
+        return new_lines
 
     def capture(self) -> Iterator[RawEvent]:
         if not self._activated:
             raise RuntimeError(f"{self.collector_id}: capture() called before activate()")
-
-        if self._replay_events is not None:
-            for record in self._replay_events:
-                yield RawEvent(
-                    timestamp=RawEvent.now_iso(),
-                    collector_id=self.collector_id,
-                    agent=AGENT_NAME,
-                    raw_payload=record,  # untouched -- transcript line or fs-event record
-                )
+        source = self._event_source()
+        if source is None:
             return
-
-        if self._handler is None:
-            return
-        pending, self._handler.pending = self._handler.pending, []
-        for record in pending:
+        for record in source:
             yield RawEvent(
                 timestamp=RawEvent.now_iso(),
                 collector_id=self.collector_id,
@@ -305,14 +224,17 @@ class ClaudeCodeFSWatcherCollector(Collector):
                 raw_payload=record,
             )
 
+    def _event_source(self):
+        if self._replay_events is not None:
+            return self._replay_events
+        return self._live_feed
+
     def deactivate(self) -> None:
-        if self._observer is not None:
-            try:
-                self._observer.stop()
-                self._observer.join(timeout=2.0)
-            except Exception:  # noqa: BLE001 - best-effort cleanup only
-                pass
         self._activated = False
+        watch = self._watch
+        self._watch = None
+        if watch is not None:
+            watch.stop()
 
 
 if __name__ == "__main__":

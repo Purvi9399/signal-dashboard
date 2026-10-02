@@ -49,17 +49,15 @@ tested.
 from __future__ import annotations
 
 import json
-import os
 import shutil
-import threading
-import time
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterator, List, Optional
 
 import sys as _sys
 from pathlib import Path as _Path
 _sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
+from collectors.live_fs import LiveFSWatch, QueuedFSHandler  # noqa: E402
+from collectors.live_http import LiveEventFeed  # noqa: E402
 from core import Collector, RawEvent
 
 AGENT_NAME = "antigravity"
@@ -73,13 +71,6 @@ WATCH_ROOTS = [
     Path.home() / ".gemini" / "antigravity" / "brain",       # IDE surface
     Path.home() / ".gemini" / "antigravity-cli" / "brain",   # CLI surface
 ]
-
-
-def _safe_size(path: str) -> Optional[int]:
-    try:
-        return os.path.getsize(path)
-    except OSError:
-        return None
 
 
 def _load_jsonl(path: Path) -> List[dict]:
@@ -132,13 +123,14 @@ class AntigravityFSWatcherCollector(Collector):
         self,
         watch_roots: Optional[List[Path]] = None,
         replay_path: Optional[Path] = None,
+        replay_events: Optional[List[dict]] = None,
     ) -> None:
-        self._watch_roots = watch_roots or WATCH_ROOTS
+        self._watch_roots = watch_roots or list(WATCH_ROOTS)
         self._replay_path = replay_path
+        self._replay_events = replay_events
         self._activated = False
-        self._observer = None
-        self._events: "list[dict]" = []
-        self._lock = threading.Lock()
+        self._live_feed: Optional[LiveEventFeed] = None
+        self._watch: Optional[LiveFSWatch] = None
 
     @property
     def collector_id(self) -> str:
@@ -157,96 +149,30 @@ class AntigravityFSWatcherCollector(Collector):
         """
         return any(root.is_dir() for root in self._watch_roots)
 
+    def _is_replay(self) -> bool:
+        return self._replay_events is not None or self._replay_path is not None
+
     def activate(self) -> None:
-        """Starts a real watchdog Observer over whichever of the two real
-        roots exist (creating them if missing, exactly as the real
-        fs_watcher.py's main() does via os.makedirs(root, exist_ok=True),
-        so a freshly-installed Antigravity with no conversations yet still
-        gets watched from the start). No-op in replay mode."""
-        if self._replay_path is not None:
-            self._activated = True
-            return
-
-        try:
-            from watchdog.observers import Observer
-            from watchdog.events import FileSystemEventHandler
-        except ImportError as exc:
-            raise RuntimeError(
-                f"{self.collector_id}: live mode requires the third-party "
-                f"'watchdog' package (pip install watchdog) -- same "
-                f"dependency the real Antigravity_FSWatcher/fs_watcher.py "
-                f"used. Use replay_path= for replay-only testing."
-            ) from exc
-
-        events_ref = self._events
-        lock_ref = self._lock
-
-        class _Handler(FileSystemEventHandler):
-            def _log(self, event_type, path, is_directory, extra=None):
-                record = {
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                    "event_type": event_type,
-                    "path": path,
-                    "is_directory": is_directory,
-                    "size_bytes": None if is_directory else _safe_size(path),
-                }
-                if extra:
-                    record.update(extra)
-                with lock_ref:
-                    events_ref.append(record)
-
-            def on_created(self, event):
-                self._log("created", event.src_path, event.is_directory)
-
-            def on_modified(self, event):
-                self._log("modified", event.src_path, event.is_directory)
-
-            def on_deleted(self, event):
-                self._log("deleted", event.src_path, event.is_directory)
-
-            def on_moved(self, event):
-                self._log(
-                    "moved", event.src_path, event.is_directory,
-                    extra={"dest_path": event.dest_path},
-                )
-
-        observer = Observer()
-        handler = _Handler()
-        for root in self._watch_roots:
-            root.mkdir(parents=True, exist_ok=True)
-            observer.schedule(handler, str(root), recursive=True)
-        observer.start()
-        self._observer = observer
         self._activated = True
+        if self._is_replay():
+            return
+        self._start_live()
+
+    def _start_live(self) -> None:
+        feed = LiveEventFeed()
+        handler = QueuedFSHandler(feed)
+        watch = LiveFSWatch(feed, handler)
+        watch.start([str(root) for root in self._watch_roots], mkdir=True)
+        self._live_feed = feed
+        self._watch = watch
 
     def capture(self) -> Iterator[RawEvent]:
         if not self._activated:
             raise RuntimeError(f"{self.collector_id}: capture() called before activate()")
-
-        if self._replay_path is not None:
-            for payload in _load_jsonl(self._replay_path):
-                yield RawEvent(
-                    timestamp=RawEvent.now_iso(),
-                    collector_id=self.collector_id,
-                    agent=AGENT_NAME,
-                    raw_payload=payload,  # untouched, exact captured shape
-                )
+        source = self._event_source()
+        if source is None:
             return
-
-        # Live mode: drain whatever the background Observer thread has
-        # queued so far. This is a finite drain per call (matching
-        # core.py's note that capture() "may be a live/blocking generator
-        # ... or a finite one"); a long-running consumer is expected to
-        # call capture() repeatedly (registry.merged_capture() does this
-        # implicitly via round-robin re-entry into fresh iterators is NOT
-        # how this is written -- here one capture() call drains the
-        # snapshot taken at call time, mirroring how the real
-        # fs_watcher.py just appends to a growing file that a separate
-        # tailer would re-read).
-        with self._lock:
-            pending = list(self._events)
-            self._events.clear()
-        for payload in pending:
+        for payload in source:
             yield RawEvent(
                 timestamp=RawEvent.now_iso(),
                 collector_id=self.collector_id,
@@ -254,12 +180,19 @@ class AntigravityFSWatcherCollector(Collector):
                 raw_payload=payload,
             )
 
+    def _event_source(self):
+        if self._replay_events is not None:
+            return self._replay_events
+        if self._replay_path is not None:
+            return _load_jsonl(self._replay_path)
+        return self._live_feed
+
     def deactivate(self) -> None:
-        if self._observer is not None:
-            self._observer.stop()
-            self._observer.join(timeout=2.0)
-            self._observer = None
         self._activated = False
+        watch = self._watch
+        self._watch = None
+        if watch is not None:
+            watch.stop()
 
 
 if __name__ == "__main__":

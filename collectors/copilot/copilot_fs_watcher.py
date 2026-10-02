@@ -72,29 +72,19 @@ Handler._log() already produces -- untouched.
 from __future__ import annotations
 
 import os
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterator, List, Optional
 
 import sys as _sys
 from pathlib import Path as _Path
 _sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
+from collectors.live_fs import (  # noqa: E402
+    LiveFSWatch,
+    QueuedFSHandler,
+    WATCHDOG_AVAILABLE,
+)
+from collectors.live_http import LiveEventFeed  # noqa: E402
 from core import Collector, RawEvent
-
-try:
-    from watchdog.events import FileSystemEventHandler
-    from watchdog.observers import Observer
-
-    WATCHDOG_AVAILABLE = True
-except ImportError:
-    # `watchdog` is a third-party dependency, not stdlib. The task requires
-    # stdlib-only for this framework, so live-mode watching is best-effort
-    # and gracefully degrades (detect() still works; activate()/capture() in
-    # live mode raise a clear error) if watchdog isn't installed. Replay
-    # mode (feeding capture() from already-captured JSONL) works regardless.
-    WATCHDOG_AVAILABLE = False
-    FileSystemEventHandler = object  # type: ignore[assignment,misc]
-    Observer = None  # type: ignore[assignment]
 
 AGENT_NAME = "copilot"
 COLLECTOR_ID = "copilot.fs_watcher"
@@ -108,51 +98,6 @@ WATCH_ROOTS = [
     os.path.expanduser("~/.copilot/logs"),   # Copilot_MCP_Proxy/RESULTS.md section f
     os.path.expanduser("~/.copilot/hooks"),  # Copilot/RESULTS.md section 5, finding 5
 ]
-
-
-def _safe_size(path: str) -> Optional[int]:
-    try:
-        return os.path.getsize(path)
-    except OSError:
-        return None
-
-
-if WATCHDOG_AVAILABLE:
-
-    class _QueueingHandler(FileSystemEventHandler):
-        """Direct adaptation of Antigravity_FSWatcher/fs_watcher.py's
-        Handler class -- same event shape, same four event types -- but
-        pushes onto an in-process list instead of appending to a file,
-        since this collector's capture() (not a standalone script's
-        main loop) owns delivery.
-        """
-
-        def __init__(self) -> None:
-            self.pending: List[dict] = []
-
-        def _log(self, event_type: str, path: str, is_directory: bool, extra: Optional[dict] = None) -> None:
-            record = {
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "event_type": event_type,
-                "path": path,
-                "is_directory": is_directory,
-                "size_bytes": None if is_directory else _safe_size(path),
-            }
-            if extra:
-                record.update(extra)
-            self.pending.append(record)
-
-        def on_created(self, event):
-            self._log("created", event.src_path, event.is_directory)
-
-        def on_modified(self, event):
-            self._log("modified", event.src_path, event.is_directory)
-
-        def on_deleted(self, event):
-            self._log("deleted", event.src_path, event.is_directory)
-
-        def on_moved(self, event):
-            self._log("moved", event.src_path, event.is_directory, extra={"dest_path": event.dest_path})
 
 
 class CopilotFSWatcherCollector(Collector):
@@ -174,11 +119,16 @@ class CopilotFSWatcherCollector(Collector):
     presented as real Copilot data).
     """
 
-    def __init__(self, replay_events: Optional[List[dict]] = None) -> None:
+    def __init__(
+        self,
+        replay_events: Optional[List[dict]] = None,
+        watch_roots: Optional[List[str]] = None,
+    ) -> None:
         self._replay_events = replay_events
+        self._watch_roots = watch_roots or list(WATCH_ROOTS)
         self._activated = False
-        self._observer = None
-        self._handler: Optional["_QueueingHandler"] = None
+        self._live_feed: Optional[LiveEventFeed] = None
+        self._watch: Optional[LiveFSWatch] = None
 
     @property
     def collector_id(self) -> str:
@@ -192,53 +142,29 @@ class CopilotFSWatcherCollector(Collector):
         legitimately fail this (neither directory would exist yet), which
         is an honest reflection of how thin this collector's grounding is.
         """
-        return any(Path(root).is_dir() for root in WATCH_ROOTS)
+        return any(Path(root).is_dir() for root in self._watch_roots)
 
     def activate(self) -> None:
-        """In replay mode, a no-op besides marking activated. In live mode,
-        requires the `watchdog` third-party package (not stdlib) -- raises
-        a clear RuntimeError if unavailable rather than silently doing
-        nothing, per this collector's overall "be honest about gaps"
-        posture.
-        """
-        if self._replay_events is None:
-            if not WATCHDOG_AVAILABLE:
-                raise RuntimeError(
-                    f"{self.collector_id}: live filesystem watching requires the "
-                    f"third-party `watchdog` package, which is not installed and "
-                    f"not part of this stdlib-only framework's guaranteed deps. "
-                    f"Install it, or use replay_events= for offline testing."
-                )
-            self._handler = _QueueingHandler()
-            self._observer = Observer()
-            existing_roots = [root for root in WATCH_ROOTS if Path(root).is_dir()]
-            for root in existing_roots:
-                self._observer.schedule(self._handler, root, recursive=True)
-            self._observer.start()
         self._activated = True
+        if self._replay_events is not None:
+            return
+        self._start_live()
+
+    def _start_live(self) -> None:
+        feed = LiveEventFeed()
+        handler = QueuedFSHandler(feed)
+        watch = LiveFSWatch(feed, handler)
+        watch.start(self._watch_roots)
+        self._live_feed = feed
+        self._watch = watch
 
     def capture(self) -> Iterator[RawEvent]:
         if not self._activated:
             raise RuntimeError(f"{self.collector_id}: capture() called before activate()")
-
-        if self._replay_events is not None:
-            for record in self._replay_events:
-                yield RawEvent(
-                    timestamp=RawEvent.now_iso(),
-                    collector_id=self.collector_id,
-                    agent=AGENT_NAME,
-                    raw_payload=record,  # untouched
-                )
+        source = self._event_source()
+        if source is None:
             return
-
-        if self._handler is None:
-            return
-        # Drain whatever the watchdog handler has queued so far. This is a
-        # finite drain per call (matching this framework's "capture() may
-        # be called many times" contract), not a blocking tail -- a live
-        # deployment would call capture() repeatedly/on a loop.
-        pending, self._handler.pending = self._handler.pending, []
-        for record in pending:
+        for record in source:
             yield RawEvent(
                 timestamp=RawEvent.now_iso(),
                 collector_id=self.collector_id,
@@ -246,14 +172,17 @@ class CopilotFSWatcherCollector(Collector):
                 raw_payload=record,
             )
 
+    def _event_source(self):
+        if self._replay_events is not None:
+            return self._replay_events
+        return self._live_feed
+
     def deactivate(self) -> None:
-        if self._observer is not None:
-            try:
-                self._observer.stop()
-                self._observer.join(timeout=2.0)
-            except Exception:  # noqa: BLE001 - best-effort cleanup only
-                pass
         self._activated = False
+        watch = self._watch
+        self._watch = None
+        if watch is not None:
+            watch.stop()
 
 
 if __name__ == "__main__":

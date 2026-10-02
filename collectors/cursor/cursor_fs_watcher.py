@@ -88,28 +88,19 @@ from __future__ import annotations
 import os
 import shutil
 import subprocess
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterator, List, Optional
 
 import sys as _sys
 from pathlib import Path as _Path
 _sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
+from collectors.live_fs import (  # noqa: E402
+    LiveFSWatch,
+    QueuedFSHandler,
+    WATCHDOG_AVAILABLE,
+)
+from collectors.live_http import LiveEventFeed  # noqa: E402
 from core import Collector, RawEvent
-
-try:
-    from watchdog.events import FileSystemEventHandler
-    from watchdog.observers import Observer
-
-    WATCHDOG_AVAILABLE = True
-except ImportError:
-    # Third-party, not stdlib -- this framework is stdlib-only, so live
-    # watching degrades gracefully (detect() still works; live-mode
-    # activate() raises a clear error). Replay mode works regardless,
-    # matching copilot_fs_watcher.py's exact same posture.
-    WATCHDOG_AVAILABLE = False
-    FileSystemEventHandler = object  # type: ignore[assignment,misc]
-    Observer = None  # type: ignore[assignment]
 
 AGENT_NAME = "cursor"
 COLLECTOR_ID = "cursor.fs_watcher"
@@ -171,64 +162,6 @@ def read_git_ref(project_root: Path) -> Optional[dict]:
     }
 
 
-def _safe_size(path: str) -> Optional[int]:
-    try:
-        return os.path.getsize(path)
-    except OSError:
-        return None
-
-
-if WATCHDOG_AVAILABLE:
-
-    class _QueueingHandler(FileSystemEventHandler):
-        """Same {timestamp, event_type, path, is_directory, size_bytes}
-        shape used by copilot_fs_watcher.py's own _QueueingHandler (itself
-        adapted from Antigravity_FSWatcher/fs_watcher.py's Handler), with
-        an added `project_root` closure so `.git`-rooted events can be
-        tagged with a real git_ref lookup (see _log() below) -- this is
-        the concrete, CSV-cited ("read from .git or a git command")
-        mechanism, not a generic FS fact.
-        """
-
-        def __init__(self, project_root: Path) -> None:
-            self.pending: List[dict] = []
-            self._project_root = project_root
-
-        def _log(self, event_type: str, path: str, is_directory: bool, extra: Optional[dict] = None) -> None:
-            record = {
-                "timestamp": datetime.now(timezone.utc).isoformat(),
-                "event_type": event_type,
-                "path": path,
-                "is_directory": is_directory,
-                "size_bytes": None if is_directory else _safe_size(path),
-            }
-            # CSV rows 33/34: git_branch/git_commit come from reading
-            # .git directly. Only attempted for events actually under the
-            # .git directory, to avoid a `git` subprocess call on every
-            # single workspace-file event (real filesystem events for a
-            # busy workspace can be frequent; git state changes far less
-            # often than files do).
-            if ".git" in Path(path).parts:
-                git_ref = read_git_ref(self._project_root)
-                if git_ref:
-                    record["git_ref"] = git_ref
-            if extra:
-                record.update(extra)
-            self.pending.append(record)
-
-        def on_created(self, event):
-            self._log("created", event.src_path, event.is_directory)
-
-        def on_modified(self, event):
-            self._log("modified", event.src_path, event.is_directory)
-
-        def on_deleted(self, event):
-            self._log("deleted", event.src_path, event.is_directory)
-
-        def on_moved(self, event):
-            self._log("moved", event.src_path, event.is_directory, extra={"dest_path": event.dest_path})
-
-
 class CursorFSWatcherCollector(Collector):
     """Filesystem-watcher-based collector for Cursor, watching a detected
     project's `.git` directory (git_branch/git_commit, CSV rows 33/34)
@@ -257,12 +190,15 @@ class CursorFSWatcherCollector(Collector):
         self,
         replay_events: Optional[List[dict]] = None,
         project_root: Optional[Path] = None,
+        use_detected_root: bool = True,
     ) -> None:
         self._replay_events = replay_events
-        self._project_root = project_root or find_cursor_project_root()
+        self._project_root = project_root
+        if self._project_root is None and use_detected_root:
+            self._project_root = find_cursor_project_root()
         self._activated = False
-        self._observer = None
-        self._handler: Optional["_QueueingHandler"] = None
+        self._live_feed: Optional[LiveEventFeed] = None
+        self._watch: Optional[LiveFSWatch] = None
 
     @property
     def collector_id(self) -> str:
@@ -285,51 +221,40 @@ class CursorFSWatcherCollector(Collector):
         return root.is_dir()
 
     def activate(self) -> None:
-        """In replay mode, a no-op besides marking activated. In live
-        mode, requires the third-party `watchdog` package -- raises a
-        clear RuntimeError if unavailable, matching copilot_fs_watcher.py's
-        exact posture, rather than silently doing nothing.
-        """
-        if self._replay_events is None:
-            if not WATCHDOG_AVAILABLE:
-                raise RuntimeError(
-                    f"{self.collector_id}: live filesystem watching requires the "
-                    f"third-party `watchdog` package, which is not installed and "
-                    f"not part of this stdlib-only framework's guaranteed deps. "
-                    f"Install it, or use replay_events= for offline testing."
-                )
-            if self._project_root is None:
-                raise RuntimeError(
-                    f"{self.collector_id}: no Cursor project root detected "
-                    f"(no .cursor/hooks.json found walking up from cwd) -- "
-                    f"nothing to watch."
-                )
-            self._handler = _QueueingHandler(self._project_root)
-            self._observer = Observer()
-            for root in default_watch_paths(self._project_root):
-                if Path(root).is_dir():
-                    self._observer.schedule(self._handler, root, recursive=True)
-            self._observer.start()
         self._activated = True
+        if self._replay_events is not None:
+            return
+        self._start_live()
+
+    def _start_live(self) -> None:
+        if self._project_root is None:
+            raise RuntimeError(
+                f"{self.collector_id}: no Cursor project root detected "
+                f"(no .cursor/hooks.json found walking up from cwd) -- "
+                f"nothing to watch."
+            )
+        feed = LiveEventFeed()
+        handler = QueuedFSHandler(feed, extra_for=self._git_extra)
+        watch = LiveFSWatch(feed, handler)
+        watch.start(default_watch_paths(self._project_root))
+        self._live_feed = feed
+        self._watch = watch
+
+    def _git_extra(self, _event_type: str, path: str) -> Optional[dict]:
+        if ".git" not in Path(path).parts:
+            return None
+        git_ref = read_git_ref(self._project_root)
+        if not git_ref:
+            return None
+        return {"git_ref": git_ref}
 
     def capture(self) -> Iterator[RawEvent]:
         if not self._activated:
             raise RuntimeError(f"{self.collector_id}: capture() called before activate()")
-
-        if self._replay_events is not None:
-            for record in self._replay_events:
-                yield RawEvent(
-                    timestamp=RawEvent.now_iso(),
-                    collector_id=self.collector_id,
-                    agent=AGENT_NAME,
-                    raw_payload=record,  # untouched
-                )
+        source = self._event_source()
+        if source is None:
             return
-
-        if self._handler is None:
-            return
-        pending, self._handler.pending = self._handler.pending, []
-        for record in pending:
+        for record in source:
             yield RawEvent(
                 timestamp=RawEvent.now_iso(),
                 collector_id=self.collector_id,
@@ -337,14 +262,17 @@ class CursorFSWatcherCollector(Collector):
                 raw_payload=record,
             )
 
+    def _event_source(self):
+        if self._replay_events is not None:
+            return self._replay_events
+        return self._live_feed
+
     def deactivate(self) -> None:
-        if self._observer is not None:
-            try:
-                self._observer.stop()
-                self._observer.join(timeout=2.0)
-            except Exception:  # noqa: BLE001 - best-effort cleanup only
-                pass
         self._activated = False
+        watch = self._watch
+        self._watch = None
+        if watch is not None:
+            watch.stop()
 
 
 if __name__ == "__main__":

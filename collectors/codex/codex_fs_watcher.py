@@ -48,6 +48,8 @@ from typing import Iterator, List, Optional
 import sys as _sys
 from pathlib import Path as _Path
 _sys.path.insert(0, str(_Path(__file__).resolve().parents[2]))
+from collectors.live_fs import LiveFSWatch, QueuedFSHandler, safe_size  # noqa: E402
+from collectors.live_http import LiveEventFeed  # noqa: E402
 from core import Collector, RawEvent
 
 AGENT_NAME = "codex"
@@ -140,6 +142,8 @@ class CodexFSWatcherCollector(Collector):
         self._replay_events = replay_events
         self._watch_paths = watch_paths or default_watch_paths()
         self._activated = False
+        self._live_feed: Optional[LiveEventFeed] = None
+        self._watch: Optional[LiveFSWatch] = None
 
     @property
     def collector_id(self) -> str:
@@ -187,43 +191,54 @@ class CodexFSWatcherCollector(Collector):
         informational, not blocking.
         """
         self._activated = True
+        if self._replay_events is not None:
+            return
+        self._start_live()
+
+    def _start_live(self) -> None:
+        feed = LiveEventFeed()
+        handler = QueuedFSHandler(feed, extra_for=self._codex_extra)
+        watch = LiveFSWatch(feed, handler)
+        watch.start(self._watch_paths)
+        self._live_feed = feed
+        self._watch = watch
+
+    def _root_for(self, path: str) -> str:
+        resolved = str(Path(path).resolve())
+        for root in self._watch_paths:
+            prefix = str(Path(root).resolve())
+            if resolved == prefix or resolved.startswith(prefix + "/"):
+                return root
+        return self._watch_paths[0] if self._watch_paths else ""
+
+    def _codex_extra(self, _event_type: str, path: str) -> dict:
+        return {"watch_root": self._root_for(path), "size": safe_size(path)}
 
     def capture(self) -> Iterator[RawEvent]:
         if not self._activated:
             raise RuntimeError(f"{self.collector_id}: capture() called before activate()")
-
-        if self._replay_events is None:
-            # Live mode placeholder: no live watchdog Observer spawned in
-            # this standalone demo build.
+        source = self._event_source()
+        if source is None:
             return
-
-        for payload in self._replay_events:
-            # DOCUMENTED, CONFIRMED SHAPE/QUIRKS -- preserved exactly:
-            #
-            #  1. Real record shape is EXACTLY {"timestamp": ..., "event_type":
-            #     "created"|"modified"|"deleted"|"moved_from"|"moved_to",
-            #     "path": ..., "is_directory": bool, "size": int|null,
-            #     "watch_root": ...} -- confirmed against fs_watcher.py's own
-            #     _emit() function. `size` is null for directory events and
-            #     for paths that vanish (`OSError` on os.path.getsize) --
-            #     not backfilled here.
-            #
-            #  2. TOOL-CALL SUCCESS/FAILURE IS NOT RECOVERABLE FROM THIS
-            #     COLLECTOR AT ALL -- confirmed a shell command with zero FS
-            #     footprint (e.g. `echo ...`) leaves NO trace whatsoever in
-            #     this event stream, matching (RESULTS.md section 6) the
-            #     same false-success-signal gap found in every other Codex
-            #     collector in this series, just manifesting here as
-            #     "invisible" rather than "misreported."
+        for payload in source:
             yield RawEvent(
                 timestamp=RawEvent.now_iso(),
                 collector_id=self.collector_id,
                 agent=AGENT_NAME,
-                raw_payload=payload,  # untouched, exact shape from source
+                raw_payload=payload,
             )
+
+    def _event_source(self):
+        if self._replay_events is not None:
+            return self._replay_events
+        return self._live_feed
 
     def deactivate(self) -> None:
         self._activated = False
+        watch = self._watch
+        self._watch = None
+        if watch is not None:
+            watch.stop()
 
 
 def _load_sample_fs_events(max_events: int = 8) -> List[dict]:
