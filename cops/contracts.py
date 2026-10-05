@@ -16,7 +16,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence
 
 
 class MetricState(str, Enum):
@@ -95,6 +95,28 @@ class COPDecision:
     evaluation_ms: float = 0
     failed: bool = False
     error: Optional[str] = None
+
+
+def confidence_is_valid(value: Any) -> bool:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    return 0.0 <= float(value) <= 1.0
+
+
+def _is_id_string(ref: Any) -> bool:
+    return isinstance(ref, str) and ref != ""
+
+
+def evidence_refs_are_ids(refs: Sequence[Any]) -> bool:
+    if not isinstance(refs, (list, tuple)):
+        return False
+    return all(_is_id_string(ref) for ref in refs)
+
+
+def is_incident_input(value: Any) -> bool:
+    if not isinstance(value, (list, tuple)):
+        return False
+    return all(isinstance(item, COPDecision) for item in value)
 
 
 # COPS owned in this pass (do not implement the other side's files).

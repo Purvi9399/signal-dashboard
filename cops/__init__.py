@@ -9,7 +9,16 @@ metrics.
 
 from __future__ import annotations
 
-from .contracts import ActionType, COPDecision, CopType, MetricEvent, MetricState
+from .contracts import (
+    ActionType,
+    COPDecision,
+    CopType,
+    MetricEvent,
+    MetricState,
+    confidence_is_valid,
+    evidence_refs_are_ids,
+    is_incident_input,
+)
 
 __all__ = [
     "ActionType",
@@ -17,4 +26,7 @@ __all__ = [
     "CopType",
     "MetricEvent",
     "MetricState",
+    "confidence_is_valid",
+    "evidence_refs_are_ids",
+    "is_incident_input",
 ]
