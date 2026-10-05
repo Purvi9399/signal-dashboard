@@ -79,6 +79,22 @@ def nonzero_exit(r):
     c = r.get("exit_code")
     return has(c) and str(c) not in ("0", "0.0")
 
+CALL_TYPES = {"tool_request", "tool_call", "mcp_call", "command", "shell_command"}
+NOT_CALLS = {"tool_result", "permission_request", "mcp_result", "subagent_start", "subagent_stop"}
+
+def calls(rows):
+    seen, out = set(), []
+    for r in sorted(rows, key=lambda r: (r.get("occurred_at") or "", r.get("sequence_num") or 0)):
+        if not has(r.get("tool_name")) or (r.get("observable_type") or "") in NOT_CALLS:
+            continue
+        uid = r.get("tool_use_id")
+        if uid:
+            if uid in seen:
+                continue
+            seen.add(uid)
+        out.append(r)
+    return out
+
 def ref(kind, x):
     return f"{kind}:{x}" if has(x) else None
 
@@ -122,7 +138,10 @@ class Session:
                               for r in rows if r.get("operator_username") or r.get("operator_email")), None)
         times = sorted(r["occurred_at"] for r in rows if r.get("occurred_at"))
         self.start, self.end = (times[0], times[-1]) if times else (None, None)
-        self.actions = [r for r in rows if has(r.get("tool_name"))]
+        # one entry per call the agent made: the request row, or the first row
+        # seen for a tool_use_id. Results and permission rows for the same call
+        # are not separate actions (counting them was the old repetition bug).
+        self.actions = calls(rows)
         self.approvals = [s for s in steps if s["step"] == "ASK"]
         self.tokens = sum(num(r.get("total_tokens")) for r in rows)
 
@@ -511,10 +530,26 @@ def event(s, mid, name, value, t, state, feats, ev, trace_id, fields, basis, cou
 
 # ------------------------------------------------------------------ cli
 
+def why(events, mid):
+    """What sits behind a metric's states: tool, state and the deciding features."""
+    rows = [e for e in events if e["metric_id"] == mid]
+    groups = Counter()
+    for e in rows:
+        f = e["features"]
+        key = f.get("reason") or json.dumps({k: v for k, v in f.items()
+                                             if k in ("missing", "present")}, default=str)
+        groups[(e["tool"] or "unattributed", e["state"], key[:110])] += 1
+    print(f"\n{mid}: {len(rows)} sessions\n")
+    print(f"{'tool':<14}{'state':<16}{'n':>4}   detail")
+    for (tool, state, key), n in sorted(groups.items(), key=lambda x: (x[0][0], -x[1])):
+        print(f"{tool:<14}{state:<16}{n:>4}   {key}")
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--session")
+    ap.add_argument("--why", help="metric id: group its non-normal sessions by tool and reason")
     a = ap.parse_args()
     if not (URL and KEY):
         sys.exit("set SUPABASE_URL and SUPABASE_KEY (source ~/.signal-env)")
@@ -530,6 +565,9 @@ def main():
     for mid in METRIC_IDS + ["telemetry.unknown_share"]:
         print(f"{mid:<30}" + "".join(f"{per[mid][s]:>10}" for s in STATES))
 
+    if a.why:
+        why(events, a.why)
+        return
     if a.session:
         print(f"\nsession {a.session}")
         for e in events:

@@ -164,3 +164,23 @@ def test_llm_output_is_validated():
         LLMInterpreter.validate(spec, [], {"interpretation": "ANOMALOUS", "action": "BLOCK"})
     with pytest.raises(ValueError):
         LLMInterpreter.validate(spec, [], {"interpretation": "VIOLATION", "action": "WATCH"})
+
+
+def test_result_and_permission_rows_are_not_repeats():
+    rows = session("rep", 13, ["Read"])
+    call = next(r for r in rows if r.get("tool_name") == "Read" and r.get("tool_use_id"))
+    rows.append({**call, "observable_id": "rep-res", "observable_type": "tool_result"})
+    rows.append({**call, "observable_id": "rep-perm", "observable_type": "permission_request"})
+    rows.append({**call, "observable_id": "rep-dup", "observable_type": "tool_request"})   # same tool_use_id, re-emitted
+    events, _ = signal_metrics.compute(rows)
+    assert ev(events, "rep", "insights.repetition")["value"] == 0
+
+def test_true_repeat_is_still_caught():
+    rows = session("rep2", 14, [])
+    for i in range(3):
+        rows.append({"observable_id": f"r{i}", "session_id": "rep2", "tool": "claude-code",
+                     "collector": "local_hooks", "observable_type": "tool_request", "turn_id": "T",
+                     "tool_name": "Read", "tool_use_id": f"u{i}", "tool_arguments": {"p": "a.py"},
+                     "occurred_at": f"2026-09-14T11:00:0{i}Z"})
+    events, _ = signal_metrics.compute(rows)
+    assert ev(events, "rep2", "insights.repetition")["value"] == 2
