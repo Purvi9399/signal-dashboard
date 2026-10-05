@@ -34,6 +34,7 @@ create table if not exists trace_effects (
   content_hash text, chars_added int, chars_removed int, reverted boolean,
   sensitivity_tier int, secret_detected boolean, outside_workspace boolean,
   git_commit text, occurred_at timestamptz, lag_s numeric, attributed_to text,
+  attributed_via text, had_session boolean,
   observable_id text
 );
 

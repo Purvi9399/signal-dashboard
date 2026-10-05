@@ -184,3 +184,45 @@ def test_true_repeat_is_still_caught():
                      "occurred_at": f"2026-09-14T11:00:0{i}Z"})
     events, _ = signal_metrics.compute(rows)
     assert ev(events, "rep2", "insights.repetition")["value"] == 2
+
+
+def test_command_steps_own_the_files_they_write():
+    import signal_traces
+    rows = session("inst", 15, [])
+    rows.append({"observable_id": "c1", "session_id": "inst", "tool": "claude-code", "collector": "local_hooks",
+                 "observable_type": "tool_request", "tool_name": "Bash", "command": "npm install",
+                 "tool_use_id": "b1", "cwd": "/ws", "occurred_at": "2026-09-15T10:30:00Z"})
+    rows.append({"observable_id": "f1", "collector": "fs_watcher", "observable_type": "file_create",
+                 "file_path": "/ws/package-lock.json", "occurred_at": "2026-09-15T10:30:05Z"})
+    _, _, fx = signal_traces.build(rows)
+    e = next(x for x in fx if x["effect_id"] == "f1")
+    assert e["attributed_to"] == "agent" and e["attributed_via"] == "command" and e["session_id"] == "inst"
+
+def test_relative_step_path_matches_absolute_change():
+    import signal_traces
+    rows = session("rel", 16, [])
+    rows.append({"observable_id": "w1", "session_id": "rel", "tool": "claude-code", "collector": "local_hooks",
+                 "observable_type": "tool_request", "tool_name": "Write", "file_path": "src/a.py",
+                 "tool_use_id": "w", "cwd": "/ws", "occurred_at": "2026-09-16T10:30:00Z"})
+    rows.append({"observable_id": "f2", "collector": "fs_watcher", "observable_type": "file_modify",
+                 "file_path": "/ws/src/a.py", "occurred_at": "2026-09-16T10:30:02Z"})
+    _, _, fx = signal_traces.build(rows)
+    assert next(x for x in fx if x["effect_id"] == "f2")["attributed_via"] == "path"
+
+def test_terminal_twin_folds_into_agent_session():
+    rows = session("agent1", 17, NORMAL, collectors=("local_hooks",), full=False)
+    for r in rows: r["cwd"] = "/ws"
+    rows += [{"observable_id": f"w{i}", "session_id": "wrap1", "tool": "claude-code", "collector": "cli_wrapper",
+              "observable_type": "command", "command": "claude", "cwd": "/ws",
+              "occurred_at": f"2026-09-17T10:0{i}:30Z"} for i in range(3)]
+    sessions, extra = signal_metrics.build_sessions(rows, with_unlinked=True)
+    assert [s.id for s in sessions] == ["agent1"] and extra["merged"] == {"wrap1": "agent1"}
+    assert "cli_wrapper" in sessions[0].collectors
+
+def test_transcript_only_record_is_held_out():
+    rows = session("agent2", 18, NORMAL, full=False)
+    rows.append({"observable_id": "t1", "session_id": "rollout-2026-agent2", "tool": "codex",
+                 "collector": "fs_watcher", "observable_type": "transcript_appended", "total_tokens": 900,
+                 "occurred_at": "2026-09-18T10:05:00Z"})
+    sessions, extra = signal_metrics.build_sessions(rows, with_unlinked=True)
+    assert "rollout-2026-agent2" in extra["unlinked"] and len(sessions) == 1

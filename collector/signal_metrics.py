@@ -446,7 +446,19 @@ def estate(sessions):
 
 # ------------------------------------------------------------------ build
 
-def build_sessions(rows):
+def build_sessions(rows, with_unlinked=False):
+    """Agent sessions, each with its rows, trace, steps and effects.
+
+    Two kinds of capture record are not agent sessions and are folded or
+    held out here rather than measured as if they were:
+
+      terminal twins   the wrapper names its own session; where signal_traces
+                       joined it to an agent session, its rows and steps are
+                       merged into that session as a "terminal" lane;
+      unlinked         records with no agent activity at all, mostly
+                       transcripts whose file name is not the agent's session
+                       id. They are returned separately, not measured.
+    """
     traces, steps, fx = signal_traces.build(rows)
     rows_by = defaultdict(list)
     for r in rows:
@@ -458,8 +470,65 @@ def build_sessions(rows):
     for x in fx:
         if x.get("session_id"):
             fx_by[x["session_id"]].append(x)
-    return [Session(sid, rows_by[sid], traces.get(sid), steps_by[sid], fx_by[sid])
-            for sid in sorted(rows_by)]
+
+    merged_into = {}
+    for sid, t in traces.items():
+        partner = t.get("wrapper_session_id")
+        wrapper_only = {r.get("collector") for r in t["rows"]} == {"cli_wrapper"}
+        if partner and wrapper_only and partner in traces:
+            merged_into[sid] = partner
+    for w, p in merged_into.items():
+        rows_by[p] += rows_by.pop(w, [])
+        steps_by[p] += steps_by.pop(w, [])
+        fx_by[p] += fx_by.pop(w, [])
+        for lane, lane_steps in traces[w]["lanes"].items():
+            traces[p]["lanes"]["terminal" if lane == "main" else f"terminal:{lane}"] = lane_steps
+
+    sessions, unlinked = [], []
+    for sid in sorted(rows_by):
+        if sid in merged_into:
+            continue
+        if sid not in traces:
+            unlinked.append(sid)
+            continue
+        sessions.append(Session(sid, rows_by[sid], traces[sid], steps_by[sid], fx_by[sid]))
+    if with_unlinked:
+        return sessions, {"merged": merged_into, "unlinked": {u: rows_by[u] for u in unlinked},
+                          "agent_rows": rows_by}
+    return sessions
+
+
+def orphans(rows):
+    """Unlinked capture records and the agent session each most likely belongs to."""
+    sessions, extra = build_sessions(rows, with_unlinked=True)
+    by_agent_id = defaultdict(set)
+    for s in sessions:
+        for r in s.rows:
+            if r.get("agent_id"):
+                by_agent_id[r["agent_id"]].add(s.id)
+    print(f"\n{len(sessions)} agent sessions, {len(extra['merged'])} terminal twins merged, "
+          f"{len(extra['unlinked'])} unlinked records\n")
+    print(f"{'tool':<13}{'record id':<40}{'rows':>6}{'tokens':>9}  likely owner")
+    for oid, orows in sorted(extra["unlinked"].items(), key=lambda x: (str(x[1][0].get("tool")), x[0])):
+        tool = next((r.get("tool") for r in orows if r.get("tool")), None)
+        toks = sum(num(r.get("total_tokens")) for r in orows)
+        t0 = min((r.get("occurred_at") or "" for r in orows), default="")
+        hit, how = None, ""
+        if by_agent_id.get(oid):
+            hit, how = sorted(by_agent_id[oid])[0], "subagent transcript (agent_id)"
+        else:
+            for s in sessions:
+                if s.id in oid or oid in s.id:
+                    hit, how = s.id, "id contained in file name"
+                    break
+        if not hit:
+            near = [s for s in sessions if s.tool == tool and s.start and s.end and s.start <= t0 <= s.end]
+            if len(near) == 1:
+                hit, how = near[0].id, "same tool, inside its time window"
+            elif near:
+                how = f"{len(near)} overlapping sessions, ambiguous"
+        print(f"{str(tool):<13}{oid[:38]:<40}{len(orows):>6}{int(toks):>9}  "
+              f"{(hit or '-')[:24]}  {how}")
 
 
 def compute(rows, cfg=None, computed_at=None):
@@ -550,10 +619,14 @@ def main():
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--session")
     ap.add_argument("--why", help="metric id: group its non-normal sessions by tool and reason")
+    ap.add_argument("--orphans", action="store_true", help="capture records with no agent session")
     a = ap.parse_args()
     if not (URL and KEY):
         sys.exit("set SUPABASE_URL and SUPABASE_KEY (source ~/.signal-env)")
     rows = signal_traces.get("observables", f"select={COLS}&order=occurred_at.asc")
+    if a.orphans:
+        orphans(rows)
+        return
     events, sessions = compute(rows)
 
     by_state = Counter(e["state"] for e in events)

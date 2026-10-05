@@ -177,7 +177,10 @@ def build(rows):
 
     link_lanes(sessions)
     approval_waits(sessions)
-    fx = attach_effects(steps, effects)
+    cwd = {sid: next((r.get("cwd") or r.get("workspace") for r in sv["rows"]
+                      if r.get("cwd") or r.get("workspace")), None)
+           for sid, sv in sessions.items()}
+    fx = attach_effects(steps, effects, cwd)
     link_wrapper(sessions)
     return sessions, steps, fx
 
@@ -252,44 +255,81 @@ def approval_waits(sessions):
                     st["decided_by"] = "agent_alone"
 
 
-def attach_effects(steps, effects):
-    """Match a change on disk to the step that touched the same path.
+def _norm(path, cwd=None):
+    if not path:
+        return None
+    p = str(path)
+    if not os.path.isabs(p) and cwd:
+        p = os.path.join(cwd, p)
+    return os.path.normpath(p)
 
-    The watcher records what changed, never who changed it. A step that
-    touched the same file moments earlier is the cause. What matches
-    nothing is change no agent accounts for.
+
+def attach_effects(steps, effects, cwd_by_session=None):
+    """Match a change on disk to the step that caused it.
+
+    The watcher records what changed, never who changed it. Two ways a
+    step can own a change:
+
+      path      a step touched the same file moments earlier (paths are
+                normalised, and relative step paths resolved against the
+                session's working directory, so ./a.py and /ws/a.py match);
+      command   a shell command was running in that session, or in the
+                workspace the file sits in, when the change landed. This is
+                how installs, builds and test runs write files.
+
+    What matches neither is change no agent accounts for.
     """
-    index = defaultdict(list)
+    cwd_by_session = cwd_by_session or {}
+    by_path = defaultdict(list)
+    cmds = defaultdict(list)                      # session -> command steps
     for st in steps:
         if st["file_path"]:
-            index[st["file_path"]].append(st)
-        elif st["command"]:
-            index[("cmd", st["session_id"])].append(st)
-    for v in index.values():
+            by_path[_norm(st["file_path"], cwd_by_session.get(st["session_id"]))].append(st)
+        if st["command"]:
+            cmds[st["session_id"]].append(st)
+    for v in list(by_path.values()) + list(cmds.values()):
         v.sort(key=lambda x: x["started_at"] or "")
+    roots = sorted(((os.path.normpath(c), sid) for sid, c in cwd_by_session.items() if c),
+                   key=lambda x: -len(x[0]))
+
+    def by_command(at, sids):
+        best = None
+        for sid in sids:
+            for st in cmds.get(sid, []):
+                a, b = ts(st["started_at"]), ts(st["ended_at"]) or ts(st["started_at"])
+                if not a or a - timedelta(seconds=EFFECT_LEAD_S) > at:
+                    break
+                if at <= b + timedelta(seconds=EFFECT_WINDOW_S):
+                    best = st if best is None or st["started_at"] > best["started_at"] else best
+        return best
 
     out = []
     for e in effects:
         at = ts(e.get("occurred_at"))
-        path = e.get("file_path")
-        owner = None
+        path = _norm(e.get("file_path"))
+        owner, via = None, None
         if at and path:
-            for st in index.get(path, []):
+            for st in by_path.get(path, []):
                 s_at = ts(st["started_at"])
                 if not s_at:
                     continue
                 lag = (at - s_at).total_seconds()
                 if -EFFECT_LEAD_S <= lag <= EFFECT_WINDOW_S:
-                    owner = st
+                    owner, via = st, "path"
                 elif lag < -EFFECT_LEAD_S:
                     break
+        if at and not owner:
+            sids = [e["session_id"]] if e.get("session_id") in cmds else \
+                   [sid for root, sid in roots if path and path.startswith(root + os.sep)]
+            owner = by_command(at, sids)
+            via = "command" if owner else None
         t = e.get("observable_type") or ""
         out.append({
             "effect_id": e.get("observable_id"),
             "session_id": (owner or {}).get("session_id") or e.get("session_id"),
             "step_id": (owner or {}).get("step_id"),
             "kind": "commit" if t in VCS_EVENTS else (e.get("file_change_kind") or t or "change"),
-            "file_path": path, "content_hash": e.get("content_hash"),
+            "file_path": e.get("file_path"), "content_hash": e.get("content_hash"),
             "chars_added": e.get("chars_added"), "chars_removed": e.get("chars_removed"),
             "reverted": bool(e.get("reverted_to_earlier")),
             "sensitivity_tier": e.get("sensitivity_tier"),
@@ -299,9 +339,28 @@ def attach_effects(steps, effects):
             "occurred_at": e.get("occurred_at"),
             "lag_s": round((at - ts(owner["started_at"])).total_seconds(), 1) if owner and at else None,
             "attributed_to": "agent" if owner else "unaccounted",
+            "attributed_via": via,
+            "had_session": bool(e.get("session_id")),
             "observable_id": e.get("observable_id"),
         })
     return out
+
+
+def effect_report(fx):
+    """Why changes went unaccounted, so the matcher can be judged on real data."""
+    att = Counter(e["attributed_via"] for e in fx if e["attributed_to"] == "agent")
+    un = [e for e in fx if e["attributed_to"] == "unaccounted"]
+    print(f"  attached by path {att['path']:,}, by command {att['command']:,}")
+    print(f"  unaccounted with a session id {sum(1 for e in un if e['had_session']):,}, "
+          f"without {sum(1 for e in un if not e['had_session']):,}")
+    top = Counter()
+    for e in un:
+        parts = (e["file_path"] or "").split("/")
+        top["/".join(parts[-3:-1]) or "(no path)"] += 1
+    print("  most common unaccounted folders: " +
+          ", ".join(f"{k} {v}" for k, v in top.most_common(8)))
+    kinds = Counter(e["kind"] for e in un)
+    print("  unaccounted kinds: " + ", ".join(f"{k} {v}" for k, v in kinds.most_common(6)))
 
 
 def link_wrapper(sessions):
@@ -415,6 +474,7 @@ def main():
     print(f"{len(fx):,} effects, {attached:,} attached to a step "
           f"({attached / max(len(fx), 1):.0%}), "
           f"{len(fx) - attached:,} unaccounted for")
+    effect_report(fx)
     waits = [x["approval_wait_ms"] for x in steps if x["approval_wait_ms"]]
     if waits:
         waits.sort()
