@@ -1,0 +1,198 @@
+{
+  "_comment": "Every threshold the metric layer uses. Direction 'above' means higher is worse; 'below' means lower is worse. The Insights page's old hard-coded numbers (5x, 10x, 40 actions) are carried over here unchanged.",
+  "metric_version": "2026-10-05.1",
+  "thresholds": {
+    "insights.repetition": {
+      "direction": "above",
+      "warning": 1,
+      "exception": 3,
+      "critical": 10
+    },
+    "insights.retry": {
+      "direction": "above",
+      "warning": 1,
+      "exception": 2,
+      "critical": 5
+    },
+    "insights.stalled": {
+      "direction": "above",
+      "warning": 1,
+      "exception": 1,
+      "critical": 3
+    },
+    "insights.outside": {
+      "direction": "above",
+      "warning": 1,
+      "exception": 1,
+      "critical": 10
+    },
+    "insights.sensitive_unasked": {
+      "direction": "above",
+      "warning": 1,
+      "exception": 1,
+      "critical": 5
+    },
+    "insights.secrets": {
+      "direction": "above",
+      "warning": 1,
+      "exception": 1,
+      "critical": 3
+    },
+    "insights.blocked": {
+      "direction": "above",
+      "warning": 1,
+      "exception": 1,
+      "critical": 5
+    },
+    "insights.no_oversight": {
+      "direction": "above",
+      "warning": 41,
+      "exception": 41,
+      "critical": 200
+    },
+    "insights.reverted": {
+      "direction": "above",
+      "warning": 1,
+      "exception": 3,
+      "critical": 10
+    },
+    "insights.lockfile": {
+      "direction": "above",
+      "warning": 1,
+      "exception": 1,
+      "critical": 5
+    },
+    "insights.failed": {
+      "direction": "above",
+      "warning": 1,
+      "exception": 5,
+      "critical": 20
+    },
+    "insights.unattributed": {
+      "direction": "above",
+      "warning": 1,
+      "exception": 5,
+      "critical": 25
+    },
+    "insights.token_outlier": {
+      "direction": "above",
+      "warning": 3,
+      "exception": 5,
+      "critical": 15
+    },
+    "insights.duration_outlier": {
+      "direction": "above",
+      "warning": 1,
+      "exception": 1,
+      "critical": 5
+    },
+    "telemetry.collector_coverage": {
+      "direction": "below",
+      "warning": 0.99,
+      "exception": 0.5,
+      "critical": 0.0
+    },
+    "telemetry.source_agreement": {
+      "direction": "below",
+      "warning": 0.99,
+      "exception": 0.9,
+      "critical": 0.5
+    },
+    "telemetry.turn_linkage": {
+      "direction": "below",
+      "warning": 0.9,
+      "exception": 0.6,
+      "critical": 0.2
+    },
+    "telemetry.lane_linkage": {
+      "direction": "below",
+      "warning": 0.99,
+      "exception": 0.5,
+      "critical": 0.0
+    },
+    "telemetry.unknown_share": {
+      "direction": "above",
+      "warning": 0.25,
+      "exception": 0.5,
+      "critical": 0.75
+    },
+    "path.transition_novelty": {
+      "direction": "above",
+      "warning": 0.25,
+      "exception": 0.5,
+      "critical": 0.8
+    },
+    "activity.action_rate_ratio": {
+      "direction": "above",
+      "warning": 3,
+      "exception": 5,
+      "critical": 15
+    },
+    "access.first_seen_mcp": {
+      "direction": "above",
+      "warning": 1,
+      "exception": 1,
+      "critical": 3
+    },
+    "oversight.fast_approvals": {
+      "direction": "above",
+      "warning": 1,
+      "exception": 3,
+      "critical": 10
+    },
+    "oversight.declined_inferred": {
+      "direction": "above",
+      "warning": 1,
+      "exception": 3,
+      "critical": 10
+    },
+    "interaction.subagent_lanes": {
+      "direction": "above",
+      "warning": 5,
+      "exception": 15,
+      "critical": 50
+    },
+    "interaction.mcp_servers": {
+      "direction": "above",
+      "warning": 3,
+      "exception": 6,
+      "critical": 12
+    }
+  },
+  "fast_approval_ms": 1000,
+  "duration_outlier_multiple": 10,
+  "min_sessions_for_baseline": 5,
+  "min_transitions_for_novelty": 5,
+  "expected_collectors": {
+    "_comment": "What a properly configured install of each tool should produce. Tune per estate; missing ones lower telemetry.collector_coverage.",
+    "claude-code": [
+      "local_hooks",
+      "otel"
+    ],
+    "cursor": [
+      "local_hooks"
+    ],
+    "codex": [
+      "local_hooks",
+      "otel"
+    ],
+    "copilot": [
+      "local_hooks",
+      "otel"
+    ],
+    "antigravity": [
+      "local_hooks"
+    ]
+  },
+  "tool_capabilities": {
+    "_comment": "What each tool can emit at all, from the capture work. A detector that depends on an absent capability yields UNKNOWN, never NORMAL. Seeing the event in a session also proves the capability.",
+    "approval_events": {
+      "claude-code": true,
+      "copilot": true,
+      "codex": false,
+      "cursor": false,
+      "antigravity": false,
+      "_why": "cursor: sandbox auto-approves, no permission events ever fired; codex/antigravity: not yet seen, unverified"
+    }
+  }
+}
