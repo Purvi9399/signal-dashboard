@@ -9,6 +9,7 @@ metrics.
 
 from __future__ import annotations
 
+from .audit import AuditCOP
 from .classification import ClassificationCOP
 from .contracts import (
     ActionType,
@@ -23,6 +24,7 @@ from .contracts import (
 
 __all__ = [
     "ActionType",
+    "AuditCOP",
     "ClassificationCOP",
     "COPDecision",
     "CopType",
