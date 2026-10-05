@@ -2,10 +2,16 @@
 """
 Signal paths
 
-Turns each session into the route the agent took: an ordered sequence of
-steps drawn from one shared vocabulary, so paths from different coding
-agents can be compared at all. Only actions the agent chose are steps;
-file watcher rows are effects on disk and are left out here.
+Turns each session into the routes its agents took: an ordered sequence
+of steps from one shared vocabulary, one path per agent, so paths from
+different coding agents can be compared at all.
+
+Subagents share their parent's session id. Read as one line, their steps
+interleave and look like loops. So each agent within a session gets its
+own lane, and the parent's lane records the handoffs between them.
+
+Only actions an agent chose are steps; file watcher rows are effects on
+disk and are left out here.
 
     python3 signal_paths.py                   coverage of the vocabulary
     python3 signal_paths.py --show 8          print eight sessions as paths
@@ -33,7 +39,9 @@ VCS     = re.compile(r"^\s*git\b", re.I)
 LOOK_C  = re.compile(r"^\s*(cat|head|tail|less|more|bat|wc)\b", re.I)
 SRCH_C  = re.compile(r"^\s*(ls|find|grep|rg|tree|fd|locate)\b", re.I)
 
-DELEGATE = re.compile(r"^(task|agent)$|spawn_agent|invoke_subagent|send_message|delegate", re.I)
+QUESTION = re.compile(r"askuserquestion|ask_user|ask_followup", re.I)
+WAIT     = re.compile(r"^wait$|wait_agent|schedulewakeup|sleep", re.I)
+DELEGATE = re.compile(r"^(task|agent)$|spawn_agent|invoke_subagent|send_?message|delegate", re.I)
 PLAN     = re.compile(r"todo|update_plan|task_?create|plan", re.I)
 NETWORK  = re.compile(r"web|fetch|browse|http|url", re.I)
 SHELL    = re.compile(r"bash|shell|terminal|run_command|exec|command|stdin", re.I)
@@ -50,8 +58,7 @@ EVENT_STEP = {
     "message_displayed": "RESPOND", "turn_end": "RESPOND",
     "plan_created": "PLAN", "plan_completed": "PLAN",
     "compaction": "COMPACT", "shell_stall": "STALL",
-    "subagent_start": "DELEGATE", "subagent_stop": "RETURN",
-    "delegation": "DELEGATE",
+    "subagent_stop": "RETURN", "delegation": "DELEGATE",
 }
 
 def command_step(c):
@@ -63,16 +70,30 @@ def command_step(c):
     return "RUN"
 
 def tool_step(name, mcp):
-    for rx, s in ((DELEGATE, "DELEGATE"), (PLAN, "PLAN"), (NETWORK, "NETWORK"),
-                  (SHELL, "RUN"), (CHANGE, "CHANGE"), (CREATE, "CREATE"),
-                  (DELETE, "DELETE"), (SEARCH, "SEARCH"), (LOOK, "LOOK")):
+    # order matters: TodoWrite is planning, not creating; Task is delegation
+    for rx, s in ((QUESTION, "QUESTION"), (WAIT, "WAIT"), (DELEGATE, "DELEGATE"),
+                  (PLAN, "PLAN"), (NETWORK, "NETWORK"), (SHELL, "RUN"),
+                  (CHANGE, "CHANGE"), (CREATE, "CREATE"), (DELETE, "DELETE"),
+                  (SEARCH, "SEARCH"), (LOOK, "LOOK")):
         if rx.search(name):
             return s
     return "EXTERNAL" if mcp else "OTHER"
 
+# Some events name a tool without being a tool call: a permission request
+# names what it is asking about, and a wrapper session start carries the
+# command that launched the agent. Read the event first for these, or the
+# ask disappears into the thing it was asking about.
+EVENT_FIRST = {"permission_request", "session_start", "session_end",
+               "user_prompt", "compaction", "shell_stall", "subagent_stop",
+               "plan_created", "plan_completed", "delegation"}
+
+
 def step_of(r):
     if r.get("hung_seconds"):
         return "STALL"
+    t = r.get("observable_type") or ""
+    if t in EVENT_FIRST:
+        return EVENT_STEP.get(t)
     cmd, name = (r.get("command") or "").strip(), (r.get("tool_name") or "").strip()
     if cmd:  return command_step(cmd)
     if name: return tool_step(name, r.get("mcp_server"))
@@ -105,16 +126,30 @@ def load():
     return rows
 
 def build(rows):
-    by_session = defaultdict(list)
+    """{session: {"tool": .., "lanes": {agent: [steps]}}}; "main" is the parent."""
+    by_lane = defaultdict(list)
     for r in rows:
-        if r.get("session_id") and r.get("collector") != "fs_watcher":
-            by_session[r["session_id"]].append(r)
-    paths = {}
-    for sid, events in by_session.items():
+        if not r.get("session_id") or r.get("collector") == "fs_watcher":
+            continue
+        t = r.get("observable_type") or ""
+        # handoff markers belong to the parent, whichever agent they name
+        lane = "main" if "subagent" in t else (r.get("agent_id") or "main")
+        by_lane[(r["session_id"], lane)].append(r)
+
+    sessions = {}
+    for (sid, lane), events in by_lane.items():
         events.sort(key=lambda r: (r.get("occurred_at") or "", r.get("sequence_num") or 0))
         steps, by_use = [], {}
         tool = next((r["tool"] for r in events if r.get("tool") in AGENTS), None)
         for r in events:
+            t = r.get("observable_type") or ""
+            if t == "subagent_start":
+                # a Task call usually records the handoff already; add one
+                # only when the platform spawned the agent with no visible call
+                if not steps or steps[-1]["step"] != "DELEGATE":
+                    steps.append({"step": "DELEGATE", "failed": False, "name": None,
+                                  "at": r.get("occurred_at"), "turn": r.get("turn_id")})
+                continue
             s = step_of(r)
             if not s:
                 continue
@@ -122,20 +157,26 @@ def build(rows):
             if uid and uid in by_use:
                 steps[by_use[uid]]["failed"] |= bad
                 continue
-            if (r.get("observable_type") == "tool_result" and not uid
-                    and steps and steps[-1]["step"] == s):
+            if t == "tool_result" and not uid and steps and steps[-1]["step"] == s:
                 steps[-1]["failed"] |= bad
                 continue
-            if s == "RESPOND" and steps and steps[-1]["step"] == "RESPOND":
+            # streamed replies and streamed reasoning arrive in many chunks
+            if s in ("RESPOND", "THINK") and steps and steps[-1]["step"] == s:
                 continue
             steps.append({"step": s, "failed": bad, "name": r.get("tool_name"),
-                          "at": r.get("occurred_at"), "turn": r.get("turn_id"),
-                          "agent": r.get("agent_id")})
+                          "at": r.get("occurred_at"), "turn": r.get("turn_id")})
             if uid:
                 by_use[uid] = len(steps) - 1
         if steps:
-            paths[sid] = {"tool": tool, "steps": steps}
-    return paths
+            p = sessions.setdefault(sid, {"tool": None, "lanes": {}})
+            p["tool"] = p["tool"] or tool
+            p["lanes"][lane] = steps
+    return sessions
+
+def lanes(paths):
+    for sid, p in paths.items():
+        for lane, steps in p["lanes"].items():
+            yield sid, lane, p["tool"], steps
 
 def render(steps, limit=40):
     out, prev, n = [], None, 0
@@ -149,25 +190,27 @@ def render(steps, limit=40):
     return " -> ".join(out[:limit]) + (" -> ..." if len(out) > limit else "")
 
 def coverage(paths):
-    per = defaultdict(Counter)
-    for p in paths.values():
-        for s in p["steps"]:
-            per[p["tool"] or "unattributed"][s["step"]] += 1
-    print(f"\n{len(paths)} sessions turned into paths\n")
-    print(f"{'agent':<14}{'sessions':>9}{'steps':>8}{'unmapped':>10}   most common steps")
-    print("-" * 96)
+    per, n_paths = defaultdict(Counter), Counter()
+    for sid, lane, tool, steps in lanes(paths):
+        key = tool or "unattributed"
+        n_paths[key] += 1
+        for s in steps:
+            per[key][s["step"]] += 1
+    print(f"\n{len(paths)} sessions, {sum(n_paths.values())} agent paths within them\n")
+    print(f"{'agent':<14}{'sessions':>9}{'paths':>7}{'steps':>8}{'unmapped':>10}   most common steps")
+    print("-" * 104)
     for tool in sorted(per, key=lambda t: -sum(per[t].values())):
         c = per[tool]; total = sum(c.values())
         n = sum(1 for p in paths.values() if (p["tool"] or "unattributed") == tool)
         top = ", ".join(f"{k} {v}" for k, v in c.most_common(6))
-        print(f"{tool:<14}{n:>9}{total:>8}{c['OTHER'] / total:>9.0%}   {top}")
+        print(f"{tool:<14}{n:>9}{n_paths[tool]:>7}{total:>8}{c['OTHER'] / total:>9.0%}   {top}")
 
 def unmapped(paths):
     names = defaultdict(Counter)
-    for p in paths.values():
-        for s in p["steps"]:
+    for sid, lane, tool, steps in lanes(paths):
+        for s in steps:
             if s["step"] == "OTHER":
-                names[p["tool"] or "unattributed"][s["name"] or "?"] += 1
+                names[tool or "unattributed"][s["name"] or "?"] += 1
     if not names:
         print("\nevery action maps onto the vocabulary"); return
     print("\nactions the vocabulary does not yet cover\n")
@@ -175,12 +218,20 @@ def unmapped(paths):
         print(f"{tool}: " + ", ".join(f"{k} ({v})" for k, v in c.most_common(15)))
 
 def show(paths, n, tool):
+    size = lambda p: sum(len(v) for v in p["lanes"].values())
     chosen = sorted(((sid, p) for sid, p in paths.items() if not tool or p["tool"] == tool),
-                    key=lambda x: -len(x[1]["steps"]))
+                    key=lambda x: -size(x[1]))
     step = max(1, len(chosen) // max(n, 1))
     for sid, p in chosen[::step][:n]:
-        print(f"\n{p['tool'] or 'unattributed'}  {sid[:12]}  {len(p['steps'])} steps")
-        print("  " + render(p["steps"]))
+        subs = [l for l in p["lanes"] if l != "main"]
+        print(f"\n{p['tool'] or 'unattributed'}  {sid[:12]}  {size(p)} steps"
+              + (f", {len(subs)} subagents" if subs else ""))
+        if "main" in p["lanes"]:
+            print("  main      " + render(p["lanes"]["main"]))
+        for lane in subs[:6]:
+            print(f"  {lane[:8]:<8}  " + render(p["lanes"][lane], limit=18))
+        if len(subs) > 6:
+            print(f"  and {len(subs) - 6} more subagents")
 
 def main():
     ap = argparse.ArgumentParser()
