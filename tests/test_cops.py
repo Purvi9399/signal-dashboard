@@ -219,10 +219,49 @@ def test_terminal_twin_folds_into_agent_session():
     assert [s.id for s in sessions] == ["agent1"] and extra["merged"] == {"wrap1": "agent1"}
     assert "cli_wrapper" in sessions[0].collectors
 
-def test_transcript_only_record_is_held_out():
-    rows = session("agent2", 18, NORMAL, full=False)
-    rows.append({"observable_id": "t1", "session_id": "rollout-2026-agent2", "tool": "codex",
+U = "019ff9f1-f454-79d0-b966-0123456789ab"
+
+def test_codex_rollout_rekeys_to_its_session_and_brings_tokens():
+    rows = session(U, 18, NORMAL, full=False)
+    for r in rows: r["tool"] = "codex"
+    rows.append({"observable_id": "t1", "session_id": f"rollout-2026-09-18T10-00-00-{U}", "tool": "codex",
                  "collector": "fs_watcher", "observable_type": "transcript_appended", "total_tokens": 900,
+                 "file_path": f"/Users/x/.codex/sessions/2026/09/18/rollout-2026-09-18T10-00-00-{U}.jsonl",
                  "occurred_at": "2026-09-18T10:05:00Z"})
     sessions, extra = signal_metrics.build_sessions(rows, with_unlinked=True)
-    assert "rollout-2026-agent2" in extra["unlinked"] and len(sessions) == 1
+    assert [s.id for s in sessions] == [U] and not extra["unlinked"]
+    assert sessions[0].tokens == 1000 + 900
+    assert not sessions[0].effects                       # a transcript is not a change to the repo
+
+def test_subagent_transcript_joins_parent_from_its_path():
+    rows = session("0a96fa4d-4caa-4d14-9b86-4f78f2ac01c5", 19, NORMAL, full=False)
+    rows.append({"observable_id": "t2", "session_id": "agent-a5389945832fb5e8e", "tool": "claude-code",
+                 "collector": "fs_watcher", "observable_type": "transcript_appended", "total_tokens": 5000,
+                 "file_path": "/Users/x/.claude/projects/-Users-x-p/0a96fa4d-4caa-4d14-9b86-4f78f2ac01c5/subagents/agent-a5389945832fb5e8e.jsonl",
+                 "occurred_at": "2026-09-19T10:05:00Z"})
+    sessions, extra = signal_metrics.build_sessions(rows, with_unlinked=True)
+    assert len(sessions) == 1 and sessions[0].tokens == 6000
+
+def test_transcript_only_session_is_measured_not_dropped():
+    rows = [{"observable_id": "t3", "session_id": "414237d1-e7f9-4773-9e93-268757d2ff5d", "tool": "claude-code",
+             "collector": "fs_watcher", "observable_type": "transcript_appended", "total_tokens": 22908,
+             "occurred_at": "2026-09-20T10:05:00Z"}]
+    events, sessions = signal_metrics.compute(rows)
+    assert len(sessions) == 1
+    assert ev(events, "414237d1-e7f9-4773-9e93-268757d2ff5d", "telemetry.collector_coverage")["state"] == "CRITICAL"
+
+def test_signal_output_is_not_an_agent_change():
+    import signal_traces
+    rows = [{"observable_id": "s1", "collector": "fs_watcher", "observable_type": "file_modify",
+             "file_path": "/Users/x/idp-test/signal_sessions/abc.jsonl", "occurred_at": "2026-09-20T10:00:00Z"}]
+    _, _, fx = signal_traces.build(rows)
+    assert fx == []
+
+def test_repo_agent_config_change_is_still_an_effect():
+    import signal_traces
+    rows = [{"observable_id": "s2", "collector": "fs_watcher", "observable_type": "file_modify",
+             "file_path": "/Users/x/project/.claude/settings.json", "occurred_at": "2026-09-20T10:00:00Z"},
+            {"observable_id": "s3", "collector": "fs_watcher", "observable_type": "file_modify",
+             "file_path": "/Users/x/.claude/projects/p/t.jsonl", "occurred_at": "2026-09-20T10:00:00Z"}]
+    _, _, fx = signal_traces.build(rows)
+    assert [e["effect_id"] for e in fx] == ["s2"]

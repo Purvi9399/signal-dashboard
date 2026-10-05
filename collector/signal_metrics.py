@@ -455,10 +455,13 @@ def build_sessions(rows, with_unlinked=False):
       terminal twins   the wrapper names its own session; where signal_traces
                        joined it to an agent session, its rows and steps are
                        merged into that session as a "terminal" lane;
-      unlinked         records with no agent activity at all, mostly
-                       transcripts whose file name is not the agent's session
-                       id. They are returned separately, not measured.
+      transcript-only  a session seen only through its transcript (usually run
+                       before hooks were installed). Transcript ids are first
+                       re-keyed to the agent session (signal_traces.canonical);
+                       what remains is a real session and is measured, with
+                       coverage saying how little was seen.
     """
+    rows = signal_traces.canonicalize(rows)
     traces, steps, fx = signal_traces.build(rows)
     rows_by = defaultdict(list)
     for r in rows:
@@ -490,8 +493,7 @@ def build_sessions(rows, with_unlinked=False):
             continue
         if sid not in traces:
             unlinked.append(sid)
-            continue
-        sessions.append(Session(sid, rows_by[sid], traces[sid], steps_by[sid], fx_by[sid]))
+        sessions.append(Session(sid, rows_by[sid], traces.get(sid), steps_by[sid], fx_by[sid]))
     if with_unlinked:
         return sessions, {"merged": merged_into, "unlinked": {u: rows_by[u] for u in unlinked},
                           "agent_rows": rows_by}
@@ -499,15 +501,16 @@ def build_sessions(rows, with_unlinked=False):
 
 
 def orphans(rows):
-    """Unlinked capture records and the agent session each most likely belongs to."""
+    """Sessions seen only through a transcript, and where each might belong."""
     sessions, extra = build_sessions(rows, with_unlinked=True)
+    sessions = [s for s in sessions if s.id not in extra["unlinked"]]
     by_agent_id = defaultdict(set)
     for s in sessions:
         for r in s.rows:
             if r.get("agent_id"):
                 by_agent_id[r["agent_id"]].add(s.id)
-    print(f"\n{len(sessions)} agent sessions, {len(extra['merged'])} terminal twins merged, "
-          f"{len(extra['unlinked'])} unlinked records\n")
+    print(f"\n{len(sessions)} sessions, {len(extra['merged'])} terminal twins merged, "
+          f"{len(extra['unlinked'])} seen only through a transcript\n")
     print(f"{'tool':<13}{'record id':<40}{'rows':>6}{'tokens':>9}  likely owner")
     for oid, orows in sorted(extra["unlinked"].items(), key=lambda x: (str(x[1][0].get("tool")), x[0])):
         tool = next((r.get("tool") for r in orows if r.get("tool")), None)

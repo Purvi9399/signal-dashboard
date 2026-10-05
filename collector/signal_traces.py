@@ -30,7 +30,7 @@ Three things this does that the path builder does not:
     python3 signal_traces.py --session ID  one session, printed as a tree
 """
 
-import argparse, json, os, sys, urllib.error, urllib.request
+import argparse, json, os, re, sys, urllib.error, urllib.request
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta
 
@@ -111,10 +111,61 @@ def post(table, rows, conflict):
 
 # ------------------------------------------------------------------ build
 
+# ------------------------------------------------------------------ identity
+#
+# Transcript files are named by the tool, not by us, so a transcript row's
+# session id is often not the agent's session id. Resolved here, once, for
+# everything downstream. (Belongs in signal_curate eventually; kept here so
+# no re-upload is needed to fix it.)
+
+UUID_TAIL = re.compile(r"([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$", re.I)
+SUBAGENT_FILE = re.compile(r"/([^/]+)/subagents/agent-([^/.]+)\.jsonl?$")
+
+def canonical(r):
+    """The agent session a row belongs to.
+
+      codex        rollout-<timestamp>-<uuid>            -> <uuid>
+      claude-code  .../<session>/subagents/agent-<id>    -> <session>, agent <id>
+      otherwise    unchanged; a transcript with no hook session is a session
+                   we only saw through its transcript, and stays one
+    """
+    sid = r.get("session_id") or ""
+    if sid.startswith("rollout-"):
+        m = UUID_TAIL.search(sid)
+        if m:
+            return {**r, "session_id": m.group(1), "transcript_id": sid}
+    if sid.startswith("agent-"):
+        m = SUBAGENT_FILE.search(r.get("file_path") or "")
+        if m:
+            return {**r, "session_id": m.group(1), "agent_id": m.group(2), "transcript_id": sid}
+    return r
+
+def canonicalize(rows):
+    return [canonical(r) for r in rows]
+
+
+# Paths the watcher records that are bookkeeping, not work in the repo:
+# Signal's own output and the agents' transcript and log stores.
+NOT_WORKSPACE = re.compile(
+    # the agents' and Signal's stores in the home directory only: a repo's own
+    # .cursor/rules or .claude/settings.json is an agent changing its own
+    # instructions, which is a change governance must see
+    r"^/(Users|home)/[^/]+/\.(claude|codex|cursor|gemini|antigravity|signal)/|"
+    r"/signal_sessions/|\.system_generated/|/chunks/transcript|/agent-transcripts/")
+TRANSCRIPT_TYPES = {"transcript_appended"}
+
+def is_bookkeeping(r):
+    return (r.get("observable_type") or "") in TRANSCRIPT_TYPES or \
+        bool(NOT_WORKSPACE.search(r.get("file_path") or ""))
+
+
 def build(rows):
+    rows = canonicalize(rows)
     agent_rows, effects, wrapper = [], [], []
     for r in rows:
         t = r.get("observable_type") or ""
+        if is_bookkeeping(r):                      # transcripts, our own output, agent logs
+            continue
         if t in FILE_EVENTS or (r.get("collector") == "fs_watcher" and r.get("file_path")):
             effects.append(r)
             continue
@@ -475,6 +526,10 @@ def main():
           f"({attached / max(len(fx), 1):.0%}), "
           f"{len(fx) - attached:,} unaccounted for")
     effect_report(fx)
+    book = sum(1 for r in canonicalize(rows) if is_bookkeeping(r))
+    remapped = sum(1 for r in rows if (r.get("session_id") or "").startswith(("rollout-", "agent-")))
+    print(f"  {book:,} bookkeeping rows set aside (transcripts, Signal output, agent logs); "
+          f"{remapped:,} transcript rows re-keyed to their agent session")
     waits = [x["approval_wait_ms"] for x in steps if x["approval_wait_ms"]]
     if waits:
         waits.sort()
