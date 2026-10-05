@@ -8,6 +8,8 @@ from cops.audit import AuditCOP
 from cops.contracts import ActionType, CopType, MetricEvent, MetricState
 
 
+# Build a MetricEvent for unit cases from a feature dict.
+# Keeps each test focused on status rules, not fixture noise.
 def _event(features: dict, state: MetricState = MetricState.NORMAL) -> MetricEvent:
     return MetricEvent(
         metric_id="metric_audit_1",
@@ -30,9 +32,11 @@ COMPLETE = {
 
 
 class AuditUnitTests(unittest.TestCase):
+    # Fresh AuditCOP per test so state cannot leak.
     def setUp(self) -> None:
         self.cop = AuditCOP()
 
+    # Complete features must be attributable with action NONE.
     def test_attributable_is_none(self) -> None:
         decision = self.cop.evaluate(_event(dict(COMPLETE)))
         self.assertEqual(decision.cop, CopType.AUDIT_AND_TRACEABILITY)
@@ -41,6 +45,7 @@ class AuditUnitTests(unittest.TestCase):
         self.assertEqual(decision.downstream_cops, [])
         self.assertEqual(decision.confidence, 0.95)
 
+    # Missing pointer plus unattributed must ALERT Governance Architecture.
     def test_untraceable_alerts(self) -> None:
         features = dict(COMPLETE)
         features["raw_ref"] = ""
@@ -53,6 +58,7 @@ class AuditUnitTests(unittest.TestCase):
             [CopType.GOVERNANCE_ARCHITECTURE],
         )
 
+    # collectors_agree false wins over empty raw_ref (FR7 order).
     def test_disputed_beats_untraceable_order(self) -> None:
         features = dict(COMPLETE)
         features["collectors_agree"] = False
@@ -61,12 +67,14 @@ class AuditUnitTests(unittest.TestCase):
         self.assertEqual(decision.context_used["status"], "disputed")
         self.assertEqual(decision.action, ActionType.ALERT)
 
+    # Missing keys must be incomplete NONE, not a false ALERT.
     def test_incomplete_is_none(self) -> None:
         decision = self.cop.evaluate(_event({}))
         self.assertEqual(decision.context_used["status"], "incomplete")
         self.assertEqual(decision.action, ActionType.NONE)
         self.assertEqual(decision.confidence, 0.60)
 
+    # UNKNOWN telemetry must lower confidence and stay on NONE.
     def test_unknown_state_does_not_claim_certainty(self) -> None:
         decision = self.cop.evaluate(_event(dict(COMPLETE), MetricState.UNKNOWN))
         self.assertEqual(decision.confidence, 0.30)

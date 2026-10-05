@@ -10,6 +10,7 @@ FROZEN = ("incomplete", "disputed", "untraceable", "attributable")
 
 
 class AuditStatusRegressionTests(unittest.TestCase):
+    # Status strings must stay stable for downstream COPS and dashboards.
     def test_statuses_frozen(self) -> None:
         self.assertEqual(FROZEN_STATUSES, FROZEN)
 

@@ -8,6 +8,7 @@ from cops import ActionType, AuditCOP, CopType, MetricEvent, MetricState
 
 
 class AuditFunctionalTests(unittest.TestCase):
+    # Public cops.AuditCOP must evaluate a complete row without failure.
     def test_package_exports_audit_cop(self) -> None:
         event = MetricEvent(
             metric_id="metric_audit_3",

@@ -12,6 +12,8 @@ from cops.audit import AuditCOP
 from cops.contracts import ActionType, MetricEvent, MetricState
 
 
+# Build one attributable MetricEvent for timing runs.
+# Uses a complete feature set so the bench path is the success case.
 def _event(index: int) -> MetricEvent:
     return MetricEvent(
         metric_id=f"metric_{index}",
@@ -30,12 +32,16 @@ def _event(index: int) -> MetricEvent:
     )
 
 
+# Check count and that attributable rows stay on NONE.
+# Stops a silent logic change from looking like a faster bench.
 def _invariants_ok(n: int, decisions: list) -> bool:
     if len(decisions) != n:
         return False
     return all(item.action == ActionType.NONE for item in decisions)
 
 
+# Time N evaluate calls and return elapsed stats.
+# Independent of git; results are printed, not stored.
 def _bench(n: int) -> dict:
     cop = AuditCOP()
     events = [_event(i) for i in range(n)]
@@ -51,6 +57,8 @@ def _bench(n: int) -> dict:
     }
 
 
+# Run N=20 and N=100 and print a table.
+# Reviewers use this instead of a committed RESULTS file.
 def main() -> int:
     rows = [_bench(20), _bench(100)]
     print("Audit evaluate benchmark (not stored in git)")

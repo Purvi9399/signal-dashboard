@@ -15,12 +15,15 @@ from cops.contracts import (
 )
 
 
+# Stub that returns one event ID so tests never hit Redis or SQL.
 class FakeContext(ContextProvider):
+    # Echo the requested ID as a minimal raw event.
     def get_raw_event(self, event_id: str) -> dict:
         return {"event_id": event_id, "collector": "local_hooks"}
 
 
 class AuditIntegrationTests(unittest.TestCase):
+    # Lookup may attach raw_event but disputed status stays from features.
     def test_lookup_does_not_override_disputed_status(self) -> None:
         cop = AuditCOP(context=FakeContext())
         event = MetricEvent(
