@@ -1,0 +1,684 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>COPS metric network</title>
+<style>
+:root{
+  color-scheme:light dark;
+  --bg:#f6f7f9;--panel:#ffffff;--panel2:#f0f2f5;--ink:#16191d;--muted:#66707c;--line:#d8dde4;
+  --edge:#8b939d;--focus:#16191d;--shadow:0 1px 3px rgba(0,0,0,.08);
+  --built:#2368a2;--built-bg:#e8f2fb;--hyp:#76808a;--hyp-bg:#f1f3f5;
+  --active:#147a55;--active-bg:#e8f6ef;--next:#a56708;--next-bg:#fff4df;--defined:#6f5aa7;--defined-bg:#f0ecfb;
+  --normal:#2f855a;--warning:#b7791f;--exception:#c05621;--critical:#c53030;--unknown:#718096;--na:#a0aec0;
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg:#111418;--panel:#181c21;--panel2:#20252b;--ink:#edf0f3;--muted:#aab2bc;--line:#353c45;
+    --edge:#66707b;--focus:#f4f6f8;--shadow:none;
+    --built:#6aaee6;--built-bg:#182b3a;--hyp:#9aa4ae;--hyp-bg:#22282e;
+    --active:#5fc49b;--active-bg:#173329;--next:#e6b45f;--next-bg:#382b16;--defined:#a996df;--defined-bg:#2b2440;
+    --normal:#68d391;--warning:#ecc94b;--exception:#ed8936;--critical:#fc8181;--unknown:#a0aec0;--na:#718096;
+  }
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+button,input,select{font:inherit;color:inherit}
+button{cursor:pointer}
+.app{min-height:100%;display:flex;flex-direction:column}
+.topbar{background:var(--panel);border-bottom:1px solid var(--line);padding:16px 20px 12px;position:sticky;top:0;z-index:20}
+.title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:18px}
+h1{font-size:20px;margin:0 0 4px}
+.subtitle{color:var(--muted);font-size:12px;max-width:900px}
+.view-tabs{display:flex;gap:6px;flex:0 0 auto}
+.view-tab{border:1px solid var(--line);background:var(--panel2);border-radius:8px;padding:7px 10px}
+.view-tab[aria-selected="true"]{outline:2px solid var(--focus);outline-offset:-2px;background:var(--panel)}
+.pipeline{display:flex;align-items:center;gap:5px;overflow:auto;padding:11px 0 3px}
+.pipe-step{white-space:nowrap;border:1px solid var(--line);background:var(--panel2);border-radius:999px;padding:4px 9px;font-size:11px}
+.pipe-arrow{color:var(--muted)}
+.legend-row{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;padding-top:9px;font-size:11px;color:var(--muted)}
+.legend-item{display:flex;gap:6px;align-items:center}
+.legend-mark{display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border:1px solid currentColor;font-size:9px;font-weight:700}
+.legend-mark.built{color:var(--built);background:var(--built-bg);border-radius:50%}
+.legend-mark.hyp{color:var(--hyp);background:repeating-linear-gradient(135deg,var(--hyp-bg),var(--hyp-bg) 3px,transparent 3px,transparent 6px)}
+.legend-mark.active{color:var(--active);background:var(--active-bg);border-radius:50%}
+.legend-mark.next{color:var(--next);background:var(--next-bg);transform:rotate(45deg)}
+.legend-mark.next span{transform:rotate(-45deg)}
+.legend-mark.defined{color:var(--defined);background:var(--defined-bg)}
+.warning{display:none;margin-top:8px;border:1px solid #c27a1b;background:#fff7e6;color:#6b4300;border-radius:8px;padding:7px 10px;font-size:11px}
+@media(prefers-color-scheme:dark){.warning{background:#332610;color:#ffd99b;border-color:#8b6427}}
+.controls{display:flex;gap:8px;flex-wrap:wrap;align-items:end;background:var(--panel);border-bottom:1px solid var(--line);padding:10px 20px}
+.control{display:grid;gap:3px}
+.control label,.control .label{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.control input[type="search"],.control select{height:32px;border:1px solid var(--line);background:var(--panel);border-radius:7px;padding:0 9px}
+.toggle-group{display:flex;gap:5px;height:32px;align-items:center}
+.check{display:flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:7px;padding:5px 8px;background:var(--panel2);font-size:12px}
+.main{flex:1;display:grid;grid-template-columns:minmax(660px,1fr) 390px;gap:12px;padding:12px 20px 20px;min-height:0}
+.visual{background:var(--panel);border:1px solid var(--line);border-radius:10px;min-height:0;overflow:hidden;box-shadow:var(--shadow)}
+.bipartite{height:calc(100vh - 250px);min-height:520px;position:relative;display:grid;grid-template-columns:1fr 1fr}
+.col{min-width:0;display:flex;flex-direction:column}
+.col:first-child{border-right:1px solid var(--line)}
+.col-head{height:42px;display:flex;justify-content:space-between;align-items:center;padding:0 12px;border-bottom:1px solid var(--line);background:var(--panel2);font-weight:700;font-size:12px}
+.scroller{overflow:auto;min-height:0;flex:1;padding:10px 12px;scrollbar-gutter:stable}
+.family{margin:0 0 14px}
+.family-title{position:sticky;top:-10px;z-index:3;margin:0 -2px 6px;padding:6px 2px 5px;background:var(--panel);border-bottom:1px solid var(--line);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.node-list{display:grid;gap:6px}
+.node-card{width:100%;text-align:left;border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:8px 9px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 8px;position:relative;transition:opacity .12s,border-color .12s,box-shadow .12s}
+.node-card:hover{box-shadow:0 0 0 1px var(--focus) inset}
+.node-card:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.node-card.selected,.node-card.connected{box-shadow:0 0 0 2px var(--focus) inset}
+.node-card.dim{opacity:.20}
+.node-title{font-size:12px;font-weight:700;overflow-wrap:anywhere}
+.node-id{font:10px/1.3 ui-monospace,SFMono-Regular,Consolas,monospace;color:var(--muted);overflow-wrap:anywhere}
+.count{font-size:11px;font-weight:800;min-width:24px;text-align:right}
+.status-line{grid-column:1/-1;display:flex;gap:5px;align-items:center;flex-wrap:wrap}
+.badge{display:inline-flex;gap:4px;align-items:center;border:1px solid currentColor;border-radius:999px;padding:1px 6px;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.03em}
+.metric-built{border-left:4px solid var(--built)}
+.metric-built .badge{color:var(--built);background:var(--built-bg)}
+.metric-hyp{border-left:4px dashed var(--hyp);background:repeating-linear-gradient(135deg,var(--hyp-bg),var(--hyp-bg) 5px,transparent 5px,transparent 11px)}
+.metric-hyp .badge{color:var(--hyp);background:var(--hyp-bg)}
+.cop-active{border-left:4px solid var(--active)}
+.cop-next{border-left:4px solid var(--next)}
+.cop-defined{border-left:4px solid var(--defined)}
+.badge.active{color:var(--active);background:var(--active-bg)}
+.badge.next{color:var(--next);background:var(--next-bg)}
+.badge.defined{color:var(--defined);background:var(--defined-bg)}
+.edge-layer{position:absolute;inset:42px 0 0;width:100%;height:calc(100% - 42px);pointer-events:none;z-index:5;overflow:visible}
+.edge{fill:none;stroke:var(--edge);stroke-width:.8;opacity:.22}
+.edge.hot{stroke-width:2.5;opacity:.92}
+.detail{background:var(--panel);border:1px solid var(--line);border-radius:10px;height:calc(100vh - 250px);min-height:520px;overflow:auto;box-shadow:var(--shadow)}
+.detail-inner{padding:14px}
+.detail-empty{color:var(--muted);padding:28px 12px;text-align:center}
+.detail h2{font-size:18px;margin:0 0 5px}
+.detail h3{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:17px 0 7px}
+.detail p{margin:6px 0}
+.kv{display:grid;grid-template-columns:120px 1fr;gap:5px 10px;font-size:12px;margin-top:10px}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0;overflow-wrap:anywhere}
+.chips{display:flex;gap:5px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:var(--panel2);border-radius:999px;padding:3px 7px;font-size:10px}
+.group-block{border-top:1px solid var(--line);padding:9px 0}
+.group-block:first-child{border-top:0}
+.metric-row,.reader-row{border:1px solid var(--line);border-radius:7px;padding:7px;margin:5px 0;background:var(--panel2)}
+.metric-row.hyp{background:repeating-linear-gradient(135deg,var(--hyp-bg),var(--hyp-bg) 5px,transparent 5px,transparent 11px)}
+.row-head{display:flex;justify-content:space-between;gap:8px;font-size:11px;font-weight:700}
+.row-sub{font-size:10px;color:var(--muted);margin-top:2px}
+.context-change{margin-top:5px;border-left:2px solid var(--line);padding-left:7px;font-size:10px}
+pre{white-space:pre-wrap;word-break:break-word;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:9px;font:10px/1.45 ui-monospace,SFMono-Regular,Consolas,monospace}
+.example-note{font-size:11px;color:var(--muted);margin:5px 0 7px}
+.network-view{display:none;height:calc(100vh - 250px);min-height:520px;overflow:auto;position:relative}
+.network-stage{position:relative;min-width:900px;height:920px}
+.network-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
+.net-edge{fill:none;stroke:var(--edge);stroke-width:1.1;opacity:.35}
+.net-edge.hot{stroke-width:2.8;opacity:.95}
+.net-card{position:absolute;width:170px;min-height:58px;z-index:2;text-align:left;border:1px solid var(--line);border-radius:9px;background:var(--panel);padding:7px 8px}
+.net-card.dim{opacity:.18}
+.net-card.selected,.net-card.connected{box-shadow:0 0 0 2px var(--focus) inset}
+.net-card:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.net-name{font-size:11px;font-weight:800}
+.net-count{font-size:9px;color:var(--muted);margin-top:2px}
+.live-box{border:1px solid var(--line);border-radius:8px;padding:9px;background:var(--panel2)}
+.live-seg{height:12px;border-radius:999px;overflow:hidden;display:flex;background:var(--line);margin:7px 0}
+.live-seg span{height:100%;min-width:0}
+.state-normal{background:var(--normal)}.state-warning{background:var(--warning)}.state-exception{background:var(--exception)}
+.state-critical{background:var(--critical)}.state-unknown{background:var(--unknown)}.state-not_applicable{background:var(--na)}
+.live-legend{display:grid;grid-template-columns:1fr 1fr;gap:3px 10px;font-size:10px}
+.live-state{display:flex;justify-content:space-between;gap:8px}
+.small-table{width:100%;border-collapse:collapse;font-size:10px}
+.small-table td{padding:3px 0;border-bottom:1px solid var(--line)}
+.small-table td:last-child{text-align:right;font-weight:700}
+.hidden{display:none!important}
+@media(max-width:1100px){
+  .main{grid-template-columns:1fr}
+  .detail{height:auto;max-height:none}
+  .bipartite,.network-view{height:650px}
+}
+@media(max-width:760px){
+  .topbar{padding:12px}
+  .controls{padding:8px 12px}
+  .main{padding:8px 12px 14px;min-width:700px}
+  body{overflow-x:auto}
+  .bipartite{grid-template-columns:1fr 1fr}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="topbar">
+  <div class="title-row">
+    <div>
+      <h1 id="appTitle">COPS metric network</h1>
+      <div class="subtitle" id="appNote"></div>
+    </div>
+    <div class="view-tabs" role="tablist" aria-label="Views">
+      <button class="view-tab" id="tabBip" role="tab" aria-selected="true" aria-controls="bipView">Metrics ↔ COPS</button>
+      <button class="view-tab" id="tabFlow" role="tab" aria-selected="false" aria-controls="flowView">COPS hand-offs</button>
+    </div>
+  </div>
+  <div class="pipeline" id="pipeline" aria-label="Pipeline"></div>
+  <div class="legend-row" id="legend"></div>
+  <div class="warning" id="countWarning" role="status"></div>
+</header>
+
+<section class="controls" aria-label="Filters">
+  <div class="control">
+    <label for="search">Search</label>
+    <input id="search" type="search" placeholder="Metric, family, COP, question…">
+  </div>
+  <div class="control">
+    <span class="label">Metric status</span>
+    <div class="toggle-group">
+      <label class="check"><input id="showBuilt" type="checkbox" checked> Built</label>
+      <label class="check"><input id="showHyp" type="checkbox" checked> Hypothetical</label>
+    </div>
+  </div>
+  <div class="control">
+    <label for="feasibility">Feasibility</label>
+    <select id="feasibility"><option value="">All</option></select>
+  </div>
+  <div class="control">
+    <label for="family">Metric family</label>
+    <select id="family"><option value="">All</option></select>
+  </div>
+  <div class="control">
+    <label for="copStatus">COP status</label>
+    <select id="copStatus"><option value="">All</option><option value="active">Active</option><option value="next">Next</option><option value="defined">Defined</option></select>
+  </div>
+  <div class="control">
+    <label for="sortMetrics">Sort metrics</label>
+    <select id="sortMetrics"><option value="family">Family</option><option value="name">Name</option><option value="count">Number of COPS</option></select>
+  </div>
+  <button class="view-tab" id="clearSel" type="button">Clear selection</button>
+</section>
+
+<main class="main">
+  <section class="visual" aria-label="Network visualization">
+    <div class="bipartite" id="bipView">
+      <div class="col">
+        <div class="col-head"><span>Metrics</span><span id="metricVisibleCount"></span></div>
+        <div class="scroller" id="metricScroll"><div id="metricList"></div></div>
+      </div>
+      <div class="col">
+        <div class="col-head"><span>COPS</span><span id="copVisibleCount"></span></div>
+        <div class="scroller" id="copScroll"><div id="copList" class="node-list"></div></div>
+      </div>
+      <svg class="edge-layer" id="edgeLayer" aria-hidden="true"></svg>
+    </div>
+    <div class="network-view" id="flowView" role="tabpanel" aria-labelledby="tabFlow">
+      <div class="network-stage" id="networkStage">
+        <svg class="network-svg" id="networkSvg" aria-hidden="true"></svg>
+        <div id="networkNodes"></div>
+      </div>
+    </div>
+  </section>
+
+  <aside class="detail" id="detail" aria-live="polite">
+    <div class="detail-inner" id="detailInner"></div>
+  </aside>
+</main>
+</div>
+
+<script>
+const CONFIG = {
+  SUPABASE_URL: "",
+  SUPABASE_ANON_KEY: ""
+};
+
+const DATA = {"meta":{"title":"Project Signal: metrics to COPS network (target state)","note":"Target state. Metrics marked built exist today in signal_metrics.py; metrics marked hypothetical are assumed built so the whole network can be seen. Every metric is computed once, deterministically. COPS only read metrics and interpret them.","status_legend":{"built":"computed today","hypothetical":"assumed built for this view"},"feasibility_legend":{"derivable_now":"can be computed now from fields already collected","new_script":"needs a new deterministic script over existing data","new_telemetry":"needs telemetry that is not collected today"},"cop_status_legend":{"active":"switched on and tested","next":"switched on after the first three","defined":"specified, not running"},"metric_states":["NORMAL","WARNING","EXCEPTION","CRITICAL","UNKNOWN","NOT_APPLICABLE"],"metric_state_meaning":{"UNKNOWN":"could have happened but could not be seen","NOT_APPLICABLE":"the situation never arose"}},"pipeline":["Collectors","observables (Supabase)","signal_traces.py (paths, lanes, effects)","signal_metrics.py (every metric, once)","metric_events","COPS (interpret)","cop_decisions"],"response_schema":{"interpretation":"one label from the COP's own list","severity":"NONE | LOW | MEDIUM | HIGH | CRITICAL","action":"NONE | WATCH | ALERT | INSTRUCT | REQUEST_CONTEXT | REQUEST_APPROVAL | PASS_TO_COP | ESCALATE | PAUSE | BLOCK","action_reason":"why this action","driving_metrics":"the metrics that most drove the reading","downstream":"COPS the finding is passed to","also_recorded":["evidence_refs","metrics_read","context_used","evidence_score","evaluation_ms","failed","error"],"limits":"PAUSE and BLOCK are recommended only; every run is dry-run today"},"cops":[{"id":"workflow_orchestration","name":"Workflow Orchestration","question":"Is the task progressing coherently toward its intended state?","status":"defined","cadence":"session","interpretations":["NORMAL","DRIFTING","STALLED","EXCESSIVE_DELEGATION","UNEXPECTED_BRANCH"],"permitted_actions":["NONE","WATCH","ALERT","INSTRUCT","PASS_TO_COP"],"downstream":["behavior_analytics","incident_response"],"reads_decisions_from":[],"example_response":{"interpretation":"STALLED","severity":"LOW","action":"ALERT","action_reason":"no progress for several turns with plan items open","driving_metrics":["insights.repetition","insights.stalled","insights.duration_outlier"],"downstream":["behavior_analytics","incident_response"],"note":"illustrative"}},{"id":"runtime_monitoring","name":"Runtime Monitoring","question":"Is the evidence required for this governance decision present, reliable and sufficiently complete?","status":"active","cadence":"session","interpretations":["SUFFICIENT","DEGRADED","INSUFFICIENT"],"permitted_actions":["NONE","WATCH","ALERT","REQUEST_CONTEXT","PASS_TO_COP"],"downstream":["audit_traceability","incident_response"],"reads_decisions_from":[],"example_response":{"interpretation":"DEGRADED","severity":"LOW","action":"WATCH","action_reason":"findings stand but rest on partial evidence","driving_metrics":["insights.stalled","insights.unattributed","telemetry.collector_coverage"],"downstream":["audit_traceability","incident_response"],"note":"shape produced today"}},{"id":"anomaly_detection","name":"Anomaly Detection","question":"Is the observed behaviour materially different from what is expected in this context?","status":"active","cadence":"session","interpretations":["NORMAL","ANOMALOUS","INDETERMINATE"],"permitted_actions":["NONE","WATCH","ALERT","REQUEST_CONTEXT","PASS_TO_COP"],"downstream":["classification_tagging","policy_enforcement","risk_mitigation","incident_response"],"reads_decisions_from":["runtime_monitoring"],"example_response":{"interpretation":"ANOMALOUS","severity":"HIGH","action":"ALERT","action_reason":"deviation 8.0 on insights.token_outlier; unusual is not prohibited","driving_metrics":["insights.repetition","insights.retry","insights.duration_outlier"],"downstream":["classification_tagging","policy_enforcement"],"note":"shape produced today"}},{"id":"context_memory","name":"Context & Memory","question":"Is the current context internally consistent, relevant to the task, and supported by useful precedent?","status":"defined","cadence":"session","interpretations":["CONTEXT_OK","STALE","CONTRADICTORY","CONTEXT_LOSS","PRECEDENT_FOUND"],"permitted_actions":["NONE","WATCH"],"downstream":["behavior_analytics"],"reads_decisions_from":[],"example_response":{"interpretation":"CONTEXT_LOSS","severity":"LOW","action":"WATCH","action_reason":"files re-read after every compaction","driving_metrics":["task.drift_score","context.compaction_count","context.loss_after_compaction"],"downstream":["behavior_analytics"],"note":"illustrative"}},{"id":"interaction_discovery","name":"Interaction Discovery","question":"Who or what is interacting with whom, through what route, and how is the activity propagating?","status":"next","cadence":"session","interpretations":["CONTAINED","PROPAGATING","NEW_ROUTE","PATH_PARTIAL"],"permitted_actions":["NONE","WATCH","PASS_TO_COP"],"downstream":["policy_enforcement","risk_mitigation","audit_traceability"],"reads_decisions_from":["runtime_monitoring"],"example_response":{"interpretation":"NEW_ROUTE","severity":"MEDIUM","action":"PASS_TO_COP","action_reason":"new edge to an MCP server never used by this operator","driving_metrics":["insights.outside","insights.unattributed","telemetry.lane_linkage"],"downstream":["policy_enforcement","risk_mitigation"],"note":"illustrative"}},{"id":"incident_response","name":"Incident Response","question":"Do the current findings constitute an actionable incident, and what should happen now?","status":"active","cadence":"session","interpretations":["NO_INCIDENT","WATCH","INCIDENT"],"permitted_actions":["NONE","WATCH","ALERT","INSTRUCT","REQUEST_APPROVAL","PAUSE","BLOCK","ESCALATE"],"downstream":[],"reads_decisions_from":["runtime_monitoring","anomaly_detection","policy_enforcement","interaction_discovery"],"example_response":{"interpretation":"INCIDENT","severity":"HIGH","action":"ESCALATE","action_reason":"unusual behaviour in a session that also reached credentials","driving_metrics":["insights.sensitive_unasked","insights.secrets","insights.blocked"],"downstream":[],"note":"shape produced today"}},{"id":"classification_tagging","name":"Classification & Tagging","question":"What kind of governance event is this, and which entities should remain associated with it?","status":"defined","cadence":"session","interpretations":["UNCLASSIFIED","BOUNDARY","OVERSIGHT","LOOPS","OUTCOME","INTEGRITY","COST"],"permitted_actions":["NONE"],"downstream":["governance_intelligence"],"reads_decisions_from":[],"example_response":{"interpretation":"BOUNDARY","severity":"NONE","action":"NONE","action_reason":"tagged boundary, credential; kept associated with operator and repo","driving_metrics":["insights.outside","insights.sensitive_unasked","insights.secrets"],"downstream":["governance_intelligence"],"note":"illustrative"}},{"id":"policy_enforcement","name":"Policy Enforcement","question":"Does the observed behaviour violate an explicit permission, policy, entitlement, boundary, or approval requirement?","status":"next","cadence":"session","interpretations":["ALLOWED","VIOLATION","APPROVAL_REQUIRED","UNCERTAIN"],"permitted_actions":["NONE","WATCH","ALERT","REQUEST_APPROVAL","BLOCK","PASS_TO_COP"],"downstream":["incident_response","risk_mitigation","audit_traceability"],"reads_decisions_from":["runtime_monitoring","interaction_discovery"],"example_response":{"interpretation":"APPROVAL_REQUIRED","severity":"MEDIUM","action":"REQUEST_APPROVAL","action_reason":"sensitive path touched with no approval in session","driving_metrics":["insights.outside","insights.sensitive_unasked","insights.secrets"],"downstream":["incident_response","risk_mitigation"],"note":"illustrative"}},{"id":"risk_mitigation","name":"Risk Mitigation","question":"Do the combined findings create a material or emerging risk, and what residual risk remains after available controls?","status":"defined","cadence":"session","interpretations":["LOW","EMERGING","MATERIAL"],"permitted_actions":["NONE","WATCH","INSTRUCT","ESCALATE","PASS_TO_COP"],"downstream":["incident_response"],"reads_decisions_from":[],"example_response":{"interpretation":"EMERGING","severity":"HIGH","action":"ESCALATE","action_reason":"secret read followed by a network step with no restore point","driving_metrics":["insights.token_outlier","insights.outside","insights.sensitive_unasked"],"downstream":["incident_response"],"note":"illustrative"}},{"id":"resource_management","name":"Resource Management","question":"Is resource consumption within entitlement and acceptable operating bounds?","status":"defined","cadence":"session","interpretations":["NORMAL","INEFFICIENT","EXCESSIVE","UNAUTHORIZED"],"permitted_actions":["NONE","WATCH","ALERT"],"downstream":["workload_optimization","risk_mitigation"],"reads_decisions_from":[],"example_response":{"interpretation":"EXCESSIVE","severity":"MEDIUM","action":"ALERT","action_reason":"consumption far above the estate norm with subagents fanned out","driving_metrics":["insights.stalled","insights.duration_outlier","insights.token_outlier"],"downstream":["workload_optimization","risk_mitigation"],"note":"illustrative"}},{"id":"governance_intelligence","name":"Governance Intelligence","question":"What recurring patterns, concentrations or blind spots indicate a broader governance problem?","status":"defined","cadence":"aggregate","interpretations":["NO_PATTERN","RECURRING","CONCENTRATED","BLIND_SPOT"],"permitted_actions":["NONE","WATCH"],"downstream":["governance_architecture","knowledge_policy_management"],"reads_decisions_from":[],"example_response":{"interpretation":"CONCENTRATED","severity":"LOW","action":"WATCH","action_reason":"most unattributed changes come from two operators","driving_metrics":["insights.no_oversight","insights.reverted","oversight.fast_approvals"],"downstream":["governance_architecture","knowledge_policy_management"],"note":"illustrative"}},{"id":"behavior_analytics","name":"Behavior Analytics","question":"What behavioural pattern best characterizes this execution or sequence of executions?","status":"defined","cadence":"session","interpretations":["STABLE","LOOPING","DRIFTING","OVER_EXPLORING","POOR_RECOVERY"],"permitted_actions":["NONE","WATCH"],"downstream":["anomaly_detection","recovery_resilience"],"reads_decisions_from":[],"example_response":{"interpretation":"LOOPING","severity":"LOW","action":"WATCH","action_reason":"same call repeated in one lane with no change between","driving_metrics":["insights.repetition","insights.retry","insights.blocked"],"downstream":["anomaly_detection","recovery_resilience"],"note":"illustrative"}},{"id":"recovery_resilience","name":"Recovery & Resilience","question":"After failure or intervention, did the system return to a viable state without compounding the problem?","status":"defined","cadence":"session","interpretations":["RECOVERED","PARTIAL_RECOVERY","FAILED_RECOVERY","IRREVERSIBLE"],"permitted_actions":["NONE","WATCH","ALERT"],"downstream":["incident_response","governance_intelligence"],"reads_decisions_from":[],"example_response":{"interpretation":"PARTIAL_RECOVERY","severity":"MEDIUM","action":"ALERT","action_reason":"rollback restored files but a push had already gone out","driving_metrics":["insights.retry","insights.failed","insights.reverted"],"downstream":["incident_response","governance_intelligence"],"note":"illustrative"}},{"id":"workload_optimization","name":"Workload Optimization","question":"Is the workload using tools, models, time and resources efficiently for the task being performed?","status":"defined","cadence":"session","interpretations":["EFFICIENT","REDUNDANT","BOTTLENECK","OVERPROVISIONED","UNDERPROVISIONED"],"permitted_actions":["NONE","WATCH","INSTRUCT"],"downstream":["resource_management"],"reads_decisions_from":[],"example_response":{"interpretation":"REDUNDANT","severity":"LOW","action":"INSTRUCT","action_reason":"the same files read again with nothing changed","driving_metrics":["insights.repetition","insights.retry","insights.duration_outlier"],"downstream":["resource_management"],"note":"illustrative"}},{"id":"audit_traceability","name":"Audit & Traceability","question":"Can every consequential finding, decision and action be attributed and reconstructed from trustworthy evidence?","status":"defined","cadence":"session","interpretations":["COMPLETE","PARTIAL","BROKEN_TRACE","UNATTRIBUTABLE"],"permitted_actions":["NONE","WATCH","ALERT"],"downstream":["governance_architecture"],"reads_decisions_from":[],"example_response":{"interpretation":"PARTIAL","severity":"MEDIUM","action":"ALERT","action_reason":"two findings cannot be traced to a raw event","driving_metrics":["insights.secrets","insights.unattributed","telemetry.source_agreement"],"downstream":["governance_architecture"],"note":"illustrative"}},{"id":"knowledge_policy_management","name":"Knowledge & Policy Management","question":"Are the rules, policies and governance knowledge currently being used still current, coherent and internally consistent?","status":"defined","cadence":"aggregate","interpretations":["CURRENT","STALE","CONFLICT","UPDATE_REQUIRED"],"permitted_actions":["NONE","WATCH"],"downstream":["governance_architecture"],"reads_decisions_from":[],"example_response":{"interpretation":"STALE","severity":"LOW","action":"WATCH","action_reason":"a deny rule hit often on ordinary work and was overridden","driving_metrics":["insights.blocked","context.precedent_match","policy.precedence_conflict"],"downstream":["governance_architecture"],"note":"illustrative"}},{"id":"agent_lifecycle_management","name":"Agent Lifecycle Management","question":"Has an agent's identity, version, configuration, capability or connectivity changed in a way requiring governance attention?","status":"defined","cadence":"session","interpretations":["UNCHANGED","NEW","CHANGED","DRIFTED","INACTIVE","RETIRED"],"permitted_actions":["NONE","WATCH","ALERT"],"downstream":["classification_tagging","policy_enforcement"],"reads_decisions_from":[],"example_response":{"interpretation":"CHANGED","severity":"LOW","action":"WATCH","action_reason":"same operator now on a new machine with a new tool version","driving_metrics":["telemetry.collector_coverage","lifecycle.version_change","lifecycle.model_change"],"downstream":["classification_tagging","policy_enforcement"],"note":"illustrative"}},{"id":"governance_architecture","name":"Governance Architecture","question":"Does the current governance architecture adequately cover the estate and the behaviours actually occurring?","status":"defined","cadence":"aggregate","interpretations":["ADEQUATE","GAP","STRUCTURAL_CHANGE_RECOMMENDED"],"permitted_actions":["NONE","WATCH"],"downstream":[],"reads_decisions_from":[],"example_response":{"interpretation":"GAP","severity":"MEDIUM","action":"WATCH","action_reason":"no tool in the estate can show whether approvals were asked","driving_metrics":["telemetry.collector_coverage","telemetry.evidence_score","telemetry.unknown_share"],"downstream":[],"note":"illustrative"}}],"metrics":[{"id":"insights.repetition","name":"Identical call repeated within a turn","family":"insights","status":"built","source":"collector/signal_metrics.py"},{"id":"insights.retry","name":"Failed command reissued unchanged","family":"insights","status":"built","source":"collector/signal_metrics.py"},{"id":"insights.stalled","name":"Execution left hanging","family":"insights","status":"built","source":"collector/signal_metrics.py"},{"id":"insights.outside","name":"Work outside the workspace","family":"insights","status":"built","source":"collector/signal_metrics.py"},{"id":"insights.sensitive_unasked","name":"Sensitive path, no approval in session","family":"insights","status":"built","source":"collector/signal_metrics.py"},{"id":"insights.secrets","name":"Secret-shaped content handled","family":"insights","status":"built","source":"collector/signal_metrics.py"},{"id":"insights.blocked","name":"Action stopped by our deny rules","family":"insights","status":"built","source":"collector/signal_metrics.py"},{"id":"insights.no_oversight","name":"Long session, nobody asked","family":"insights","status":"built","source":"collector/signal_metrics.py"},{"id":"insights.reverted","name":"Agent work put back","family":"insights","status":"built","source":"collector/signal_metrics.py"},{"id":"insights.lockfile","name":"Manifest changed without lockfile","family":"insights","status":"built","source":"collector/signal_metrics.py"},{"id":"insights.failed","name":"Actions that failed","family":"insights","status":"built","source":"collector/signal_metrics.py"},{"id":"insights.unattributed","name":"Disk change no agent accounts for","family":"insights","status":"built","source":"collector/signal_metrics.py"},{"id":"insights.token_outlier","name":"Session tokens / estate median","family":"insights","status":"built","source":"collector/signal_metrics.py"},{"id":"insights.duration_outlier","name":"Steps beyond 10x median duration","family":"insights","status":"built","source":"collector/signal_metrics.py"},{"id":"telemetry.collector_coverage","name":"Expected collectors present","family":"telemetry","status":"built","source":"collector/signal_metrics.py"},{"id":"telemetry.source_agreement","name":"Cross-collector agreement","family":"telemetry","status":"built","source":"collector/signal_metrics.py"},{"id":"telemetry.turn_linkage","name":"Steps carrying a turn id","family":"telemetry","status":"built","source":"collector/signal_metrics.py"},{"id":"telemetry.lane_linkage","name":"Subagent lanes linked to a handoff","family":"telemetry","status":"built","source":"collector/signal_metrics.py"},{"id":"path.transition_novelty","name":"Step transitions unseen for this tool","family":"path","status":"built","source":"collector/signal_metrics.py"},{"id":"activity.action_rate_ratio","name":"Actions/min vs tool median","family":"activity","status":"built","source":"collector/signal_metrics.py"},{"id":"access.first_seen_mcp","name":"MCP server new for this operator","family":"access","status":"built","source":"collector/signal_metrics.py"},{"id":"oversight.fast_approvals","name":"Approvals returned in under a second","family":"oversight","status":"built","source":"collector/signal_metrics.py"},{"id":"oversight.declined_inferred","name":"Approval requests apparently declined","family":"oversight","status":"built","source":"collector/signal_metrics.py"},{"id":"telemetry.event_freshness","name":"Median delay from event to ingestion (s)","family":"telemetry","status":"built","source":"collector/signal_metrics.py"},{"id":"lifecycle.version_change","name":"Tool version differs from operator's last session","family":"lifecycle","status":"built","source":"collector/signal_metrics.py"},{"id":"lifecycle.model_change","name":"Model differs from operator's last session","family":"lifecycle","status":"built","source":"collector/signal_metrics.py"},{"id":"lifecycle.new_machine","name":"Machine differs from operator's last session","family":"lifecycle","status":"built","source":"collector/signal_metrics.py"},{"id":"interaction.subagent_lanes","name":"Subagent lanes in session","family":"interaction","status":"built","source":"collector/signal_metrics.py"},{"id":"interaction.mcp_servers","name":"Distinct MCP servers used","family":"interaction","status":"built","source":"collector/signal_metrics.py"},{"id":"telemetry.unknown_share","name":"Share of metrics that could not be judged","family":"telemetry","status":"built","source":"collector/signal_metrics.py"},{"id":"telemetry.evidence_score","name":"Share of needed evidence present","family":"telemetry","status":"built","source":"collector/signal_metrics.py"},{"id":"task.progress_ratio","name":"Share of planned items completed","family":"task","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"plan_item / plan_status events (present for some tools)"},{"id":"task.drift_score","name":"Distance between work done and the stated task","family":"task","status":"hypothetical","feasibility":"new_telemetry","source":"new collector or data source","needs":"a representation of the intended end state"},{"id":"task.unresolved_items","name":"Plan items still open at session end","family":"task","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"plan_status events"},{"id":"task.stalled_per_turn","name":"Idle seconds inside a turn","family":"task","status":"hypothetical","feasibility":"derivable_now","source":"signal_metrics.py (new metric function)","needs":"turn and action timestamps"},{"id":"task.delegation_ratio","name":"Subagent actions over all actions","family":"task","status":"hypothetical","feasibility":"derivable_now","source":"signal_metrics.py (new metric function)","needs":"agent_id on rows"},{"id":"task.unexpected_branches","name":"Path branches unlike the tool's usual plan-act-verify shape","family":"task","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"lane paths from signal_traces"},{"id":"telemetry.collector_heartbeat","name":"Expected heartbeats received per collector","family":"telemetry","status":"hypothetical","feasibility":"new_telemetry","source":"new collector or data source","needs":"collectors emitting periodic heartbeats"},{"id":"telemetry.missing_event_rate","name":"Expected events that never arrived","family":"telemetry","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"paired events (request with result)"},{"id":"telemetry.collector_errors","name":"Errors logged by collectors","family":"telemetry","status":"hypothetical","feasibility":"new_telemetry","source":"new collector or data source","needs":"collectors logging their own failures"},{"id":"telemetry.field_completeness","name":"Required fields present for this session","family":"telemetry","status":"hypothetical","feasibility":"derivable_now","source":"signal_metrics.py (new metric function)","needs":"observable_field_status joined to the session"},{"id":"telemetry.raw_ref_resolvability","name":"Evidence references that resolve to source events","family":"telemetry","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"raw_ref and source_events"},{"id":"audit.decision_evidence_coverage","name":"COP decisions carrying resolvable evidence","family":"audit","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"cop_decisions evidence_refs"},{"id":"audit.hash_chain_intact","name":"Source event hash chain unbroken","family":"audit","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"content-addressed source_events"},{"id":"anomaly.tool_use_deviation","name":"Tool mix against this agent's baseline","family":"anomaly","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"per-agent tool distribution"},{"id":"anomaly.file_access_novelty","name":"Share of files never touched before in this workspace","family":"anomaly","status":"hypothetical","feasibility":"derivable_now","source":"signal_metrics.py (new metric function)","needs":"file_path history"},{"id":"anomaly.token_expansion","name":"Growth of tokens per turn","family":"anomaly","status":"hypothetical","feasibility":"derivable_now","source":"signal_metrics.py (new metric function)","needs":"tokens per turn"},{"id":"anomaly.sequence_deviation","name":"Distance of the action sequence from the baseline","family":"anomaly","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"action n-grams per tool"},{"id":"anomaly.composite_score","name":"Weighted combination of deviation metrics","family":"anomaly","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"the deviation metrics, with fixed weights"},{"id":"context.compaction_count","name":"Context compactions in the session","family":"context","status":"hypothetical","feasibility":"derivable_now","source":"signal_metrics.py (new metric function)","needs":"compaction_reason"},{"id":"context.loss_after_compaction","name":"Files or decisions re-fetched after a compaction","family":"context","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"reads before and after compaction"},{"id":"context.session_reset","name":"Session restarts in the same workspace","family":"context","status":"hypothetical","feasibility":"derivable_now","source":"signal_metrics.py (new metric function)","needs":"session boundaries"},{"id":"context.precedent_match","name":"Similarity to previously resolved cases","family":"context","status":"hypothetical","feasibility":"new_telemetry","source":"new collector or data source","needs":"a store of resolved cases"},{"id":"context.instruction_changes","name":"Changes to loaded instructions during the session","family":"context","status":"hypothetical","feasibility":"derivable_now","source":"signal_metrics.py (new metric function)","needs":"instructions_loaded"},{"id":"context.consistency","name":"Contradictions between the agent's statements and state","family":"context","status":"hypothetical","feasibility":"new_telemetry","source":"new collector or data source","needs":"content analysis (content is withheld today)"},{"id":"interaction.edges","name":"Distinct actor-to-target edges","family":"interaction","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"step paths and handoffs"},{"id":"interaction.new_edges","name":"Edges never seen before for this operator","family":"interaction","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"edge history"},{"id":"interaction.fan_out","name":"Largest number of targets from one actor","family":"interaction","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"edge table"},{"id":"interaction.fan_in","name":"Largest number of sources into one resource","family":"interaction","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"edge table"},{"id":"interaction.max_delegation_depth","name":"Deepest chain of delegation","family":"interaction","status":"hypothetical","feasibility":"derivable_now","source":"signal_metrics.py (new metric function)","needs":"delegation_depth"},{"id":"interaction.propagation_depth","name":"How far an action's effect travels","family":"interaction","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"edge table with downstream effects"},{"id":"interaction.cross_agent_paths","name":"Paths from general agents through coding agents to tools","family":"interaction","status":"hypothetical","feasibility":"new_telemetry","source":"new collector or data source","needs":"general-agent collection and parent_agent_id"},{"id":"interaction.external_service_calls","name":"Calls to services outside the workspace","family":"interaction","status":"hypothetical","feasibility":"derivable_now","source":"signal_metrics.py (new metric function)","needs":"NETWORK steps"},{"id":"incident.time_to_harm","name":"Estimated time before an exposure becomes irreversible","family":"incident","status":"hypothetical","feasibility":"new_telemetry","source":"new collector or data source","needs":"live path state (a push or publish still ahead)"},{"id":"incident.intervention_available","name":"Whether a live hook can still pause or block","family":"incident","status":"hypothetical","feasibility":"new_telemetry","source":"new collector or data source","needs":"live control channel to the agent"},{"id":"incident.affected_entities","name":"Distinct repos, files and servers in flagged steps","family":"incident","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"flagged steps and effects"},{"id":"incident.open_count","name":"Unresolved incidents for this operator","family":"incident","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"cop_decisions history"},{"id":"incident.human_approval_state","name":"State of a recommended action awaiting a human","family":"incident","status":"hypothetical","feasibility":"new_telemetry","source":"new collector or data source","needs":"an approval queue"},{"id":"class.actor_type","name":"Kind of actor: coding agent, general agent, subagent, tool, human","family":"class","status":"hypothetical","feasibility":"derivable_now","source":"signal_metrics.py (new metric function)","needs":"tool and agent_id"},{"id":"class.resource_type","name":"Kind of resource: file, secret, network, MCP, database","family":"class","status":"hypothetical","feasibility":"derivable_now","source":"signal_metrics.py (new metric function)","needs":"step category"},{"id":"class.sensitivity_class","name":"Sensitivity tier of the resource","family":"class","status":"hypothetical","feasibility":"derivable_now","source":"signal_metrics.py (new metric function)","needs":"sensitivity_tier"},{"id":"class.incident_family","name":"Family a finding belongs to","family":"class","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"fixed mapping from finding combinations"},{"id":"class.tag_provenance","name":"Share of tags from vendor fields rather than inference","family":"class","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"confidence per curated field"},{"id":"policy.entitlement_mismatch","name":"Use of a resource beyond the operator's entitlement","family":"policy","status":"hypothetical","feasibility":"new_telemetry","source":"new collector or data source","needs":"an entitlement store"},{"id":"policy.indirect_privilege_use","name":"Privilege used through another agent's grant","family":"policy","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"cross-agent paths and entitlements"},{"id":"policy.missing_required_approval","name":"Actions that needed approval and had none","family":"policy","status":"hypothetical","feasibility":"new_telemetry","source":"new collector or data source","needs":"rules marking approval-required actions"},{"id":"policy.precedence_conflict","name":"Rules that disagree about the same action","family":"policy","status":"hypothetical","feasibility":"new_telemetry","source":"new collector or data source","needs":"a policy store"},{"id":"policy.rule_hit_rate","name":"Hits per rule over opportunities","family":"policy","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"deny and approval events"},{"id":"policy.override_rate","name":"Share of blocks or prompts a human overrode","family":"policy","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"approval decisions after policy events"},{"id":"policy.false_positive_rate","name":"Alerts a human marked as wrong","family":"policy","status":"hypothetical","feasibility":"new_telemetry","source":"new collector or data source","needs":"human feedback on findings"},{"id":"policy.version_age","name":"Age of the rules in force","family":"policy","status":"hypothetical","feasibility":"new_telemetry","source":"new collector or data source","needs":"a versioned policy store"},{"id":"policy.unused_rules","name":"Rules with no hits in the window","family":"policy","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"rule hit counts"},{"id":"policy.rule_conflicts","name":"Pairs of rules that conflict","family":"policy","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"a policy store"},{"id":"risk.compound_score","name":"Severity x reach x reversibility x exposure","family":"risk","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"the component metrics, with fixed weights"},{"id":"risk.reversibility","name":"Share of effects that can be restored","family":"risk","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"content hashes and git state"},{"id":"risk.residual","name":"Risk left after the controls that fired","family":"risk","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"compound score and control events"},{"id":"risk.repeated_failures","name":"Same failure signature across sessions","family":"risk","status":"hypothetical","feasibility":"derivable_now","source":"signal_metrics.py (new metric function)","needs":"failure signatures per operator"},{"id":"risk.secret_exposure_path","name":"A secret read followed by network or commit","family":"risk","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"ordered steps in the lane path"},{"id":"resource.budget_utilisation","name":"Spend against budget","family":"resource","status":"hypothetical","feasibility":"new_telemetry","source":"new collector or data source","needs":"budgets per operator or team"},{"id":"resource.cost_per_session","name":"Estimated cost of the session","family":"resource","status":"hypothetical","feasibility":"derivable_now","source":"signal_metrics.py (new metric function)","needs":"cost_usd, estimated where absent"},{"id":"resource.rate_limit_hits","name":"Rate-limit responses received","family":"resource","status":"hypothetical","feasibility":"new_telemetry","source":"new collector or data source","needs":"vendor rate-limit events"},{"id":"resource.host_load","name":"CPU, GPU, memory and queue depth","family":"resource","status":"hypothetical","feasibility":"new_telemetry","source":"new collector or data source","needs":"host metrics (present in the simulation, not for coding agents)"},{"id":"resource.model_usage_mix","name":"Share of calls per model","family":"resource","status":"hypothetical","feasibility":"derivable_now","source":"signal_metrics.py (new metric function)","needs":"model on rows"},{"id":"resource.cache_hit_ratio","name":"Cache reads over total input tokens","family":"resource","status":"hypothetical","feasibility":"derivable_now","source":"signal_metrics.py (new metric function)","needs":"cache_read_tokens"},{"id":"resource.connector_call_volume","name":"MCP and connector calls","family":"resource","status":"hypothetical","feasibility":"derivable_now","source":"signal_metrics.py (new metric function)","needs":"mcp_server and tool"},{"id":"workload.redundant_reads","name":"Files read again with no change between","family":"workload","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"ordered reads and writes"},{"id":"workload.tokens_per_action","name":"Tokens spent per action","family":"workload","status":"hypothetical","feasibility":"derivable_now","source":"signal_metrics.py (new metric function)","needs":"tokens and actions"},{"id":"workload.queue_depth","name":"Work waiting to run","family":"workload","status":"hypothetical","feasibility":"new_telemetry","source":"new collector or data source","needs":"queue telemetry"},{"id":"behavior.loop_score","name":"Repeating subsequence in the lane path","family":"behavior","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"lane paths"},{"id":"behavior.exploration_rate","name":"Look and search steps over all steps","family":"behavior","status":"hypothetical","feasibility":"derivable_now","source":"signal_metrics.py (new metric function)","needs":"step categories"},{"id":"behavior.planning_deviation","name":"Executed order versus plan order","family":"behavior","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"plan items and steps"},{"id":"behavior.recovery_pattern","name":"What follows a failure: retry, switch, ask, give up","family":"behavior","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"steps after failed steps"},{"id":"behavior.unsafe_action_rate","name":"Share of steps matching dangerous patterns","family":"behavior","status":"hypothetical","feasibility":"derivable_now","source":"signal_metrics.py (new metric function)","needs":"command patterns"},{"id":"behavior.session_complexity","name":"Steps x lanes x distinct tools","family":"behavior","status":"hypothetical","feasibility":"derivable_now","source":"signal_metrics.py (new metric function)","needs":"traces"},{"id":"recovery.success_after_failure","name":"Failed steps later followed by success","family":"recovery","status":"hypothetical","feasibility":"derivable_now","source":"signal_metrics.py (new metric function)","needs":"ordered steps"},{"id":"recovery.time","name":"Seconds from failure to recovery","family":"recovery","status":"hypothetical","feasibility":"derivable_now","source":"signal_metrics.py (new metric function)","needs":"step timestamps"},{"id":"recovery.rollback_success","name":"Reverts that restored an earlier hash","family":"recovery","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"content hashes"},{"id":"recovery.irreversible_change","name":"Deletes, pushes and publishes with no snapshot","family":"recovery","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"step types and prior state"},{"id":"recovery.residual_errors","name":"Failures still present at session end","family":"recovery","status":"hypothetical","feasibility":"derivable_now","source":"signal_metrics.py (new metric function)","needs":"failed steps near the end"},{"id":"recovery.restart_events","name":"Agent or process restarts","family":"recovery","status":"hypothetical","feasibility":"derivable_now","source":"signal_metrics.py (new metric function)","needs":"session and process events"},{"id":"lifecycle.first_last_seen","name":"First and last session per agent","family":"lifecycle","status":"hypothetical","feasibility":"derivable_now","source":"signal_metrics.py (new metric function)","needs":"session history"},{"id":"lifecycle.hook_config_removed","name":"Hooks previously present now absent","family":"lifecycle","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"hook presence per machine over time"},{"id":"lifecycle.capability_change","name":"Tools or MCP servers available changed","family":"lifecycle","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"mcp_tools_available history"},{"id":"lifecycle.new_agent","name":"First session for an operator and tool","family":"lifecycle","status":"hypothetical","feasibility":"derivable_now","source":"signal_metrics.py (new metric function)","needs":"session history"},{"id":"lifecycle.inactive_agent","name":"No sessions for the window","family":"lifecycle","status":"hypothetical","feasibility":"derivable_now","source":"signal_metrics.py (new metric function)","needs":"session history"},{"id":"lifecycle.config_drift","name":"Settings or instruction hash differs from approved","family":"lifecycle","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"config hashes and an approved baseline"},{"id":"agg.exception_trend","name":"Exceptions per metric over time","family":"agg","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"metric_events history"},{"id":"agg.incident_trend","name":"Incidents over time by family","family":"agg","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"cop_decisions history"},{"id":"agg.risk_concentration","name":"Share of risk from the top operators and resources","family":"agg","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"compound scores across the estate"},{"id":"agg.repeat_actor_concentration","name":"Share of findings from repeat actors","family":"agg","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"findings grouped by operator and agent"},{"id":"agg.coverage_trend","name":"Evidence score over time","family":"agg","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"evidence_score history"},{"id":"agg.unresolved_incident_rate","name":"Share of incidents with no resolution","family":"agg","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"incident history"},{"id":"agg.policy_violation_trend","name":"Violations over time by rule","family":"agg","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"policy findings history"},{"id":"agg.confidence_trend","name":"Evidence and decision confidence over time","family":"agg","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"evidence_score and decision history"},{"id":"arch.cops_coverage","name":"Exception types handled by at least one active COP","family":"arch","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"metric states and active COP lenses"},{"id":"arch.unhandled_exceptions","name":"Exceptions no COP acted on","family":"arch","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"metric_events joined to cop_decisions"},{"id":"arch.observability_gaps","name":"Metric and tool pairs that are structurally UNKNOWN","family":"arch","status":"hypothetical","feasibility":"derivable_now","source":"signal_metrics.py (new metric function)","needs":"observable_field_status"},{"id":"arch.enforcement_coverage","name":"High-severity findings with an enforcement path","family":"arch","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"findings and control capabilities"},{"id":"arch.repeated_escalations","name":"Same finding escalated again and again","family":"arch","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"escalation history"},{"id":"arch.control_conflicts","name":"Controls recommending opposite actions","family":"arch","status":"hypothetical","feasibility":"new_script","source":"new deterministic script","needs":"decisions from different COPS"},{"id":"arch.uncovered_behaviours","name":"Behaviour seen with no metric measuring it","family":"arch","status":"hypothetical","feasibility":"new_telemetry","source":"new collector or data source","needs":"a catalogue of observed step types"}],"edges":[{"metric":"insights.repetition","cop":"behavior_analytics","means":"the agent is looping: same call, same arguments, same turn","context_changes":[{"when":"the hit sits in a subagent lane, not the main one","meaning":"a subagent stuck without progress, invisible from the main lane"},{"when":"the commands involved are test runs","meaning":"re-running the same check after edits; often verification, not a loop"}]},{"metric":"insights.repetition","cop":"workload_optimization","means":"redundant work: the result was already in hand","context_changes":[{"when":"the hit sits in a subagent lane, not the main one","meaning":"redundancy multiplied across parallel subagents"}]},{"metric":"insights.repetition","cop":"anomaly_detection","means":"only notable if this tool does not normally repeat; repetition alone is not deviation"},{"metric":"insights.repetition","cop":"workflow_orchestration","means":"progress may have stopped if repetition clusters at the end of the session"},{"metric":"insights.retry","cop":"behavior_analytics","means":"retry pressure: a failed command reissued unchanged","context_changes":[{"when":"the commands involved are test runs","meaning":"the normal red-green loop of test-driven work"},{"when":"the commands involved install dependencies","meaning":"an environment problem the agent cannot fix by retrying"},{"when":"the commands involved deploy, push or publish","meaning":"repeated attempts against an external system"}]},{"metric":"insights.retry","cop":"recovery_resilience","means":"an attempt to recover; whether it worked is the question","context_changes":[{"when":"the commands involved deploy, push or publish","meaning":"partial side effects may compound with each attempt"}]},{"metric":"insights.retry","cop":"workload_optimization","means":"wasted runs"},{"metric":"insights.retry","cop":"anomaly_detection","means":"notable only against how often this tool normally retries"},{"metric":"insights.stalled","cop":"workflow_orchestration","means":"the task stopped moving","context_changes":[{"when":"this tool cannot show approval prompts","meaning":"may be waiting on an approval we cannot see, not a hung agent"}]},{"metric":"insights.stalled","cop":"resource_management","means":"a hung process holding a terminal and its resources"},{"metric":"insights.stalled","cop":"runtime_monitoring","means":"if the hooks also went silent, the collector may have been lost, not just the agent","context_changes":[{"when":"session seen only through the terminal wrapper","meaning":"the wrapper is the only witness; nothing else can confirm the hang"}]},{"metric":"insights.duration_outlier","cop":"resource_management","means":"a step held resources far longer than usual"},{"metric":"insights.duration_outlier","cop":"workload_optimization","means":"a bottleneck step"},{"metric":"insights.duration_outlier","cop":"workflow_orchestration","means":"progress blocked on one step"},{"metric":"insights.duration_outlier","cop":"anomaly_detection","means":"step timing unlike the estate"},{"metric":"insights.token_outlier","cop":"resource_management","means":"consumption far above the estate norm","context_changes":[{"when":"session delegated to subagents","meaning":"fan-out explains part of it; judge per lane, not per session"},{"when":"session seen only through its transcript","meaning":"token counts are the only evidence of how much work was done"}]},{"metric":"insights.token_outlier","cop":"anomaly_detection","means":"a session unlike others in size"},{"metric":"insights.token_outlier","cop":"workload_optimization","means":"inefficiency when tokens are high but actions are few"},{"metric":"insights.token_outlier","cop":"risk_mitigation","means":"a contributor to compound risk, not a risk alone"},{"metric":"activity.action_rate_ratio","cop":"anomaly_detection","means":"acting much faster than this tool normally does","context_changes":[{"when":"session delegated to subagents","meaning":"parallel lanes raise the rate legitimately"}]},{"metric":"activity.action_rate_ratio","cop":"resource_management","means":"load generated per minute"},{"metric":"activity.action_rate_ratio","cop":"workload_optimization","means":"throughput relative to peers"},{"metric":"insights.outside","cop":"policy_enforcement","means":"a boundary crossing: work outside the workspace","context_changes":[{"when":"session touched a tier-3 path","meaning":"outside and sensitive together: credentials or keys, violation-grade"}]},{"metric":"insights.outside","cop":"interaction_discovery","means":"the agent's reach extends into other repos or the home directory"},{"metric":"insights.outside","cop":"risk_mitigation","means":"blast radius beyond the project"},{"metric":"insights.outside","cop":"classification_tagging","means":"BOUNDARY"},{"metric":"insights.sensitive_unasked","cop":"policy_enforcement","means":"a sensitive resource touched with no approval in the session","context_changes":[{"when":"this tool cannot show approval prompts","meaning":"UNCERTAIN, not VIOLATION: this tool cannot show whether it asked"}]},{"metric":"insights.sensitive_unasked","cop":"incident_response","means":"an exposure candidate"},{"metric":"insights.sensitive_unasked","cop":"risk_mitigation","means":"raises compound risk with secrets or network steps"},{"metric":"insights.sensitive_unasked","cop":"classification_tagging","means":"OVERSIGHT"},{"metric":"insights.secrets","cop":"incident_response","means":"secret-shaped content handled","context_changes":[{"when":"the commands involved deploy, push or publish","meaning":"the secret may have left the machine"}]},{"metric":"insights.secrets","cop":"policy_enforcement","means":"secret-handling rule engaged"},{"metric":"insights.secrets","cop":"risk_mitigation","means":"severity multiplier for every other finding in the session"},{"metric":"insights.secrets","cop":"classification_tagging","means":"BOUNDARY, credential"},{"metric":"insights.secrets","cop":"audit_traceability","means":"evidence must be kept as a hash, never as content"},{"metric":"insights.blocked","cop":"policy_enforcement","means":"a control fired and held","context_changes":[{"when":"first session recorded for this operator","meaning":"likely a new user learning the rules, not persistence"}]},{"metric":"insights.blocked","cop":"incident_response","means":"worth watching when repeated: persistence against a control"},{"metric":"insights.blocked","cop":"knowledge_policy_management","means":"a rule hit; frequent hits on ordinary work mean the rule is too strict"},{"metric":"insights.blocked","cop":"behavior_analytics","means":"whether the agent routes around the block in its next steps"},{"metric":"insights.no_oversight","cop":"policy_enforcement","means":"a long session with no approval asked","context_changes":[{"when":"this tool cannot show approval prompts","meaning":"cannot be judged on this tool"}]},{"metric":"insights.no_oversight","cop":"governance_intelligence","means":"where unsupervised work concentrates"},{"metric":"insights.no_oversight","cop":"risk_mitigation","means":"length of unsupervised exposure"},{"metric":"insights.lockfile","cop":"risk_mitigation","means":"dependency change without a pinned lockfile: supply-chain drift"},{"metric":"insights.lockfile","cop":"classification_tagging","means":"INTEGRITY"},{"metric":"insights.failed","cop":"behavior_analytics","means":"a failure pattern","context_changes":[{"when":"the commands involved are test runs","meaning":"failing tests mid-task are expected; failing at the end is not"}]},{"metric":"insights.failed","cop":"recovery_resilience","means":"something to recover from"},{"metric":"insights.failed","cop":"workflow_orchestration","means":"progress obstructed"},{"metric":"insights.failed","cop":"anomaly_detection","means":"notable against this tool's usual failure rate"},{"metric":"insights.reverted","cop":"recovery_resilience","means":"a rollback: did the state return to good"},{"metric":"insights.reverted","cop":"behavior_analytics","means":"rework: the agent's output did not stand"},{"metric":"insights.reverted","cop":"governance_intelligence","means":"rework rate over time"},{"metric":"insights.unattributed","cop":"audit_traceability","means":"a change on disk no actor can be tied to"},{"metric":"insights.unattributed","cop":"interaction_discovery","means":"an unobserved actor may be working in the repo"},{"metric":"insights.unattributed","cop":"runtime_monitoring","means":"an attribution gap in the evidence"},{"metric":"telemetry.collector_coverage","cop":"runtime_monitoring","means":"evidence present: the collectors this tool should have were running","context_changes":[{"when":"session seen only through its transcript","meaning":"a known historical gap, before hooks were installed"},{"when":"session seen only through the terminal wrapper","meaning":"seen from outside only; nothing about what the agent decided"}]},{"metric":"telemetry.collector_coverage","cop":"agent_lifecycle_management","means":"coverage that drops for an agent that used to be covered means its configuration changed"},{"metric":"telemetry.collector_coverage","cop":"governance_architecture","means":"where the estate is not instrumented"},{"metric":"telemetry.source_agreement","cop":"runtime_monitoring","means":"evidence reliable: independent collectors agree"},{"metric":"telemetry.source_agreement","cop":"audit_traceability","means":"conflicting accounts of the same event"},{"metric":"telemetry.turn_linkage","cop":"runtime_monitoring","means":"evidence complete enough to group actions into turns"},{"metric":"telemetry.turn_linkage","cop":"audit_traceability","means":"decisions can be traced to the prompt that caused them"},{"metric":"telemetry.turn_linkage","cop":"workflow_orchestration","means":"progress can only be judged per turn if turns are known"},{"metric":"telemetry.lane_linkage","cop":"interaction_discovery","means":"the delegation path is complete"},{"metric":"telemetry.lane_linkage","cop":"audit_traceability","means":"subagent work can be traced to who started it"},{"metric":"telemetry.lane_linkage","cop":"runtime_monitoring","means":"subagent evidence is connected"},{"metric":"telemetry.evidence_score","cop":"runtime_monitoring","means":"overall: how much of the evidence this session needs is present, judged and collected","context_changes":[{"when":"session seen only through its transcript","meaning":"capped by design: only the transcript was ever collected"},{"when":"session seen only through the terminal wrapper","meaning":"capped by design: only the terminal wrapper was collected"}]},{"metric":"telemetry.evidence_score","cop":"governance_architecture","means":"how well the estate can be judged at all"},{"metric":"telemetry.event_freshness","cop":"runtime_monitoring","means":"events arrive late, so a live decision would act on a stale picture"},{"metric":"telemetry.event_freshness","cop":"audit_traceability","means":"delayed ingestion widens the gap between action and record"},{"metric":"lifecycle.version_change","cop":"agent_lifecycle_management","means":"the tool's version differs from this operator's last session"},{"metric":"lifecycle.version_change","cop":"behavior_analytics","means":"a behavioural shift after an update is expected, not a new pattern"},{"metric":"lifecycle.model_change","cop":"agent_lifecycle_management","means":"the model behind the agent changed since the operator's last session"},{"metric":"lifecycle.model_change","cop":"resource_management","means":"a different model changes the cost and token profile"},{"metric":"lifecycle.new_machine","cop":"agent_lifecycle_management","means":"the same operator is now running the agent on a different machine"},{"metric":"lifecycle.new_machine","cop":"policy_enforcement","means":"is this machine one the operator is entitled to use"},{"metric":"telemetry.unknown_share","cop":"runtime_monitoring","means":"how much of this session cannot be judged at all"},{"metric":"telemetry.unknown_share","cop":"governance_architecture","means":"where the architecture is blind"},{"metric":"path.transition_novelty","cop":"anomaly_detection","means":"the agent moved between steps in ways this tool has not before","context_changes":[{"when":"first session recorded for this operator","meaning":"everything is new for a new user; weak signal"}]},{"metric":"path.transition_novelty","cop":"behavior_analytics","means":"a new working strategy"},{"metric":"path.transition_novelty","cop":"interaction_discovery","means":"a new route, when the novel steps reach network or MCP"},{"metric":"access.first_seen_mcp","cop":"interaction_discovery","means":"a new edge: the agent reached a server it never had"},{"metric":"access.first_seen_mcp","cop":"agent_lifecycle_management","means":"the agent's connectivity changed"},{"metric":"access.first_seen_mcp","cop":"policy_enforcement","means":"is this server entitled for this operator"},{"metric":"access.first_seen_mcp","cop":"anomaly_detection","means":"resource-access novelty","context_changes":[{"when":"first session recorded for this operator","meaning":"no history to be novel against"}]},{"metric":"interaction.mcp_servers","cop":"interaction_discovery","means":"how widely the session reaches"},{"metric":"interaction.mcp_servers","cop":"agent_lifecycle_management","means":"connector footprint"},{"metric":"interaction.subagent_lanes","cop":"interaction_discovery","means":"fan-out of delegation"},{"metric":"interaction.subagent_lanes","cop":"workflow_orchestration","means":"excessive delegation for the task"},{"metric":"interaction.subagent_lanes","cop":"resource_management","means":"parallel consumption"},{"metric":"oversight.fast_approvals","cop":"policy_enforcement","means":"approvals given too fast to have been read: oversight on paper only","context_changes":[{"when":"session touched a tier-3 path","meaning":"rubber-stamping on sensitive resources"}]},{"metric":"oversight.fast_approvals","cop":"governance_intelligence","means":"whether approval fatigue is spreading"},{"metric":"oversight.declined_inferred","cop":"workflow_orchestration","means":"a human stopped the work"},{"metric":"oversight.declined_inferred","cop":"policy_enforcement","means":"a refusal the agent must respect"},{"metric":"oversight.declined_inferred","cop":"behavior_analytics","means":"whether the agent tried another way to do the refused thing"},{"metric":"task.progress_ratio","cop":"workflow_orchestration","means":"how far the task has moved toward its plan"},{"metric":"task.progress_ratio","cop":"behavior_analytics","means":"planning followed or abandoned"},{"metric":"task.drift_score","cop":"workflow_orchestration","means":"work diverging from what was asked"},{"metric":"task.drift_score","cop":"context_memory","means":"context no longer relevant to the task"},{"metric":"task.unresolved_items","cop":"workflow_orchestration","means":"work left hanging"},{"metric":"task.unresolved_items","cop":"recovery_resilience","means":"residue after a failure"},{"metric":"task.stalled_per_turn","cop":"workflow_orchestration","means":"the turn stopped moving"},{"metric":"task.stalled_per_turn","cop":"behavior_analytics","means":"stall pattern across turns"},{"metric":"task.delegation_ratio","cop":"workflow_orchestration","means":"excessive delegation for the task"},{"metric":"task.delegation_ratio","cop":"interaction_discovery","means":"how much work leaves the main lane"},{"metric":"task.delegation_ratio","cop":"resource_management","means":"work multiplied across lanes"},{"metric":"task.unexpected_branches","cop":"workflow_orchestration","means":"an unexpected branch in the task"},{"metric":"task.unexpected_branches","cop":"anomaly_detection","means":"structure unlike the baseline"},{"metric":"telemetry.collector_heartbeat","cop":"runtime_monitoring","means":"silence versus absence: could not see, or nothing happened"},{"metric":"telemetry.collector_heartbeat","cop":"governance_architecture","means":"which collectors are unreliable estate-wide"},{"metric":"telemetry.missing_event_rate","cop":"runtime_monitoring","means":"gaps inside an otherwise present trace"},{"metric":"telemetry.missing_event_rate","cop":"audit_traceability","means":"holes in the record"},{"metric":"telemetry.collector_errors","cop":"runtime_monitoring","means":"evidence lost to a fault, not to inactivity"},{"metric":"telemetry.field_completeness","cop":"runtime_monitoring","means":"enough fields to support a governance decision"},{"metric":"telemetry.field_completeness","cop":"audit_traceability","means":"fields needed for attribution"},{"metric":"telemetry.field_completeness","cop":"governance_architecture","means":"fields no tool can supply"},{"metric":"telemetry.raw_ref_resolvability","cop":"audit_traceability","means":"a finding can be traced to its raw evidence"},{"metric":"audit.decision_evidence_coverage","cop":"audit_traceability","means":"every decision can be reconstructed"},{"metric":"audit.decision_evidence_coverage","cop":"governance_architecture","means":"decisions made on evidence nobody can inspect"},{"metric":"audit.hash_chain_intact","cop":"audit_traceability","means":"provenance has not been tampered with"},{"metric":"audit.hash_chain_intact","cop":"runtime_monitoring","means":"evidence integrity"},{"metric":"anomaly.tool_use_deviation","cop":"anomaly_detection","means":"using different tools than this agent normally does"},{"metric":"anomaly.tool_use_deviation","cop":"behavior_analytics","means":"a changed working style"},{"metric":"anomaly.file_access_novelty","cop":"anomaly_detection","means":"reaching files outside the normal footprint"},{"metric":"anomaly.file_access_novelty","cop":"interaction_discovery","means":"new territory entered"},{"metric":"anomaly.file_access_novelty","cop":"policy_enforcement","means":"new files may be out of scope"},{"metric":"anomaly.token_expansion","cop":"anomaly_detection","means":"context ballooning unlike normal sessions"},{"metric":"anomaly.token_expansion","cop":"resource_management","means":"runaway consumption"},{"metric":"anomaly.token_expansion","cop":"workload_optimization","means":"inefficient context use"},{"metric":"anomaly.sequence_deviation","cop":"anomaly_detection","means":"a sequence this tool rarely produces"},{"metric":"anomaly.sequence_deviation","cop":"behavior_analytics","means":"a new working strategy"},{"metric":"anomaly.composite_score","cop":"anomaly_detection","means":"one deterministic summary of how unusual the session is"},{"metric":"anomaly.composite_score","cop":"risk_mitigation","means":"deviation as a risk contributor"},{"metric":"context.compaction_count","cop":"context_memory","means":"how often the agent had to forget"},{"metric":"context.compaction_count","cop":"resource_management","means":"context pressure"},{"metric":"context.loss_after_compaction","cop":"context_memory","means":"information lost and rebuilt"},{"metric":"context.loss_after_compaction","cop":"behavior_analytics","means":"rework caused by forgetting"},{"metric":"context.loss_after_compaction","cop":"workload_optimization","means":"cost of lost context"},{"metric":"context.session_reset","cop":"context_memory","means":"context discarded and restarted"},{"metric":"context.session_reset","cop":"workflow_orchestration","means":"task interrupted"},{"metric":"context.precedent_match","cop":"context_memory","means":"a useful precedent exists"},{"metric":"context.precedent_match","cop":"incident_response","means":"how this was handled before"},{"metric":"context.precedent_match","cop":"knowledge_policy_management","means":"precedent that no rule captures"},{"metric":"context.instruction_changes","cop":"context_memory","means":"the agent's guidance changed under it"},{"metric":"context.instruction_changes","cop":"agent_lifecycle_management","means":"configuration changed"},{"metric":"context.instruction_changes","cop":"policy_enforcement","means":"an agent editing its own instructions"},{"metric":"context.consistency","cop":"context_memory","means":"internally inconsistent context"},{"metric":"interaction.edges","cop":"interaction_discovery","means":"the size of the interaction graph"},{"metric":"interaction.edges","cop":"audit_traceability","means":"relationships that must be traceable"},{"metric":"interaction.new_edges","cop":"interaction_discovery","means":"a new relationship formed"},{"metric":"interaction.new_edges","cop":"anomaly_detection","means":"relationship novelty"},{"metric":"interaction.new_edges","cop":"policy_enforcement","means":"is the new relationship permitted"},{"metric":"interaction.fan_out","cop":"interaction_discovery","means":"one actor spreading across many targets"},{"metric":"interaction.fan_out","cop":"resource_management","means":"load multiplied"},{"metric":"interaction.fan_out","cop":"risk_mitigation","means":"blast radius"},{"metric":"interaction.fan_in","cop":"interaction_discovery","means":"many actors converging on one resource"},{"metric":"interaction.fan_in","cop":"risk_mitigation","means":"concentration of access"},{"metric":"interaction.max_delegation_depth","cop":"interaction_discovery","means":"how many hands the task passed through"},{"metric":"interaction.max_delegation_depth","cop":"workflow_orchestration","means":"delegation too deep to follow"},{"metric":"interaction.max_delegation_depth","cop":"risk_mitigation","means":"accountability thins with depth"},{"metric":"interaction.propagation_depth","cop":"interaction_discovery","means":"how activity propagates"},{"metric":"interaction.propagation_depth","cop":"risk_mitigation","means":"spread of consequences"},{"metric":"interaction.propagation_depth","cop":"incident_response","means":"how far an incident reached"},{"metric":"interaction.cross_agent_paths","cop":"interaction_discovery","means":"one multi-agent path, not separate worlds"},{"metric":"interaction.cross_agent_paths","cop":"audit_traceability","means":"attribution across agents"},{"metric":"interaction.cross_agent_paths","cop":"policy_enforcement","means":"privilege passed between agents"},{"metric":"interaction.external_service_calls","cop":"interaction_discovery","means":"reach beyond the machine"},{"metric":"interaction.external_service_calls","cop":"policy_enforcement","means":"external destinations to check against policy"},{"metric":"interaction.external_service_calls","cop":"risk_mitigation","means":"data leaving"},{"metric":"interaction.external_service_calls","cop":"resource_management","means":"connector load"},{"metric":"incident.time_to_harm","cop":"incident_response","means":"how urgent the response is"},{"metric":"incident.time_to_harm","cop":"risk_mitigation","means":"window for containment"},{"metric":"incident.intervention_available","cop":"incident_response","means":"whether PAUSE or BLOCK is real or only advice"},{"metric":"incident.intervention_available","cop":"policy_enforcement","means":"enforcement is possible here"},{"metric":"incident.affected_entities","cop":"incident_response","means":"who and what the incident touches"},{"metric":"incident.affected_entities","cop":"classification_tagging","means":"entities to keep associated"},{"metric":"incident.affected_entities","cop":"audit_traceability","means":"scope for the record"},{"metric":"incident.open_count","cop":"incident_response","means":"is this part of an ongoing incident"},{"metric":"incident.open_count","cop":"governance_intelligence","means":"unresolved incidents piling up"},{"metric":"incident.human_approval_state","cop":"incident_response","means":"waiting, approved, or refused"},{"metric":"class.actor_type","cop":"classification_tagging","means":"who acted"},{"metric":"class.actor_type","cop":"interaction_discovery","means":"node type in the graph"},{"metric":"class.resource_type","cop":"classification_tagging","means":"what was touched"},{"metric":"class.resource_type","cop":"policy_enforcement","means":"which rules apply"},{"metric":"class.sensitivity_class","cop":"classification_tagging","means":"how sensitive"},{"metric":"class.sensitivity_class","cop":"policy_enforcement","means":"how strict the rule is"},{"metric":"class.sensitivity_class","cop":"risk_mitigation","means":"severity multiplier"},{"metric":"class.incident_family","cop":"classification_tagging","means":"which kind of governance event"},{"metric":"class.incident_family","cop":"incident_response","means":"playbook for the family"},{"metric":"class.incident_family","cop":"governance_intelligence","means":"recurring families"},{"metric":"class.tag_provenance","cop":"classification_tagging","means":"how much to trust the tag"},{"metric":"class.tag_provenance","cop":"audit_traceability","means":"which tags are reported, which inferred"},{"metric":"policy.entitlement_mismatch","cop":"policy_enforcement","means":"a permission mismatch"},{"metric":"policy.entitlement_mismatch","cop":"resource_management","means":"unauthorised consumption"},{"metric":"policy.entitlement_mismatch","cop":"incident_response","means":"entitlement breach"},{"metric":"policy.indirect_privilege_use","cop":"policy_enforcement","means":"privilege borrowed rather than held"},{"metric":"policy.indirect_privilege_use","cop":"interaction_discovery","means":"the path that carried it"},{"metric":"policy.indirect_privilege_use","cop":"risk_mitigation","means":"escalation by delegation"},{"metric":"policy.missing_required_approval","cop":"policy_enforcement","means":"an approval requirement not met"},{"metric":"policy.missing_required_approval","cop":"incident_response","means":"oversight bypassed"},{"metric":"policy.precedence_conflict","cop":"policy_enforcement","means":"which rule wins is unclear"},{"metric":"policy.precedence_conflict","cop":"knowledge_policy_management","means":"conflicting rules to resolve"},{"metric":"policy.rule_hit_rate","cop":"knowledge_policy_management","means":"rules that fire too much or never"},{"metric":"policy.rule_hit_rate","cop":"policy_enforcement","means":"how often the rule bites"},{"metric":"policy.rule_hit_rate","cop":"governance_intelligence","means":"where rules concentrate"},{"metric":"policy.override_rate","cop":"knowledge_policy_management","means":"rules people routinely override"},{"metric":"policy.override_rate","cop":"governance_intelligence","means":"oversight fatigue"},{"metric":"policy.override_rate","cop":"policy_enforcement","means":"enforcement being waved through"},{"metric":"policy.false_positive_rate","cop":"knowledge_policy_management","means":"rules that cry wolf"},{"metric":"policy.false_positive_rate","cop":"governance_architecture","means":"controls losing credibility"},{"metric":"policy.version_age","cop":"knowledge_policy_management","means":"rules gone stale"},{"metric":"policy.version_age","cop":"policy_enforcement","means":"enforcing an old rule"},{"metric":"policy.unused_rules","cop":"knowledge_policy_management","means":"dead rules that add confusion"},{"metric":"policy.rule_conflicts","cop":"knowledge_policy_management","means":"an incoherent rule set"},{"metric":"policy.rule_conflicts","cop":"governance_architecture","means":"control conflicts in the architecture"},{"metric":"risk.compound_score","cop":"risk_mitigation","means":"one deterministic risk figure"},{"metric":"risk.compound_score","cop":"incident_response","means":"how much the findings add up to"},{"metric":"risk.compound_score","cop":"governance_intelligence","means":"risk across the estate"},{"metric":"risk.reversibility","cop":"risk_mitigation","means":"whether the damage can be undone"},{"metric":"risk.reversibility","cop":"recovery_resilience","means":"whether recovery is possible"},{"metric":"risk.reversibility","cop":"incident_response","means":"cost of waiting"},{"metric":"risk.residual","cop":"risk_mitigation","means":"what remains after mitigation"},{"metric":"risk.residual","cop":"incident_response","means":"whether the controls were enough"},{"metric":"risk.repeated_failures","cop":"risk_mitigation","means":"a failure that keeps happening"},{"metric":"risk.repeated_failures","cop":"behavior_analytics","means":"a habit, not an accident"},{"metric":"risk.repeated_failures","cop":"governance_intelligence","means":"recurring failure rate"},{"metric":"risk.secret_exposure_path","cop":"risk_mitigation","means":"a plausible route for the secret to leave"},{"metric":"risk.secret_exposure_path","cop":"incident_response","means":"exposure with an exit"},{"metric":"risk.secret_exposure_path","cop":"policy_enforcement","means":"secret-handling rule"},{"metric":"risk.secret_exposure_path","cop":"audit_traceability","means":"path to preserve as evidence"},{"metric":"resource.budget_utilisation","cop":"resource_management","means":"within entitlement or not"},{"metric":"resource.budget_utilisation","cop":"risk_mitigation","means":"budget exhaustion risk"},{"metric":"resource.cost_per_session","cop":"resource_management","means":"what the session cost"},{"metric":"resource.cost_per_session","cop":"workload_optimization","means":"cost per task"},{"metric":"resource.rate_limit_hits","cop":"resource_management","means":"hitting the ceiling"},{"metric":"resource.rate_limit_hits","cop":"workload_optimization","means":"work throttled"},{"metric":"resource.host_load","cop":"resource_management","means":"machine pressure"},{"metric":"resource.host_load","cop":"workload_optimization","means":"bottleneck on the host"},{"metric":"resource.model_usage_mix","cop":"resource_management","means":"expensive models doing cheap work"},{"metric":"resource.model_usage_mix","cop":"workload_optimization","means":"model fit to task"},{"metric":"resource.model_usage_mix","cop":"agent_lifecycle_management","means":"which models are in use"},{"metric":"resource.cache_hit_ratio","cop":"workload_optimization","means":"how well context is reused"},{"metric":"resource.cache_hit_ratio","cop":"resource_management","means":"cost avoided or wasted"},{"metric":"resource.connector_call_volume","cop":"resource_management","means":"connector load"},{"metric":"resource.connector_call_volume","cop":"interaction_discovery","means":"how much runs through connectors"},{"metric":"resource.connector_call_volume","cop":"workload_optimization","means":"connector overuse"},{"metric":"workload.redundant_reads","cop":"workload_optimization","means":"work already done"},{"metric":"workload.redundant_reads","cop":"behavior_analytics","means":"forgetting or looping"},{"metric":"workload.tokens_per_action","cop":"workload_optimization","means":"efficiency of each action"},{"metric":"workload.tokens_per_action","cop":"resource_management","means":"consumption rate"},{"metric":"workload.queue_depth","cop":"workload_optimization","means":"a bottleneck forming"},{"metric":"workload.queue_depth","cop":"resource_management","means":"contention"},{"metric":"behavior.loop_score","cop":"behavior_analytics","means":"looping behaviour"},{"metric":"behavior.loop_score","cop":"workflow_orchestration","means":"progress stalled in a loop"},{"metric":"behavior.loop_score","cop":"anomaly_detection","means":"loops this tool does not usually make"},{"metric":"behavior.exploration_rate","cop":"behavior_analytics","means":"over-exploring versus acting"},{"metric":"behavior.exploration_rate","cop":"workload_optimization","means":"time spent finding rather than doing"},{"metric":"behavior.planning_deviation","cop":"behavior_analytics","means":"the plan was not followed"},{"metric":"behavior.planning_deviation","cop":"workflow_orchestration","means":"drift from the plan"},{"metric":"behavior.recovery_pattern","cop":"behavior_analytics","means":"how this agent copes with failure"},{"metric":"behavior.recovery_pattern","cop":"recovery_resilience","means":"quality of recovery"},{"metric":"behavior.unsafe_action_rate","cop":"behavior_analytics","means":"a risky working style"},{"metric":"behavior.unsafe_action_rate","cop":"risk_mitigation","means":"exposure from habits"},{"metric":"behavior.unsafe_action_rate","cop":"policy_enforcement","means":"prohibited action matches"},{"metric":"behavior.session_complexity","cop":"behavior_analytics","means":"how involved the session was"},{"metric":"behavior.session_complexity","cop":"workload_optimization","means":"complexity against output"},{"metric":"behavior.session_complexity","cop":"resource_management","means":"load by complexity"},{"metric":"recovery.success_after_failure","cop":"recovery_resilience","means":"the system got back on track"},{"metric":"recovery.success_after_failure","cop":"behavior_analytics","means":"resilient or not"},{"metric":"recovery.time","cop":"recovery_resilience","means":"how long it stayed broken"},{"metric":"recovery.time","cop":"workload_optimization","means":"time lost"},{"metric":"recovery.rollback_success","cop":"recovery_resilience","means":"a rollback that actually worked"},{"metric":"recovery.rollback_success","cop":"risk_mitigation","means":"a safe undo exists"},{"metric":"recovery.irreversible_change","cop":"recovery_resilience","means":"changes that cannot be taken back"},{"metric":"recovery.irreversible_change","cop":"risk_mitigation","means":"irreversibility"},{"metric":"recovery.irreversible_change","cop":"incident_response","means":"no way to undo"},{"metric":"recovery.residual_errors","cop":"recovery_resilience","means":"left broken"},{"metric":"recovery.residual_errors","cop":"workflow_orchestration","means":"the task did not finish clean"},{"metric":"recovery.restart_events","cop":"recovery_resilience","means":"restarts as part of recovery"},{"metric":"recovery.restart_events","cop":"runtime_monitoring","means":"restarts that look like collector loss"},{"metric":"lifecycle.first_last_seen","cop":"agent_lifecycle_management","means":"new, active or going quiet"},{"metric":"lifecycle.first_last_seen","cop":"governance_architecture","means":"agents appearing outside the estate's view"},{"metric":"lifecycle.hook_config_removed","cop":"agent_lifecycle_management","means":"an agent changed to avoid observation"},{"metric":"lifecycle.hook_config_removed","cop":"runtime_monitoring","means":"coverage drop caused by configuration"},{"metric":"lifecycle.hook_config_removed","cop":"policy_enforcement","means":"oversight removed"},{"metric":"lifecycle.capability_change","cop":"agent_lifecycle_management","means":"the agent can now do something different"},{"metric":"lifecycle.capability_change","cop":"policy_enforcement","means":"new capability, new permissions to check"},{"metric":"lifecycle.capability_change","cop":"interaction_discovery","means":"new possible edges"},{"metric":"lifecycle.new_agent","cop":"agent_lifecycle_management","means":"a new agent in the estate"},{"metric":"lifecycle.new_agent","cop":"classification_tagging","means":"tag for onboarding"},{"metric":"lifecycle.new_agent","cop":"governance_architecture","means":"estate growing"},{"metric":"lifecycle.inactive_agent","cop":"agent_lifecycle_management","means":"an agent gone quiet"},{"metric":"lifecycle.inactive_agent","cop":"governance_intelligence","means":"retired or abandoned agents"},{"metric":"lifecycle.config_drift","cop":"agent_lifecycle_management","means":"configuration drifted"},{"metric":"lifecycle.config_drift","cop":"policy_enforcement","means":"running outside approved settings"},{"metric":"lifecycle.config_drift","cop":"knowledge_policy_management","means":"baseline out of date"},{"metric":"agg.exception_trend","cop":"governance_intelligence","means":"exceptions rising or falling"},{"metric":"agg.exception_trend","cop":"governance_architecture","means":"trends the architecture does not answer"},{"metric":"agg.incident_trend","cop":"governance_intelligence","means":"incident growth by family"},{"metric":"agg.incident_trend","cop":"incident_response","means":"workload ahead"},{"metric":"agg.risk_concentration","cop":"governance_intelligence","means":"risk concentrated in a few places"},{"metric":"agg.risk_concentration","cop":"risk_mitigation","means":"where mitigation pays most"},{"metric":"agg.repeat_actor_concentration","cop":"governance_intelligence","means":"a few actors behind most findings"},{"metric":"agg.repeat_actor_concentration","cop":"risk_mitigation","means":"repeat exposure"},{"metric":"agg.coverage_trend","cop":"governance_intelligence","means":"blind spots growing or closing"},{"metric":"agg.coverage_trend","cop":"runtime_monitoring","means":"coverage drifting"},{"metric":"agg.coverage_trend","cop":"governance_architecture","means":"instrumentation gaps over time"},{"metric":"agg.unresolved_incident_rate","cop":"governance_intelligence","means":"incidents nobody closes"},{"metric":"agg.unresolved_incident_rate","cop":"incident_response","means":"response not completing"},{"metric":"agg.unresolved_incident_rate","cop":"governance_architecture","means":"a missing resolution path"},{"metric":"agg.policy_violation_trend","cop":"governance_intelligence","means":"violations by rule over time"},{"metric":"agg.policy_violation_trend","cop":"policy_enforcement","means":"enforcement trend"},{"metric":"agg.policy_violation_trend","cop":"knowledge_policy_management","means":"rules whose violations are rising"},{"metric":"agg.confidence_trend","cop":"governance_intelligence","means":"whether judgements are getting weaker"},{"metric":"agg.confidence_trend","cop":"runtime_monitoring","means":"evidence quality over time"},{"metric":"arch.cops_coverage","cop":"governance_architecture","means":"exceptions with no one looking"},{"metric":"arch.cops_coverage","cop":"governance_intelligence","means":"where COPS leave gaps"},{"metric":"arch.unhandled_exceptions","cop":"governance_architecture","means":"exceptions that fell through"},{"metric":"arch.unhandled_exceptions","cop":"incident_response","means":"findings not reaching response"},{"metric":"arch.observability_gaps","cop":"governance_architecture","means":"behaviour no tool can reveal"},{"metric":"arch.observability_gaps","cop":"runtime_monitoring","means":"why evidence is thin"},{"metric":"arch.observability_gaps","cop":"agent_lifecycle_management","means":"tools that cannot be governed yet"},{"metric":"arch.enforcement_coverage","cop":"governance_architecture","means":"findings with nothing able to stop them"},{"metric":"arch.enforcement_coverage","cop":"policy_enforcement","means":"where enforcement is only advice"},{"metric":"arch.repeated_escalations","cop":"governance_architecture","means":"a problem needing structural change"},{"metric":"arch.repeated_escalations","cop":"incident_response","means":"escalation that changes nothing"},{"metric":"arch.control_conflicts","cop":"governance_architecture","means":"COPS or rules working against each other"},{"metric":"arch.control_conflicts","cop":"knowledge_policy_management","means":"conflicting guidance"},{"metric":"arch.uncovered_behaviours","cop":"governance_architecture","means":"things happening that nothing measures"}],"cop_links":[{"from":"workflow_orchestration","to":"behavior_analytics","kind":"passes_to"},{"from":"workflow_orchestration","to":"incident_response","kind":"passes_to"},{"from":"runtime_monitoring","to":"audit_traceability","kind":"passes_to"},{"from":"runtime_monitoring","to":"incident_response","kind":"passes_to"},{"from":"anomaly_detection","to":"classification_tagging","kind":"passes_to"},{"from":"anomaly_detection","to":"policy_enforcement","kind":"passes_to"},{"from":"anomaly_detection","to":"risk_mitigation","kind":"passes_to"},{"from":"anomaly_detection","to":"incident_response","kind":"passes_to"},{"from":"context_memory","to":"behavior_analytics","kind":"passes_to"},{"from":"interaction_discovery","to":"policy_enforcement","kind":"passes_to"},{"from":"interaction_discovery","to":"risk_mitigation","kind":"passes_to"},{"from":"interaction_discovery","to":"audit_traceability","kind":"passes_to"},{"from":"classification_tagging","to":"governance_intelligence","kind":"passes_to"},{"from":"policy_enforcement","to":"incident_response","kind":"passes_to"},{"from":"policy_enforcement","to":"risk_mitigation","kind":"passes_to"},{"from":"policy_enforcement","to":"audit_traceability","kind":"passes_to"},{"from":"risk_mitigation","to":"incident_response","kind":"passes_to"},{"from":"resource_management","to":"workload_optimization","kind":"passes_to"},{"from":"resource_management","to":"risk_mitigation","kind":"passes_to"},{"from":"governance_intelligence","to":"governance_architecture","kind":"passes_to"},{"from":"governance_intelligence","to":"knowledge_policy_management","kind":"passes_to"},{"from":"behavior_analytics","to":"anomaly_detection","kind":"passes_to"},{"from":"behavior_analytics","to":"recovery_resilience","kind":"passes_to"},{"from":"recovery_resilience","to":"incident_response","kind":"passes_to"},{"from":"recovery_resilience","to":"governance_intelligence","kind":"passes_to"},{"from":"workload_optimization","to":"resource_management","kind":"passes_to"},{"from":"audit_traceability","to":"governance_architecture","kind":"passes_to"},{"from":"knowledge_policy_management","to":"governance_architecture","kind":"passes_to"},{"from":"agent_lifecycle_management","to":"classification_tagging","kind":"passes_to"},{"from":"agent_lifecycle_management","to":"policy_enforcement","kind":"passes_to"}],"expected_counts":{"metrics_total":131,"built":31,"hypothetical":100,"cops_total":18,"edges_total":328,"metrics_per_cop":{"workflow_orchestration":18,"runtime_monitoring":19,"anomaly_detection":16,"context_memory":7,"interaction_discovery":21,"incident_response":22,"classification_tagging":11,"policy_enforcement":31,"risk_mitigation":26,"resource_management":22,"governance_intelligence":19,"behavior_analytics":22,"recovery_resilience":12,"workload_optimization":19,"audit_traceability":16,"knowledge_policy_management":12,"agent_lifecycle_management":15,"governance_architecture":20},"built_metrics_per_cop":{"workflow_orchestration":7,"runtime_monitoring":9,"anomaly_detection":8,"context_memory":0,"interaction_discovery":7,"incident_response":3,"classification_tagging":4,"policy_enforcement":9,"risk_mitigation":6,"resource_management":6,"governance_intelligence":3,"behavior_analytics":8,"recovery_resilience":3,"workload_optimization":5,"audit_traceability":6,"knowledge_policy_management":1,"agent_lifecycle_management":6,"governance_architecture":3},"cops_per_metric":{"access.first_seen_mcp":4,"activity.action_rate_ratio":3,"agg.confidence_trend":2,"agg.coverage_trend":3,"agg.exception_trend":2,"agg.incident_trend":2,"agg.policy_violation_trend":3,"agg.repeat_actor_concentration":2,"agg.risk_concentration":2,"agg.unresolved_incident_rate":3,"anomaly.composite_score":2,"anomaly.file_access_novelty":3,"anomaly.sequence_deviation":2,"anomaly.token_expansion":3,"anomaly.tool_use_deviation":2,"arch.control_conflicts":2,"arch.cops_coverage":2,"arch.enforcement_coverage":2,"arch.observability_gaps":3,"arch.repeated_escalations":2,"arch.uncovered_behaviours":1,"arch.unhandled_exceptions":2,"audit.decision_evidence_coverage":2,"audit.hash_chain_intact":2,"behavior.exploration_rate":2,"behavior.loop_score":3,"behavior.planning_deviation":2,"behavior.recovery_pattern":2,"behavior.session_complexity":3,"behavior.unsafe_action_rate":3,"class.actor_type":2,"class.incident_family":3,"class.resource_type":2,"class.sensitivity_class":3,"class.tag_provenance":2,"context.compaction_count":2,"context.consistency":1,"context.instruction_changes":3,"context.loss_after_compaction":3,"context.precedent_match":3,"context.session_reset":2,"incident.affected_entities":3,"incident.human_approval_state":1,"incident.intervention_available":2,"incident.open_count":2,"incident.time_to_harm":2,"insights.blocked":4,"insights.duration_outlier":4,"insights.failed":4,"insights.lockfile":2,"insights.no_oversight":3,"insights.outside":4,"insights.repetition":4,"insights.retry":4,"insights.reverted":3,"insights.secrets":5,"insights.sensitive_unasked":4,"insights.stalled":3,"insights.token_outlier":4,"insights.unattributed":3,"interaction.cross_agent_paths":3,"interaction.edges":2,"interaction.external_service_calls":4,"interaction.fan_in":2,"interaction.fan_out":3,"interaction.max_delegation_depth":3,"interaction.mcp_servers":2,"interaction.new_edges":3,"interaction.propagation_depth":3,"interaction.subagent_lanes":3,"lifecycle.capability_change":3,"lifecycle.config_drift":3,"lifecycle.first_last_seen":2,"lifecycle.hook_config_removed":3,"lifecycle.inactive_agent":2,"lifecycle.model_change":2,"lifecycle.new_agent":3,"lifecycle.new_machine":2,"lifecycle.version_change":2,"oversight.declined_inferred":3,"oversight.fast_approvals":2,"path.transition_novelty":3,"policy.entitlement_mismatch":3,"policy.false_positive_rate":2,"policy.indirect_privilege_use":3,"policy.missing_required_approval":2,"policy.override_rate":3,"policy.precedence_conflict":2,"policy.rule_conflicts":2,"policy.rule_hit_rate":3,"policy.unused_rules":1,"policy.version_age":2,"recovery.irreversible_change":3,"recovery.residual_errors":2,"recovery.restart_events":2,"recovery.rollback_success":2,"recovery.success_after_failure":2,"recovery.time":2,"resource.budget_utilisation":2,"resource.cache_hit_ratio":2,"resource.connector_call_volume":3,"resource.cost_per_session":2,"resource.host_load":2,"resource.model_usage_mix":3,"resource.rate_limit_hits":2,"risk.compound_score":3,"risk.repeated_failures":3,"risk.residual":2,"risk.reversibility":3,"risk.secret_exposure_path":4,"task.delegation_ratio":3,"task.drift_score":2,"task.progress_ratio":2,"task.stalled_per_turn":2,"task.unexpected_branches":2,"task.unresolved_items":2,"telemetry.collector_coverage":3,"telemetry.collector_errors":1,"telemetry.collector_heartbeat":2,"telemetry.event_freshness":2,"telemetry.evidence_score":2,"telemetry.field_completeness":3,"telemetry.lane_linkage":3,"telemetry.missing_event_rate":2,"telemetry.raw_ref_resolvability":1,"telemetry.source_agreement":2,"telemetry.turn_linkage":3,"telemetry.unknown_share":2,"workload.queue_depth":2,"workload.redundant_reads":2,"workload.tokens_per_action":2}},"live":{"optional":true,"views_to_create_in_supabase":["create or replace view metric_state_counts as select metric_id, state, count(*)::int as n from metric_events group by 1, 2;","create or replace view cop_decision_counts as select cop, interpretation, action, count(*)::int as n from cop_decisions group by 1, 2, 3;"],"reads":{"metric_state_counts":["metric_id","state","n"],"cop_decision_counts":["cop","interpretation","action","n"]},"note":"counts only; no session content. Use the read-only anon key and grant select on these two views only."}};
+
+(() => {
+"use strict";
+
+const $ = s => document.querySelector(s);
+const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const titleCase = s => String(s ?? "").replace(/_/g," ").replace(/\b\w/g,c=>c.toUpperCase());
+const metricById = new Map(DATA.metrics.map(x => [x.id,x]));
+const copById = new Map(DATA.cops.map(x => [x.id,x]));
+const edgesByMetric = new Map(DATA.metrics.map(m => [m.id,[]]));
+const edgesByCop = new Map(DATA.cops.map(c => [c.id,[]]));
+DATA.edges.forEach(e => {
+  if(!edgesByMetric.has(e.metric)) edgesByMetric.set(e.metric,[]);
+  if(!edgesByCop.has(e.cop)) edgesByCop.set(e.cop,[]);
+  edgesByMetric.get(e.metric).push(e);
+  edgesByCop.get(e.cop).push(e);
+});
+const copLinksFrom = new Map(DATA.cops.map(c=>[c.id,[]]));
+const copLinksTo = new Map(DATA.cops.map(c=>[c.id,[]]));
+(DATA.cop_links||[]).forEach(l=>{
+  if(!copLinksFrom.has(l.from)) copLinksFrom.set(l.from,[]);
+  if(!copLinksTo.has(l.to)) copLinksTo.set(l.to,[]);
+  copLinksFrom.get(l.from).push(l); copLinksTo.get(l.to).push(l);
+});
+
+const state = {
+  selected:null,
+  view:"bip",
+  search:"",
+  showBuilt:true,
+  showHyp:true,
+  feasibility:"",
+  family:"",
+  copStatus:"",
+  sort:"family",
+  liveMetrics:new Map(),
+  liveCops:new Map()
+};
+
+function statusCue(status){
+  if(status==="active") return "●";
+  if(status==="next") return "◆";
+  return "■";
+}
+
+function initHeader(){
+  $("#appTitle").textContent = DATA.meta?.title || "COPS metric network";
+  $("#appNote").textContent = DATA.meta?.note || "";
+  $("#pipeline").innerHTML = (DATA.pipeline||[]).map((p,i)=>
+    `${i?'<span class="pipe-arrow" aria-hidden="true">→</span>':""}<span class="pipe-step">${esc(p)}</span>`
+  ).join("");
+
+  const sl=DATA.meta?.status_legend||{}, cl=DATA.meta?.cop_status_legend||{};
+  $("#legend").innerHTML = `
+    <span class="legend-item"><span class="legend-mark built">B</span>Built — ${esc(sl.built||"")}</span>
+    <span class="legend-item"><span class="legend-mark hyp">H</span>Hypothetical — ${esc(sl.hypothetical||"")}</span>
+    <span class="legend-item"><span class="legend-mark active">●</span>Active — ${esc(cl.active||"")}</span>
+    <span class="legend-item"><span class="legend-mark next"><span>◆</span></span>Next — ${esc(cl.next||"")}</span>
+    <span class="legend-item"><span class="legend-mark defined">■</span>Defined — ${esc(cl.defined||"")}</span>
+  `;
+
+  const families=[...new Set(DATA.metrics.map(m=>m.family))].sort();
+  $("#family").insertAdjacentHTML("beforeend",families.map(f=>`<option value="${esc(f)}">${esc(f)}</option>`).join(""));
+  const feas=[...new Set(DATA.metrics.filter(m=>m.status==="hypothetical" && m.feasibility).map(m=>m.feasibility))].sort();
+  $("#feasibility").insertAdjacentHTML("beforeend",feas.map(f=>`<option value="${esc(f)}">${esc(titleCase(f))}</option>`).join(""));
+}
+
+function validateCounts(){
+  const exp=DATA.expected_counts||{}, problems=[];
+  const actualBuilt=DATA.metrics.filter(m=>m.status==="built").length;
+  const actualHyp=DATA.metrics.filter(m=>m.status==="hypothetical").length;
+  const checks=[
+    ["metrics_total",DATA.metrics.length],
+    ["built",actualBuilt],["hypothetical",actualHyp],
+    ["cops_total",DATA.cops.length],["edges_total",DATA.edges.length]
+  ];
+  checks.forEach(([k,a])=>{ if(exp[k]!==undefined && Number(exp[k])!==a) problems.push(`${k}: expected ${exp[k]}, found ${a}`); });
+  if(exp.metrics_per_cop){
+    DATA.cops.forEach(c=>{
+      const a=(edgesByCop.get(c.id)||[]).length, x=exp.metrics_per_cop[c.id];
+      if(x!==undefined && Number(x)!==a) problems.push(`${c.id} metrics: expected ${x}, found ${a}`);
+    });
+  }
+  if(exp.built_metrics_per_cop){
+    DATA.cops.forEach(c=>{
+      const a=(edgesByCop.get(c.id)||[]).filter(e=>metricById.get(e.metric)?.status==="built").length;
+      const x=exp.built_metrics_per_cop[c.id];
+      if(x!==undefined && Number(x)!==a) problems.push(`${c.id} built metrics: expected ${x}, found ${a}`);
+    });
+  }
+  if(exp.cops_per_metric){
+    DATA.metrics.forEach(m=>{
+      const a=(edgesByMetric.get(m.id)||[]).length, x=exp.cops_per_metric[m.id];
+      if(x!==undefined && Number(x)!==a) problems.push(`${m.id} readers: expected ${x}, found ${a}`);
+    });
+  }
+  if(problems.length){
+    const el=$("#countWarning");
+    el.style.display="block";
+    el.innerHTML=`<strong>Count check warning:</strong> ${problems.length} mismatch${problems.length===1?"":"es"}. ${esc(problems.slice(0,5).join(" · "))}${problems.length>5?" · …":""}`;
+  }
+}
+
+function metricMatches(m){
+  if(m.status==="built" && !state.showBuilt) return false;
+  if(m.status==="hypothetical" && !state.showHyp) return false;
+  if(state.feasibility && m.feasibility!==state.feasibility) return false;
+  if(state.family && m.family!==state.family) return false;
+  const q=state.search.trim().toLowerCase();
+  if(q){
+    const hay=[m.id,m.name,m.family,m.status,m.feasibility,m.needs].filter(Boolean).join(" ").toLowerCase();
+    if(!hay.includes(q)) return false;
+  }
+  return true;
+}
+function copMatches(c){
+  if(state.copStatus && c.status!==state.copStatus) return false;
+  const q=state.search.trim().toLowerCase();
+  if(q){
+    const hay=[c.id,c.name,c.question,c.status,c.cadence,(c.interpretations||[]).join(" "),(c.permitted_actions||[]).join(" ")].join(" ").toLowerCase();
+    if(!hay.includes(q)) return false;
+  }
+  return true;
+}
+
+function renderMetricList(){
+  const visible=DATA.metrics.filter(metricMatches);
+  $("#metricVisibleCount").textContent=`${visible.length} / ${DATA.metrics.length}`;
+  const groups=new Map();
+  visible.forEach(m=>{if(!groups.has(m.family))groups.set(m.family,[]);groups.get(m.family).push(m)});
+  let fams=[...groups.keys()].sort();
+  if(state.sort==="name"){
+    fams.sort((a,b)=>{
+      const aa=[...groups.get(a)].sort((x,y)=>x.name.localeCompare(y.name))[0]?.name||"";
+      const bb=[...groups.get(b)].sort((x,y)=>x.name.localeCompare(y.name))[0]?.name||"";
+      return aa.localeCompare(bb);
+    });
+  }else if(state.sort==="count"){
+    fams.sort((a,b)=>{
+      const am=Math.max(...groups.get(a).map(m=>(edgesByMetric.get(m.id)||[]).length));
+      const bm=Math.max(...groups.get(b).map(m=>(edgesByMetric.get(m.id)||[]).length));
+      return bm-am || a.localeCompare(b);
+    });
+  }
+  const html=fams.map(f=>{
+    let arr=groups.get(f);
+    if(state.sort==="count") arr=[...arr].sort((a,b)=>(edgesByMetric.get(b.id)||[]).length-(edgesByMetric.get(a.id)||[]).length || a.name.localeCompare(b.name));
+    else arr=[...arr].sort((a,b)=>a.name.localeCompare(b.name));
+    return `<section class="family"><h3 class="family-title">${esc(f)} · ${arr.length}</h3><div class="node-list">${
+      arr.map(metricCard).join("")
+    }</div></section>`;
+  }).join("");
+  $("#metricList").innerHTML=html || `<div class="detail-empty">No metrics match the current filters.</div>`;
+}
+
+function metricCard(m){
+  const n=(edgesByMetric.get(m.id)||[]).length, hypo=m.status==="hypothetical";
+  const cls=["node-card",hypo?"metric-hyp":"metric-built"];
+  if(state.selected){
+    if(state.selected.type==="metric"){
+      if(state.selected.id===m.id) cls.push("selected"); else cls.push("dim");
+    }else{
+      const related=(edgesByCop.get(state.selected.id)||[]).some(e=>e.metric===m.id);
+      if(related) cls.push("connected"); else cls.push("dim");
+    }
+  }
+  return `<button type="button" class="${cls.join(" ")}" data-type="metric" data-id="${esc(m.id)}" aria-label="${esc(m.name)}, ${hypo?"hypothetical":"built"}, read by ${n} COPS">
+    <span><span class="node-title">${esc(m.name)}</span><span class="node-id">${esc(m.id)}</span></span>
+    <span class="count">${n}</span>
+    <span class="status-line"><span class="badge">${hypo?"H · Hypothetical":"B · Built"}</span>${hypo&&m.feasibility?`<span class="chip">${esc(titleCase(m.feasibility))}</span>`:""}</span>
+  </button>`;
+}
+
+function renderCopList(){
+  const visible=DATA.cops.filter(copMatches);
+  $("#copVisibleCount").textContent=`${visible.length} / ${DATA.cops.length}`;
+  $("#copList").innerHTML=visible.map(copCard).join("") || `<div class="detail-empty">No COPS match the current filters.</div>`;
+}
+
+function copCard(c){
+  const n=(edgesByCop.get(c.id)||[]).length, cls=["node-card",`cop-${c.status}`];
+  if(state.selected){
+    if(state.selected.type==="cop"){
+      if(state.selected.id===c.id) cls.push("selected"); else cls.push("dim");
+    }else{
+      const related=(edgesByMetric.get(state.selected.id)||[]).some(e=>e.cop===c.id);
+      if(related) cls.push("connected"); else cls.push("dim");
+    }
+  }
+  return `<button type="button" class="${cls.join(" ")}" data-type="cop" data-id="${esc(c.id)}" aria-label="${esc(c.name)}, ${esc(c.status)}, reads ${n} metrics">
+    <span><span class="node-title">${esc(c.name)}</span><span class="node-id">${esc(c.id)}</span></span>
+    <span class="count">${n}</span>
+    <span class="status-line"><span class="badge ${esc(c.status)}">${statusCue(c.status)} ${esc(c.status)}</span><span class="chip">${esc(c.cadence)}</span></span>
+  </button>`;
+}
+
+function render(){
+  renderMetricList(); renderCopList(); renderNetwork();
+  renderDetail();
+  requestAnimationFrame(()=>{drawBipartiteEdges(); drawCopNetworkEdges();});
+}
+
+function select(type,id){
+  state.selected={type,id};
+  render();
+}
+function clearSelection(){
+  state.selected=null; render();
+}
+function bindNodeClicks(root){
+  root.addEventListener("click",e=>{
+    const b=e.target.closest("[data-type][data-id]");
+    if(b) select(b.dataset.type,b.dataset.id);
+  });
+}
+bindNodeClicks($("#metricList"));
+bindNodeClicks($("#copList"));
+bindNodeClicks($("#networkNodes"));
+
+function drawBipartiteEdges(){
+  if(state.view!=="bip") return;
+  const svg=$("#edgeLayer"), host=$("#bipView");
+  const hr=host.getBoundingClientRect(), yOffset=42;
+  const visibleMetricIds=new Set([...$("#metricList").querySelectorAll('[data-type="metric"]')].map(x=>x.dataset.id));
+  const visibleCopIds=new Set([...$("#copList").querySelectorAll('[data-type="cop"]')].map(x=>x.dataset.id));
+  const relevant = state.selected?.type==="metric"
+    ? (edgesByMetric.get(state.selected.id)||[])
+    : state.selected?.type==="cop"
+      ? (edgesByCop.get(state.selected.id)||[])
+      : DATA.edges;
+  let d=[];
+  relevant.forEach(e=>{
+    if(!visibleMetricIds.has(e.metric)||!visibleCopIds.has(e.cop)) return;
+    const a=$("#metricList").querySelector(`[data-id="${CSS.escape(e.metric)}"]`);
+    const b=$("#copList").querySelector(`[data-id="${CSS.escape(e.cop)}"]`);
+    if(!a||!b)return;
+    const ar=a.getBoundingClientRect(), br=b.getBoundingClientRect();
+    const insideA=ar.bottom>hr.top+yOffset && ar.top<hr.bottom;
+    const insideB=br.bottom>hr.top+yOffset && br.top<hr.bottom;
+    if(!insideA||!insideB)return;
+    const x1=ar.right-hr.left, y1=ar.top+ar.height/2-hr.top-yOffset;
+    const x2=br.left-hr.left, y2=br.top+br.height/2-hr.top-yOffset;
+    const dx=Math.max(40,(x2-x1)*.45);
+    const hot=!!state.selected && ((state.selected.type==="metric"&&state.selected.id===e.metric)||(state.selected.type==="cop"&&state.selected.id===e.cop));
+    d.push(`<path class="edge${hot?" hot":""}" d="M ${x1.toFixed(1)} ${y1.toFixed(1)} C ${(x1+dx).toFixed(1)} ${y1.toFixed(1)}, ${(x2-dx).toFixed(1)} ${y2.toFixed(1)}, ${x2.toFixed(1)} ${y2.toFixed(1)}"/>`);
+  });
+  svg.setAttribute("viewBox",`0 0 ${Math.max(1,hr.width)} ${Math.max(1,hr.height-yOffset)}`);
+  svg.innerHTML=d.join("");
+}
+
+let edgeRaf=0;
+function scheduleEdges(){
+  cancelAnimationFrame(edgeRaf); edgeRaf=requestAnimationFrame(drawBipartiteEdges);
+}
+$("#metricScroll").addEventListener("scroll",scheduleEdges,{passive:true});
+$("#copScroll").addEventListener("scroll",scheduleEdges,{passive:true});
+window.addEventListener("resize",()=>requestAnimationFrame(()=>{drawBipartiteEdges();drawCopNetworkEdges()}));
+
+function renderDetail(){
+  const el=$("#detailInner");
+  if(!state.selected){
+    el.innerHTML=`<div class="detail-empty"><strong>Select a metric or COP</strong><br><br>Choose a metric to see every COP that reads it, or choose a COP to see its complete metric lens.</div>`;
+    return;
+  }
+  if(state.selected.type==="metric"){
+    const m=metricById.get(state.selected.id); if(!m)return;
+    const es=edgesByMetric.get(m.id)||[];
+    const live=liveMetricHtml(m.id);
+    el.innerHTML=`
+      <h2>${esc(m.name)}</h2>
+      <div class="node-id">${esc(m.id)}</div>
+      <div class="status-line" style="margin-top:8px"><span class="badge" style="color:var(--${m.status==="built"?"built":"hyp"})">${m.status==="built"?"B · Built":"H · Hypothetical"}</span></div>
+      <dl class="kv">
+        <dt>Family</dt><dd>${esc(m.family)}</dd>
+        ${m.status==="hypothetical"?`<dt>Feasibility</dt><dd>${esc(titleCase(m.feasibility))}</dd><dt>Needs</dt><dd>${esc(m.needs||"")}</dd>`:""}
+        ${m.source?`<dt>Source</dt><dd>${esc(m.source)}</dd>`:""}
+        <dt>Readers</dt><dd><strong>Read by ${es.length} of ${DATA.cops.length} COPS</strong></dd>
+      </dl>
+      ${live}
+      <h3>COPS that read this metric</h3>
+      <div>${es.map(e=>readerRow(e)).join("")||'<div class="row-sub">No readers.</div>'}</div>`;
+  }else{
+    const c=copById.get(state.selected.id); if(!c)return;
+    const es=edgesByCop.get(c.id)||[];
+    const built=es.filter(e=>metricById.get(e.metric)?.status==="built").length;
+    const hyp=es.length-built;
+    const grouped=new Map();
+    es.forEach(e=>{const m=metricById.get(e.metric);if(!m)return;if(!grouped.has(m.family))grouped.set(m.family,[]);grouped.get(m.family).push(m)});
+    const note=c.example_response?.note||"";
+    const passes=(c.downstream||[]).map(id=>copById.get(id)?.name||id);
+    const reads=(c.reads_decisions_from||[]).map(id=>copById.get(id)?.name||id);
+    el.innerHTML=`
+      <h2>${esc(c.name)}</h2>
+      <div class="status-line"><span class="badge ${esc(c.status)}">${statusCue(c.status)} ${esc(c.status)}</span><span class="chip">${esc(c.cadence)}</span></div>
+      <h3>Behavioural question</h3>
+      <p>${esc(c.question)}</p>
+      <p><strong>Reads ${es.length} metrics (${built} built, ${hyp} hypothetical)</strong></p>
+      ${liveCopHtml(c.id)}
+      <h3>Metrics by family</h3>
+      ${[...grouped.keys()].sort().map(f=>`<div class="group-block"><strong>${esc(f)}</strong>${grouped.get(f).sort((a,b)=>a.name.localeCompare(b.name)).map(m=>`<div class="metric-row ${m.status==="hypothetical"?"hyp":""}"><div class="row-head"><span>${esc(m.name)}</span><span>${m.status==="built"?"B":"H"}</span></div><div class="row-sub">${esc(m.id)}${m.status==="hypothetical"&&m.feasibility?` · ${esc(titleCase(m.feasibility))}`:""}</div></div>`).join("")}</div>`).join("")}
+      <h3>Possible interpretations</h3><div class="chips">${(c.interpretations||[]).map(x=>`<span class="chip">${esc(x)}</span>`).join("")}</div>
+      <h3>Permitted actions</h3><div class="chips">${(c.permitted_actions||[]).map(x=>`<span class="chip">${esc(x)}</span>`).join("")}</div>
+      <h3>Finding flow</h3>
+      <dl class="kv"><dt>Passes to</dt><dd>${passes.length?esc(passes.join(", ")):"None"}</dd><dt>Reads from</dt><dd>${reads.length?esc(reads.join(", ")):"None"}</dd></dl>
+      <h3>Example response</h3>
+      <div class="example-note">${note?`Source note: <strong>${esc(note)}</strong>`:"No example note supplied."}</div>
+      <pre>${esc(JSON.stringify(c.example_response||{},null,2))}</pre>`;
+  }
+}
+
+function readerRow(e){
+  const c=copById.get(e.cop);
+  const changes=e.context_changes||[];
+  return `<div class="reader-row">
+    <div class="row-head"><span>${esc(c?.name||e.cop)}</span><span>${esc(c?.status||"")}</span></div>
+    <div class="row-sub">${esc(e.means||"")}</div>
+    ${changes.map(ch=>`<div class="context-change"><strong>When:</strong> ${esc(ch.when)}<br><strong>Meaning:</strong> ${esc(ch.meaning)}</div>`).join("")}
+  </div>`;
+}
+
+function renderNetwork(){
+  const stage=$("#networkStage"), holder=$("#networkNodes");
+  const cops=DATA.cops.filter(copMatches);
+  const W=Math.max(900,stage.clientWidth||900), H=920, cx=W/2, cy=H/2, rx=Math.min(360,W*.37), ry=365;
+  const positions=new Map();
+  cops.forEach((c,i)=>{
+    const angle=-Math.PI/2 + (Math.PI*2*i/Math.max(1,cops.length));
+    positions.set(c.id,{x:cx+rx*Math.cos(angle)-85,y:cy+ry*Math.sin(angle)-29});
+  });
+  holder.innerHTML=cops.map(c=>{
+    const p=positions.get(c.id), n=(edgesByCop.get(c.id)||[]).length;
+    let cls=`net-card cop-${c.status}`;
+    if(state.selected?.type==="cop"){
+      if(state.selected.id===c.id) cls+=" selected";
+      else{
+        const connected=(copLinksFrom.get(state.selected.id)||[]).some(l=>l.to===c.id)||(copLinksTo.get(state.selected.id)||[]).some(l=>l.from===c.id);
+        cls+=connected?" connected":" dim";
+      }
+    }else if(state.selected?.type==="metric"){
+      const related=(edgesByMetric.get(state.selected.id)||[]).some(e=>e.cop===c.id);
+      cls+=related?" connected":" dim";
+    }
+    return `<button class="${cls}" data-type="cop" data-id="${esc(c.id)}" style="left:${p.x}px;top:${p.y}px">
+      <div class="net-name">${statusCue(c.status)} ${esc(c.name)}</div>
+      <div class="net-count">${n} metrics · ${esc(c.status)}</div>
+    </button>`;
+  }).join("");
+}
+
+function drawCopNetworkEdges(){
+  if(state.view!=="flow") return;
+  const svg=$("#networkSvg"), stage=$("#networkStage"), sr=stage.getBoundingClientRect();
+  let paths=[];
+  (DATA.cop_links||[]).forEach(l=>{
+    const a=$("#networkNodes").querySelector(`[data-id="${CSS.escape(l.from)}"]`);
+    const b=$("#networkNodes").querySelector(`[data-id="${CSS.escape(l.to)}"]`);
+    if(!a||!b)return;
+    const ar=a.getBoundingClientRect(), br=b.getBoundingClientRect();
+    const x1=ar.left+ar.width/2-sr.left, y1=ar.top+ar.height/2-sr.top;
+    const x2=br.left+br.width/2-sr.left, y2=br.top+br.height/2-sr.top;
+    const mx=(x1+x2)/2, my=(y1+y2)/2 - Math.min(55,Math.abs(x2-x1)*.10+15);
+    const hot=state.selected?.type==="cop"&&(state.selected.id===l.from||state.selected.id===l.to);
+    paths.push(`<path class="net-edge${hot?" hot":""}" d="M ${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}"><title>${esc((copById.get(l.from)?.name||l.from)+" → "+(copById.get(l.to)?.name||l.to)+" · "+(l.kind||""))}</title></path>`);
+  });
+  svg.setAttribute("viewBox",`0 0 ${sr.width||900} ${stage.clientHeight||920}`);
+  svg.innerHTML=paths.join("");
+}
+
+function switchView(view){
+  state.view=view;
+  const bip=view==="bip";
+  $("#bipView").style.display=bip?"grid":"none";
+  $("#flowView").style.display=bip?"none":"block";
+  $("#tabBip").setAttribute("aria-selected",String(bip));
+  $("#tabFlow").setAttribute("aria-selected",String(!bip));
+  requestAnimationFrame(()=>{if(bip)drawBipartiteEdges();else{renderNetwork();drawCopNetworkEdges();}});
+}
+$("#tabBip").addEventListener("click",()=>switchView("bip"));
+$("#tabFlow").addEventListener("click",()=>switchView("flow"));
+
+function bindFilters(){
+  $("#search").addEventListener("input",e=>{state.search=e.target.value;render()});
+  $("#showBuilt").addEventListener("change",e=>{state.showBuilt=e.target.checked;render()});
+  $("#showHyp").addEventListener("change",e=>{state.showHyp=e.target.checked;render()});
+  $("#feasibility").addEventListener("change",e=>{state.feasibility=e.target.value;render()});
+  $("#family").addEventListener("change",e=>{state.family=e.target.value;render()});
+  $("#copStatus").addEventListener("change",e=>{state.copStatus=e.target.value;render()});
+  $("#sortMetrics").addEventListener("change",e=>{state.sort=e.target.value;render()});
+  $("#clearSel").addEventListener("click",clearSelection);
+  document.addEventListener("keydown",e=>{if(e.key==="Escape")clearSelection()});
+}
+
+const LIVE_STATES = DATA.meta?.metric_states || ["NORMAL","WARNING","EXCEPTION","CRITICAL","UNKNOWN","NOT_APPLICABLE"];
+function liveMetricHtml(id){
+  if(!liveEnabled()) return "";
+  const rows=state.liveMetrics.get(id)||[];
+  if(!rows.length) return `<h3>Live metric states</h3><div class="live-box">no data yet</div>`;
+  const counts=Object.fromEntries(LIVE_STATES.map(s=>[s,0]));
+  rows.forEach(r=>{if(r.state in counts)counts[r.state]+=Number(r.n)||0});
+  const total=Object.values(counts).reduce((a,b)=>a+b,0);
+  const seg=LIVE_STATES.map(s=>`<span class="state-${s.toLowerCase()}" style="width:${total?counts[s]/total*100:0}%" title="${esc(s)}: ${counts[s]}"></span>`).join("");
+  return `<h3>Live metric states</h3><div class="live-box"><div class="live-seg">${seg}</div><div class="live-legend">${LIVE_STATES.map(s=>`<div class="live-state"><span>${esc(s)}</span><strong>${counts[s]}</strong></div>`).join("")}</div></div>`;
+}
+function liveCopHtml(id){
+  if(!liveEnabled()) return "";
+  const rows=state.liveCops.get(id)||[];
+  if(!rows.length) return `<h3>Live decisions</h3><div class="live-box">no data yet</div>`;
+  const interpretations=new Map(), actions=new Map();
+  rows.forEach(r=>{
+    const n=Number(r.n)||0;
+    interpretations.set(r.interpretation,(interpretations.get(r.interpretation)||0)+n);
+    actions.set(r.action,(actions.get(r.action)||0)+n);
+  });
+  const table=map=>`<table class="small-table">${[...map.entries()].sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<tr><td>${esc(k)}</td><td>${v}</td></tr>`).join("")}</table>`;
+  return `<h3>Live decisions</h3><div class="live-box"><strong>By interpretation</strong>${table(interpretations)}<div style="height:8px"></div><strong>By action</strong>${table(actions)}</div>`;
+}
+function liveEnabled(){return Boolean(CONFIG.SUPABASE_URL && CONFIG.SUPABASE_ANON_KEY)}
+async function fetchLiveView(name){
+  const base=CONFIG.SUPABASE_URL.replace(/\/$/,"");
+  const r=await fetch(`${base}/rest/v1/${encodeURIComponent(name)}?select=*`,{
+    headers:{apikey:CONFIG.SUPABASE_ANON_KEY,Authorization:`Bearer ${CONFIG.SUPABASE_ANON_KEY}`}
+  });
+  if(!r.ok) throw new Error(`${name}: ${r.status}`);
+  return r.json();
+}
+async function refreshLive(){
+  if(!liveEnabled())return;
+  try{
+    const reads=DATA.live?.reads||{};
+    const metricView=Object.keys(reads).find(k=>(reads[k]||[]).includes("metric_id")&&(reads[k]||[]).includes("state"));
+    const copView=Object.keys(reads).find(k=>(reads[k]||[]).includes("cop")&&(reads[k]||[]).includes("interpretation"));
+    const [mr,cr]=await Promise.all([metricView?fetchLiveView(metricView):Promise.resolve([]),copView?fetchLiveView(copView):Promise.resolve([])]);
+    state.liveMetrics=new Map();
+    mr.forEach(r=>{if(!state.liveMetrics.has(r.metric_id))state.liveMetrics.set(r.metric_id,[]);state.liveMetrics.get(r.metric_id).push(r)});
+    state.liveCops=new Map();
+    cr.forEach(r=>{if(!state.liveCops.has(r.cop))state.liveCops.set(r.cop,[]);state.liveCops.get(r.cop).push(r)});
+    renderDetail();
+  }catch(err){
+    console.warn("Live mode refresh failed",err);
+  }
+}
+
+initHeader();
+validateCounts();
+bindFilters();
+render();
+switchView("bip");
+if(liveEnabled()){
+  refreshLive();
+  setInterval(refreshLive,30000);
+}
+})();
+</script>
+</body>
+</html>
