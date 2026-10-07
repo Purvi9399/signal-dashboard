@@ -24,6 +24,8 @@ class MetricState(str, Enum):
     WARNING = "WARNING"
     EXCEPTION = "EXCEPTION"
     UNKNOWN = "UNKNOWN"
+    CRITICAL = "CRITICAL"
+    NOT_APPLICABLE = "NOT_APPLICABLE"
 
 
 class ActionType(str, Enum):
@@ -86,21 +88,29 @@ class COPDecision:
     cop: CopType
     session_id: str
     interpretation: str
-    confidence: float
     action: ActionType
     action_reason: str
+    confidence: Optional[float] = None
     metric_id: Optional[str] = None
     context_used: Dict[str, Any] = field(default_factory=dict)
     downstream_cops: List[CopType] = field(default_factory=list)
     evaluation_ms: float = 0
     failed: bool = False
     error: Optional[str] = None
+    evidence_refs: List[str] = field(default_factory=list)
+    metrics_read: List[Dict[str, Any]] = field(default_factory=list)
 
 
 def confidence_is_valid(value: Any) -> bool:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         return False
     return 0.0 <= float(value) <= 1.0
+
+
+# Empty confidence is valid. The COP must not invent a score.
+# Return True only when the caller omitted the number.
+def confidence_may_be_omitted(value: Any) -> bool:
+    return value is None
 
 
 def _is_id_string(ref: Any) -> bool:

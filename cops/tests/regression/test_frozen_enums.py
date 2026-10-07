@@ -40,7 +40,14 @@ FROZEN_ACTIONS = (
     "PASS_TO_COP",
 )
 
-FROZEN_STATES = ("NORMAL", "WARNING", "EXCEPTION", "UNKNOWN")
+FROZEN_STATES = (
+    "NORMAL",
+    "WARNING",
+    "EXCEPTION",
+    "UNKNOWN",
+    "CRITICAL",
+    "NOT_APPLICABLE",
+)
 
 
 class FrozenEnumRegressionTests(unittest.TestCase):

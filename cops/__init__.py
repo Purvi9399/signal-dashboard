@@ -18,6 +18,7 @@ from .contracts import (
     MetricEvent,
     MetricState,
     confidence_is_valid,
+    confidence_may_be_omitted,
     evidence_refs_are_ids,
     is_incident_input,
 )
@@ -31,6 +32,7 @@ __all__ = [
     "MetricEvent",
     "MetricState",
     "confidence_is_valid",
+    "confidence_may_be_omitted",
     "evidence_refs_are_ids",
     "is_incident_input",
 ]
