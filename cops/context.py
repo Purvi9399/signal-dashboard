@@ -12,3 +12,8 @@ class ContextProvider:
     # Empty default avoids a table scan in V1.
     def get_raw_event(self, event_id: str) -> Dict[str, Any]:
         return {}
+
+    # Return one session snapshot by session ID, or an empty dict.
+    # Context and Memory uses this. It must not scan full history.
+    def get_session_context(self, session_id: str) -> Dict[str, Any]:
+        return {}

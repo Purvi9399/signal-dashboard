@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from .audit import AuditCOP
 from .classification import ClassificationCOP
+from .context_memory import ContextMemoryCOP
 from .contracts import (
     ActionType,
     COPDecision,
@@ -27,6 +28,7 @@ __all__ = [
     "ActionType",
     "AuditCOP",
     "ClassificationCOP",
+    "ContextMemoryCOP",
     "COPDecision",
     "CopType",
     "MetricEvent",

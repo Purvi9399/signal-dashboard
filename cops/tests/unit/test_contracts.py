@@ -64,7 +64,10 @@ class COPDecisionUnitTests(unittest.TestCase):
 class OwnershipUnitTests(unittest.TestCase):
     def test_ownership_split(self) -> None:
         self.assertEqual(len(COLLEAGUE_COPS), 5)
-        self.assertEqual(OWNED_COPS, (CopType.CLASSIFICATION,))
+        self.assertEqual(
+            OWNED_COPS,
+            (CopType.CLASSIFICATION, CopType.CONTEXT_AND_MEMORY),
+        )
         self.assertEqual(set(COLLEAGUE_COPS) & set(OWNED_COPS), set())
 
 
