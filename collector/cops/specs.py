@@ -127,7 +127,11 @@ SPECS = [
       missing_metrics=("budget_or_quota", "cpu_gpu_memory", "rate_limit_hits"),
       downstream_cops=("workload_optimization", "risk_mitigation"),
       permitted_actions=("NONE", "WATCH", "ALERT"),
-      interpretations=("NORMAL", "INEFFICIENT", "EXCESSIVE", "UNAUTHORIZED")),
+      # UNAUTHORIZED stays unreachable until budget_or_quota exists: without an
+      # entitlement, high consumption is high, not over its allowance.
+      # INDETERMINATE added so an unjudgeable session is not reported as NORMAL.
+      interpretations=("NORMAL", "INEFFICIENT", "EXCESSIVE", "UNAUTHORIZED", "INDETERMINATE"),
+      active=True),
 
     S(key="governance_intelligence", name="Governance Intelligence",
       behavioural_question="What recurring patterns, concentrations or blind spots indicate a broader governance problem?",
@@ -212,5 +216,5 @@ ACTIVE = tuple(s.key for s in SPECS if s.active)
 # Convention: interpretations[0] is the "nothing needs attention" reading,
 # used when the runner skips a costly interpreter because no metric is off.
 # Order the active COPS run in: evidence first, then interpretation, then response.
-ORDER = ("runtime_monitoring", "anomaly_detection", "interaction_discovery",
-         "policy_enforcement", "incident_response")
+ORDER = ("runtime_monitoring", "anomaly_detection", "resource_management",
+         "interaction_discovery", "policy_enforcement", "incident_response")

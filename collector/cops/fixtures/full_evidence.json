@@ -1,0 +1,400 @@
+{
+  "session_id": "demo-full_evidence",
+  "scenario": "full_evidence",
+  "note": "everything linked; hooks and OTel both present",
+  "metric_events": [
+    {
+      "metric_event_id": "fx_access_first_seen_mcp",
+      "metric_id": "access.first_seen_mcp",
+      "metric_name": "first seen mcp",
+      "session_id": "demo-full_evidence",
+      "value": 1,
+      "state": "EXCEPTION",
+      "threshold": 0,
+      "direction": "above",
+      "features": {
+        "server": "github-mcp"
+      },
+      "evidence_refs": [
+        "obs_access_0",
+        "obs_access_1"
+      ],
+      "source": "signal_metrics",
+      "metric_version": "2026.10",
+      "computed_at": "2026-10-13T09:00:00Z",
+      "basis_present": true
+    },
+    {
+      "metric_event_id": "fx_insights_token_outlier",
+      "metric_id": "insights.token_outlier",
+      "metric_name": "token outlier",
+      "session_id": "demo-full_evidence",
+      "value": 312400,
+      "state": "CRITICAL",
+      "threshold": 50000,
+      "direction": "above",
+      "features": {
+        "multiple": 6.2,
+        "tool": "claude-code"
+      },
+      "evidence_refs": [
+        "obs_insigh_0",
+        "obs_insigh_1"
+      ],
+      "source": "signal_metrics",
+      "metric_version": "2026.10",
+      "computed_at": "2026-10-13T09:00:00Z",
+      "basis_present": true
+    },
+    {
+      "metric_event_id": "fx_activity_action_rate_ratio",
+      "metric_id": "activity.action_rate_ratio",
+      "metric_name": "action rate ratio",
+      "session_id": "demo-full_evidence",
+      "value": 2.1,
+      "state": "WARNING",
+      "threshold": 2.0,
+      "direction": "above",
+      "features": {},
+      "evidence_refs": [
+        "obs_activi_0",
+        "obs_activi_1"
+      ],
+      "source": "signal_metrics",
+      "metric_version": "2026.10",
+      "computed_at": "2026-10-13T09:00:00Z",
+      "basis_present": true
+    },
+    {
+      "metric_event_id": "fx_insights_duration_outlier",
+      "metric_id": "insights.duration_outlier",
+      "metric_name": "duration outlier",
+      "session_id": "demo-full_evidence",
+      "value": 1,
+      "state": "NORMAL",
+      "threshold": 3,
+      "direction": "above",
+      "features": {},
+      "evidence_refs": [
+        "obs_insigh_0",
+        "obs_insigh_1"
+      ],
+      "source": "signal_metrics",
+      "metric_version": "2026.10",
+      "computed_at": "2026-10-13T09:00:00Z",
+      "basis_present": true
+    },
+    {
+      "metric_event_id": "fx_insights_stalled",
+      "metric_id": "insights.stalled",
+      "metric_name": "stalled",
+      "session_id": "demo-full_evidence",
+      "value": 0,
+      "state": "NORMAL",
+      "threshold": 1,
+      "direction": "above",
+      "features": {},
+      "evidence_refs": [
+        "obs_insigh_0",
+        "obs_insigh_1"
+      ],
+      "source": "signal_metrics",
+      "metric_version": "2026.10",
+      "computed_at": "2026-10-13T09:00:00Z",
+      "basis_present": true
+    },
+    {
+      "metric_event_id": "fx_insights_failed",
+      "metric_id": "insights.failed",
+      "metric_name": "failed",
+      "session_id": "demo-full_evidence",
+      "value": 1,
+      "state": "NORMAL",
+      "threshold": 5,
+      "direction": "above",
+      "features": {},
+      "evidence_refs": [
+        "obs_insigh_0",
+        "obs_insigh_1"
+      ],
+      "source": "signal_metrics",
+      "metric_version": "2026.10",
+      "computed_at": "2026-10-13T09:00:00Z",
+      "basis_present": true
+    },
+    {
+      "metric_event_id": "fx_insights_retry",
+      "metric_id": "insights.retry",
+      "metric_name": "retry",
+      "session_id": "demo-full_evidence",
+      "value": 0,
+      "state": "NORMAL",
+      "threshold": 2,
+      "direction": "above",
+      "features": {},
+      "evidence_refs": [
+        "obs_insigh_0",
+        "obs_insigh_1"
+      ],
+      "source": "signal_metrics",
+      "metric_version": "2026.10",
+      "computed_at": "2026-10-13T09:00:00Z",
+      "basis_present": true
+    },
+    {
+      "metric_event_id": "fx_insights_blocked",
+      "metric_id": "insights.blocked",
+      "metric_name": "blocked",
+      "session_id": "demo-full_evidence",
+      "value": 0,
+      "state": "NORMAL",
+      "threshold": 1,
+      "direction": "above",
+      "features": {},
+      "evidence_refs": [
+        "obs_insigh_0",
+        "obs_insigh_1"
+      ],
+      "source": "signal_metrics",
+      "metric_version": "2026.10",
+      "computed_at": "2026-10-13T09:00:00Z",
+      "basis_present": true
+    },
+    {
+      "metric_event_id": "fx_telemetry_source_agreement",
+      "metric_id": "telemetry.source_agreement",
+      "metric_name": "source agreement",
+      "session_id": "demo-full_evidence",
+      "value": 1.0,
+      "state": "NORMAL",
+      "threshold": 0.9,
+      "direction": "below",
+      "features": {},
+      "evidence_refs": [
+        "obs_teleme_0",
+        "obs_teleme_1"
+      ],
+      "source": "signal_metrics",
+      "metric_version": "2026.10",
+      "computed_at": "2026-10-13T09:00:00Z",
+      "basis_present": true
+    },
+    {
+      "metric_event_id": "fx_telemetry_unknown_share",
+      "metric_id": "telemetry.unknown_share",
+      "metric_name": "unknown share",
+      "session_id": "demo-full_evidence",
+      "value": 0.05,
+      "state": "NORMAL",
+      "threshold": 0.3,
+      "direction": "above",
+      "features": {},
+      "evidence_refs": [
+        "obs_teleme_0",
+        "obs_teleme_1"
+      ],
+      "source": "signal_metrics",
+      "metric_version": "2026.10",
+      "computed_at": "2026-10-13T09:00:00Z",
+      "basis_present": true
+    },
+    {
+      "metric_event_id": "fx_path_transition_novelty",
+      "metric_id": "path.transition_novelty",
+      "metric_name": "transition novelty",
+      "session_id": "demo-full_evidence",
+      "value": 0,
+      "state": "NORMAL",
+      "threshold": 2,
+      "direction": "above",
+      "features": {},
+      "evidence_refs": [
+        "obs_path.t_0",
+        "obs_path.t_1"
+      ],
+      "source": "signal_metrics",
+      "metric_version": "2026.10",
+      "computed_at": "2026-10-13T09:00:00Z",
+      "basis_present": true
+    },
+    {
+      "metric_event_id": "fx_telemetry_collector_coverage",
+      "metric_id": "telemetry.collector_coverage",
+      "metric_name": "collector coverage",
+      "session_id": "demo-full_evidence",
+      "value": 1.0,
+      "state": "NORMAL",
+      "threshold": 0.8,
+      "direction": "below",
+      "features": {
+        "present": [
+          "local_hooks",
+          "otel",
+          "fs_watcher"
+        ],
+        "missing": []
+      },
+      "evidence_refs": [
+        "obs_teleme_0",
+        "obs_teleme_1"
+      ],
+      "source": "signal_metrics",
+      "metric_version": "2026.10",
+      "computed_at": "2026-10-13T09:00:00Z",
+      "basis_present": true
+    },
+    {
+      "metric_event_id": "fx_telemetry_turn_linkage",
+      "metric_id": "telemetry.turn_linkage",
+      "metric_name": "turn linkage",
+      "session_id": "demo-full_evidence",
+      "value": 1.0,
+      "state": "NORMAL",
+      "threshold": 0.9,
+      "direction": "below",
+      "features": {},
+      "evidence_refs": [
+        "obs_teleme_0",
+        "obs_teleme_1"
+      ],
+      "source": "signal_metrics",
+      "metric_version": "2026.10",
+      "computed_at": "2026-10-13T09:00:00Z",
+      "basis_present": true
+    },
+    {
+      "metric_event_id": "fx_telemetry_lane_linkage",
+      "metric_id": "telemetry.lane_linkage",
+      "metric_name": "lane linkage",
+      "session_id": "demo-full_evidence",
+      "value": 1.0,
+      "state": "NORMAL",
+      "threshold": 0.9,
+      "direction": "below",
+      "features": {},
+      "evidence_refs": [
+        "obs_teleme_0",
+        "obs_teleme_1"
+      ],
+      "source": "signal_metrics",
+      "metric_version": "2026.10",
+      "computed_at": "2026-10-13T09:00:00Z",
+      "basis_present": true
+    },
+    {
+      "metric_event_id": "fx_interaction_subagent_lanes",
+      "metric_id": "interaction.subagent_lanes",
+      "metric_name": "subagent lanes",
+      "session_id": "demo-full_evidence",
+      "value": 2,
+      "state": "NORMAL",
+      "threshold": 4,
+      "direction": "above",
+      "features": {},
+      "evidence_refs": [
+        "obs_intera_0",
+        "obs_intera_1"
+      ],
+      "source": "signal_metrics",
+      "metric_version": "2026.10",
+      "computed_at": "2026-10-13T09:00:00Z",
+      "basis_present": true
+    },
+    {
+      "metric_event_id": "fx_insights_repetition",
+      "metric_id": "insights.repetition",
+      "metric_name": "repetition",
+      "session_id": "demo-full_evidence",
+      "value": 1,
+      "state": "NORMAL",
+      "threshold": 3,
+      "direction": "above",
+      "features": {},
+      "evidence_refs": [
+        "obs_insigh_0",
+        "obs_insigh_1"
+      ],
+      "source": "signal_metrics",
+      "metric_version": "2026.10",
+      "computed_at": "2026-10-13T09:00:00Z",
+      "basis_present": true
+    },
+    {
+      "metric_event_id": "fx_insights_outside",
+      "metric_id": "insights.outside",
+      "metric_name": "outside",
+      "session_id": "demo-full_evidence",
+      "value": 0,
+      "state": "NORMAL",
+      "threshold": 1,
+      "direction": "above",
+      "features": {},
+      "evidence_refs": [
+        "obs_insigh_0",
+        "obs_insigh_1"
+      ],
+      "source": "signal_metrics",
+      "metric_version": "2026.10",
+      "computed_at": "2026-10-13T09:00:00Z",
+      "basis_present": true
+    },
+    {
+      "metric_event_id": "fx_insights_sensitive_unasked",
+      "metric_id": "insights.sensitive_unasked",
+      "metric_name": "sensitive unasked",
+      "session_id": "demo-full_evidence",
+      "value": 0,
+      "state": "NORMAL",
+      "threshold": 1,
+      "direction": "above",
+      "features": {},
+      "evidence_refs": [
+        "obs_insigh_0",
+        "obs_insigh_1"
+      ],
+      "source": "signal_metrics",
+      "metric_version": "2026.10",
+      "computed_at": "2026-10-13T09:00:00Z",
+      "basis_present": true
+    },
+    {
+      "metric_event_id": "fx_insights_secrets",
+      "metric_id": "insights.secrets",
+      "metric_name": "secrets",
+      "session_id": "demo-full_evidence",
+      "value": 0,
+      "state": "NORMAL",
+      "threshold": 1,
+      "direction": "above",
+      "features": {},
+      "evidence_refs": [
+        "obs_insigh_0",
+        "obs_insigh_1"
+      ],
+      "source": "signal_metrics",
+      "metric_version": "2026.10",
+      "computed_at": "2026-10-13T09:00:00Z",
+      "basis_present": true
+    },
+    {
+      "metric_event_id": "fx_insights_unattributed",
+      "metric_id": "insights.unattributed",
+      "metric_name": "unattributed",
+      "session_id": "demo-full_evidence",
+      "value": 0.02,
+      "state": "NORMAL",
+      "threshold": 0.2,
+      "direction": "above",
+      "features": {},
+      "evidence_refs": [
+        "obs_insigh_0",
+        "obs_insigh_1"
+      ],
+      "source": "signal_metrics",
+      "metric_version": "2026.10",
+      "computed_at": "2026-10-13T09:00:00Z",
+      "basis_present": true
+    }
+  ],
+  "evidence_conditions": {}
+}
