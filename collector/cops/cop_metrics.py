@@ -1,31 +1,19 @@
 """Which metrics each COP asks about, in one place.
 
-Mirrors spec.metric_keys. Kept here so the demos and the harness cannot
+Derived from spec.metric_keys. Kept here so the demos and the harness cannot
 disagree about what a COP reads, which is the sort of drift that makes two
 views of the same session contradict each other.
 """
 
-ASKS = {
-    "runtime_monitoring":     ["telemetry.collector_coverage", "telemetry.source_agreement",
-                               "telemetry.turn_linkage", "telemetry.lane_linkage",
-                               "telemetry.unknown_share"],
-    "anomaly_detection":      ["insights.token_outlier", "insights.duration_outlier",
-                               "path.transition_novelty", "activity.action_rate_ratio",
-                               "access.first_seen_mcp", "insights.retry", "insights.repetition"],
-    "resource_management":    ["insights.token_outlier", "insights.duration_outlier",
-                               "insights.stalled", "activity.action_rate_ratio"],
-    "interaction_discovery":  ["interaction.subagent_lanes", "interaction.mcp_servers",
-                               "access.first_seen_mcp", "telemetry.lane_linkage",
-                               "insights.outside"],
-    "policy_enforcement":     ["insights.blocked", "insights.sensitive_unasked",
-                               "insights.outside", "insights.secrets"],
-    "audit_traceability":     ["insights.unattributed", "telemetry.turn_linkage",
-                               "telemetry.lane_linkage", "telemetry.source_agreement"],
-    "classification_tagging": ["insights.secrets", "insights.sensitive_unasked",
-                               "insights.outside", "insights.blocked"],
-    "incident_response":      ["insights.secrets", "insights.sensitive_unasked",
-                               "insights.blocked"],
-}
+from .specs import BY_KEY
+
+# The COPS the demos show, in the order they show them. Their metrics come
+# from the specs, so this list cannot drift from spec.metric_keys.
+_SHOWN = ("runtime_monitoring", "anomaly_detection", "resource_management",
+          "interaction_discovery", "policy_enforcement", "audit_traceability",
+          "classification_tagging", "incident_response")
+
+ASKS = {k: list(BY_KEY[k].metric_keys) for k in _SHOWN}
 
 NAMES = {
     "runtime_monitoring": "Runtime Monitoring", "anomaly_detection": "Anomaly Detection",

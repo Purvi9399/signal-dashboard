@@ -356,6 +356,9 @@ class COPAgent:
             "rationale": out.get("rationale"),
             "missing_evidence": st.missing,
             "blocking_evidence": out.get("blocking_evidence", []),
+            # the action after authority; interpreters downstream read it as
+            # .action, the same attribute a COPDecision carries
+            "action": out.get("action"),
             "recommended_action": st.recommended_action,
             "attempted_action": st.attempted_action,
             "action_status": st.action_status,
