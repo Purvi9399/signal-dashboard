@@ -275,3 +275,69 @@ def test_repo_agent_config_change_is_still_an_effect():
              "file_path": "/Users/x/.claude/projects/p/t.jsonl", "occurred_at": "2026-09-20T10:00:00Z"}]
     _, _, fx = signal_traces.build(rows)
     assert [e["effect_id"] for e in fx] == ["s2"]
+
+
+# ------------------------------------------------------------------ harness path and ASKS (PR #1)
+
+import json, pathlib
+from cops.models import MetricEvent
+from cops.harness import COPAgent, Registry
+from cops.harness_configs import default_for
+from cops.evidence import EvidenceAvailabilityService
+from cops.checkpoint import STAGES
+from cops.decide import finalise
+from cops.authority import check as authority_check
+from cops.cop_metrics import ASKS, NAMES, ORDER as SHOWN
+
+FIXTURES = pathlib.Path(__file__).parent.parent / "collector" / "cops" / "fixtures"
+
+def harness_run(fixture, cops):
+    """Run COPS in order through COPAgent, each seeing the earlier ones' results."""
+    doc = json.loads((FIXTURES / f"{fixture}.json").read_text())
+    rows = {m["metric_id"]: m for m in doc["metric_events"]}
+    svc = EvidenceAvailabilityService(lambda src, f: dict.fromkeys(STAGES, True), lambda e: True)
+    out = {}
+    for key in cops:
+        spec = BY_KEY[key]
+        events = [MetricEvent.from_row(rows[m]) for m in spec.metric_keys if m in rows]
+        agent = COPAgent(spec, default_for(key), RuleInterpreter(), svc, Registry(),
+                         finalise, authority_check)
+        out[key] = agent.run(doc["session_id"], events, upstream=dict(out))
+    return out
+
+def test_harness_result_carries_action_and_existing_fields():
+    d = harness_run("full_evidence", ["anomaly_detection"])["anomaly_detection"]
+    expected = {"run_id", "cop", "session_id", "interpretation", "decision_status", "confidence",
+                "severity", "rationale", "missing_evidence", "blocking_evidence",
+                "recommended_action", "attempted_action", "action_status", "authority_note",
+                "downstream_cops", "phase", "steps", "tool_calls", "context_requests",
+                "retries", "stop_reason", "evaluation_ms", "verification_problems", "trail",
+                "action"}
+    assert expected <= set(d)
+    assert d["phase"] == "COMPLETE" and d["interpretation"] == "ANOMALOUS"
+    # nothing substituted it, so the action after authority is the one recommended
+    assert d["action"] == d["recommended_action"] == "ALERT"
+    assert d["action_status"] == "NOT_ATTEMPTED"           # dry run: recommended, not done
+
+def test_incident_response_reads_upstream_action_on_the_harness_path():
+    # Before the fix, IncidentResponse raised AttributeError on .action here.
+    out = harness_run("full_evidence", ["runtime_monitoring", "anomaly_detection",
+                                        "resource_management", "interaction_discovery",
+                                        "policy_enforcement", "incident_response"])
+    d = out["incident_response"]
+    assert d["phase"] == "COMPLETE" and d["stop_reason"] != "tool_failure_unrecoverable"
+    # anomaly_detection ALERTed with no exposure or violation: several deviations at once
+    assert out["anomaly_detection"]["action"] == "ALERT"
+    assert (d["interpretation"], d["action"]) == ("WATCH", "ALERT")
+
+def test_asks_is_derived_from_the_specs():
+    assert list(ASKS) == ["runtime_monitoring", "anomaly_detection", "resource_management",
+                          "interaction_discovery", "policy_enforcement", "audit_traceability",
+                          "classification_tagging", "incident_response"]
+    assert SHOWN == list(ASKS) and set(NAMES) == set(ASKS)
+    known = set(signal_metrics.METRIC_IDS) | {"telemetry.unknown_share"}
+    for key, metrics in ASKS.items():
+        assert metrics == list(BY_KEY[key].metric_keys), key
+        assert set(metrics) <= known, key
+    # the hand-copied list had dropped this one
+    assert "oversight.declined_inferred" in ASKS["policy_enforcement"]
