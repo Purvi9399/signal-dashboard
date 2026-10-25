@@ -1,0 +1,2585 @@
+{
+  "meta": {
+    "repo": "Purvi9399/signal-dashboard",
+    "commit": "f4f131b",
+    "generated_by": "read-only extraction; nothing in the repo changed",
+    "metric_ids": [
+      "insights.repetition",
+      "insights.retry",
+      "insights.stalled",
+      "insights.outside",
+      "insights.sensitive_unasked",
+      "insights.secrets",
+      "insights.blocked",
+      "insights.no_oversight",
+      "insights.reverted",
+      "insights.lockfile",
+      "insights.failed",
+      "insights.unattributed",
+      "insights.token_outlier",
+      "insights.duration_outlier",
+      "telemetry.collector_coverage",
+      "telemetry.source_agreement",
+      "telemetry.turn_linkage",
+      "telemetry.lane_linkage",
+      "path.transition_novelty",
+      "activity.action_rate_ratio",
+      "access.first_seen_mcp",
+      "oversight.fast_approvals",
+      "oversight.declined_inferred",
+      "interaction.subagent_lanes",
+      "interaction.mcp_servers",
+      "telemetry.unknown_share"
+    ]
+  },
+  "pairs": [
+    {
+      "cop": "workflow_orchestration",
+      "metric_id": "insights.stalled",
+      "confirmed": false,
+      "role": "UNDEFINED",
+      "interpretation_rule": "UNDEFINED: COP has no rule interpreter",
+      "rule_source": null,
+      "documented_meaning": "the task stopped moving",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_stalled",
+        "required_fields": [
+          "hung_seconds"
+        ],
+        "basis": "wrapper",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "command"
+        ],
+        "field_materiality_for_this_cop": {
+          "command": "DEGRADING",
+          "timestamp": "BLOCKING"
+        },
+        "why": "a stall is a gap in time; the command only describes it"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 1,
+          "critical": 3
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "workflow_orchestration",
+      "metric_id": "insights.repetition",
+      "confirmed": false,
+      "role": "UNDEFINED",
+      "interpretation_rule": "UNDEFINED: COP has no rule interpreter",
+      "rule_source": null,
+      "documented_meaning": "progress may have stopped if repetition clusters at the end of the session",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_repetition",
+        "required_fields": [
+          "tool_name",
+          "tool_arguments",
+          "turn_id"
+        ],
+        "basis": "args",
+        "applies_when": "actions",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "tool_call"
+        ],
+        "field_materiality_for_this_cop": {
+          "turn_id": "BLOCKING",
+          "tool_name": "BLOCKING",
+          "tool_arguments": "DEGRADING"
+        },
+        "why": "repetition is defined within a turn; without turns there is no window"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 3,
+          "critical": 10
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "workflow_orchestration",
+      "metric_id": "oversight.declined_inferred",
+      "confirmed": false,
+      "role": "UNDEFINED",
+      "interpretation_rule": "UNDEFINED: COP has no rule interpreter",
+      "rule_source": null,
+      "documented_meaning": "a human stopped the work",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_declined_inferred",
+        "required_fields": [
+          "observable_type",
+          "turn_id"
+        ],
+        "basis": "approvals",
+        "applies_when": "asked",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 3,
+          "critical": 10
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "workflow_orchestration",
+      "metric_id": "interaction.subagent_lanes",
+      "confirmed": false,
+      "role": "UNDEFINED",
+      "interpretation_rule": "UNDEFINED: COP has no rule interpreter",
+      "rule_source": null,
+      "documented_meaning": "excessive delegation for the task",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_subagent_lanes",
+        "required_fields": [
+          "agent_id"
+        ],
+        "basis": "always",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "delegation"
+        ],
+        "field_materiality_for_this_cop": {
+          "lane_id": "DEGRADING",
+          "parent_agent_id": "DEGRADING"
+        },
+        "why": "lanes can be counted from subagent_start without lane identity; the edges between them cannot be reconstructed"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 5,
+          "exception": 15,
+          "critical": 50
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "runtime_monitoring",
+      "metric_id": "telemetry.collector_coverage",
+      "confirmed": true,
+      "role": "driver",
+      "interpretation_rule": "EXCEPTION/CRITICAL -> INSUFFICIENT (ALERT); UNKNOWN -> DEGRADED; features.missing -> request collector_breakdown context",
+      "rule_source": "interpret.RuleInterpreter.runtime_monitoring",
+      "documented_meaning": "evidence present: the collectors this tool should have were running",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_collector_coverage",
+        "required_fields": [
+          "collector",
+          "contributing"
+        ],
+        "basis": "always",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "tool_call"
+        ],
+        "field_materiality_for_this_cop": {
+          "tool_name": "IMMATERIAL",
+          "timestamp": "IMMATERIAL"
+        },
+        "why": "this metric reports on collection itself; a gap is its subject, not its obstacle"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "below",
+          "warning": 0.99,
+          "exception": 0.5,
+          "critical": 0.0
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "runtime_monitoring",
+      "metric_id": "telemetry.source_agreement",
+      "confirmed": true,
+      "role": "evidence",
+      "interpretation_rule": "WARNING+ -> DEGRADED (WATCH); generic: any hot state counts alike, no metric-specific rule",
+      "rule_source": "interpret.RuleInterpreter.runtime_monitoring",
+      "documented_meaning": "evidence reliable: independent collectors agree",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_source_agreement",
+        "required_fields": [
+          "collectors_agree"
+        ],
+        "basis": "always",
+        "applies_when": "multi",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "below",
+          "warning": 0.99,
+          "exception": 0.9,
+          "critical": 0.5
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "runtime_monitoring",
+      "metric_id": "telemetry.turn_linkage",
+      "confirmed": true,
+      "role": "evidence",
+      "interpretation_rule": "WARNING+ -> DEGRADED (WATCH); generic: any hot state counts alike, no metric-specific rule",
+      "rule_source": "interpret.RuleInterpreter.runtime_monitoring",
+      "documented_meaning": "evidence complete enough to group actions into turns",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_turn_linkage",
+        "required_fields": [
+          "turn_id"
+        ],
+        "basis": "always",
+        "applies_when": "steps",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "tool_call"
+        ],
+        "field_materiality_for_this_cop": {
+          "turn_id": "IMMATERIAL"
+        },
+        "why": "a missing turn id is the finding here, not a blocker"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "below",
+          "warning": 0.9,
+          "exception": 0.6,
+          "critical": 0.2
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "runtime_monitoring",
+      "metric_id": "telemetry.lane_linkage",
+      "confirmed": true,
+      "role": "evidence",
+      "interpretation_rule": "WARNING+ -> DEGRADED (WATCH); generic: any hot state counts alike, no metric-specific rule",
+      "rule_source": "interpret.RuleInterpreter.runtime_monitoring",
+      "documented_meaning": "subagent evidence is connected",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_lane_linkage",
+        "required_fields": [
+          "agent_id",
+          "observable_type"
+        ],
+        "basis": "always",
+        "applies_when": "subagents",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "delegation"
+        ],
+        "field_materiality_for_this_cop": {
+          "lane_id": "IMMATERIAL",
+          "parent_agent_id": "IMMATERIAL"
+        },
+        "why": "a missing lane id is the finding here, not a blocker"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "below",
+          "warning": 0.99,
+          "exception": 0.5,
+          "critical": 0.0
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "runtime_monitoring",
+      "metric_id": "telemetry.unknown_share",
+      "confirmed": true,
+      "role": "driver",
+      "interpretation_rule": "EXCEPTION/CRITICAL -> INSUFFICIENT; features.unknown listed as 'cannot judge'",
+      "rule_source": "interpret.RuleInterpreter.runtime_monitoring",
+      "documented_meaning": "how much of this session cannot be judged at all",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.compute (appended)",
+        "required_fields": [],
+        "basis": "always",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 0.25,
+          "exception": 0.5,
+          "critical": 0.75
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "anomaly_detection",
+      "metric_id": "insights.token_outlier",
+      "confirmed": true,
+      "role": "driver",
+      "interpretation_rule": "EXCEPTION/CRITICAL -> ANOMALOUS; WATCH if single, ALERT if >=2 hot or any CRITICAL; ranked by value/threshold",
+      "rule_source": "interpret.RuleInterpreter.anomaly_detection",
+      "documented_meaning": "a session unlike others in size",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_token_outlier",
+        "required_fields": [
+          "total_tokens"
+        ],
+        "basis": "tokens",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "model_request"
+        ],
+        "field_materiality_for_this_cop": {
+          "total_tokens": "BLOCKING",
+          "model": "DEGRADING",
+          "lane_id": "DEGRADING"
+        },
+        "why": "without a token count there is nothing to compare; lanes only apportion it"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 3,
+          "exception": 5,
+          "critical": 15
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "anomaly_detection",
+      "metric_id": "insights.duration_outlier",
+      "confirmed": true,
+      "role": "driver",
+      "interpretation_rule": "EXCEPTION/CRITICAL -> ANOMALOUS (same ladder)",
+      "rule_source": "interpret.RuleInterpreter.anomaly_detection",
+      "documented_meaning": "step timing unlike the estate",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_duration_outlier",
+        "required_fields": [
+          "tool_duration_ms"
+        ],
+        "basis": "durations",
+        "applies_when": "steps",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "tool_call"
+        ],
+        "field_materiality_for_this_cop": {
+          "tool_duration_ms": "BLOCKING",
+          "tool_name": "DEGRADING"
+        },
+        "why": "duration is the measure; the tool name groups the baseline"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 1,
+          "critical": 5
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "anomaly_detection",
+      "metric_id": "path.transition_novelty",
+      "confirmed": true,
+      "role": "driver",
+      "interpretation_rule": "EXCEPTION/CRITICAL -> REQUEST_CONTEXT lane_path first, then ANOMALOUS with novel transitions named",
+      "rule_source": "interpret.RuleInterpreter.anomaly_detection",
+      "documented_meaning": "the agent moved between steps in ways this tool has not before",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_transition_novelty",
+        "required_fields": [
+          "tool_name",
+          "command",
+          "observable_type"
+        ],
+        "basis": "always",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 0.25,
+          "exception": 0.5,
+          "critical": 0.8
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "anomaly_detection",
+      "metric_id": "activity.action_rate_ratio",
+      "confirmed": true,
+      "role": "driver",
+      "interpretation_rule": "EXCEPTION/CRITICAL -> ANOMALOUS (same ladder)",
+      "rule_source": "interpret.RuleInterpreter.anomaly_detection",
+      "documented_meaning": "acting much faster than this tool normally does",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_action_rate",
+        "required_fields": [
+          "tool_name",
+          "occurred_at"
+        ],
+        "basis": "always",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "tool_call"
+        ],
+        "field_materiality_for_this_cop": {
+          "timestamp": "BLOCKING",
+          "tool_name": "IMMATERIAL"
+        },
+        "why": "rate needs times; which tool it was does not change the rate"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 3,
+          "exception": 5,
+          "critical": 15
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "anomaly_detection",
+      "metric_id": "access.first_seen_mcp",
+      "confirmed": true,
+      "role": "driver",
+      "interpretation_rule": "EXCEPTION/CRITICAL -> ANOMALOUS and adds policy_enforcement downstream",
+      "rule_source": "interpret.RuleInterpreter.anomaly_detection",
+      "documented_meaning": "resource-access novelty",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_first_seen_mcp",
+        "required_fields": [
+          "mcp_server"
+        ],
+        "basis": "mcp",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "mcp_call"
+        ],
+        "field_materiality_for_this_cop": {
+          "mcp_server": "BLOCKING"
+        },
+        "why": "novelty is a property of the server's identity"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 1,
+          "critical": 3
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "anomaly_detection",
+      "metric_id": "insights.retry",
+      "confirmed": true,
+      "role": "supporting",
+      "interpretation_rule": "EXCEPTION/CRITICAL named in rationale only; never drives",
+      "rule_source": "interpret.RuleInterpreter.anomaly_detection",
+      "documented_meaning": "notable only against how often this tool normally retries",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_retry",
+        "required_fields": [
+          "command",
+          "exit_code"
+        ],
+        "basis": "commands",
+        "applies_when": "commands",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 2,
+          "critical": 5
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "anomaly_detection",
+      "metric_id": "insights.repetition",
+      "confirmed": true,
+      "role": "supporting",
+      "interpretation_rule": "EXCEPTION/CRITICAL named in rationale only; never drives",
+      "rule_source": "interpret.RuleInterpreter.anomaly_detection",
+      "documented_meaning": "only notable if this tool does not normally repeat; repetition alone is not deviation",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_repetition",
+        "required_fields": [
+          "tool_name",
+          "tool_arguments",
+          "turn_id"
+        ],
+        "basis": "args",
+        "applies_when": "actions",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "tool_call"
+        ],
+        "field_materiality_for_this_cop": {
+          "turn_id": "BLOCKING",
+          "tool_name": "BLOCKING",
+          "tool_arguments": "DEGRADING"
+        },
+        "why": "repetition is defined within a turn; without turns there is no window"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 3,
+          "critical": 10
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "interaction_discovery",
+      "metric_id": "interaction.subagent_lanes",
+      "confirmed": true,
+      "role": "driver",
+      "interpretation_rule": "EXCEPTION/CRITICAL -> PROPAGATING (PASS_TO_COP)",
+      "rule_source": "interpret._interaction_discovery",
+      "documented_meaning": "fan-out of delegation",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_subagent_lanes",
+        "required_fields": [
+          "agent_id"
+        ],
+        "basis": "always",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "delegation"
+        ],
+        "field_materiality_for_this_cop": {
+          "lane_id": "DEGRADING",
+          "parent_agent_id": "DEGRADING"
+        },
+        "why": "lanes can be counted from subagent_start without lane identity; the edges between them cannot be reconstructed"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 5,
+          "exception": 15,
+          "critical": 50
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "interaction_discovery",
+      "metric_id": "interaction.mcp_servers",
+      "confirmed": true,
+      "role": "evidence",
+      "interpretation_rule": "counted as judged; no rule fires on it",
+      "rule_source": "interpret._interaction_discovery",
+      "documented_meaning": "how widely the session reaches",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_mcp_servers",
+        "required_fields": [
+          "mcp_server"
+        ],
+        "basis": "mcp",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 3,
+          "exception": 6,
+          "critical": 12
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "interaction_discovery",
+      "metric_id": "access.first_seen_mcp",
+      "confirmed": true,
+      "role": "driver",
+      "interpretation_rule": "EXCEPTION/CRITICAL -> NEW_ROUTE (PASS_TO_COP policy_enforcement, audit_traceability)",
+      "rule_source": "interpret._interaction_discovery",
+      "documented_meaning": "a new edge: the agent reached a server it never had",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_first_seen_mcp",
+        "required_fields": [
+          "mcp_server"
+        ],
+        "basis": "mcp",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "mcp_call"
+        ],
+        "field_materiality_for_this_cop": {
+          "mcp_server": "BLOCKING"
+        },
+        "why": "novelty is a property of the server's identity"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 1,
+          "critical": 3
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "interaction_discovery",
+      "metric_id": "telemetry.lane_linkage",
+      "confirmed": true,
+      "role": "driver",
+      "interpretation_rule": "EXCEPTION/CRITICAL -> PATH_PARTIAL (WATCH), adds audit_traceability; checked first",
+      "rule_source": "interpret._interaction_discovery",
+      "documented_meaning": "the delegation path is complete",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_lane_linkage",
+        "required_fields": [
+          "agent_id",
+          "observable_type"
+        ],
+        "basis": "always",
+        "applies_when": "subagents",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "delegation"
+        ],
+        "field_materiality_for_this_cop": {
+          "lane_id": "IMMATERIAL",
+          "parent_agent_id": "IMMATERIAL"
+        },
+        "why": "a missing lane id is the finding here, not a blocker"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "below",
+          "warning": 0.99,
+          "exception": 0.5,
+          "critical": 0.0
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "interaction_discovery",
+      "metric_id": "insights.outside",
+      "confirmed": true,
+      "role": "driver",
+      "interpretation_rule": "EXCEPTION/CRITICAL -> PROPAGATING (PASS_TO_COP policy_enforcement, risk_mitigation)",
+      "rule_source": "interpret._interaction_discovery",
+      "documented_meaning": "the agent's reach extends into other repos or the home directory",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_outside",
+        "required_fields": [
+          "file_path",
+          "outside_workspace"
+        ],
+        "basis": "paths",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "file_access"
+        ],
+        "field_materiality_for_this_cop": {
+          "file_path": "DEGRADING",
+          "workspace": "BLOCKING"
+        },
+        "why": "cannot determine whether a boundary was crossed without both sides of it"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 1,
+          "critical": 10
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "incident_response",
+      "metric_id": "insights.secrets",
+      "confirmed": true,
+      "role": "driver",
+      "interpretation_rule": "EXCEPTION/CRITICAL = exposure -> INCIDENT; ESCALATE if anomaly_detection ANOMALOUS, else ALERT",
+      "rule_source": "interpret.RuleInterpreter.incident_response",
+      "documented_meaning": "secret-shaped content handled",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_secrets",
+        "required_fields": [
+          "secret_detected"
+        ],
+        "basis": "content",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "file_access"
+        ],
+        "field_materiality_for_this_cop": {
+          "file_path": "DEGRADING",
+          "content_hash": "DEGRADING"
+        },
+        "why": "detection runs on content; the path sharpens it but is not required"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 1,
+          "critical": 3
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "incident_response",
+      "metric_id": "insights.sensitive_unasked",
+      "confirmed": true,
+      "role": "driver",
+      "interpretation_rule": "same as insights.secrets",
+      "rule_source": "interpret.RuleInterpreter.incident_response",
+      "documented_meaning": "an exposure candidate",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_sensitive_unasked",
+        "required_fields": [
+          "sensitivity_tier",
+          "permission_decision"
+        ],
+        "basis": "approvals",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "file_access",
+          "approval"
+        ],
+        "field_materiality_for_this_cop": {
+          "file_path": "DEGRADING",
+          "sensitivity_tier": "DEGRADING",
+          "permission_decision": "DEGRADING"
+        },
+        "why": "cannot determine resource sensitivity without knowing the resource"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 1,
+          "critical": 5
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "incident_response",
+      "metric_id": "insights.blocked",
+      "confirmed": true,
+      "role": "supporting",
+      "interpretation_rule": "WARNING+ -> WATCH ('a deny rule fired; the control worked')",
+      "rule_source": "interpret.RuleInterpreter.incident_response",
+      "documented_meaning": "worth watching when repeated: persistence against a control",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_blocked",
+        "required_fields": [
+          "policy_rule_matched"
+        ],
+        "basis": "our_rules",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 1,
+          "critical": 5
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "classification_tagging",
+      "metric_id": "insights.secrets",
+      "confirmed": true,
+      "role": "driver",
+      "interpretation_rule": "EXCEPTION/CRITICAL -> INTEGRITY",
+      "rule_source": "interpret._classification_tagging",
+      "documented_meaning": "BOUNDARY, credential",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_secrets",
+        "required_fields": [
+          "secret_detected"
+        ],
+        "basis": "content",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "file_access"
+        ],
+        "field_materiality_for_this_cop": {
+          "file_path": "DEGRADING",
+          "content_hash": "DEGRADING"
+        },
+        "why": "detection runs on content; the path sharpens it but is not required"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 1,
+          "critical": 3
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "classification_tagging",
+      "metric_id": "insights.sensitive_unasked",
+      "confirmed": true,
+      "role": "driver",
+      "interpretation_rule": "EXCEPTION/CRITICAL -> BOUNDARY",
+      "rule_source": "interpret._classification_tagging",
+      "documented_meaning": "OVERSIGHT",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_sensitive_unasked",
+        "required_fields": [
+          "sensitivity_tier",
+          "permission_decision"
+        ],
+        "basis": "approvals",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "file_access",
+          "approval"
+        ],
+        "field_materiality_for_this_cop": {
+          "file_path": "DEGRADING",
+          "sensitivity_tier": "DEGRADING",
+          "permission_decision": "DEGRADING"
+        },
+        "why": "cannot determine resource sensitivity without knowing the resource"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 1,
+          "critical": 5
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "classification_tagging",
+      "metric_id": "insights.outside",
+      "confirmed": true,
+      "role": "driver",
+      "interpretation_rule": "EXCEPTION/CRITICAL -> BOUNDARY (ranked first)",
+      "rule_source": "interpret._classification_tagging",
+      "documented_meaning": "BOUNDARY",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_outside",
+        "required_fields": [
+          "file_path",
+          "outside_workspace"
+        ],
+        "basis": "paths",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "file_access"
+        ],
+        "field_materiality_for_this_cop": {
+          "file_path": "DEGRADING",
+          "workspace": "BLOCKING"
+        },
+        "why": "cannot determine whether a boundary was crossed without both sides of it"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 1,
+          "critical": 10
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "classification_tagging",
+      "metric_id": "insights.blocked",
+      "confirmed": true,
+      "role": "driver",
+      "interpretation_rule": "EXCEPTION/CRITICAL -> OVERSIGHT",
+      "rule_source": "interpret._classification_tagging",
+      "documented_meaning": "UNDEFINED: no edge in docs/cops/cops_topology.json",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_blocked",
+        "required_fields": [
+          "policy_rule_matched"
+        ],
+        "basis": "our_rules",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 1,
+          "critical": 5
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "policy_enforcement",
+      "metric_id": "insights.blocked",
+      "confirmed": true,
+      "role": "driver",
+      "interpretation_rule": "EXCEPTION/CRITICAL -> VIOLATION (ALERT)",
+      "rule_source": "interpret._policy_enforcement",
+      "documented_meaning": "a control fired and held",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_blocked",
+        "required_fields": [
+          "policy_rule_matched"
+        ],
+        "basis": "our_rules",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 1,
+          "critical": 5
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "policy_enforcement",
+      "metric_id": "insights.sensitive_unasked",
+      "confirmed": true,
+      "role": "driver",
+      "interpretation_rule": "EXCEPTION/CRITICAL without a violation metric -> APPROVAL_REQUIRED (REQUEST_APPROVAL)",
+      "rule_source": "interpret._policy_enforcement",
+      "documented_meaning": "a sensitive resource touched with no approval in the session",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_sensitive_unasked",
+        "required_fields": [
+          "sensitivity_tier",
+          "permission_decision"
+        ],
+        "basis": "approvals",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "file_access",
+          "approval"
+        ],
+        "field_materiality_for_this_cop": {
+          "file_path": "BLOCKING",
+          "sensitivity_tier": "BLOCKING",
+          "permission_decision": "DEGRADING"
+        },
+        "why": "cannot determine resource sensitivity without knowing the resource"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 1,
+          "critical": 5
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "policy_enforcement",
+      "metric_id": "insights.outside",
+      "confirmed": true,
+      "role": "driver",
+      "interpretation_rule": "EXCEPTION/CRITICAL -> VIOLATION (ALERT)",
+      "rule_source": "interpret._policy_enforcement",
+      "documented_meaning": "a boundary crossing: work outside the workspace",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_outside",
+        "required_fields": [
+          "file_path",
+          "outside_workspace"
+        ],
+        "basis": "paths",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "file_access"
+        ],
+        "field_materiality_for_this_cop": {
+          "file_path": "BLOCKING",
+          "workspace": "BLOCKING"
+        },
+        "why": "cannot determine whether a boundary was crossed without both sides of it"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 1,
+          "critical": 10
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "policy_enforcement",
+      "metric_id": "insights.secrets",
+      "confirmed": true,
+      "role": "driver",
+      "interpretation_rule": "EXCEPTION/CRITICAL -> VIOLATION (ALERT), adds risk_mitigation",
+      "rule_source": "interpret._policy_enforcement",
+      "documented_meaning": "secret-handling rule engaged",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_secrets",
+        "required_fields": [
+          "secret_detected"
+        ],
+        "basis": "content",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "file_access"
+        ],
+        "field_materiality_for_this_cop": {
+          "file_path": "DEGRADING",
+          "content_hash": "DEGRADING"
+        },
+        "why": "detection runs on content; the path sharpens it but is not required"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 1,
+          "critical": 3
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "policy_enforcement",
+      "metric_id": "oversight.declined_inferred",
+      "confirmed": true,
+      "role": "driver",
+      "interpretation_rule": "EXCEPTION/CRITICAL without a violation metric -> APPROVAL_REQUIRED (REQUEST_APPROVAL)",
+      "rule_source": "interpret._policy_enforcement",
+      "documented_meaning": "a refusal the agent must respect",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_declined_inferred",
+        "required_fields": [
+          "observable_type",
+          "turn_id"
+        ],
+        "basis": "approvals",
+        "applies_when": "asked",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 3,
+          "critical": 10
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "risk_mitigation",
+      "metric_id": "insights.secrets",
+      "confirmed": false,
+      "role": "UNDEFINED",
+      "interpretation_rule": "UNDEFINED: COP has no rule interpreter",
+      "rule_source": null,
+      "documented_meaning": "severity multiplier for every other finding in the session",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_secrets",
+        "required_fields": [
+          "secret_detected"
+        ],
+        "basis": "content",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "file_access"
+        ],
+        "field_materiality_for_this_cop": {
+          "file_path": "DEGRADING",
+          "content_hash": "DEGRADING"
+        },
+        "why": "detection runs on content; the path sharpens it but is not required"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 1,
+          "critical": 3
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "risk_mitigation",
+      "metric_id": "insights.sensitive_unasked",
+      "confirmed": false,
+      "role": "UNDEFINED",
+      "interpretation_rule": "UNDEFINED: COP has no rule interpreter",
+      "rule_source": null,
+      "documented_meaning": "raises compound risk with secrets or network steps",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_sensitive_unasked",
+        "required_fields": [
+          "sensitivity_tier",
+          "permission_decision"
+        ],
+        "basis": "approvals",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "file_access",
+          "approval"
+        ],
+        "field_materiality_for_this_cop": {
+          "file_path": "BLOCKING",
+          "sensitivity_tier": "BLOCKING",
+          "permission_decision": "DEGRADING"
+        },
+        "why": "cannot determine resource sensitivity without knowing the resource"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 1,
+          "critical": 5
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "risk_mitigation",
+      "metric_id": "insights.outside",
+      "confirmed": false,
+      "role": "UNDEFINED",
+      "interpretation_rule": "UNDEFINED: COP has no rule interpreter",
+      "rule_source": null,
+      "documented_meaning": "blast radius beyond the project",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_outside",
+        "required_fields": [
+          "file_path",
+          "outside_workspace"
+        ],
+        "basis": "paths",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "file_access"
+        ],
+        "field_materiality_for_this_cop": {
+          "file_path": "BLOCKING",
+          "workspace": "BLOCKING"
+        },
+        "why": "cannot determine whether a boundary was crossed without both sides of it"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 1,
+          "critical": 10
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "risk_mitigation",
+      "metric_id": "insights.reverted",
+      "confirmed": false,
+      "role": "UNDEFINED",
+      "interpretation_rule": "UNDEFINED: COP has no rule interpreter",
+      "rule_source": null,
+      "documented_meaning": "UNDEFINED: no edge in docs/cops/cops_topology.json",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_reverted",
+        "required_fields": [
+          "content_hash",
+          "reverted_to_earlier"
+        ],
+        "basis": "hashes",
+        "applies_when": "effects",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 3,
+          "critical": 10
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "risk_mitigation",
+      "metric_id": "insights.token_outlier",
+      "confirmed": false,
+      "role": "UNDEFINED",
+      "interpretation_rule": "UNDEFINED: COP has no rule interpreter",
+      "rule_source": null,
+      "documented_meaning": "a contributor to compound risk, not a risk alone",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_token_outlier",
+        "required_fields": [
+          "total_tokens"
+        ],
+        "basis": "tokens",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "model_request"
+        ],
+        "field_materiality_for_this_cop": {
+          "total_tokens": "BLOCKING",
+          "model": "DEGRADING",
+          "lane_id": "DEGRADING"
+        },
+        "why": "without a token count there is nothing to compare; lanes only apportion it"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 3,
+          "exception": 5,
+          "critical": 15
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "resource_management",
+      "metric_id": "insights.token_outlier",
+      "confirmed": true,
+      "role": "driver (burn)",
+      "interpretation_rule": "EXCEPTION/CRITICAL -> EXCESSIVE, adds risk_mitigation",
+      "rule_source": "interpret.RuleInterpreter.resource_management",
+      "documented_meaning": "consumption far above the estate norm",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_token_outlier",
+        "required_fields": [
+          "total_tokens"
+        ],
+        "basis": "tokens",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "model_request"
+        ],
+        "field_materiality_for_this_cop": {
+          "total_tokens": "BLOCKING",
+          "model": "DEGRADING",
+          "lane_id": "DEGRADING"
+        },
+        "why": "without a token count there is nothing to compare; lanes only apportion it"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 3,
+          "exception": 5,
+          "critical": 15
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "resource_management",
+      "metric_id": "insights.duration_outlier",
+      "confirmed": true,
+      "role": "driver (waste)",
+      "interpretation_rule": "EXCEPTION/CRITICAL -> INEFFICIENT, adds workload_optimization",
+      "rule_source": "interpret.RuleInterpreter.resource_management",
+      "documented_meaning": "a step held resources far longer than usual",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_duration_outlier",
+        "required_fields": [
+          "tool_duration_ms"
+        ],
+        "basis": "durations",
+        "applies_when": "steps",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "tool_call"
+        ],
+        "field_materiality_for_this_cop": {
+          "tool_duration_ms": "BLOCKING",
+          "tool_name": "DEGRADING"
+        },
+        "why": "duration is the measure; the tool name groups the baseline"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 1,
+          "critical": 5
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "resource_management",
+      "metric_id": "insights.stalled",
+      "confirmed": true,
+      "role": "driver (waste)",
+      "interpretation_rule": "EXCEPTION/CRITICAL -> INEFFICIENT, adds workload_optimization; WARNING alone -> INEFFICIENT (WATCH)",
+      "rule_source": "interpret.RuleInterpreter.resource_management",
+      "documented_meaning": "a hung process holding a terminal and its resources",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_stalled",
+        "required_fields": [
+          "hung_seconds"
+        ],
+        "basis": "wrapper",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "command"
+        ],
+        "field_materiality_for_this_cop": {
+          "command": "DEGRADING",
+          "timestamp": "BLOCKING"
+        },
+        "why": "a stall is a gap in time; the command only describes it"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 1,
+          "critical": 3
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "resource_management",
+      "metric_id": "activity.action_rate_ratio",
+      "confirmed": true,
+      "role": "driver (burn)",
+      "interpretation_rule": "EXCEPTION/CRITICAL -> EXCESSIVE, adds risk_mitigation",
+      "rule_source": "interpret.RuleInterpreter.resource_management",
+      "documented_meaning": "load generated per minute",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_action_rate",
+        "required_fields": [
+          "tool_name",
+          "occurred_at"
+        ],
+        "basis": "always",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "tool_call"
+        ],
+        "field_materiality_for_this_cop": {
+          "timestamp": "BLOCKING",
+          "tool_name": "IMMATERIAL"
+        },
+        "why": "rate needs times; which tool it was does not change the rate"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 3,
+          "exception": 5,
+          "critical": 15
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "behavior_analytics",
+      "metric_id": "insights.repetition",
+      "confirmed": false,
+      "role": "UNDEFINED",
+      "interpretation_rule": "UNDEFINED: COP has no rule interpreter",
+      "rule_source": null,
+      "documented_meaning": "the agent is looping: same call, same arguments, same turn",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_repetition",
+        "required_fields": [
+          "tool_name",
+          "tool_arguments",
+          "turn_id"
+        ],
+        "basis": "args",
+        "applies_when": "actions",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "tool_call"
+        ],
+        "field_materiality_for_this_cop": {
+          "turn_id": "BLOCKING",
+          "tool_name": "BLOCKING",
+          "tool_arguments": "DEGRADING"
+        },
+        "why": "repetition is defined within a turn; without turns there is no window"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 3,
+          "critical": 10
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "behavior_analytics",
+      "metric_id": "insights.retry",
+      "confirmed": false,
+      "role": "UNDEFINED",
+      "interpretation_rule": "UNDEFINED: COP has no rule interpreter",
+      "rule_source": null,
+      "documented_meaning": "retry pressure: a failed command reissued unchanged",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_retry",
+        "required_fields": [
+          "command",
+          "exit_code"
+        ],
+        "basis": "commands",
+        "applies_when": "commands",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 2,
+          "critical": 5
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "behavior_analytics",
+      "metric_id": "insights.stalled",
+      "confirmed": false,
+      "role": "UNDEFINED",
+      "interpretation_rule": "UNDEFINED: COP has no rule interpreter",
+      "rule_source": null,
+      "documented_meaning": "UNDEFINED: no edge in docs/cops/cops_topology.json",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_stalled",
+        "required_fields": [
+          "hung_seconds"
+        ],
+        "basis": "wrapper",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "command"
+        ],
+        "field_materiality_for_this_cop": {
+          "command": "DEGRADING",
+          "timestamp": "BLOCKING"
+        },
+        "why": "a stall is a gap in time; the command only describes it"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 1,
+          "critical": 3
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "behavior_analytics",
+      "metric_id": "insights.failed",
+      "confirmed": false,
+      "role": "UNDEFINED",
+      "interpretation_rule": "UNDEFINED: COP has no rule interpreter",
+      "rule_source": null,
+      "documented_meaning": "a failure pattern",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_failed",
+        "required_fields": [
+          "success",
+          "exit_code"
+        ],
+        "basis": "outcomes",
+        "applies_when": "actions",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 5,
+          "critical": 20
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "behavior_analytics",
+      "metric_id": "oversight.fast_approvals",
+      "confirmed": false,
+      "role": "UNDEFINED",
+      "interpretation_rule": "UNDEFINED: COP has no rule interpreter",
+      "rule_source": null,
+      "documented_meaning": "UNDEFINED: no edge in docs/cops/cops_topology.json",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_fast_approvals",
+        "required_fields": [
+          "observable_type",
+          "occurred_at"
+        ],
+        "basis": "approvals",
+        "applies_when": "asked",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 3,
+          "critical": 10
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "recovery_resilience",
+      "metric_id": "insights.reverted",
+      "confirmed": false,
+      "role": "UNDEFINED",
+      "interpretation_rule": "UNDEFINED: COP has no rule interpreter",
+      "rule_source": null,
+      "documented_meaning": "a rollback: did the state return to good",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_reverted",
+        "required_fields": [
+          "content_hash",
+          "reverted_to_earlier"
+        ],
+        "basis": "hashes",
+        "applies_when": "effects",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 3,
+          "critical": 10
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "recovery_resilience",
+      "metric_id": "insights.retry",
+      "confirmed": false,
+      "role": "UNDEFINED",
+      "interpretation_rule": "UNDEFINED: COP has no rule interpreter",
+      "rule_source": null,
+      "documented_meaning": "an attempt to recover; whether it worked is the question",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_retry",
+        "required_fields": [
+          "command",
+          "exit_code"
+        ],
+        "basis": "commands",
+        "applies_when": "commands",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 2,
+          "critical": 5
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "recovery_resilience",
+      "metric_id": "insights.failed",
+      "confirmed": false,
+      "role": "UNDEFINED",
+      "interpretation_rule": "UNDEFINED: COP has no rule interpreter",
+      "rule_source": null,
+      "documented_meaning": "something to recover from",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_failed",
+        "required_fields": [
+          "success",
+          "exit_code"
+        ],
+        "basis": "outcomes",
+        "applies_when": "actions",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 5,
+          "critical": 20
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "workload_optimization",
+      "metric_id": "insights.repetition",
+      "confirmed": false,
+      "role": "UNDEFINED",
+      "interpretation_rule": "UNDEFINED: COP has no rule interpreter",
+      "rule_source": null,
+      "documented_meaning": "redundant work: the result was already in hand",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_repetition",
+        "required_fields": [
+          "tool_name",
+          "tool_arguments",
+          "turn_id"
+        ],
+        "basis": "args",
+        "applies_when": "actions",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "tool_call"
+        ],
+        "field_materiality_for_this_cop": {
+          "turn_id": "BLOCKING",
+          "tool_name": "BLOCKING",
+          "tool_arguments": "DEGRADING"
+        },
+        "why": "repetition is defined within a turn; without turns there is no window"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 3,
+          "critical": 10
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "workload_optimization",
+      "metric_id": "insights.duration_outlier",
+      "confirmed": false,
+      "role": "UNDEFINED",
+      "interpretation_rule": "UNDEFINED: COP has no rule interpreter",
+      "rule_source": null,
+      "documented_meaning": "a bottleneck step",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_duration_outlier",
+        "required_fields": [
+          "tool_duration_ms"
+        ],
+        "basis": "durations",
+        "applies_when": "steps",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "tool_call"
+        ],
+        "field_materiality_for_this_cop": {
+          "tool_duration_ms": "BLOCKING",
+          "tool_name": "DEGRADING"
+        },
+        "why": "duration is the measure; the tool name groups the baseline"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 1,
+          "critical": 5
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "workload_optimization",
+      "metric_id": "insights.token_outlier",
+      "confirmed": false,
+      "role": "UNDEFINED",
+      "interpretation_rule": "UNDEFINED: COP has no rule interpreter",
+      "rule_source": null,
+      "documented_meaning": "inefficiency when tokens are high but actions are few",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_token_outlier",
+        "required_fields": [
+          "total_tokens"
+        ],
+        "basis": "tokens",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "model_request"
+        ],
+        "field_materiality_for_this_cop": {
+          "total_tokens": "BLOCKING",
+          "model": "DEGRADING",
+          "lane_id": "DEGRADING"
+        },
+        "why": "without a token count there is nothing to compare; lanes only apportion it"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 3,
+          "exception": 5,
+          "critical": 15
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "workload_optimization",
+      "metric_id": "activity.action_rate_ratio",
+      "confirmed": false,
+      "role": "UNDEFINED",
+      "interpretation_rule": "UNDEFINED: COP has no rule interpreter",
+      "rule_source": null,
+      "documented_meaning": "throughput relative to peers",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_action_rate",
+        "required_fields": [
+          "tool_name",
+          "occurred_at"
+        ],
+        "basis": "always",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "tool_call"
+        ],
+        "field_materiality_for_this_cop": {
+          "timestamp": "BLOCKING",
+          "tool_name": "IMMATERIAL"
+        },
+        "why": "rate needs times; which tool it was does not change the rate"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 3,
+          "exception": 5,
+          "critical": 15
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "audit_traceability",
+      "metric_id": "insights.unattributed",
+      "confirmed": true,
+      "role": "driver",
+      "interpretation_rule": "CRITICAL -> UNATTRIBUTABLE; EXCEPTION -> BROKEN_TRACE; WARNING -> PARTIAL",
+      "rule_source": "interpret._audit_traceability",
+      "documented_meaning": "a change on disk no actor can be tied to",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_unattributed",
+        "required_fields": [
+          "file_path",
+          "attribution"
+        ],
+        "basis": "fs",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 5,
+          "critical": 25
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "audit_traceability",
+      "metric_id": "telemetry.turn_linkage",
+      "confirmed": true,
+      "role": "driver",
+      "interpretation_rule": "same severity ladder; generic: any hot state counts alike, no metric-specific rule",
+      "rule_source": "interpret._audit_traceability",
+      "documented_meaning": "decisions can be traced to the prompt that caused them",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_turn_linkage",
+        "required_fields": [
+          "turn_id"
+        ],
+        "basis": "always",
+        "applies_when": "steps",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "tool_call"
+        ],
+        "field_materiality_for_this_cop": {
+          "turn_id": "IMMATERIAL"
+        },
+        "why": "a missing turn id is the finding here, not a blocker"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "below",
+          "warning": 0.9,
+          "exception": 0.6,
+          "critical": 0.2
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "audit_traceability",
+      "metric_id": "telemetry.lane_linkage",
+      "confirmed": true,
+      "role": "driver",
+      "interpretation_rule": "same severity ladder; generic: any hot state counts alike, no metric-specific rule",
+      "rule_source": "interpret._audit_traceability",
+      "documented_meaning": "subagent work can be traced to who started it",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_lane_linkage",
+        "required_fields": [
+          "agent_id",
+          "observable_type"
+        ],
+        "basis": "always",
+        "applies_when": "subagents",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "delegation"
+        ],
+        "field_materiality_for_this_cop": {
+          "lane_id": "DEGRADING",
+          "parent_agent_id": "IMMATERIAL"
+        },
+        "why": "a missing lane id is the finding here, not a blocker"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "below",
+          "warning": 0.99,
+          "exception": 0.5,
+          "critical": 0.0
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "audit_traceability",
+      "metric_id": "telemetry.source_agreement",
+      "confirmed": true,
+      "role": "driver",
+      "interpretation_rule": "same severity ladder; generic: any hot state counts alike, no metric-specific rule",
+      "rule_source": "interpret._audit_traceability",
+      "documented_meaning": "conflicting accounts of the same event",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_source_agreement",
+        "required_fields": [
+          "collectors_agree"
+        ],
+        "basis": "always",
+        "applies_when": "multi",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "below",
+          "warning": 0.99,
+          "exception": 0.9,
+          "critical": 0.5
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "agent_lifecycle_management",
+      "metric_id": "access.first_seen_mcp",
+      "confirmed": false,
+      "role": "UNDEFINED",
+      "interpretation_rule": "UNDEFINED: COP has no rule interpreter",
+      "rule_source": null,
+      "documented_meaning": "the agent's connectivity changed",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.py:m_first_seen_mcp",
+        "required_fields": [
+          "mcp_server"
+        ],
+        "basis": "mcp",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "events": [
+          "mcp_call"
+        ],
+        "field_materiality_for_this_cop": {
+          "mcp_server": "BLOCKING"
+        },
+        "why": "novelty is a property of the server's identity"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 1,
+          "exception": 1,
+          "critical": 3
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    },
+    {
+      "cop": "governance_architecture",
+      "metric_id": "telemetry.unknown_share",
+      "confirmed": false,
+      "role": "UNDEFINED",
+      "interpretation_rule": "UNDEFINED: COP has no rule interpreter",
+      "rule_source": null,
+      "documented_meaning": "where the architecture is blind",
+      "documented_meaning_source": "docs/cops/cops_topology.json edges[].means (target-state doc, not code)",
+      "evidence_requirements": {
+        "computed_by": "signal_metrics.compute (appended)",
+        "required_fields": [],
+        "basis": "always",
+        "applies_when": "always",
+        "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+        "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+      },
+      "verifier_requirements": {
+        "state_thresholds": {
+          "direction": "above",
+          "warning": 0.25,
+          "exception": 0.5,
+          "critical": 0.75
+        },
+        "checks": [
+          "cited metric_id must be one supplied to this COP (harness.reverify, LLMInterpreter.validate)",
+          "interpretation must be in spec.interpretations (harness.reverify)",
+          "action must be in spec.permitted_actions (COPRunner.run_cop, harness.reverify, authority.check)",
+          "downstream must be in spec.downstream_cops (harness.reverify; COPRunner filters)"
+        ],
+        "per_pair_check": "UNDEFINED: no verifier checks this metric's contribution specifically"
+      }
+    }
+  ],
+  "unmapped_metrics": [
+    "insights.no_oversight",
+    "insights.lockfile"
+  ],
+  "documented_only_pairs": [
+    [
+      "agent_lifecycle_management",
+      "interaction.mcp_servers"
+    ],
+    [
+      "agent_lifecycle_management",
+      "telemetry.collector_coverage"
+    ],
+    [
+      "anomaly_detection",
+      "insights.failed"
+    ],
+    [
+      "audit_traceability",
+      "insights.secrets"
+    ],
+    [
+      "behavior_analytics",
+      "insights.blocked"
+    ],
+    [
+      "behavior_analytics",
+      "insights.reverted"
+    ],
+    [
+      "behavior_analytics",
+      "oversight.declined_inferred"
+    ],
+    [
+      "behavior_analytics",
+      "path.transition_novelty"
+    ],
+    [
+      "classification_tagging",
+      "insights.lockfile"
+    ],
+    [
+      "governance_architecture",
+      "telemetry.collector_coverage"
+    ],
+    [
+      "governance_intelligence",
+      "insights.no_oversight"
+    ],
+    [
+      "governance_intelligence",
+      "insights.reverted"
+    ],
+    [
+      "governance_intelligence",
+      "oversight.fast_approvals"
+    ],
+    [
+      "interaction_discovery",
+      "insights.unattributed"
+    ],
+    [
+      "interaction_discovery",
+      "path.transition_novelty"
+    ],
+    [
+      "knowledge_policy_management",
+      "insights.blocked"
+    ],
+    [
+      "policy_enforcement",
+      "access.first_seen_mcp"
+    ],
+    [
+      "policy_enforcement",
+      "insights.no_oversight"
+    ],
+    [
+      "policy_enforcement",
+      "oversight.fast_approvals"
+    ],
+    [
+      "resource_management",
+      "interaction.subagent_lanes"
+    ],
+    [
+      "risk_mitigation",
+      "insights.lockfile"
+    ],
+    [
+      "risk_mitigation",
+      "insights.no_oversight"
+    ],
+    [
+      "runtime_monitoring",
+      "insights.stalled"
+    ],
+    [
+      "runtime_monitoring",
+      "insights.unattributed"
+    ],
+    [
+      "workflow_orchestration",
+      "insights.duration_outlier"
+    ],
+    [
+      "workflow_orchestration",
+      "insights.failed"
+    ],
+    [
+      "workflow_orchestration",
+      "telemetry.turn_linkage"
+    ],
+    [
+      "workload_optimization",
+      "insights.retry"
+    ]
+  ],
+  "documented_built_but_not_computed": [
+    "lifecycle.model_change",
+    "lifecycle.new_machine",
+    "lifecycle.version_change",
+    "telemetry.event_freshness",
+    "telemetry.evidence_score"
+  ]
+}
