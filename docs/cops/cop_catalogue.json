@@ -1,0 +1,1507 @@
+{
+  "meta": {
+    "repo": "Purvi9399/signal-dashboard",
+    "commit": "f4f131b",
+    "generated_by": "read-only extraction; nothing in the repo changed",
+    "metric_ids": [
+      "insights.repetition",
+      "insights.retry",
+      "insights.stalled",
+      "insights.outside",
+      "insights.sensitive_unasked",
+      "insights.secrets",
+      "insights.blocked",
+      "insights.no_oversight",
+      "insights.reverted",
+      "insights.lockfile",
+      "insights.failed",
+      "insights.unattributed",
+      "insights.token_outlier",
+      "insights.duration_outlier",
+      "telemetry.collector_coverage",
+      "telemetry.source_agreement",
+      "telemetry.turn_linkage",
+      "telemetry.lane_linkage",
+      "path.transition_novelty",
+      "activity.action_rate_ratio",
+      "access.first_seen_mcp",
+      "oversight.fast_approvals",
+      "oversight.declined_inferred",
+      "interaction.subagent_lanes",
+      "interaction.mcp_servers",
+      "telemetry.unknown_share"
+    ]
+  },
+  "cops": [
+    {
+      "key": "workflow_orchestration",
+      "name": "Workflow Orchestration",
+      "behavioural_question": "Is the task progressing coherently toward its intended state?",
+      "spec_version": "1",
+      "cadence": "session",
+      "responsibility": "Is the task progressing coherently toward its intended state?",
+      "boundaries": [
+        "none stated in code beyond permitted_actions"
+      ],
+      "inputs": {
+        "metric_keys": [
+          "insights.stalled",
+          "insights.repetition",
+          "oversight.declined_inferred",
+          "interaction.subagent_lanes"
+        ],
+        "missing_metrics": [
+          "task_progress",
+          "intended_state",
+          "task_drift",
+          "unresolved_items",
+          "stalled_duration_per_turn",
+          "excessive_delegation_ratio"
+        ],
+        "context_keys": [
+          "lane_path"
+        ],
+        "consumes_decisions_from": [],
+        "evidence_from_runtime_monitoring": "evid (COPRunner.run_cop)"
+      },
+      "outputs": {
+        "interpretations": [
+          "NORMAL",
+          "DRIFTING",
+          "STALLED",
+          "EXCESSIVE_DELEGATION",
+          "UNEXPECTED_BRANCH"
+        ],
+        "record": "models.COPDecision -> cop_decisions",
+        "downstream_cops": [
+          "behavior_analytics",
+          "incident_response"
+        ]
+      },
+      "action_permissions": {
+        "permitted_actions": [
+          "NONE",
+          "WATCH",
+          "ALERT",
+          "INSTRUCT",
+          "PASS_TO_COP"
+        ],
+        "authority_tiers": [
+          "OBSERVE",
+          "RECORD",
+          "ALERT",
+          "NOTIFY",
+          "RECOMMEND"
+        ],
+        "never_automatic": [],
+        "harness": {
+          "source": "harness_configs.default_for (restrictive default)"
+        }
+      },
+      "status": {
+        "specified": true,
+        "implemented": false,
+        "runnable": false,
+        "active": false,
+        "tested": "no",
+        "live": "unverified (no database read)",
+        "topology_doc_status": "defined"
+      },
+      "tests": [],
+      "known_gaps": [
+        "missing metrics (named in spec, computed nowhere): task_progress, intended_state, task_drift, unresolved_items, stalled_duration_per_turn, excessive_delegation_ratio",
+        "no RuleInterpreter method: RuleInterpreter.interpret raises NotImplementedError"
+      ],
+      "source": "collector/cops/specs.py SPECS"
+    },
+    {
+      "key": "runtime_monitoring",
+      "name": "Runtime Monitoring",
+      "behavioural_question": "Is the evidence required for this governance decision present, reliable and sufficiently complete?",
+      "spec_version": "1",
+      "cadence": "session",
+      "responsibility": "Is the evidence required for this governance decision present, reliable and sufficiently complete?",
+      "boundaries": [
+        "Reports on collection itself; a gap is its subject, not its obstacle (evidence_map.COP_MATERIALITY)",
+        "Empty result means 'could not see', not 'nothing happened' (interpret.RuleInterpreter.runtime_monitoring)"
+      ],
+      "inputs": {
+        "metric_keys": [
+          "telemetry.collector_coverage",
+          "telemetry.source_agreement",
+          "telemetry.turn_linkage",
+          "telemetry.lane_linkage",
+          "telemetry.unknown_share"
+        ],
+        "missing_metrics": [
+          "collector_heartbeat",
+          "event_freshness_live",
+          "missing_event_rate",
+          "collector_errors"
+        ],
+        "context_keys": [
+          "collector_breakdown"
+        ],
+        "consumes_decisions_from": [],
+        "evidence_from_runtime_monitoring": "produces it"
+      },
+      "outputs": {
+        "interpretations": [
+          "SUFFICIENT",
+          "DEGRADED",
+          "INSUFFICIENT"
+        ],
+        "record": "models.COPDecision -> cop_decisions",
+        "downstream_cops": [
+          "audit_traceability",
+          "incident_response"
+        ]
+      },
+      "action_permissions": {
+        "permitted_actions": [
+          "NONE",
+          "WATCH",
+          "ALERT",
+          "REQUEST_CONTEXT",
+          "PASS_TO_COP"
+        ],
+        "authority_tiers": [
+          "OBSERVE",
+          "RECORD",
+          "ALERT",
+          "NOTIFY",
+          "REQUEST"
+        ],
+        "never_automatic": [],
+        "harness": {
+          "source": "harness_configs.RUNTIME_MONITORING",
+          "autonomous": [
+            "NONE",
+            "WATCH"
+          ],
+          "approval": [
+            "ALERT",
+            "REQUEST_CONTEXT"
+          ],
+          "prohibited": [
+            "PAUSE",
+            "BLOCK",
+            "INSTRUCT",
+            "ESCALATE"
+          ],
+          "memory": {
+            "working": true,
+            "session": true,
+            "historical": "none",
+            "retain": [
+              "collector failures",
+              "open alerts",
+              "previous window status"
+            ]
+          },
+          "budgets": {
+            "max_steps": 8,
+            "max_tool_calls": 4,
+            "max_context_requests": 1,
+            "max_handoffs": 3,
+            "max_retries": 1,
+            "max_runtime_s": 20
+          }
+        }
+      },
+      "status": {
+        "specified": true,
+        "implemented": true,
+        "runnable": true,
+        "active": true,
+        "tested": "asserted",
+        "live": "unverified (no database read)",
+        "topology_doc_status": "active"
+      },
+      "tests": [
+        "test_normal_session_is_quiet",
+        "test_partial_instrumentation_degrades_but_does_not_alarm",
+        "test_thin_evidence_is_insufficient_and_lowers_confidence"
+      ],
+      "known_gaps": [
+        "missing metrics (named in spec, computed nowhere): collector_heartbeat, event_freshness_live, missing_event_rate, collector_errors"
+      ],
+      "source": "collector/cops/specs.py SPECS"
+    },
+    {
+      "key": "anomaly_detection",
+      "name": "Anomaly Detection",
+      "behavioural_question": "Is the observed behaviour materially different from what is expected in this context?",
+      "spec_version": "1",
+      "cadence": "session",
+      "responsibility": "Is the observed behaviour materially different from what is expected in this context?",
+      "boundaries": [
+        "'unusual is not prohibited, permission is Policy Enforcement's question' (interpret.RuleInterpreter.anomaly_detection)"
+      ],
+      "inputs": {
+        "metric_keys": [
+          "insights.token_outlier",
+          "insights.duration_outlier",
+          "path.transition_novelty",
+          "activity.action_rate_ratio",
+          "access.first_seen_mcp",
+          "insights.retry",
+          "insights.repetition"
+        ],
+        "missing_metrics": [
+          "tool_use_deviation_per_agent",
+          "resource_access_novelty_files",
+          "token_expansion_per_turn"
+        ],
+        "context_keys": [
+          "lane_path",
+          "evidence_rows"
+        ],
+        "consumes_decisions_from": [
+          "runtime_monitoring"
+        ],
+        "evidence_from_runtime_monitoring": "evid (COPRunner.run_cop)"
+      },
+      "outputs": {
+        "interpretations": [
+          "NORMAL",
+          "ANOMALOUS",
+          "INDETERMINATE"
+        ],
+        "record": "models.COPDecision -> cop_decisions",
+        "downstream_cops": [
+          "classification_tagging",
+          "policy_enforcement",
+          "risk_mitigation",
+          "incident_response"
+        ]
+      },
+      "action_permissions": {
+        "permitted_actions": [
+          "NONE",
+          "WATCH",
+          "ALERT",
+          "REQUEST_CONTEXT",
+          "PASS_TO_COP"
+        ],
+        "authority_tiers": [
+          "OBSERVE",
+          "RECORD",
+          "ALERT",
+          "NOTIFY",
+          "REQUEST"
+        ],
+        "never_automatic": [],
+        "harness": {
+          "source": "harness_configs.OTHERS (notes only, not wired)",
+          "memory": "targeted history for baselines",
+          "autonomous": [
+            "NONE",
+            "WATCH"
+          ],
+          "note": "needs history; must never claim prohibition"
+        }
+      },
+      "status": {
+        "specified": true,
+        "implemented": true,
+        "runnable": true,
+        "active": true,
+        "tested": "asserted",
+        "live": "unverified (no database read)",
+        "topology_doc_status": "active"
+      },
+      "tests": [
+        "test_normal_session_is_quiet",
+        "test_spike_is_anomalous_but_not_an_incident",
+        "test_novelty_pulls_only_the_lane",
+        "test_harness_result_carries_action_and_existing_fields",
+        "test_incident_response_reads_upstream_action_on_the_harness_path"
+      ],
+      "known_gaps": [
+        "missing metrics (named in spec, computed nowhere): tool_use_deviation_per_agent, resource_access_novelty_files, token_expansion_per_turn",
+        "no HarnessConfig of its own: harness_configs.default_for gives the most restrictive default"
+      ],
+      "source": "collector/cops/specs.py SPECS"
+    },
+    {
+      "key": "context_memory",
+      "name": "Context & Memory",
+      "behavioural_question": "Is the current context internally consistent, relevant to the task, and supported by useful precedent?",
+      "spec_version": "1",
+      "cadence": "session",
+      "responsibility": "Is the current context internally consistent, relevant to the task, and supported by useful precedent?",
+      "boundaries": [
+        "none stated in code beyond permitted_actions"
+      ],
+      "inputs": {
+        "metric_keys": [],
+        "missing_metrics": [
+          "compaction_count",
+          "context_loss_after_compaction",
+          "session_reset",
+          "precedent_match",
+          "context_consistency"
+        ],
+        "context_keys": [],
+        "consumes_decisions_from": [],
+        "evidence_from_runtime_monitoring": "evid (COPRunner.run_cop)"
+      },
+      "outputs": {
+        "interpretations": [
+          "CONTEXT_OK",
+          "STALE",
+          "CONTRADICTORY",
+          "CONTEXT_LOSS",
+          "PRECEDENT_FOUND"
+        ],
+        "record": "models.COPDecision -> cop_decisions",
+        "downstream_cops": [
+          "behavior_analytics"
+        ]
+      },
+      "action_permissions": {
+        "permitted_actions": [
+          "NONE",
+          "WATCH"
+        ],
+        "authority_tiers": [
+          "OBSERVE",
+          "RECORD"
+        ],
+        "never_automatic": [],
+        "harness": {
+          "source": "harness_configs.default_for (restrictive default)"
+        }
+      },
+      "status": {
+        "specified": true,
+        "implemented": false,
+        "runnable": false,
+        "active": false,
+        "tested": "no",
+        "live": "unverified (no database read)",
+        "topology_doc_status": "defined"
+      },
+      "tests": [],
+      "known_gaps": [
+        "missing metrics (named in spec, computed nowhere): compaction_count, context_loss_after_compaction, session_reset, precedent_match, context_consistency",
+        "reads no computed metric; cannot run on today's data",
+        "no RuleInterpreter method: RuleInterpreter.interpret raises NotImplementedError"
+      ],
+      "source": "collector/cops/specs.py SPECS"
+    },
+    {
+      "key": "interaction_discovery",
+      "name": "Interaction Discovery",
+      "behavioural_question": "Who or what is interacting with whom, through what route, and how is the activity propagating?",
+      "spec_version": "1",
+      "cadence": "session",
+      "responsibility": "Who or what is interacting with whom, through what route, and how is the activity propagating?",
+      "boundaries": [
+        "'Structure only. Whether a route was permitted belongs to Policy Enforcement' (interpret._interaction_discovery)"
+      ],
+      "inputs": {
+        "metric_keys": [
+          "interaction.subagent_lanes",
+          "interaction.mcp_servers",
+          "access.first_seen_mcp",
+          "telemetry.lane_linkage",
+          "insights.outside"
+        ],
+        "missing_metrics": [
+          "edge_table",
+          "new_edges",
+          "fan_in",
+          "fan_out",
+          "max_delegation_depth",
+          "cross_agent_path_general_to_coding"
+        ],
+        "context_keys": [
+          "lane_path",
+          "evidence_rows"
+        ],
+        "consumes_decisions_from": [
+          "runtime_monitoring"
+        ],
+        "evidence_from_runtime_monitoring": "evid (COPRunner.run_cop)"
+      },
+      "outputs": {
+        "interpretations": [
+          "CONTAINED",
+          "PROPAGATING",
+          "NEW_ROUTE",
+          "PATH_PARTIAL"
+        ],
+        "record": "models.COPDecision -> cop_decisions",
+        "downstream_cops": [
+          "policy_enforcement",
+          "risk_mitigation",
+          "audit_traceability"
+        ]
+      },
+      "action_permissions": {
+        "permitted_actions": [
+          "NONE",
+          "WATCH",
+          "PASS_TO_COP"
+        ],
+        "authority_tiers": [
+          "OBSERVE",
+          "RECORD",
+          "NOTIFY"
+        ],
+        "never_automatic": [],
+        "harness": {
+          "source": "harness_configs.OTHERS (notes only, not wired)",
+          "memory": "known relationships, previous routes",
+          "autonomous": [
+            "NONE",
+            "WATCH"
+          ],
+          "note": "graph state is its memory"
+        }
+      },
+      "status": {
+        "specified": true,
+        "implemented": true,
+        "runnable": true,
+        "active": false,
+        "tested": "executed, not asserted",
+        "live": "unverified (no database read)",
+        "topology_doc_status": "next"
+      },
+      "tests": "test_incident_response_reads_upstream_action_on_the_harness_path",
+      "known_gaps": [
+        "missing metrics (named in spec, computed nowhere): edge_table, new_edges, fan_in, fan_out, max_delegation_depth, cross_agent_path_general_to_coding",
+        "no HarnessConfig of its own: harness_configs.default_for gives the most restrictive default"
+      ],
+      "source": "collector/cops/specs.py SPECS"
+    },
+    {
+      "key": "incident_response",
+      "name": "Incident Response",
+      "behavioural_question": "Do the current findings constitute an actionable incident, and what should happen now?",
+      "spec_version": "1",
+      "cadence": "session",
+      "responsibility": "Do the current findings constitute an actionable incident, and what should happen now?",
+      "boundaries": [
+        "Only COP with intervening actions; PAUSE/BLOCK recorded, never executed (harness_configs.OTHERS, authority.check)"
+      ],
+      "inputs": {
+        "metric_keys": [
+          "insights.secrets",
+          "insights.sensitive_unasked",
+          "insights.blocked"
+        ],
+        "missing_metrics": [
+          "time_to_harm",
+          "intervention_available",
+          "affected_entities"
+        ],
+        "context_keys": [
+          "evidence_rows"
+        ],
+        "consumes_decisions_from": [
+          "runtime_monitoring",
+          "anomaly_detection",
+          "policy_enforcement",
+          "interaction_discovery"
+        ],
+        "evidence_from_runtime_monitoring": "evid (COPRunner.run_cop)"
+      },
+      "outputs": {
+        "interpretations": [
+          "NO_INCIDENT",
+          "WATCH",
+          "INCIDENT"
+        ],
+        "record": "models.COPDecision -> cop_decisions",
+        "downstream_cops": []
+      },
+      "action_permissions": {
+        "permitted_actions": [
+          "NONE",
+          "WATCH",
+          "ALERT",
+          "INSTRUCT",
+          "REQUEST_APPROVAL",
+          "PAUSE",
+          "BLOCK",
+          "ESCALATE"
+        ],
+        "authority_tiers": [
+          "OBSERVE",
+          "RECORD",
+          "ALERT",
+          "REQUEST",
+          "RECOMMEND",
+          "INITIATE",
+          "INTERVENE"
+        ],
+        "never_automatic": [
+          "PAUSE",
+          "BLOCK"
+        ],
+        "harness": {
+          "source": "harness_configs.OTHERS (notes only, not wired)",
+          "memory": "open incidents, prior responses",
+          "autonomous": [
+            "NONE",
+            "WATCH"
+          ],
+          "approval": [
+            "ALERT",
+            "ESCALATE",
+            "REQUEST_APPROVAL"
+          ],
+          "prohibited_until_live": [
+            "PAUSE",
+            "BLOCK"
+          ],
+          "note": "the only COP with intervening actions at all"
+        }
+      },
+      "status": {
+        "specified": true,
+        "implemented": true,
+        "runnable": true,
+        "active": true,
+        "tested": "asserted",
+        "live": "unverified (no database read)",
+        "topology_doc_status": "active"
+      },
+      "tests": [
+        "test_normal_session_is_quiet",
+        "test_partial_instrumentation_degrades_but_does_not_alarm",
+        "test_spike_is_anomalous_but_not_an_incident",
+        "test_anomaly_plus_secret_escalates",
+        "test_thin_evidence_is_insufficient_and_lowers_confidence",
+        "test_incident_response_reads_upstream_action_on_the_harness_path"
+      ],
+      "known_gaps": [
+        "missing metrics (named in spec, computed nowhere): time_to_harm, intervention_available, affected_entities",
+        "no HarnessConfig of its own: harness_configs.default_for gives the most restrictive default"
+      ],
+      "source": "collector/cops/specs.py SPECS"
+    },
+    {
+      "key": "classification_tagging",
+      "name": "Classification & Tagging",
+      "behavioural_question": "What kind of governance event is this, and which entities should remain associated with it?",
+      "spec_version": "1",
+      "cadence": "session",
+      "responsibility": "What kind of governance event is this, and which entities should remain associated with it?",
+      "boundaries": [
+        "'Kind only. Not how serious, not what to do'; permits only NONE (interpret._classification_tagging)"
+      ],
+      "inputs": {
+        "metric_keys": [
+          "insights.secrets",
+          "insights.sensitive_unasked",
+          "insights.outside",
+          "insights.blocked"
+        ],
+        "missing_metrics": [
+          "actor_type",
+          "resource_type",
+          "incident_family",
+          "classification_confidence"
+        ],
+        "context_keys": [],
+        "consumes_decisions_from": [],
+        "evidence_from_runtime_monitoring": "evid (COPRunner.run_cop)"
+      },
+      "outputs": {
+        "interpretations": [
+          "UNCLASSIFIED",
+          "BOUNDARY",
+          "OVERSIGHT",
+          "LOOPS",
+          "OUTCOME",
+          "INTEGRITY",
+          "COST"
+        ],
+        "record": "models.COPDecision -> cop_decisions",
+        "downstream_cops": [
+          "governance_intelligence"
+        ]
+      },
+      "action_permissions": {
+        "permitted_actions": [
+          "NONE"
+        ],
+        "authority_tiers": [
+          "OBSERVE"
+        ],
+        "never_automatic": [],
+        "harness": {
+          "source": "harness_configs.OTHERS (notes only, not wired)",
+          "memory": "taxonomy, and tags that persist on entities",
+          "autonomous": [
+            "NONE"
+          ],
+          "note": "records only; no alerting"
+        }
+      },
+      "status": {
+        "specified": true,
+        "implemented": true,
+        "runnable": false,
+        "active": false,
+        "tested": "no",
+        "live": "unverified (no database read)",
+        "topology_doc_status": "defined"
+      },
+      "tests": [],
+      "known_gaps": [
+        "missing metrics (named in spec, computed nowhere): actor_type, resource_type, incident_family, classification_confidence",
+        "has an interpreter but is not in specs.ORDER: COPRunner silently drops it, even with --activate",
+        "labels LOOPS, OUTCOME, COST never produced by the rule interpreter",
+        "no HarnessConfig of its own: harness_configs.default_for gives the most restrictive default"
+      ],
+      "source": "collector/cops/specs.py SPECS"
+    },
+    {
+      "key": "policy_enforcement",
+      "name": "Policy Enforcement",
+      "behavioural_question": "Does the observed behaviour violate an explicit permission, policy, entitlement, boundary, or approval requirement?",
+      "spec_version": "1",
+      "cadence": "session",
+      "responsibility": "Does the observed behaviour violate an explicit permission, policy, entitlement, boundary, or approval requirement?",
+      "boundaries": [
+        "'Was it permitted? Not: was it unusual, and not: was it harmful' (interpret._policy_enforcement)",
+        "No policy store: reads conditions, not evaluated rules; never reads silence as permission"
+      ],
+      "inputs": {
+        "metric_keys": [
+          "insights.blocked",
+          "insights.sensitive_unasked",
+          "insights.outside",
+          "insights.secrets",
+          "oversight.declined_inferred"
+        ],
+        "missing_metrics": [
+          "entitlement_mismatch",
+          "indirect_privilege_use",
+          "policy_precedence",
+          "missing_required_approval"
+        ],
+        "context_keys": [
+          "matched_policy",
+          "lane_path"
+        ],
+        "consumes_decisions_from": [
+          "runtime_monitoring",
+          "interaction_discovery"
+        ],
+        "evidence_from_runtime_monitoring": "evid (COPRunner.run_cop)"
+      },
+      "outputs": {
+        "interpretations": [
+          "ALLOWED",
+          "VIOLATION",
+          "APPROVAL_REQUIRED",
+          "UNCERTAIN"
+        ],
+        "record": "models.COPDecision -> cop_decisions",
+        "downstream_cops": [
+          "incident_response",
+          "risk_mitigation",
+          "audit_traceability"
+        ]
+      },
+      "action_permissions": {
+        "permitted_actions": [
+          "NONE",
+          "WATCH",
+          "ALERT",
+          "REQUEST_APPROVAL",
+          "BLOCK",
+          "PASS_TO_COP"
+        ],
+        "authority_tiers": [
+          "OBSERVE",
+          "RECORD",
+          "ALERT",
+          "NOTIFY",
+          "REQUEST",
+          "INTERVENE"
+        ],
+        "never_automatic": [
+          "BLOCK"
+        ],
+        "harness": {
+          "source": "harness_configs.OTHERS (notes only, not wired)",
+          "memory": "policy version only",
+          "autonomous": [
+            "NONE",
+            "WATCH"
+          ],
+          "approval": [
+            "ALERT",
+            "REQUEST_APPROVAL"
+          ],
+          "note": "deterministic; strict reverification"
+        }
+      },
+      "status": {
+        "specified": true,
+        "implemented": true,
+        "runnable": true,
+        "active": false,
+        "tested": "executed, not asserted",
+        "live": "unverified (no database read)",
+        "topology_doc_status": "next"
+      },
+      "tests": "test_incident_response_reads_upstream_action_on_the_harness_path",
+      "known_gaps": [
+        "missing metrics (named in spec, computed nowhere): entitlement_mismatch, indirect_privilege_use, policy_precedence, missing_required_approval",
+        "no HarnessConfig of its own: harness_configs.default_for gives the most restrictive default"
+      ],
+      "source": "collector/cops/specs.py SPECS"
+    },
+    {
+      "key": "risk_mitigation",
+      "name": "Risk Mitigation",
+      "behavioural_question": "Do the combined findings create a material or emerging risk, and what residual risk remains after available controls?",
+      "spec_version": "1",
+      "cadence": "session",
+      "responsibility": "Do the combined findings create a material or emerging risk, and what residual risk remains after available controls?",
+      "boundaries": [
+        "none stated in code beyond permitted_actions"
+      ],
+      "inputs": {
+        "metric_keys": [
+          "insights.secrets",
+          "insights.sensitive_unasked",
+          "insights.outside",
+          "insights.reverted",
+          "insights.token_outlier"
+        ],
+        "missing_metrics": [
+          "compound_risk_score",
+          "reversibility",
+          "residual_risk"
+        ],
+        "context_keys": [],
+        "consumes_decisions_from": [],
+        "evidence_from_runtime_monitoring": "evid (COPRunner.run_cop)"
+      },
+      "outputs": {
+        "interpretations": [
+          "LOW",
+          "EMERGING",
+          "MATERIAL"
+        ],
+        "record": "models.COPDecision -> cop_decisions",
+        "downstream_cops": [
+          "incident_response"
+        ]
+      },
+      "action_permissions": {
+        "permitted_actions": [
+          "NONE",
+          "WATCH",
+          "INSTRUCT",
+          "ESCALATE",
+          "PASS_TO_COP"
+        ],
+        "authority_tiers": [
+          "OBSERVE",
+          "RECORD",
+          "NOTIFY",
+          "RECOMMEND",
+          "INITIATE"
+        ],
+        "never_automatic": [],
+        "harness": {
+          "source": "harness_configs.default_for (restrictive default)"
+        }
+      },
+      "status": {
+        "specified": true,
+        "implemented": false,
+        "runnable": false,
+        "active": false,
+        "tested": "no",
+        "live": "unverified (no database read)",
+        "topology_doc_status": "defined"
+      },
+      "tests": [],
+      "known_gaps": [
+        "missing metrics (named in spec, computed nowhere): compound_risk_score, reversibility, residual_risk",
+        "no RuleInterpreter method: RuleInterpreter.interpret raises NotImplementedError"
+      ],
+      "source": "collector/cops/specs.py SPECS"
+    },
+    {
+      "key": "resource_management",
+      "name": "Resource Management",
+      "behavioural_question": "Is resource consumption within entitlement and acceptable operating bounds?",
+      "spec_version": "1",
+      "cadence": "session",
+      "responsibility": "Is resource consumption within entitlement and acceptable operating bounds?",
+      "boundaries": [
+        "Burn and waste kept apart; 'whether the work was permitted is Policy Enforcement's question' (interpret.RuleInterpreter.resource_management)",
+        "No quota configured: UNAUTHORIZED unreachable until budget_or_quota exists (specs.py comment)"
+      ],
+      "inputs": {
+        "metric_keys": [
+          "insights.token_outlier",
+          "insights.duration_outlier",
+          "insights.stalled",
+          "activity.action_rate_ratio"
+        ],
+        "missing_metrics": [
+          "budget_or_quota",
+          "cpu_gpu_memory",
+          "rate_limit_hits"
+        ],
+        "context_keys": [],
+        "consumes_decisions_from": [],
+        "evidence_from_runtime_monitoring": "evid (COPRunner.run_cop)"
+      },
+      "outputs": {
+        "interpretations": [
+          "NORMAL",
+          "INEFFICIENT",
+          "EXCESSIVE",
+          "UNAUTHORIZED",
+          "INDETERMINATE"
+        ],
+        "record": "models.COPDecision -> cop_decisions",
+        "downstream_cops": [
+          "workload_optimization",
+          "risk_mitigation"
+        ]
+      },
+      "action_permissions": {
+        "permitted_actions": [
+          "NONE",
+          "WATCH",
+          "ALERT"
+        ],
+        "authority_tiers": [
+          "OBSERVE",
+          "RECORD",
+          "ALERT"
+        ],
+        "never_automatic": [],
+        "harness": {
+          "source": "harness_configs.RESOURCE_MANAGEMENT",
+          "autonomous": [
+            "NONE",
+            "WATCH"
+          ],
+          "approval": [
+            "ALERT",
+            "INSTRUCT"
+          ],
+          "prohibited": [
+            "PAUSE",
+            "BLOCK",
+            "ESCALATE"
+          ],
+          "memory": {
+            "working": true,
+            "session": true,
+            "historical": "targeted",
+            "retain": [
+              "usage baseline per tool",
+              "previous resource warnings"
+            ]
+          },
+          "budgets": {
+            "max_steps": 10,
+            "max_tool_calls": 6,
+            "max_context_requests": 2,
+            "max_handoffs": 3,
+            "max_retries": 1,
+            "max_runtime_s": 30
+          }
+        }
+      },
+      "status": {
+        "specified": true,
+        "implemented": true,
+        "runnable": true,
+        "active": true,
+        "tested": "executed, not asserted",
+        "live": "unverified (no database read)",
+        "topology_doc_status": "defined"
+      },
+      "tests": "every runner test session (it is in ACTIVE); harness test",
+      "known_gaps": [
+        "missing metrics (named in spec, computed nowhere): budget_or_quota, cpu_gpu_memory, rate_limit_hits",
+        "docs/cops/cops_topology.json says 'defined' but spec is active",
+        "UNAUTHORIZED unreachable until budget_or_quota exists"
+      ],
+      "source": "collector/cops/specs.py SPECS"
+    },
+    {
+      "key": "governance_intelligence",
+      "name": "Governance Intelligence",
+      "behavioural_question": "What recurring patterns, concentrations or blind spots indicate a broader governance problem?",
+      "spec_version": "1",
+      "cadence": "aggregate",
+      "responsibility": "What recurring patterns, concentrations or blind spots indicate a broader governance problem?",
+      "boundaries": [
+        "none stated in code beyond permitted_actions"
+      ],
+      "inputs": {
+        "metric_keys": [],
+        "missing_metrics": [
+          "metric_state_trends_from_metric_events",
+          "decision_trends_from_cop_decisions",
+          "repeat_actor_concentration"
+        ],
+        "context_keys": [],
+        "consumes_decisions_from": [],
+        "evidence_from_runtime_monitoring": "evid (COPRunner.run_cop)"
+      },
+      "outputs": {
+        "interpretations": [
+          "NO_PATTERN",
+          "RECURRING",
+          "CONCENTRATED",
+          "BLIND_SPOT"
+        ],
+        "record": "models.COPDecision -> cop_decisions",
+        "downstream_cops": [
+          "governance_architecture",
+          "knowledge_policy_management"
+        ]
+      },
+      "action_permissions": {
+        "permitted_actions": [
+          "NONE",
+          "WATCH"
+        ],
+        "authority_tiers": [
+          "OBSERVE",
+          "RECORD"
+        ],
+        "never_automatic": [],
+        "harness": {
+          "source": "harness_configs.default_for (restrictive default)"
+        }
+      },
+      "status": {
+        "specified": true,
+        "implemented": false,
+        "runnable": false,
+        "active": false,
+        "tested": "no",
+        "live": "unverified (no database read)",
+        "topology_doc_status": "defined"
+      },
+      "tests": [],
+      "known_gaps": [
+        "missing metrics (named in spec, computed nowhere): metric_state_trends_from_metric_events, decision_trends_from_cop_decisions, repeat_actor_concentration",
+        "reads no computed metric; cannot run on today's data",
+        "no RuleInterpreter method: RuleInterpreter.interpret raises NotImplementedError",
+        "cadence 'aggregate': COPRunner only has a per-session path"
+      ],
+      "source": "collector/cops/specs.py SPECS"
+    },
+    {
+      "key": "behavior_analytics",
+      "name": "Behavior Analytics",
+      "behavioural_question": "What behavioural pattern best characterizes this execution or sequence of executions?",
+      "spec_version": "1",
+      "cadence": "session",
+      "responsibility": "What behavioural pattern best characterizes this execution or sequence of executions?",
+      "boundaries": [
+        "none stated in code beyond permitted_actions"
+      ],
+      "inputs": {
+        "metric_keys": [
+          "insights.repetition",
+          "insights.retry",
+          "insights.stalled",
+          "insights.failed",
+          "oversight.fast_approvals"
+        ],
+        "missing_metrics": [
+          "loop_score_per_lane",
+          "exploration_rate",
+          "planning_deviation",
+          "recovery_pattern"
+        ],
+        "context_keys": [
+          "lane_path"
+        ],
+        "consumes_decisions_from": [],
+        "evidence_from_runtime_monitoring": "evid (COPRunner.run_cop)"
+      },
+      "outputs": {
+        "interpretations": [
+          "STABLE",
+          "LOOPING",
+          "DRIFTING",
+          "OVER_EXPLORING",
+          "POOR_RECOVERY"
+        ],
+        "record": "models.COPDecision -> cop_decisions",
+        "downstream_cops": [
+          "anomaly_detection",
+          "recovery_resilience"
+        ]
+      },
+      "action_permissions": {
+        "permitted_actions": [
+          "NONE",
+          "WATCH"
+        ],
+        "authority_tiers": [
+          "OBSERVE",
+          "RECORD"
+        ],
+        "never_automatic": [],
+        "harness": {
+          "source": "harness_configs.default_for (restrictive default)"
+        }
+      },
+      "status": {
+        "specified": true,
+        "implemented": false,
+        "runnable": false,
+        "active": false,
+        "tested": "no",
+        "live": "unverified (no database read)",
+        "topology_doc_status": "defined"
+      },
+      "tests": [],
+      "known_gaps": [
+        "missing metrics (named in spec, computed nowhere): loop_score_per_lane, exploration_rate, planning_deviation, recovery_pattern",
+        "no RuleInterpreter method: RuleInterpreter.interpret raises NotImplementedError"
+      ],
+      "source": "collector/cops/specs.py SPECS"
+    },
+    {
+      "key": "recovery_resilience",
+      "name": "Recovery & Resilience",
+      "behavioural_question": "After failure or intervention, did the system return to a viable state without compounding the problem?",
+      "spec_version": "1",
+      "cadence": "session",
+      "responsibility": "After failure or intervention, did the system return to a viable state without compounding the problem?",
+      "boundaries": [
+        "none stated in code beyond permitted_actions"
+      ],
+      "inputs": {
+        "metric_keys": [
+          "insights.reverted",
+          "insights.retry",
+          "insights.failed"
+        ],
+        "missing_metrics": [
+          "recovery_success_after_failure",
+          "irreversible_change",
+          "recovery_time"
+        ],
+        "context_keys": [
+          "lane_path"
+        ],
+        "consumes_decisions_from": [],
+        "evidence_from_runtime_monitoring": "evid (COPRunner.run_cop)"
+      },
+      "outputs": {
+        "interpretations": [
+          "RECOVERED",
+          "PARTIAL_RECOVERY",
+          "FAILED_RECOVERY",
+          "IRREVERSIBLE"
+        ],
+        "record": "models.COPDecision -> cop_decisions",
+        "downstream_cops": [
+          "incident_response",
+          "governance_intelligence"
+        ]
+      },
+      "action_permissions": {
+        "permitted_actions": [
+          "NONE",
+          "WATCH",
+          "ALERT"
+        ],
+        "authority_tiers": [
+          "OBSERVE",
+          "RECORD",
+          "ALERT"
+        ],
+        "never_automatic": [],
+        "harness": {
+          "source": "harness_configs.default_for (restrictive default)"
+        }
+      },
+      "status": {
+        "specified": true,
+        "implemented": false,
+        "runnable": false,
+        "active": false,
+        "tested": "no",
+        "live": "unverified (no database read)",
+        "topology_doc_status": "defined"
+      },
+      "tests": [],
+      "known_gaps": [
+        "missing metrics (named in spec, computed nowhere): recovery_success_after_failure, irreversible_change, recovery_time",
+        "no RuleInterpreter method: RuleInterpreter.interpret raises NotImplementedError"
+      ],
+      "source": "collector/cops/specs.py SPECS"
+    },
+    {
+      "key": "workload_optimization",
+      "name": "Workload Optimization",
+      "behavioural_question": "Is the workload using tools, models, time and resources efficiently for the task being performed?",
+      "spec_version": "1",
+      "cadence": "session",
+      "responsibility": "Is the workload using tools, models, time and resources efficiently for the task being performed?",
+      "boundaries": [
+        "none stated in code beyond permitted_actions"
+      ],
+      "inputs": {
+        "metric_keys": [
+          "insights.repetition",
+          "insights.duration_outlier",
+          "insights.token_outlier",
+          "activity.action_rate_ratio"
+        ],
+        "missing_metrics": [
+          "cost_per_task",
+          "cache_efficiency",
+          "redundant_reads"
+        ],
+        "context_keys": [],
+        "consumes_decisions_from": [],
+        "evidence_from_runtime_monitoring": "evid (COPRunner.run_cop)"
+      },
+      "outputs": {
+        "interpretations": [
+          "EFFICIENT",
+          "REDUNDANT",
+          "BOTTLENECK",
+          "OVERPROVISIONED",
+          "UNDERPROVISIONED"
+        ],
+        "record": "models.COPDecision -> cop_decisions",
+        "downstream_cops": [
+          "resource_management"
+        ]
+      },
+      "action_permissions": {
+        "permitted_actions": [
+          "NONE",
+          "WATCH",
+          "INSTRUCT"
+        ],
+        "authority_tiers": [
+          "OBSERVE",
+          "RECORD",
+          "RECOMMEND"
+        ],
+        "never_automatic": [],
+        "harness": {
+          "source": "harness_configs.default_for (restrictive default)"
+        }
+      },
+      "status": {
+        "specified": true,
+        "implemented": false,
+        "runnable": false,
+        "active": false,
+        "tested": "no",
+        "live": "unverified (no database read)",
+        "topology_doc_status": "defined"
+      },
+      "tests": [],
+      "known_gaps": [
+        "missing metrics (named in spec, computed nowhere): cost_per_task, cache_efficiency, redundant_reads",
+        "no RuleInterpreter method: RuleInterpreter.interpret raises NotImplementedError"
+      ],
+      "source": "collector/cops/specs.py SPECS"
+    },
+    {
+      "key": "audit_traceability",
+      "name": "Audit & Traceability",
+      "behavioural_question": "Can every consequential finding, decision and action be attributed and reconstructed from trustworthy evidence?",
+      "spec_version": "1",
+      "cadence": "session",
+      "responsibility": "Can every consequential finding, decision and action be attributed and reconstructed from trustworthy evidence?",
+      "boundaries": [
+        "Owns actions another COP could not judge (interpret._audit_traceability)"
+      ],
+      "inputs": {
+        "metric_keys": [
+          "insights.unattributed",
+          "telemetry.turn_linkage",
+          "telemetry.lane_linkage",
+          "telemetry.source_agreement"
+        ],
+        "missing_metrics": [
+          "decision_evidence_coverage",
+          "raw_ref_resolvability"
+        ],
+        "context_keys": [
+          "evidence_rows"
+        ],
+        "consumes_decisions_from": [],
+        "evidence_from_runtime_monitoring": "evid (COPRunner.run_cop)"
+      },
+      "outputs": {
+        "interpretations": [
+          "COMPLETE",
+          "PARTIAL",
+          "BROKEN_TRACE",
+          "UNATTRIBUTABLE"
+        ],
+        "record": "models.COPDecision -> cop_decisions",
+        "downstream_cops": [
+          "governance_architecture"
+        ]
+      },
+      "action_permissions": {
+        "permitted_actions": [
+          "NONE",
+          "WATCH",
+          "ALERT"
+        ],
+        "authority_tiers": [
+          "OBSERVE",
+          "RECORD",
+          "ALERT"
+        ],
+        "never_automatic": [],
+        "harness": {
+          "source": "harness_configs.OTHERS (notes only, not wired)",
+          "memory": "retrieval rather than retention",
+          "autonomous": [
+            "NONE",
+            "WATCH"
+          ],
+          "note": "least live memory, most lookup"
+        }
+      },
+      "status": {
+        "specified": true,
+        "implemented": true,
+        "runnable": false,
+        "active": false,
+        "tested": "no",
+        "live": "unverified (no database read)",
+        "topology_doc_status": "defined"
+      },
+      "tests": [],
+      "known_gaps": [
+        "missing metrics (named in spec, computed nowhere): decision_evidence_coverage, raw_ref_resolvability",
+        "has an interpreter but is not in specs.ORDER: COPRunner silently drops it, even with --activate",
+        "no HarnessConfig of its own: harness_configs.default_for gives the most restrictive default"
+      ],
+      "source": "collector/cops/specs.py SPECS"
+    },
+    {
+      "key": "knowledge_policy_management",
+      "name": "Knowledge & Policy Management",
+      "behavioural_question": "Are the rules, policies and governance knowledge currently being used still current, coherent and internally consistent?",
+      "spec_version": "1",
+      "cadence": "aggregate",
+      "responsibility": "Are the rules, policies and governance knowledge currently being used still current, coherent and internally consistent?",
+      "boundaries": [
+        "none stated in code beyond permitted_actions"
+      ],
+      "inputs": {
+        "metric_keys": [],
+        "missing_metrics": [
+          "policy_store",
+          "policy_version",
+          "rule_conflicts",
+          "rule_hit_rate",
+          "override_rate"
+        ],
+        "context_keys": [],
+        "consumes_decisions_from": [],
+        "evidence_from_runtime_monitoring": "evid (COPRunner.run_cop)"
+      },
+      "outputs": {
+        "interpretations": [
+          "CURRENT",
+          "STALE",
+          "CONFLICT",
+          "UPDATE_REQUIRED"
+        ],
+        "record": "models.COPDecision -> cop_decisions",
+        "downstream_cops": [
+          "governance_architecture"
+        ]
+      },
+      "action_permissions": {
+        "permitted_actions": [
+          "NONE",
+          "WATCH"
+        ],
+        "authority_tiers": [
+          "OBSERVE",
+          "RECORD"
+        ],
+        "never_automatic": [],
+        "harness": {
+          "source": "harness_configs.default_for (restrictive default)"
+        }
+      },
+      "status": {
+        "specified": true,
+        "implemented": false,
+        "runnable": false,
+        "active": false,
+        "tested": "no",
+        "live": "unverified (no database read)",
+        "topology_doc_status": "defined"
+      },
+      "tests": [],
+      "known_gaps": [
+        "missing metrics (named in spec, computed nowhere): policy_store, policy_version, rule_conflicts, rule_hit_rate, override_rate",
+        "reads no computed metric; cannot run on today's data",
+        "no RuleInterpreter method: RuleInterpreter.interpret raises NotImplementedError",
+        "cadence 'aggregate': COPRunner only has a per-session path"
+      ],
+      "source": "collector/cops/specs.py SPECS"
+    },
+    {
+      "key": "agent_lifecycle_management",
+      "name": "Agent Lifecycle Management",
+      "behavioural_question": "Has an agent's identity, version, configuration, capability or connectivity changed in a way requiring governance attention?",
+      "spec_version": "1",
+      "cadence": "session",
+      "responsibility": "Has an agent's identity, version, configuration, capability or connectivity changed in a way requiring governance attention?",
+      "boundaries": [
+        "none stated in code beyond permitted_actions"
+      ],
+      "inputs": {
+        "metric_keys": [
+          "access.first_seen_mcp"
+        ],
+        "missing_metrics": [
+          "tool_version_change",
+          "model_change",
+          "new_machine",
+          "first_last_seen",
+          "hook_config_removed"
+        ],
+        "context_keys": [],
+        "consumes_decisions_from": [],
+        "evidence_from_runtime_monitoring": "evid (COPRunner.run_cop)"
+      },
+      "outputs": {
+        "interpretations": [
+          "UNCHANGED",
+          "NEW",
+          "CHANGED",
+          "DRIFTED",
+          "INACTIVE",
+          "RETIRED"
+        ],
+        "record": "models.COPDecision -> cop_decisions",
+        "downstream_cops": [
+          "classification_tagging",
+          "policy_enforcement"
+        ]
+      },
+      "action_permissions": {
+        "permitted_actions": [
+          "NONE",
+          "WATCH",
+          "ALERT"
+        ],
+        "authority_tiers": [
+          "OBSERVE",
+          "RECORD",
+          "ALERT"
+        ],
+        "never_automatic": [],
+        "harness": {
+          "source": "harness_configs.default_for (restrictive default)"
+        }
+      },
+      "status": {
+        "specified": true,
+        "implemented": false,
+        "runnable": false,
+        "active": false,
+        "tested": "no",
+        "live": "unverified (no database read)",
+        "topology_doc_status": "defined"
+      },
+      "tests": [],
+      "known_gaps": [
+        "missing metrics (named in spec, computed nowhere): tool_version_change, model_change, new_machine, first_last_seen, hook_config_removed",
+        "no RuleInterpreter method: RuleInterpreter.interpret raises NotImplementedError"
+      ],
+      "source": "collector/cops/specs.py SPECS"
+    },
+    {
+      "key": "governance_architecture",
+      "name": "Governance Architecture",
+      "behavioural_question": "Does the current governance architecture adequately cover the estate and the behaviours actually occurring?",
+      "spec_version": "1",
+      "cadence": "aggregate",
+      "responsibility": "Does the current governance architecture adequately cover the estate and the behaviours actually occurring?",
+      "boundaries": [
+        "none stated in code beyond permitted_actions"
+      ],
+      "inputs": {
+        "metric_keys": [
+          "telemetry.unknown_share"
+        ],
+        "missing_metrics": [
+          "observable_field_status_per_tool",
+          "cops_coverage",
+          "unhandled_exceptions",
+          "repeated_escalations"
+        ],
+        "context_keys": [],
+        "consumes_decisions_from": [],
+        "evidence_from_runtime_monitoring": "evid (COPRunner.run_cop)"
+      },
+      "outputs": {
+        "interpretations": [
+          "ADEQUATE",
+          "GAP",
+          "STRUCTURAL_CHANGE_RECOMMENDED"
+        ],
+        "record": "models.COPDecision -> cop_decisions",
+        "downstream_cops": []
+      },
+      "action_permissions": {
+        "permitted_actions": [
+          "NONE",
+          "WATCH"
+        ],
+        "authority_tiers": [
+          "OBSERVE",
+          "RECORD"
+        ],
+        "never_automatic": [],
+        "harness": {
+          "source": "harness_configs.default_for (restrictive default)"
+        }
+      },
+      "status": {
+        "specified": true,
+        "implemented": false,
+        "runnable": false,
+        "active": false,
+        "tested": "no",
+        "live": "unverified (no database read)",
+        "topology_doc_status": "defined"
+      },
+      "tests": [],
+      "known_gaps": [
+        "missing metrics (named in spec, computed nowhere): observable_field_status_per_tool, cops_coverage, unhandled_exceptions, repeated_escalations",
+        "no RuleInterpreter method: RuleInterpreter.interpret raises NotImplementedError",
+        "cadence 'aggregate': COPRunner only has a per-session path"
+      ],
+      "source": "collector/cops/specs.py SPECS"
+    }
+  ]
+}
