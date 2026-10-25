@@ -6,7 +6,7 @@ import signal_metrics
 from cops.reader import DashboardMetricReader, MemoryBackend
 from cops.interpret import RuleInterpreter, LLMInterpreter
 from cops.runner import COPRunner
-from cops.specs import SPECS, BY_KEY, ACTIVE
+from cops.specs import SPECS, BY_KEY, ACTIVE, ORDER
 
 OPS = "ops@example.com"
 
@@ -151,7 +151,17 @@ def test_specs_only_reference_computed_metrics():
     for s in SPECS:
         assert set(s.metric_keys) <= known, s.key
         assert s.interpretations and set(s.permitted_actions)
-    assert len(SPECS) == 18 and set(ACTIVE) == {"runtime_monitoring", "anomaly_detection", "incident_response"}
+    assert len(SPECS) == 18
+
+def test_active_cops_match_the_specs_and_can_run():
+    # Which COPS are active is decided in specs.py, not here. This checks that
+    # what the specs switch on is actually runnable, not a fixed list of names.
+    assert set(ACTIVE) == {s.key for s in SPECS if s.active}
+    assert "runtime_monitoring" in ACTIVE and ORDER[0] == "runtime_monitoring"
+    rules = RuleInterpreter()
+    for key in ACTIVE:
+        assert key in ORDER, f"{key} is active but COPRunner would drop it"
+        assert callable(getattr(rules, key, None)), f"{key} is active but has no rule interpreter"
 
 def test_reader_refuses_unlisted_context():
     r = DashboardMetricReader(MemoryBackend([], []))
