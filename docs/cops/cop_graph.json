@@ -1,0 +1,649 @@
+{
+  "meta": {
+    "repo": "Purvi9399/signal-dashboard",
+    "commit": "f4f131b",
+    "generated_by": "read-only extraction; nothing in the repo changed",
+    "metric_ids": [
+      "insights.repetition",
+      "insights.retry",
+      "insights.stalled",
+      "insights.outside",
+      "insights.sensitive_unasked",
+      "insights.secrets",
+      "insights.blocked",
+      "insights.no_oversight",
+      "insights.reverted",
+      "insights.lockfile",
+      "insights.failed",
+      "insights.unattributed",
+      "insights.token_outlier",
+      "insights.duration_outlier",
+      "telemetry.collector_coverage",
+      "telemetry.source_agreement",
+      "telemetry.turn_linkage",
+      "telemetry.lane_linkage",
+      "path.transition_novelty",
+      "activity.action_rate_ratio",
+      "access.first_seen_mcp",
+      "oversight.fast_approvals",
+      "oversight.declined_inferred",
+      "interaction.subagent_lanes",
+      "interaction.mcp_servers",
+      "telemetry.unknown_share"
+    ]
+  },
+  "defined": [
+    {
+      "from": "runtime_monitoring",
+      "to": "workflow_orchestration",
+      "kind": "evidence_broadcast",
+      "defined_in": "runner.COPRunner.run_cop",
+      "executed": false,
+      "where": "runner.COPRunner.run_cop (evid)",
+      "trigger": "always, when runtime_monitoring ran earlier",
+      "purpose": "scale this COP's confidence by evidence quality",
+      "declared_as_handoff_by_sender": false
+    },
+    {
+      "from": "workflow_orchestration",
+      "to": "behavior_analytics",
+      "kind": "handoff",
+      "defined_in": "specs.py downstream_cops",
+      "executed": false,
+      "where": "recorded in COPDecision.downstream_cops only",
+      "trigger": "UNDEFINED: sender has no interpreter",
+      "purpose": "pass the finding to another governance lens"
+    },
+    {
+      "from": "workflow_orchestration",
+      "to": "incident_response",
+      "kind": "handoff",
+      "defined_in": "specs.py downstream_cops",
+      "executed": false,
+      "where": "recorded in COPDecision.downstream_cops only",
+      "trigger": "UNDEFINED: sender has no interpreter",
+      "purpose": "pass the finding to another governance lens"
+    },
+    {
+      "from": "runtime_monitoring",
+      "to": "audit_traceability",
+      "kind": "handoff",
+      "defined_in": "specs.py downstream_cops",
+      "executed": false,
+      "where": "recorded in COPDecision.downstream_cops only",
+      "trigger": "evidence INSUFFICIENT or DEGRADED",
+      "purpose": "pass the finding to another governance lens"
+    },
+    {
+      "from": "runtime_monitoring",
+      "to": "incident_response",
+      "kind": "handoff",
+      "defined_in": "specs.py downstream_cops",
+      "executed": false,
+      "where": "recorded in COPDecision.downstream_cops only",
+      "trigger": "evidence INSUFFICIENT",
+      "purpose": "pass the finding to another governance lens"
+    },
+    {
+      "from": "runtime_monitoring",
+      "to": "anomaly_detection",
+      "kind": "reads_decision",
+      "defined_in": "specs.py consumes_decisions_from",
+      "executed": true,
+      "where": "runner.COPRunner.run_cop (upstream=...)",
+      "trigger": "upstream ran earlier in specs.ORDER this session; downstream interpreter runs if any upstream action != NONE or a metric is in WARNING/EXCEPTION/CRITICAL",
+      "purpose": "passed in; this interpreter does not read its content",
+      "declared_as_handoff_by_sender": false
+    },
+    {
+      "from": "runtime_monitoring",
+      "to": "anomaly_detection",
+      "kind": "evidence_broadcast",
+      "defined_in": "runner.COPRunner.run_cop",
+      "executed": true,
+      "where": "runner.COPRunner.run_cop (evid)",
+      "trigger": "always, when runtime_monitoring ran earlier",
+      "purpose": "scale this COP's confidence by evidence quality",
+      "declared_as_handoff_by_sender": false
+    },
+    {
+      "from": "anomaly_detection",
+      "to": "classification_tagging",
+      "kind": "handoff",
+      "defined_in": "specs.py downstream_cops",
+      "executed": false,
+      "where": "recorded in COPDecision.downstream_cops only",
+      "trigger": "ANOMALOUS",
+      "purpose": "pass the finding to another governance lens"
+    },
+    {
+      "from": "anomaly_detection",
+      "to": "policy_enforcement",
+      "kind": "handoff",
+      "defined_in": "specs.py downstream_cops",
+      "executed": false,
+      "where": "recorded in COPDecision.downstream_cops only",
+      "trigger": "ANOMALOUS with access.first_seen_mcp hot",
+      "purpose": "pass the finding to another governance lens"
+    },
+    {
+      "from": "anomaly_detection",
+      "to": "risk_mitigation",
+      "kind": "handoff",
+      "defined_in": "specs.py downstream_cops",
+      "executed": false,
+      "where": "recorded in COPDecision.downstream_cops only",
+      "trigger": "UNDEFINED: interpreter never emits this hand-off",
+      "purpose": "pass the finding to another governance lens"
+    },
+    {
+      "from": "anomaly_detection",
+      "to": "incident_response",
+      "kind": "handoff",
+      "defined_in": "specs.py downstream_cops",
+      "executed": false,
+      "where": "recorded in COPDecision.downstream_cops only",
+      "trigger": "ANOMALOUS",
+      "purpose": "pass the finding to another governance lens"
+    },
+    {
+      "from": "runtime_monitoring",
+      "to": "context_memory",
+      "kind": "evidence_broadcast",
+      "defined_in": "runner.COPRunner.run_cop",
+      "executed": false,
+      "where": "runner.COPRunner.run_cop (evid)",
+      "trigger": "always, when runtime_monitoring ran earlier",
+      "purpose": "scale this COP's confidence by evidence quality",
+      "declared_as_handoff_by_sender": false
+    },
+    {
+      "from": "context_memory",
+      "to": "behavior_analytics",
+      "kind": "handoff",
+      "defined_in": "specs.py downstream_cops",
+      "executed": false,
+      "where": "recorded in COPDecision.downstream_cops only",
+      "trigger": "UNDEFINED: sender has no interpreter",
+      "purpose": "pass the finding to another governance lens"
+    },
+    {
+      "from": "runtime_monitoring",
+      "to": "interaction_discovery",
+      "kind": "reads_decision",
+      "defined_in": "specs.py consumes_decisions_from",
+      "executed": true,
+      "where": "runner.COPRunner.run_cop (upstream=...)",
+      "trigger": "upstream ran earlier in specs.ORDER this session; downstream interpreter runs if any upstream action != NONE or a metric is in WARNING/EXCEPTION/CRITICAL",
+      "purpose": "passed in; this interpreter does not read its content",
+      "declared_as_handoff_by_sender": false
+    },
+    {
+      "from": "runtime_monitoring",
+      "to": "interaction_discovery",
+      "kind": "evidence_broadcast",
+      "defined_in": "runner.COPRunner.run_cop",
+      "executed": true,
+      "where": "runner.COPRunner.run_cop (evid)",
+      "trigger": "always, when runtime_monitoring ran earlier",
+      "purpose": "scale this COP's confidence by evidence quality",
+      "declared_as_handoff_by_sender": false
+    },
+    {
+      "from": "interaction_discovery",
+      "to": "policy_enforcement",
+      "kind": "handoff",
+      "defined_in": "specs.py downstream_cops",
+      "executed": false,
+      "where": "recorded in COPDecision.downstream_cops only",
+      "trigger": "NEW_ROUTE or PROPAGATING",
+      "purpose": "pass the finding to another governance lens"
+    },
+    {
+      "from": "interaction_discovery",
+      "to": "risk_mitigation",
+      "kind": "handoff",
+      "defined_in": "specs.py downstream_cops",
+      "executed": false,
+      "where": "recorded in COPDecision.downstream_cops only",
+      "trigger": "PROPAGATING",
+      "purpose": "pass the finding to another governance lens"
+    },
+    {
+      "from": "interaction_discovery",
+      "to": "audit_traceability",
+      "kind": "handoff",
+      "defined_in": "specs.py downstream_cops",
+      "executed": false,
+      "where": "recorded in COPDecision.downstream_cops only",
+      "trigger": "PATH_PARTIAL or NEW_ROUTE",
+      "purpose": "pass the finding to another governance lens"
+    },
+    {
+      "from": "runtime_monitoring",
+      "to": "incident_response",
+      "kind": "reads_decision",
+      "defined_in": "specs.py consumes_decisions_from",
+      "executed": true,
+      "where": "runner.COPRunner.run_cop (upstream=...)",
+      "trigger": "upstream ran earlier in specs.ORDER this session; downstream interpreter runs if any upstream action != NONE or a metric is in WARNING/EXCEPTION/CRITICAL",
+      "purpose": "incident_response combines findings",
+      "declared_as_handoff_by_sender": true
+    },
+    {
+      "from": "anomaly_detection",
+      "to": "incident_response",
+      "kind": "reads_decision",
+      "defined_in": "specs.py consumes_decisions_from",
+      "executed": true,
+      "where": "runner.COPRunner.run_cop (upstream=...)",
+      "trigger": "upstream ran earlier in specs.ORDER this session; downstream interpreter runs if any upstream action != NONE or a metric is in WARNING/EXCEPTION/CRITICAL",
+      "purpose": "incident_response combines findings",
+      "declared_as_handoff_by_sender": true
+    },
+    {
+      "from": "policy_enforcement",
+      "to": "incident_response",
+      "kind": "reads_decision",
+      "defined_in": "specs.py consumes_decisions_from",
+      "executed": true,
+      "where": "runner.COPRunner.run_cop (upstream=...)",
+      "trigger": "upstream ran earlier in specs.ORDER this session; downstream interpreter runs if any upstream action != NONE or a metric is in WARNING/EXCEPTION/CRITICAL",
+      "purpose": "incident_response combines findings",
+      "declared_as_handoff_by_sender": true
+    },
+    {
+      "from": "interaction_discovery",
+      "to": "incident_response",
+      "kind": "reads_decision",
+      "defined_in": "specs.py consumes_decisions_from",
+      "executed": true,
+      "where": "runner.COPRunner.run_cop (upstream=...)",
+      "trigger": "upstream ran earlier in specs.ORDER this session; downstream interpreter runs if any upstream action != NONE or a metric is in WARNING/EXCEPTION/CRITICAL",
+      "purpose": "incident_response combines findings",
+      "declared_as_handoff_by_sender": false
+    },
+    {
+      "from": "runtime_monitoring",
+      "to": "incident_response",
+      "kind": "evidence_broadcast",
+      "defined_in": "runner.COPRunner.run_cop",
+      "executed": true,
+      "where": "runner.COPRunner.run_cop (evid)",
+      "trigger": "always, when runtime_monitoring ran earlier",
+      "purpose": "scale this COP's confidence by evidence quality",
+      "declared_as_handoff_by_sender": true
+    },
+    {
+      "from": "runtime_monitoring",
+      "to": "classification_tagging",
+      "kind": "evidence_broadcast",
+      "defined_in": "runner.COPRunner.run_cop",
+      "executed": false,
+      "where": "runner.COPRunner.run_cop (evid)",
+      "trigger": "always, when runtime_monitoring ran earlier",
+      "purpose": "scale this COP's confidence by evidence quality",
+      "declared_as_handoff_by_sender": false
+    },
+    {
+      "from": "classification_tagging",
+      "to": "governance_intelligence",
+      "kind": "handoff",
+      "defined_in": "specs.py downstream_cops",
+      "executed": false,
+      "where": "recorded in COPDecision.downstream_cops only",
+      "trigger": "any classified family (not UNCLASSIFIED)",
+      "purpose": "pass the finding to another governance lens"
+    },
+    {
+      "from": "runtime_monitoring",
+      "to": "policy_enforcement",
+      "kind": "reads_decision",
+      "defined_in": "specs.py consumes_decisions_from",
+      "executed": true,
+      "where": "runner.COPRunner.run_cop (upstream=...)",
+      "trigger": "upstream ran earlier in specs.ORDER this session; downstream interpreter runs if any upstream action != NONE or a metric is in WARNING/EXCEPTION/CRITICAL",
+      "purpose": "passed in; this interpreter does not read its content",
+      "declared_as_handoff_by_sender": false
+    },
+    {
+      "from": "interaction_discovery",
+      "to": "policy_enforcement",
+      "kind": "reads_decision",
+      "defined_in": "specs.py consumes_decisions_from",
+      "executed": true,
+      "where": "runner.COPRunner.run_cop (upstream=...)",
+      "trigger": "upstream ran earlier in specs.ORDER this session; downstream interpreter runs if any upstream action != NONE or a metric is in WARNING/EXCEPTION/CRITICAL",
+      "purpose": "passed in; this interpreter does not read its content",
+      "declared_as_handoff_by_sender": true
+    },
+    {
+      "from": "runtime_monitoring",
+      "to": "policy_enforcement",
+      "kind": "evidence_broadcast",
+      "defined_in": "runner.COPRunner.run_cop",
+      "executed": true,
+      "where": "runner.COPRunner.run_cop (evid)",
+      "trigger": "always, when runtime_monitoring ran earlier",
+      "purpose": "scale this COP's confidence by evidence quality",
+      "declared_as_handoff_by_sender": false
+    },
+    {
+      "from": "policy_enforcement",
+      "to": "incident_response",
+      "kind": "handoff",
+      "defined_in": "specs.py downstream_cops",
+      "executed": false,
+      "where": "recorded in COPDecision.downstream_cops only",
+      "trigger": "VIOLATION or APPROVAL_REQUIRED",
+      "purpose": "pass the finding to another governance lens"
+    },
+    {
+      "from": "policy_enforcement",
+      "to": "risk_mitigation",
+      "kind": "handoff",
+      "defined_in": "specs.py downstream_cops",
+      "executed": false,
+      "where": "recorded in COPDecision.downstream_cops only",
+      "trigger": "VIOLATION with insights.secrets hot",
+      "purpose": "pass the finding to another governance lens"
+    },
+    {
+      "from": "policy_enforcement",
+      "to": "audit_traceability",
+      "kind": "handoff",
+      "defined_in": "specs.py downstream_cops",
+      "executed": false,
+      "where": "recorded in COPDecision.downstream_cops only",
+      "trigger": "VIOLATION, APPROVAL_REQUIRED, or UNCERTAIN with unknown conditions",
+      "purpose": "pass the finding to another governance lens"
+    },
+    {
+      "from": "runtime_monitoring",
+      "to": "risk_mitigation",
+      "kind": "evidence_broadcast",
+      "defined_in": "runner.COPRunner.run_cop",
+      "executed": false,
+      "where": "runner.COPRunner.run_cop (evid)",
+      "trigger": "always, when runtime_monitoring ran earlier",
+      "purpose": "scale this COP's confidence by evidence quality",
+      "declared_as_handoff_by_sender": false
+    },
+    {
+      "from": "risk_mitigation",
+      "to": "incident_response",
+      "kind": "handoff",
+      "defined_in": "specs.py downstream_cops",
+      "executed": false,
+      "where": "recorded in COPDecision.downstream_cops only",
+      "trigger": "UNDEFINED: sender has no interpreter",
+      "purpose": "pass the finding to another governance lens"
+    },
+    {
+      "from": "runtime_monitoring",
+      "to": "resource_management",
+      "kind": "evidence_broadcast",
+      "defined_in": "runner.COPRunner.run_cop",
+      "executed": true,
+      "where": "runner.COPRunner.run_cop (evid)",
+      "trigger": "always, when runtime_monitoring ran earlier",
+      "purpose": "scale this COP's confidence by evidence quality",
+      "declared_as_handoff_by_sender": false
+    },
+    {
+      "from": "resource_management",
+      "to": "workload_optimization",
+      "kind": "handoff",
+      "defined_in": "specs.py downstream_cops",
+      "executed": false,
+      "where": "recorded in COPDecision.downstream_cops only",
+      "trigger": "waste metric hot (duration_outlier or stalled)",
+      "purpose": "pass the finding to another governance lens"
+    },
+    {
+      "from": "resource_management",
+      "to": "risk_mitigation",
+      "kind": "handoff",
+      "defined_in": "specs.py downstream_cops",
+      "executed": false,
+      "where": "recorded in COPDecision.downstream_cops only",
+      "trigger": "EXCESSIVE (burn metric hot)",
+      "purpose": "pass the finding to another governance lens"
+    },
+    {
+      "from": "runtime_monitoring",
+      "to": "governance_intelligence",
+      "kind": "evidence_broadcast",
+      "defined_in": "runner.COPRunner.run_cop",
+      "executed": false,
+      "where": "runner.COPRunner.run_cop (evid)",
+      "trigger": "always, when runtime_monitoring ran earlier",
+      "purpose": "scale this COP's confidence by evidence quality",
+      "declared_as_handoff_by_sender": false
+    },
+    {
+      "from": "governance_intelligence",
+      "to": "governance_architecture",
+      "kind": "handoff",
+      "defined_in": "specs.py downstream_cops",
+      "executed": false,
+      "where": "recorded in COPDecision.downstream_cops only",
+      "trigger": "UNDEFINED: sender has no interpreter",
+      "purpose": "pass the finding to another governance lens"
+    },
+    {
+      "from": "governance_intelligence",
+      "to": "knowledge_policy_management",
+      "kind": "handoff",
+      "defined_in": "specs.py downstream_cops",
+      "executed": false,
+      "where": "recorded in COPDecision.downstream_cops only",
+      "trigger": "UNDEFINED: sender has no interpreter",
+      "purpose": "pass the finding to another governance lens"
+    },
+    {
+      "from": "runtime_monitoring",
+      "to": "behavior_analytics",
+      "kind": "evidence_broadcast",
+      "defined_in": "runner.COPRunner.run_cop",
+      "executed": false,
+      "where": "runner.COPRunner.run_cop (evid)",
+      "trigger": "always, when runtime_monitoring ran earlier",
+      "purpose": "scale this COP's confidence by evidence quality",
+      "declared_as_handoff_by_sender": false
+    },
+    {
+      "from": "behavior_analytics",
+      "to": "anomaly_detection",
+      "kind": "handoff",
+      "defined_in": "specs.py downstream_cops",
+      "executed": false,
+      "where": "recorded in COPDecision.downstream_cops only",
+      "trigger": "UNDEFINED: sender has no interpreter",
+      "purpose": "pass the finding to another governance lens"
+    },
+    {
+      "from": "behavior_analytics",
+      "to": "recovery_resilience",
+      "kind": "handoff",
+      "defined_in": "specs.py downstream_cops",
+      "executed": false,
+      "where": "recorded in COPDecision.downstream_cops only",
+      "trigger": "UNDEFINED: sender has no interpreter",
+      "purpose": "pass the finding to another governance lens"
+    },
+    {
+      "from": "runtime_monitoring",
+      "to": "recovery_resilience",
+      "kind": "evidence_broadcast",
+      "defined_in": "runner.COPRunner.run_cop",
+      "executed": false,
+      "where": "runner.COPRunner.run_cop (evid)",
+      "trigger": "always, when runtime_monitoring ran earlier",
+      "purpose": "scale this COP's confidence by evidence quality",
+      "declared_as_handoff_by_sender": false
+    },
+    {
+      "from": "recovery_resilience",
+      "to": "incident_response",
+      "kind": "handoff",
+      "defined_in": "specs.py downstream_cops",
+      "executed": false,
+      "where": "recorded in COPDecision.downstream_cops only",
+      "trigger": "UNDEFINED: sender has no interpreter",
+      "purpose": "pass the finding to another governance lens"
+    },
+    {
+      "from": "recovery_resilience",
+      "to": "governance_intelligence",
+      "kind": "handoff",
+      "defined_in": "specs.py downstream_cops",
+      "executed": false,
+      "where": "recorded in COPDecision.downstream_cops only",
+      "trigger": "UNDEFINED: sender has no interpreter",
+      "purpose": "pass the finding to another governance lens"
+    },
+    {
+      "from": "runtime_monitoring",
+      "to": "workload_optimization",
+      "kind": "evidence_broadcast",
+      "defined_in": "runner.COPRunner.run_cop",
+      "executed": false,
+      "where": "runner.COPRunner.run_cop (evid)",
+      "trigger": "always, when runtime_monitoring ran earlier",
+      "purpose": "scale this COP's confidence by evidence quality",
+      "declared_as_handoff_by_sender": false
+    },
+    {
+      "from": "workload_optimization",
+      "to": "resource_management",
+      "kind": "handoff",
+      "defined_in": "specs.py downstream_cops",
+      "executed": false,
+      "where": "recorded in COPDecision.downstream_cops only",
+      "trigger": "UNDEFINED: sender has no interpreter",
+      "purpose": "pass the finding to another governance lens"
+    },
+    {
+      "from": "runtime_monitoring",
+      "to": "audit_traceability",
+      "kind": "evidence_broadcast",
+      "defined_in": "runner.COPRunner.run_cop",
+      "executed": false,
+      "where": "runner.COPRunner.run_cop (evid)",
+      "trigger": "always, when runtime_monitoring ran earlier",
+      "purpose": "scale this COP's confidence by evidence quality",
+      "declared_as_handoff_by_sender": true
+    },
+    {
+      "from": "audit_traceability",
+      "to": "governance_architecture",
+      "kind": "handoff",
+      "defined_in": "specs.py downstream_cops",
+      "executed": false,
+      "where": "recorded in COPDecision.downstream_cops only",
+      "trigger": "UNATTRIBUTABLE (severe) or BROKEN_TRACE",
+      "purpose": "pass the finding to another governance lens"
+    },
+    {
+      "from": "runtime_monitoring",
+      "to": "knowledge_policy_management",
+      "kind": "evidence_broadcast",
+      "defined_in": "runner.COPRunner.run_cop",
+      "executed": false,
+      "where": "runner.COPRunner.run_cop (evid)",
+      "trigger": "always, when runtime_monitoring ran earlier",
+      "purpose": "scale this COP's confidence by evidence quality",
+      "declared_as_handoff_by_sender": false
+    },
+    {
+      "from": "knowledge_policy_management",
+      "to": "governance_architecture",
+      "kind": "handoff",
+      "defined_in": "specs.py downstream_cops",
+      "executed": false,
+      "where": "recorded in COPDecision.downstream_cops only",
+      "trigger": "UNDEFINED: sender has no interpreter",
+      "purpose": "pass the finding to another governance lens"
+    },
+    {
+      "from": "runtime_monitoring",
+      "to": "agent_lifecycle_management",
+      "kind": "evidence_broadcast",
+      "defined_in": "runner.COPRunner.run_cop",
+      "executed": false,
+      "where": "runner.COPRunner.run_cop (evid)",
+      "trigger": "always, when runtime_monitoring ran earlier",
+      "purpose": "scale this COP's confidence by evidence quality",
+      "declared_as_handoff_by_sender": false
+    },
+    {
+      "from": "agent_lifecycle_management",
+      "to": "classification_tagging",
+      "kind": "handoff",
+      "defined_in": "specs.py downstream_cops",
+      "executed": false,
+      "where": "recorded in COPDecision.downstream_cops only",
+      "trigger": "UNDEFINED: sender has no interpreter",
+      "purpose": "pass the finding to another governance lens"
+    },
+    {
+      "from": "agent_lifecycle_management",
+      "to": "policy_enforcement",
+      "kind": "handoff",
+      "defined_in": "specs.py downstream_cops",
+      "executed": false,
+      "where": "recorded in COPDecision.downstream_cops only",
+      "trigger": "UNDEFINED: sender has no interpreter",
+      "purpose": "pass the finding to another governance lens"
+    },
+    {
+      "from": "runtime_monitoring",
+      "to": "governance_architecture",
+      "kind": "evidence_broadcast",
+      "defined_in": "runner.COPRunner.run_cop",
+      "executed": false,
+      "where": "runner.COPRunner.run_cop (evid)",
+      "trigger": "always, when runtime_monitoring ran earlier",
+      "purpose": "scale this COP's confidence by evidence quality",
+      "declared_as_handoff_by_sender": false
+    }
+  ],
+  "proposed": [
+    {
+      "from": "runtime_monitoring",
+      "to": "anomaly_detection",
+      "kind": "handoff",
+      "status": "PROPOSED",
+      "why": "already an executed read (consumes_decisions_from) but not declared in runtime_monitoring.downstream_cops"
+    },
+    {
+      "from": "runtime_monitoring",
+      "to": "interaction_discovery",
+      "kind": "handoff",
+      "status": "PROPOSED",
+      "why": "already an executed read (consumes_decisions_from) but not declared in runtime_monitoring.downstream_cops"
+    },
+    {
+      "from": "runtime_monitoring",
+      "to": "policy_enforcement",
+      "kind": "handoff",
+      "status": "PROPOSED",
+      "why": "already an executed read (consumes_decisions_from) but not declared in runtime_monitoring.downstream_cops"
+    },
+    {
+      "from": "interaction_discovery",
+      "to": "incident_response",
+      "kind": "handoff",
+      "status": "PROPOSED",
+      "why": "already an executed read but not declared in interaction_discovery.downstream_cops"
+    },
+    {
+      "from": "*",
+      "to": "audit_traceability",
+      "kind": "handoff",
+      "status": "PROPOSED (already emitted on harness path)",
+      "why": "decide.finalise Rule 1 adds audit_traceability to any BLOCKED_BY_EVIDENCE decision after harness.reverify ran, so COPs without it in downstream_cops can emit an undeclared edge"
+    }
+  ]
+}
