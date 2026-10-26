@@ -4,29 +4,6 @@ Generated read-only from `Purvi9399/signal-dashboard` at `f4f131b`. Structure is
 
 Status terms. **Specified**: has a `COPReadSpec` in `collector/cops/specs.py`. **Implemented**: has a `RuleInterpreter` method (`collector/cops/interpret.py`). **Runnable**: in `specs.ORDER` (`COPRunner.__init__` drops anything else). **Active**: `active=True`. **Tested**: a test in `tests/test_cops.py` asserts its output. **Live**: unverified for all 18 (no database read).
 
-## 1. Catalogue
-
-| COP | Implemented | Runnable | Active | Tested |
-|---|---|---|---|---|
-| Workflow Orchestration (`workflow_orchestration`) | no | no | no | no |
-| Runtime Monitoring (`runtime_monitoring`) | yes | yes | yes | asserted |
-| Anomaly Detection (`anomaly_detection`) | yes | yes | yes | asserted |
-| Context & Memory (`context_memory`) | no | no | no | no |
-| Interaction Discovery (`interaction_discovery`) | yes | yes | no | executed, not asserted |
-| Incident Response (`incident_response`) | yes | yes | yes | asserted |
-| Classification & Tagging (`classification_tagging`) | yes | no | no | no |
-| Policy Enforcement (`policy_enforcement`) | yes | yes | no | executed, not asserted |
-| Risk Mitigation (`risk_mitigation`) | no | no | no | no |
-| Resource Management (`resource_management`) | yes | yes | yes | executed, not asserted |
-| Governance Intelligence (`governance_intelligence`) | no | no | no | no |
-| Behavior Analytics (`behavior_analytics`) | no | no | no | no |
-| Recovery & Resilience (`recovery_resilience`) | no | no | no | no |
-| Workload Optimization (`workload_optimization`) | no | no | no | no |
-| Audit & Traceability (`audit_traceability`) | yes | no | no | no |
-| Knowledge & Policy Management (`knowledge_policy_management`) | no | no | no | no |
-| Agent Lifecycle Management (`agent_lifecycle_management`) | no | no | no | no |
-| Governance Architecture (`governance_architecture`) | no | no | no | no |
-
 ### Workflow Orchestration (`workflow_orchestration`)
 
 **Behavioural question (spec, verbatim):** Is the task progressing coherently toward its intended state?
