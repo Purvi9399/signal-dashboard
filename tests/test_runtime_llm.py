@@ -60,7 +60,7 @@ def test_wiring_through_the_provider_interface(cop):
     assert len(inv) == 2 and all(set(RECORD_FIELDS) <= set(i) for i in inv)
     assert all(i["simulated"] and i["prompt_version"] == f"{cop}/prompt-1" for i in inv)
     assert all(i["tools_exposed"] == list(build_profiles()[cop].tools) for i in inv)
-    assert all(i["cost_basis"] == "simulated_tokens_x_list_price" for i in inv)
+    assert all(i["cost_basis"] == "unpriced" and i["cost_usd"] is None for i in inv)   # no price configured
     assert f["status"] == "INCONCLUSIVE" and f["cop_specific"]["stop_reason"] == "model_inconclusive"
 
 
@@ -142,6 +142,16 @@ def test_token_and_cost_budgets_are_checked_before_each_call():
         "budget_exhausted:max_cost_usd"
 
 
+def test_cost_uses_configured_prices_only(monkeypatch):
+    monkeypatch.setenv("COPS_PRICING", '{"fixture-model": [2.0, 10.0]}')
+    gw = LLMGateway(FixtureProvider(lambda *a: FX.plan("x", [], [], [])))
+    spent = {"llm_calls": 0, "tokens": 0, "cost_usd": 0.0, "started": 1e18}
+    data, recs, err = gw.invoke("anomaly_detection", "c", "plan", "p", "s" * 400, {"k": "v"}, LLMBudget(), spent)
+    r = recs[0]
+    assert r["cost_basis"] == "simulated_tokens_x_configured_price"
+    assert r["cost_usd"] == round(r["input_tokens"] / 1e6 * 2.0 + r["output_tokens"] / 1e6 * 10.0, 6)
+
+
 def test_live_provider_cannot_start_by_accident(monkeypatch):
     monkeypatch.delenv("COPS_LLM_LIVE", raising=False)
     with pytest.raises(ProviderUnavailable):
@@ -150,11 +160,16 @@ def test_live_provider_cannot_start_by_accident(monkeypatch):
     monkeypatch.delenv("COPS_LLM_DATA_APPROVED", raising=False)
     with pytest.raises(ProviderUnavailable):
         AnthropicProvider()
+    monkeypatch.setenv("COPS_LLM_DATA_APPROVED", "1")
+    monkeypatch.delenv("COPS_MODEL", raising=False)
+    with pytest.raises(ProviderUnavailable):
+        AnthropicProvider()
 
 
 @pytest.mark.skipif(not (os.environ.get("COPS_LLM_LIVE") == "1" and os.environ.get("COPS_LLM_DATA_APPROVED") == "1"
-                         and os.environ.get("ANTHROPIC_API_KEY")),
-                    reason="opt-in live smoke test: needs COPS_LLM_LIVE=1, COPS_LLM_DATA_APPROVED=1 and credentials")
+                         and os.environ.get("COPS_MODEL") and os.environ.get("ANTHROPIC_API_KEY")),
+                    reason="opt-in live smoke test: needs COPS_LLM_LIVE=1, COPS_LLM_DATA_APPROVED=1, "
+                           "COPS_MODEL and credentials")
 def test_live_provider_smoke():                                         # pragma: no cover
     rt, r, f = one("anomaly_detection", AnthropicProvider())
     assert r["llm_invocations"] and not r["llm_invocations"][0]["simulated"]

@@ -98,9 +98,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 99.9,
-  "cpu_ms": 99.8,
-  "max_rss_kb": 74412,
+  "wall_ms": 95.3,
+  "cpu_ms": 95.3,
+  "max_rss_kb": 74460,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -203,18 +203,18 @@
       "reason": "nothing to remember (SUBSTANTIVE, SUFFICIENT)"
      },
      "node_ms": {
-      "receive_case": 0.007,
+      "receive_case": 0.006,
       "load_inputs": 0.002,
-      "validate_evidence": 0.091,
-      "retrieve_memory": 0.197,
-      "computational_baseline": 0.325,
-      "independent_verify": 0.203,
-      "authority_check": 0.047,
+      "validate_evidence": 0.093,
+      "retrieve_memory": 0.233,
+      "computational_baseline": 0.308,
+      "independent_verify": 0.193,
+      "authority_check": 0.044,
       "execute_action": 0.003,
-      "record_decision": 0.018,
-      "validate_memory_update": 0.005
+      "record_decision": 0.037,
+      "validate_memory_update": 0.004
      },
-     "total_ms": 0.875,
+     "total_ms": 0.882,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -377,16 +377,16 @@
      "node_ms": {
       "receive_case": 0.006,
       "load_inputs": 0.006,
-      "validate_evidence": 0.066,
-      "retrieve_memory": 0.108,
-      "computational_baseline": 0.624,
-      "independent_verify": 0.27,
-      "authority_check": 0.056,
+      "validate_evidence": 0.065,
+      "retrieve_memory": 0.088,
+      "computational_baseline": 0.561,
+      "independent_verify": 0.239,
+      "authority_check": 0.042,
       "execute_action": 0.002,
       "record_decision": 0.016,
-      "validate_memory_update": 0.003
+      "validate_memory_update": 0.004
      },
-     "total_ms": 1.138,
+     "total_ms": 1.009,
      "evidence": [
       {
        "metric": "insights.repetition",
@@ -632,22 +632,22 @@
      "node_ms": {
       "receive_case": 0.004,
       "load_inputs": 0.004,
-      "validate_evidence": 0.075,
-      "retrieve_memory": 0.108,
-      "computational_baseline": 0.153,
-      "llm_plan_investigation": 5.613,
-      "validate_tool_request": 0.015,
-      "execute_authorised_tool": 0.677,
-      "validate_tool_result": 0.006,
-      "llm_assess_evidence": 3.354,
-      "formulate_finding": 0.102,
-      "independent_verify": 0.236,
-      "authority_check": 0.038,
+      "validate_evidence": 0.074,
+      "retrieve_memory": 0.083,
+      "computational_baseline": 0.136,
+      "llm_plan_investigation": 5.38,
+      "validate_tool_request": 0.016,
+      "execute_authorised_tool": 0.693,
+      "validate_tool_result": 0.007,
+      "llm_assess_evidence": 3.065,
+      "formulate_finding": 0.087,
+      "independent_verify": 0.256,
+      "authority_check": 0.037,
       "execute_action": 0.002,
-      "record_decision": 0.022,
+      "record_decision": 0.013,
       "validate_memory_update": 0.003
      },
-     "total_ms": 10.387,
+     "total_ms": 9.844,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -796,18 +796,18 @@
       "reason": "nothing to remember (SUBSTANTIVE, ALLOWED)"
      },
      "node_ms": {
-      "receive_case": 0.005,
+      "receive_case": 0.004,
       "load_inputs": 0.004,
-      "validate_evidence": 0.06,
-      "retrieve_memory": 0.079,
-      "computational_baseline": 0.678,
-      "independent_verify": 0.214,
-      "authority_check": 0.036,
+      "validate_evidence": 0.059,
+      "retrieve_memory": 0.081,
+      "computational_baseline": 0.657,
+      "independent_verify": 0.233,
+      "authority_check": 0.035,
       "execute_action": 0.002,
-      "record_decision": 0.013,
-      "validate_memory_update": 0.003
+      "record_decision": 0.012,
+      "validate_memory_update": 0.002
      },
-     "total_ms": 1.078,
+     "total_ms": 1.075,
      "evidence": [
       {
        "metric": "insights.blocked",
@@ -1028,24 +1028,24 @@
       "reason": "nothing to remember (SUBSTANTIVE, NO_INCIDENT)"
      },
      "node_ms": {
-      "receive_case": 0.005,
-      "load_inputs": 0.005,
-      "validate_evidence": 0.047,
-      "retrieve_memory": 0.082,
-      "computational_baseline": 0.314,
-      "llm_plan_investigation": 1.25,
+      "receive_case": 0.004,
+      "load_inputs": 0.006,
+      "validate_evidence": 0.049,
+      "retrieve_memory": 0.088,
+      "computational_baseline": 0.3,
+      "llm_plan_investigation": 1.119,
       "validate_tool_request": 0.011,
-      "execute_authorised_tool": 0.216,
+      "execute_authorised_tool": 0.255,
       "validate_tool_result": 0.004,
-      "llm_assess_evidence": 2.949,
-      "formulate_finding": 0.083,
-      "independent_verify": 0.155,
-      "authority_check": 0.042,
+      "llm_assess_evidence": 2.838,
+      "formulate_finding": 0.084,
+      "independent_verify": 0.157,
+      "authority_check": 0.046,
       "execute_action": 0.002,
-      "record_decision": 0.019,
+      "record_decision": 0.013,
       "validate_memory_update": 0.003
      },
-     "total_ms": 5.165,
+     "total_ms": 4.963,
      "evidence": [
       {
        "metric": "insights.secrets",
@@ -1163,16 +1163,16 @@
      "node_ms": {
       "receive_case": 0.004,
       "load_inputs": 0.003,
-      "validate_evidence": 0.069,
-      "retrieve_memory": 0.099,
-      "computational_baseline": 0.346,
-      "independent_verify": 0.155,
-      "authority_check": 0.038,
+      "validate_evidence": 0.055,
+      "retrieve_memory": 0.083,
+      "computational_baseline": 0.3,
+      "independent_verify": 0.145,
+      "authority_check": 0.035,
       "execute_action": 0.002,
-      "record_decision": 0.014,
+      "record_decision": 0.012,
       "validate_memory_update": 0.003
      },
-     "total_ms": 0.716,
+     "total_ms": 0.627,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -1416,24 +1416,24 @@
       "reason": "nothing to remember (SUBSTANTIVE, EFFICIENT)"
      },
      "node_ms": {
-      "receive_case": 0.005,
-      "load_inputs": 0.004,
-      "validate_evidence": 0.058,
-      "retrieve_memory": 0.088,
-      "computational_baseline": 0.35,
-      "llm_plan_investigation": 1.144,
-      "validate_tool_request": 0.009,
-      "execute_authorised_tool": 0.157,
+      "receive_case": 0.026,
+      "load_inputs": 0.003,
+      "validate_evidence": 0.056,
+      "retrieve_memory": 0.101,
+      "computational_baseline": 0.288,
+      "llm_plan_investigation": 1.069,
+      "validate_tool_request": 0.008,
+      "execute_authorised_tool": 0.145,
       "validate_tool_result": 0.005,
-      "llm_assess_evidence": 2.907,
-      "formulate_finding": 0.084,
-      "independent_verify": 0.19,
-      "authority_check": 0.039,
+      "llm_assess_evidence": 2.794,
+      "formulate_finding": 0.079,
+      "independent_verify": 0.183,
+      "authority_check": 0.036,
       "execute_action": 0.002,
-      "record_decision": 0.015,
+      "record_decision": 0.014,
       "validate_memory_update": 0.003
      },
-     "total_ms": 5.042,
+     "total_ms": 4.795,
      "evidence": [
       {
        "metric": "insights.repetition",
@@ -1559,18 +1559,18 @@
       "reason": "nothing to remember (SUBSTANTIVE, COMPLETE)"
      },
      "node_ms": {
-      "receive_case": 0.028,
+      "receive_case": 0.004,
       "load_inputs": 0.004,
-      "validate_evidence": 0.059,
-      "retrieve_memory": 0.087,
-      "computational_baseline": 0.272,
-      "independent_verify": 0.163,
+      "validate_evidence": 0.058,
+      "retrieve_memory": 0.079,
+      "computational_baseline": 0.268,
+      "independent_verify": 0.155,
       "authority_check": 0.036,
       "execute_action": 0.002,
-      "record_decision": 0.014,
+      "record_decision": 0.012,
       "validate_memory_update": 0.003
      },
-     "total_ms": 0.651,
+     "total_ms": 0.606,
      "evidence": [
       {
        "metric": "insights.unattributed",
@@ -2003,8 +2003,9 @@
     "llm_calls": 6,
     "tool_calls": 19,
     "tokens_estimated": 9813,
-    "cost_usd_estimated": 0.061988,
-    "cop_ms": 25.052
+    "cost_usd_estimated": null,
+    "unpriced_llm_calls": 6,
+    "cop_ms": 23.801
    },
    "security_events": [],
    "persisted_decisions": 8,
@@ -2075,9 +2076,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 54.7,
-  "cpu_ms": 50.4,
-  "max_rss_kb": 74796,
+  "wall_ms": 51.8,
+  "cpu_ms": 51.7,
+  "max_rss_kb": 74844,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -2176,18 +2177,18 @@
       "reason": "nothing to remember (SUBSTANTIVE, SUFFICIENT)"
      },
      "node_ms": {
-      "receive_case": 0.005,
-      "load_inputs": 0.007,
-      "validate_evidence": 0.079,
-      "retrieve_memory": 0.138,
-      "computational_baseline": 0.242,
-      "independent_verify": 0.164,
-      "authority_check": 0.04,
+      "receive_case": 0.004,
+      "load_inputs": 0.001,
+      "validate_evidence": 0.076,
+      "retrieve_memory": 0.125,
+      "computational_baseline": 0.248,
+      "independent_verify": 0.227,
+      "authority_check": 0.036,
       "execute_action": 0.002,
-      "record_decision": 0.015,
+      "record_decision": 0.012,
       "validate_memory_update": 0.003
      },
-     "total_ms": 0.677,
+     "total_ms": 0.719,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -2443,24 +2444,24 @@
       "status": "VERIFIED"
      },
      "node_ms": {
-      "receive_case": 0.005,
+      "receive_case": 0.004,
       "load_inputs": 0.003,
-      "validate_evidence": 0.08,
-      "retrieve_memory": 0.083,
-      "computational_baseline": 0.216,
-      "llm_plan_investigation": 1.3,
-      "validate_tool_request": 0.01,
-      "execute_authorised_tool": 0.291,
+      "validate_evidence": 0.078,
+      "retrieve_memory": 0.085,
+      "computational_baseline": 0.178,
+      "llm_plan_investigation": 1.121,
+      "validate_tool_request": 0.009,
+      "execute_authorised_tool": 0.281,
       "validate_tool_result": 0.004,
-      "llm_assess_evidence": 2.929,
-      "formulate_finding": 0.087,
-      "independent_verify": 0.21,
-      "authority_check": 0.04,
+      "llm_assess_evidence": 2.822,
+      "formulate_finding": 0.082,
+      "independent_verify": 0.214,
+      "authority_check": 0.069,
       "execute_action": 0.002,
       "record_decision": 0.015,
-      "validate_memory_update": 0.389
+      "validate_memory_update": 0.382
      },
-     "total_ms": 5.26,
+     "total_ms": 4.952,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -2620,18 +2621,18 @@
       "status": "VERIFIED"
      },
      "node_ms": {
-      "receive_case": 0.004,
+      "receive_case": 0.005,
       "load_inputs": 0.003,
-      "validate_evidence": 0.066,
-      "retrieve_memory": 0.121,
-      "computational_baseline": 0.307,
-      "independent_verify": 0.248,
-      "authority_check": 0.041,
+      "validate_evidence": 0.057,
+      "retrieve_memory": 0.127,
+      "computational_baseline": 0.318,
+      "independent_verify": 0.219,
+      "authority_check": 0.036,
       "execute_action": 0.002,
-      "record_decision": 0.017,
-      "validate_memory_update": 0.311
+      "record_decision": 0.032,
+      "validate_memory_update": 0.277
      },
-     "total_ms": 0.792,
+     "total_ms": 0.767,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -2795,23 +2796,23 @@
      },
      "node_ms": {
       "receive_case": 0.004,
-      "load_inputs": 0.004,
-      "validate_evidence": 0.057,
-      "retrieve_memory": 0.137,
-      "computational_baseline": 0.316,
-      "llm_plan_investigation": 1.14,
-      "validate_tool_request": 0.01,
-      "execute_authorised_tool": 0.211,
+      "load_inputs": 0.003,
+      "validate_evidence": 0.095,
+      "retrieve_memory": 0.127,
+      "computational_baseline": 0.323,
+      "llm_plan_investigation": 1.02,
+      "validate_tool_request": 0.009,
+      "execute_authorised_tool": 0.242,
       "validate_tool_result": 0.006,
-      "llm_assess_evidence": 3.101,
+      "llm_assess_evidence": 2.983,
       "formulate_finding": 0.05,
-      "independent_verify": 0.12,
-      "authority_check": 0.04,
+      "independent_verify": 0.115,
+      "authority_check": 0.127,
       "execute_action": 0.002,
-      "record_decision": 0.051,
+      "record_decision": 0.016,
       "validate_memory_update": 0.003
      },
-     "total_ms": 5.198,
+     "total_ms": 5.106,
      "evidence": [
       {
        "metric": "insights.repetition",
@@ -3068,8 +3069,9 @@
     "llm_calls": 5,
     "tool_calls": 13,
     "tokens_estimated": 7947,
-    "cost_usd_estimated": 0.04542,
-    "cop_ms": 11.927
+    "cost_usd_estimated": null,
+    "unpriced_llm_calls": 5,
+    "cop_ms": 11.544
    },
    "security_events": [],
    "persisted_decisions": 4,
@@ -3104,9 +3106,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 56.0,
-  "cpu_ms": 55.9,
-  "max_rss_kb": 75820,
+  "wall_ms": 55.1,
+  "cpu_ms": 55.1,
+  "max_rss_kb": 75740,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -3207,17 +3209,17 @@
      },
      "node_ms": {
       "receive_case": 0.005,
-      "load_inputs": 0.001,
-      "validate_evidence": 0.104,
+      "load_inputs": 0.002,
+      "validate_evidence": 0.088,
       "retrieve_memory": 0.137,
-      "computational_baseline": 0.523,
-      "independent_verify": 0.166,
-      "authority_check": 0.039,
+      "computational_baseline": 0.568,
+      "independent_verify": 0.178,
+      "authority_check": 0.036,
       "execute_action": 0.002,
-      "record_decision": 0.033,
+      "record_decision": 0.012,
       "validate_memory_update": 0.003
      },
-     "total_ms": 0.977,
+     "total_ms": 1.016,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -3423,24 +3425,24 @@
       "status": "VERIFIED"
      },
      "node_ms": {
-      "receive_case": 0.005,
+      "receive_case": 0.004,
       "load_inputs": 0.003,
-      "validate_evidence": 0.06,
-      "retrieve_memory": 0.095,
-      "computational_baseline": 0.416,
-      "llm_plan_investigation": 1.261,
-      "validate_tool_request": 0.008,
-      "execute_authorised_tool": 0.234,
+      "validate_evidence": 0.061,
+      "retrieve_memory": 0.113,
+      "computational_baseline": 0.393,
+      "llm_plan_investigation": 1.161,
+      "validate_tool_request": 0.009,
+      "execute_authorised_tool": 0.207,
       "validate_tool_result": 0.004,
       "llm_assess_evidence": 2.929,
-      "formulate_finding": 0.1,
-      "independent_verify": 0.15,
-      "authority_check": 0.037,
+      "formulate_finding": 0.074,
+      "independent_verify": 0.176,
+      "authority_check": 0.04,
       "execute_action": 0.002,
-      "record_decision": 0.016,
-      "validate_memory_update": 0.329
+      "record_decision": 0.015,
+      "validate_memory_update": 0.312
      },
-     "total_ms": 5.304,
+     "total_ms": 5.176,
      "evidence": [
       {
        "metric": "insights.stalled",
@@ -3601,18 +3603,18 @@
       "status": "VERIFIED"
      },
      "node_ms": {
-      "receive_case": 0.004,
+      "receive_case": 0.005,
       "load_inputs": 0.004,
-      "validate_evidence": 0.065,
-      "retrieve_memory": 0.173,
-      "computational_baseline": 0.493,
-      "independent_verify": 0.269,
-      "authority_check": 0.037,
+      "validate_evidence": 0.068,
+      "retrieve_memory": 0.12,
+      "computational_baseline": 0.476,
+      "independent_verify": 0.234,
+      "authority_check": 0.036,
       "execute_action": 0.002,
-      "record_decision": 0.013,
-      "validate_memory_update": 0.313
+      "record_decision": 0.012,
+      "validate_memory_update": 0.319
      },
-     "total_ms": 1.047,
+     "total_ms": 0.945,
      "evidence": [
       {
        "metric": "insights.repetition",
@@ -3793,24 +3795,24 @@
       "status": "VERIFIED"
      },
      "node_ms": {
-      "receive_case": 0.005,
+      "receive_case": 0.004,
       "load_inputs": 0.003,
       "validate_evidence": 0.075,
-      "retrieve_memory": 0.131,
-      "computational_baseline": 0.189,
-      "llm_plan_investigation": 1.335,
+      "retrieve_memory": 0.15,
+      "computational_baseline": 0.199,
+      "llm_plan_investigation": 1.138,
       "validate_tool_request": 0.007,
-      "execute_authorised_tool": 0.181,
+      "execute_authorised_tool": 0.134,
       "validate_tool_result": 0.003,
-      "llm_assess_evidence": 3.668,
-      "formulate_finding": 0.106,
-      "independent_verify": 0.153,
-      "authority_check": 0.038,
+      "llm_assess_evidence": 2.911,
+      "formulate_finding": 0.075,
+      "independent_verify": 0.149,
+      "authority_check": 0.037,
       "execute_action": 0.002,
-      "record_decision": 0.047,
-      "validate_memory_update": 0.32
+      "record_decision": 0.012,
+      "validate_memory_update": 0.276
      },
-     "total_ms": 5.896,
+     "total_ms": 4.887,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -3950,18 +3952,18 @@
       "reason": "nothing to remember (SUBSTANTIVE, NORMAL)"
      },
      "node_ms": {
-      "receive_case": 0.005,
+      "receive_case": 0.004,
       "load_inputs": 0.003,
-      "validate_evidence": 0.055,
-      "retrieve_memory": 0.14,
-      "computational_baseline": 0.338,
-      "independent_verify": 0.175,
+      "validate_evidence": 0.059,
+      "retrieve_memory": 0.39,
+      "computational_baseline": 0.314,
+      "independent_verify": 0.162,
       "authority_check": 0.037,
       "execute_action": 0.002,
-      "record_decision": 0.014,
+      "record_decision": 0.013,
       "validate_memory_update": 0.003
      },
-     "total_ms": 0.755,
+     "total_ms": 0.971,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -4270,8 +4272,9 @@
     "llm_calls": 4,
     "tool_calls": 11,
     "tokens_estimated": 6411,
-    "cost_usd_estimated": 0.036588,
-    "cop_ms": 13.979
+    "cost_usd_estimated": null,
+    "unpriced_llm_calls": 4,
+    "cop_ms": 12.995
    },
    "security_events": [],
    "persisted_decisions": 5,
@@ -4323,9 +4326,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 51.8,
-  "cpu_ms": 51.1,
-  "max_rss_kb": 76588,
+  "wall_ms": 48.9,
+  "cpu_ms": 48.9,
+  "max_rss_kb": 76508,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -4425,18 +4428,18 @@
       "reason": "nothing to remember (SUBSTANTIVE, SUFFICIENT)"
      },
      "node_ms": {
-      "receive_case": 0.006,
+      "receive_case": 0.005,
       "load_inputs": 0.001,
       "validate_evidence": 0.076,
-      "retrieve_memory": 0.162,
-      "computational_baseline": 0.249,
-      "independent_verify": 0.163,
+      "retrieve_memory": 0.134,
+      "computational_baseline": 0.282,
+      "independent_verify": 0.221,
       "authority_check": 0.036,
       "execute_action": 0.002,
-      "record_decision": 0.014,
+      "record_decision": 0.013,
       "validate_memory_update": 0.003
      },
-     "total_ms": 0.695,
+     "total_ms": 0.757,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -4622,24 +4625,24 @@
       "status": "VERIFIED"
      },
      "node_ms": {
-      "receive_case": 0.004,
+      "receive_case": 0.027,
       "load_inputs": 0.003,
-      "validate_evidence": 0.079,
-      "retrieve_memory": 0.129,
-      "computational_baseline": 0.209,
-      "llm_plan_investigation": 1.182,
+      "validate_evidence": 0.077,
+      "retrieve_memory": 0.083,
+      "computational_baseline": 0.185,
+      "llm_plan_investigation": 1.164,
       "validate_tool_request": 0.01,
-      "execute_authorised_tool": 0.269,
-      "validate_tool_result": 0.004,
-      "llm_assess_evidence": 2.914,
-      "formulate_finding": 0.073,
-      "independent_verify": 0.183,
-      "authority_check": 0.037,
+      "execute_authorised_tool": 0.273,
+      "validate_tool_result": 0.003,
+      "llm_assess_evidence": 2.867,
+      "formulate_finding": 0.074,
+      "independent_verify": 0.207,
+      "authority_check": 0.036,
       "execute_action": 0.002,
-      "record_decision": 0.017,
-      "validate_memory_update": 0.387
+      "record_decision": 0.013,
+      "validate_memory_update": 0.31
      },
-     "total_ms": 5.098,
+     "total_ms": 5.011,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -4833,16 +4836,16 @@
      "node_ms": {
       "receive_case": 0.004,
       "load_inputs": 0.003,
-      "validate_evidence": 0.066,
-      "retrieve_memory": 0.117,
-      "computational_baseline": 0.47,
-      "independent_verify": 0.253,
-      "authority_check": 0.044,
+      "validate_evidence": 0.063,
+      "retrieve_memory": 0.115,
+      "computational_baseline": 0.433,
+      "independent_verify": 0.222,
+      "authority_check": 0.07,
       "execute_action": 0.002,
-      "record_decision": 0.015,
-      "validate_memory_update": 0.311
+      "record_decision": 0.013,
+      "validate_memory_update": 0.321
      },
-     "total_ms": 0.959,
+     "total_ms": 0.912,
      "evidence": [
       {
        "metric": "interaction.subagent_lanes",
@@ -5014,18 +5017,18 @@
       "status": "VERIFIED"
      },
      "node_ms": {
-      "receive_case": 0.005,
+      "receive_case": 0.004,
       "load_inputs": 0.003,
-      "validate_evidence": 0.038,
-      "retrieve_memory": 0.186,
-      "computational_baseline": 0.393,
-      "independent_verify": 0.228,
-      "authority_check": 0.036,
+      "validate_evidence": 0.036,
+      "retrieve_memory": 0.127,
+      "computational_baseline": 0.419,
+      "independent_verify": 0.207,
+      "authority_check": 0.035,
       "execute_action": 0.002,
-      "record_decision": 0.013,
-      "validate_memory_update": 0.341
+      "record_decision": 0.012,
+      "validate_memory_update": 0.296
      },
-     "total_ms": 0.891,
+     "total_ms": 0.833,
      "evidence": [
       {
        "metric": "access.first_seen_mcp",
@@ -5158,18 +5161,18 @@
       "status": "VERIFIED"
      },
      "node_ms": {
-      "receive_case": 0.005,
-      "load_inputs": 0.005,
-      "validate_evidence": 0.063,
-      "retrieve_memory": 0.148,
-      "computational_baseline": 0.749,
-      "independent_verify": 0.251,
-      "authority_check": 0.035,
+      "receive_case": 0.004,
+      "load_inputs": 0.004,
+      "validate_evidence": 0.083,
+      "retrieve_memory": 0.137,
+      "computational_baseline": 0.699,
+      "independent_verify": 0.254,
+      "authority_check": 0.034,
       "execute_action": 0.002,
       "record_decision": 0.013,
-      "validate_memory_update": 0.297
+      "validate_memory_update": 0.286
      },
-     "total_ms": 1.258,
+     "total_ms": 1.217,
      "evidence": [
       {
        "metric": "insights.blocked",
@@ -5512,8 +5515,9 @@
     "llm_calls": 2,
     "tool_calls": 10,
     "tokens_estimated": 3113,
-    "cost_usd_estimated": 0.017924,
-    "cop_ms": 8.901
+    "cost_usd_estimated": null,
+    "unpriced_llm_calls": 2,
+    "cop_ms": 8.73
    },
    "security_events": [],
    "persisted_decisions": 5,
@@ -5566,8 +5570,8 @@
   ],
   "error": null,
   "wall_ms": 82.7,
-  "cpu_ms": 82.6,
-  "max_rss_kb": 77740,
+  "cpu_ms": 78.6,
+  "max_rss_kb": 77788,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -5669,18 +5673,18 @@
       "reason": "nothing to remember (SUBSTANTIVE, SUFFICIENT)"
      },
      "node_ms": {
-      "receive_case": 0.006,
+      "receive_case": 0.005,
       "load_inputs": 0.001,
-      "validate_evidence": 0.086,
-      "retrieve_memory": 0.139,
-      "computational_baseline": 0.273,
-      "independent_verify": 0.213,
-      "authority_check": 0.037,
+      "validate_evidence": 0.087,
+      "retrieve_memory": 0.149,
+      "computational_baseline": 0.265,
+      "independent_verify": 0.16,
+      "authority_check": 0.036,
       "execute_action": 0.002,
-      "record_decision": 0.013,
+      "record_decision": 0.012,
       "validate_memory_update": 0.003
      },
-     "total_ms": 0.757,
+     "total_ms": 0.705,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -5925,23 +5929,23 @@
      },
      "node_ms": {
       "receive_case": 0.004,
-      "load_inputs": 0.004,
-      "validate_evidence": 0.122,
-      "retrieve_memory": 0.106,
-      "computational_baseline": 0.13,
-      "llm_plan_investigation": 1.274,
-      "validate_tool_request": 0.01,
-      "execute_authorised_tool": 0.735,
-      "validate_tool_result": 0.004,
-      "llm_assess_evidence": 3.04,
-      "formulate_finding": 0.116,
-      "independent_verify": 0.279,
-      "authority_check": 0.047,
+      "load_inputs": 0.003,
+      "validate_evidence": 0.079,
+      "retrieve_memory": 0.082,
+      "computational_baseline": 0.127,
+      "llm_plan_investigation": 1.258,
+      "validate_tool_request": 0.011,
+      "execute_authorised_tool": 0.698,
+      "validate_tool_result": 0.003,
+      "llm_assess_evidence": 2.992,
+      "formulate_finding": 0.131,
+      "independent_verify": 0.237,
+      "authority_check": 0.037,
       "execute_action": 0.002,
-      "record_decision": 0.014,
+      "record_decision": 0.013,
       "validate_memory_update": 0.003
      },
-     "total_ms": 5.873,
+     "total_ms": 5.664,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -6087,16 +6091,16 @@
      "node_ms": {
       "receive_case": 0.004,
       "load_inputs": 0.003,
-      "validate_evidence": 0.064,
-      "retrieve_memory": 0.084,
-      "computational_baseline": 0.335,
-      "independent_verify": 0.161,
-      "authority_check": 0.037,
+      "validate_evidence": 0.063,
+      "retrieve_memory": 0.105,
+      "computational_baseline": 0.346,
+      "independent_verify": 0.158,
+      "authority_check": 0.035,
       "execute_action": 0.002,
-      "record_decision": 0.014,
+      "record_decision": 0.013,
       "validate_memory_update": 0.003
      },
-     "total_ms": 0.69,
+     "total_ms": 0.716,
      "evidence": [
       {
        "metric": "interaction.subagent_lanes",
@@ -6261,18 +6265,18 @@
       "status": "VERIFIED"
      },
      "node_ms": {
-      "receive_case": 0.005,
-      "load_inputs": 0.005,
-      "validate_evidence": 0.063,
-      "retrieve_memory": 0.08,
-      "computational_baseline": 0.978,
-      "independent_verify": 0.226,
-      "authority_check": 0.038,
+      "receive_case": 0.004,
+      "load_inputs": 0.004,
+      "validate_evidence": 0.061,
+      "retrieve_memory": 0.084,
+      "computational_baseline": 0.809,
+      "independent_verify": 0.206,
+      "authority_check": 0.039,
       "execute_action": 0.002,
-      "record_decision": 0.014,
-      "validate_memory_update": 0.35
+      "record_decision": 0.012,
+      "validate_memory_update": 0.281
      },
-     "total_ms": 1.397,
+     "total_ms": 1.209,
      "evidence": [
       {
        "metric": "insights.blocked",
@@ -6529,24 +6533,24 @@
       "status": "VERIFIED"
      },
      "node_ms": {
-      "receive_case": 0.005,
+      "receive_case": 0.004,
       "load_inputs": 0.005,
-      "validate_evidence": 0.054,
-      "retrieve_memory": 0.122,
-      "computational_baseline": 0.263,
-      "llm_plan_investigation": 1.264,
+      "validate_evidence": 0.059,
+      "retrieve_memory": 0.112,
+      "computational_baseline": 0.251,
+      "llm_plan_investigation": 1.226,
       "validate_tool_request": 0.008,
-      "execute_authorised_tool": 0.365,
-      "validate_tool_result": 0.005,
-      "llm_assess_evidence": 3.008,
-      "formulate_finding": 0.096,
-      "independent_verify": 0.167,
-      "authority_check": 0.048,
+      "execute_authorised_tool": 0.348,
+      "validate_tool_result": 0.004,
+      "llm_assess_evidence": 2.976,
+      "formulate_finding": 0.084,
+      "independent_verify": 0.151,
+      "authority_check": 0.045,
       "execute_action": 0.002,
-      "record_decision": 0.017,
-      "validate_memory_update": 0.348
+      "record_decision": 0.037,
+      "validate_memory_update": 0.324
      },
-     "total_ms": 5.412,
+     "total_ms": 5.275,
      "evidence": [
       {
        "metric": "insights.secrets",
@@ -6664,16 +6668,16 @@
      "node_ms": {
       "receive_case": 0.005,
       "load_inputs": 0.003,
-      "validate_evidence": 0.059,
-      "retrieve_memory": 0.148,
-      "computational_baseline": 0.312,
-      "independent_verify": 0.158,
-      "authority_check": 0.061,
+      "validate_evidence": 0.056,
+      "retrieve_memory": 0.124,
+      "computational_baseline": 0.252,
+      "independent_verify": 0.14,
+      "authority_check": 0.034,
       "execute_action": 0.002,
       "record_decision": 0.013,
-      "validate_memory_update": 0.003
+      "validate_memory_update": 0.002
      },
-     "total_ms": 0.748,
+     "total_ms": 0.616,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -6897,24 +6901,24 @@
       "status": "VERIFIED"
      },
      "node_ms": {
-      "receive_case": 0.005,
+      "receive_case": 0.004,
       "load_inputs": 0.005,
-      "validate_evidence": 0.065,
-      "retrieve_memory": 0.135,
-      "computational_baseline": 0.326,
-      "llm_plan_investigation": 1.456,
-      "validate_tool_request": 0.01,
-      "execute_authorised_tool": 0.257,
-      "validate_tool_result": 0.005,
-      "llm_assess_evidence": 3.026,
-      "formulate_finding": 0.085,
+      "validate_evidence": 0.07,
+      "retrieve_memory": 0.126,
+      "computational_baseline": 0.343,
+      "llm_plan_investigation": 1.225,
+      "validate_tool_request": 0.009,
+      "execute_authorised_tool": 0.247,
+      "validate_tool_result": 0.008,
+      "llm_assess_evidence": 3.002,
+      "formulate_finding": 0.096,
       "independent_verify": 0.148,
-      "authority_check": 0.039,
+      "authority_check": 0.036,
       "execute_action": 0.002,
-      "record_decision": 0.02,
-      "validate_memory_update": 0.317
+      "record_decision": 0.015,
+      "validate_memory_update": 0.313
      },
-     "total_ms": 5.564,
+     "total_ms": 5.321,
      "evidence": [
       {
        "metric": "insights.secrets",
@@ -7361,8 +7365,9 @@
     "llm_calls": 7,
     "tool_calls": 20,
     "tokens_estimated": 13545,
-    "cost_usd_estimated": 0.079108,
-    "cop_ms": 20.441
+    "cost_usd_estimated": null,
+    "unpriced_llm_calls": 7,
+    "cop_ms": 19.506
    },
    "security_events": [],
    "persisted_decisions": 7,
@@ -7416,9 +7421,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 41.4,
-  "cpu_ms": 41.4,
-  "max_rss_kb": 78508,
+  "wall_ms": 41.3,
+  "cpu_ms": 41.2,
+  "max_rss_kb": 78428,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -7572,17 +7577,17 @@
      },
      "node_ms": {
       "receive_case": 0.005,
-      "load_inputs": 0.001,
-      "validate_evidence": 0.088,
-      "retrieve_memory": 0.125,
-      "computational_baseline": 0.306,
-      "independent_verify": 0.223,
+      "load_inputs": 0.002,
+      "validate_evidence": 0.081,
+      "retrieve_memory": 0.145,
+      "computational_baseline": 0.287,
+      "independent_verify": 0.259,
       "authority_check": 0.038,
       "execute_action": 0.002,
-      "record_decision": 0.013,
-      "validate_memory_update": 0.364
+      "record_decision": 0.015,
+      "validate_memory_update": 0.415
      },
-     "total_ms": 0.788,
+     "total_ms": 0.819,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -7763,22 +7768,22 @@
      "node_ms": {
       "receive_case": 0.004,
       "load_inputs": 0.003,
-      "validate_evidence": 0.083,
-      "retrieve_memory": 0.114,
-      "computational_baseline": 0.133,
-      "llm_plan_investigation": 1.103,
+      "validate_evidence": 0.084,
+      "retrieve_memory": 0.118,
+      "computational_baseline": 0.136,
+      "llm_plan_investigation": 1.13,
       "validate_tool_request": 0.008,
       "execute_authorised_tool": 0.151,
       "validate_tool_result": 0.003,
-      "llm_assess_evidence": 2.844,
-      "formulate_finding": 0.086,
-      "independent_verify": 0.179,
-      "authority_check": 0.037,
+      "llm_assess_evidence": 2.922,
+      "formulate_finding": 0.073,
+      "independent_verify": 0.151,
+      "authority_check": 0.036,
       "execute_action": 0.002,
       "record_decision": 0.012,
-      "validate_memory_update": 0.295
+      "validate_memory_update": 0.29
      },
-     "total_ms": 4.75,
+     "total_ms": 4.821,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -8008,22 +8013,22 @@
      "node_ms": {
       "receive_case": 0.004,
       "load_inputs": 0.005,
-      "validate_evidence": 0.054,
-      "retrieve_memory": 0.136,
-      "computational_baseline": 0.234,
-      "llm_plan_investigation": 1.195,
-      "validate_tool_request": 0.016,
-      "execute_authorised_tool": 0.234,
+      "validate_evidence": 0.053,
+      "retrieve_memory": 0.13,
+      "computational_baseline": 0.22,
+      "llm_plan_investigation": 1.136,
+      "validate_tool_request": 0.032,
+      "execute_authorised_tool": 0.182,
       "validate_tool_result": 0.004,
-      "llm_assess_evidence": 3.1,
-      "formulate_finding": 0.079,
-      "independent_verify": 0.156,
+      "llm_assess_evidence": 2.892,
+      "formulate_finding": 0.083,
+      "independent_verify": 0.18,
       "authority_check": 0.035,
       "execute_action": 0.002,
-      "record_decision": 0.024,
-      "validate_memory_update": 0.337
+      "record_decision": 0.014,
+      "validate_memory_update": 0.33
      },
-     "total_ms": 5.254,
+     "total_ms": 4.958,
      "evidence": [
       {
        "metric": "insights.secrets",
@@ -8298,8 +8303,9 @@
     "llm_calls": 4,
     "tool_calls": 6,
     "tokens_estimated": 6295,
-    "cost_usd_estimated": 0.035964,
-    "cop_ms": 10.792
+    "cost_usd_estimated": null,
+    "unpriced_llm_calls": 4,
+    "cop_ms": 10.598
    },
    "security_events": [],
    "persisted_decisions": 3,
@@ -8348,9 +8354,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 37.0,
-  "cpu_ms": 37.0,
-  "max_rss_kb": 79148,
+  "wall_ms": 34.1,
+  "cpu_ms": 34.1,
+  "max_rss_kb": 79068,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -8468,16 +8474,16 @@
      "node_ms": {
       "receive_case": 0.005,
       "load_inputs": 0.001,
-      "validate_evidence": 0.089,
-      "retrieve_memory": 0.131,
-      "computational_baseline": 0.299,
-      "independent_verify": 0.198,
-      "authority_check": 0.043,
+      "validate_evidence": 0.076,
+      "retrieve_memory": 0.129,
+      "computational_baseline": 0.272,
+      "independent_verify": 0.2,
+      "authority_check": 0.036,
       "execute_action": 0.002,
-      "record_decision": 0.014,
-      "validate_memory_update": 0.366
+      "record_decision": 0.012,
+      "validate_memory_update": 0.29
      },
-     "total_ms": 0.768,
+     "total_ms": 0.721,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -8693,24 +8699,24 @@
       "status": "UNVALIDATED"
      },
      "node_ms": {
-      "receive_case": 0.005,
-      "load_inputs": 0.005,
-      "validate_evidence": 0.066,
-      "retrieve_memory": 0.132,
-      "computational_baseline": 0.318,
-      "llm_plan_investigation": 1.283,
+      "receive_case": 0.004,
+      "load_inputs": 0.003,
+      "validate_evidence": 0.078,
+      "retrieve_memory": 0.111,
+      "computational_baseline": 0.265,
+      "llm_plan_investigation": 1.132,
       "validate_tool_request": 0.008,
-      "execute_authorised_tool": 0.2,
-      "validate_tool_result": 0.005,
-      "llm_assess_evidence": 3.293,
-      "formulate_finding": 0.094,
-      "independent_verify": 0.173,
-      "authority_check": 0.037,
+      "execute_authorised_tool": 0.178,
+      "validate_tool_result": 0.008,
+      "llm_assess_evidence": 2.871,
+      "formulate_finding": 0.075,
+      "independent_verify": 0.136,
+      "authority_check": 0.035,
       "execute_action": 0.002,
-      "record_decision": 0.017,
-      "validate_memory_update": 0.298
+      "record_decision": 0.015,
+      "validate_memory_update": 0.29
      },
-     "total_ms": 5.621,
+     "total_ms": 4.906,
      "evidence": [
       {
        "metric": "insights.stalled",
@@ -8855,17 +8861,17 @@
      },
      "node_ms": {
       "receive_case": 0.004,
-      "load_inputs": 0.005,
-      "validate_evidence": 0.064,
-      "retrieve_memory": 0.214,
-      "computational_baseline": 0.458,
-      "independent_verify": 0.202,
+      "load_inputs": 0.004,
+      "validate_evidence": 0.106,
+      "retrieve_memory": 0.157,
+      "computational_baseline": 0.446,
+      "independent_verify": 0.193,
       "authority_check": 0.035,
       "execute_action": 0.002,
       "record_decision": 0.013,
-      "validate_memory_update": 0.294
+      "validate_memory_update": 0.301
      },
-     "total_ms": 0.984,
+     "total_ms": 0.947,
      "evidence": [
       {
        "metric": "insights.repetition",
@@ -9132,8 +9138,9 @@
     "llm_calls": 2,
     "tool_calls": 8,
     "tokens_estimated": 2811,
-    "cost_usd_estimated": 0.016348,
-    "cop_ms": 7.373
+    "cost_usd_estimated": null,
+    "unpriced_llm_calls": 2,
+    "cop_ms": 6.574
    },
    "security_events": [],
    "persisted_decisions": 3,
@@ -9186,9 +9193,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 27.7,
-  "cpu_ms": 27.7,
-  "max_rss_kb": 79916,
+  "wall_ms": 26.6,
+  "cpu_ms": 26.6,
+  "max_rss_kb": 79836,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -9287,16 +9294,16 @@
      "node_ms": {
       "receive_case": 0.005,
       "load_inputs": 0.001,
-      "validate_evidence": 0.082,
-      "retrieve_memory": 0.174,
-      "computational_baseline": 0.298,
-      "independent_verify": 0.161,
-      "authority_check": 0.038,
+      "validate_evidence": 0.083,
+      "retrieve_memory": 0.13,
+      "computational_baseline": 0.235,
+      "independent_verify": 0.189,
+      "authority_check": 0.037,
       "execute_action": 0.002,
-      "record_decision": 0.013,
+      "record_decision": 0.012,
       "validate_memory_update": 0.003
      },
-     "total_ms": 0.761,
+     "total_ms": 0.682,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -9537,24 +9544,24 @@
       "status": "VERIFIED"
      },
      "node_ms": {
-      "receive_case": 0.005,
+      "receive_case": 0.004,
       "load_inputs": 0.003,
-      "validate_evidence": 0.062,
-      "retrieve_memory": 0.091,
-      "computational_baseline": 0.406,
-      "llm_plan_investigation": 1.071,
+      "validate_evidence": 0.058,
+      "retrieve_memory": 0.08,
+      "computational_baseline": 0.348,
+      "llm_plan_investigation": 1.02,
       "validate_tool_request": 0.01,
-      "execute_authorised_tool": 0.36,
-      "validate_tool_result": 0.01,
-      "llm_assess_evidence": 2.851,
-      "formulate_finding": 0.086,
-      "independent_verify": 0.169,
-      "authority_check": 0.049,
+      "execute_authorised_tool": 0.329,
+      "validate_tool_result": 0.013,
+      "llm_assess_evidence": 2.814,
+      "formulate_finding": 0.132,
+      "independent_verify": 0.184,
+      "authority_check": 0.035,
       "execute_action": 0.002,
-      "record_decision": 0.017,
-      "validate_memory_update": 0.359
+      "record_decision": 0.015,
+      "validate_memory_update": 0.341
      },
-     "total_ms": 5.175,
+     "total_ms": 5.032,
      "evidence": [
       {
        "metric": "insights.secrets",
@@ -9751,8 +9758,9 @@
     "llm_calls": 2,
     "tool_calls": 7,
     "tokens_estimated": 2737,
-    "cost_usd_estimated": 0.018804,
-    "cop_ms": 5.936
+    "cost_usd_estimated": null,
+    "unpriced_llm_calls": 2,
+    "cop_ms": 5.714
    },
    "security_events": [],
    "persisted_decisions": 2,
@@ -9803,9 +9811,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 57.4,
-  "cpu_ms": 57.4,
-  "max_rss_kb": 80684,
+  "wall_ms": 54.2,
+  "cpu_ms": 54.2,
+  "max_rss_kb": 80732,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -9906,16 +9914,16 @@
      "node_ms": {
       "receive_case": 0.005,
       "load_inputs": 0.001,
-      "validate_evidence": 0.066,
-      "retrieve_memory": 0.161,
-      "computational_baseline": 0.297,
-      "independent_verify": 0.168,
+      "validate_evidence": 0.067,
+      "retrieve_memory": 0.141,
+      "computational_baseline": 0.258,
+      "independent_verify": 0.169,
       "authority_check": 0.037,
       "execute_action": 0.002,
-      "record_decision": 0.013,
+      "record_decision": 0.014,
       "validate_memory_update": 0.003
      },
-     "total_ms": 0.737,
+     "total_ms": 0.68,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -10143,24 +10151,24 @@
       "reason": "nothing to remember (SUBSTANTIVE, NORMAL)"
      },
      "node_ms": {
-      "receive_case": 0.005,
+      "receive_case": 0.004,
       "load_inputs": 0.003,
       "validate_evidence": 0.055,
-      "retrieve_memory": 0.086,
-      "computational_baseline": 0.332,
-      "llm_plan_investigation": 1.146,
+      "retrieve_memory": 0.122,
+      "computational_baseline": 0.355,
+      "llm_plan_investigation": 1.113,
       "validate_tool_request": 0.008,
-      "execute_authorised_tool": 0.206,
-      "validate_tool_result": 0.005,
-      "llm_assess_evidence": 3.033,
-      "formulate_finding": 0.083,
-      "independent_verify": 0.14,
-      "authority_check": 0.048,
+      "execute_authorised_tool": 0.211,
+      "validate_tool_result": 0.004,
+      "llm_assess_evidence": 2.916,
+      "formulate_finding": 0.079,
+      "independent_verify": 0.134,
+      "authority_check": 0.037,
       "execute_action": 0.002,
-      "record_decision": 0.018,
+      "record_decision": 0.015,
       "validate_memory_update": 0.003
      },
-     "total_ms": 5.152,
+     "total_ms": 5.043,
      "evidence": [
       {
        "metric": "insights.stalled",
@@ -10418,24 +10426,24 @@
       "status": "VERIFIED"
      },
      "node_ms": {
-      "receive_case": 0.004,
-      "load_inputs": 0.004,
+      "receive_case": 0.005,
+      "load_inputs": 0.003,
       "validate_evidence": 0.023,
-      "retrieve_memory": 0.089,
-      "computational_baseline": 0.432,
-      "llm_plan_investigation": 1.208,
+      "retrieve_memory": 0.083,
+      "computational_baseline": 0.429,
+      "llm_plan_investigation": 1.004,
       "validate_tool_request": 0.009,
-      "execute_authorised_tool": 0.246,
-      "validate_tool_result": 0.005,
-      "llm_assess_evidence": 3.301,
-      "formulate_finding": 0.091,
-      "independent_verify": 0.127,
-      "authority_check": 0.038,
+      "execute_authorised_tool": 0.238,
+      "validate_tool_result": 0.004,
+      "llm_assess_evidence": 2.812,
+      "formulate_finding": 0.078,
+      "independent_verify": 0.123,
+      "authority_check": 0.036,
       "execute_action": 0.002,
-      "record_decision": 0.027,
-      "validate_memory_update": 0.387
+      "record_decision": 0.019,
+      "validate_memory_update": 0.353
      },
-     "total_ms": 5.579,
+     "total_ms": 4.849,
      "evidence": []
     },
     "behavior_analytics": {
@@ -10539,18 +10547,18 @@
       "status": "VERIFIED"
      },
      "node_ms": {
-      "receive_case": 0.005,
+      "receive_case": 0.004,
       "load_inputs": 0.005,
-      "validate_evidence": 0.067,
-      "retrieve_memory": 0.169,
-      "computational_baseline": 0.481,
-      "independent_verify": 0.183,
+      "validate_evidence": 0.059,
+      "retrieve_memory": 0.126,
+      "computational_baseline": 0.431,
+      "independent_verify": 0.17,
       "authority_check": 0.037,
       "execute_action": 0.002,
-      "record_decision": 0.013,
-      "validate_memory_update": 0.289
+      "record_decision": 0.012,
+      "validate_memory_update": 0.243
      },
-     "total_ms": 0.949,
+     "total_ms": 0.834,
      "evidence": [
       {
        "metric": "insights.repetition",
@@ -10825,8 +10833,9 @@
     "llm_calls": 5,
     "tool_calls": 16,
     "tokens_estimated": 6821,
-    "cost_usd_estimated": 0.043892,
-    "cop_ms": 12.417
+    "cost_usd_estimated": null,
+    "unpriced_llm_calls": 5,
+    "cop_ms": 11.406
    },
    "security_events": [],
    "persisted_decisions": 4,
@@ -10851,9 +10860,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 34.2,
-  "cpu_ms": 34.2,
-  "max_rss_kb": 81452,
+  "wall_ms": 32.9,
+  "cpu_ms": 32.9,
+  "max_rss_kb": 81372,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -10953,16 +10962,16 @@
      "node_ms": {
       "receive_case": 0.005,
       "load_inputs": 0.001,
-      "validate_evidence": 0.082,
-      "retrieve_memory": 0.134,
-      "computational_baseline": 0.248,
-      "independent_verify": 0.175,
-      "authority_check": 0.039,
+      "validate_evidence": 0.079,
+      "retrieve_memory": 0.138,
+      "computational_baseline": 0.263,
+      "independent_verify": 0.198,
+      "authority_check": 0.037,
       "execute_action": 0.002,
-      "record_decision": 0.013,
+      "record_decision": 0.012,
       "validate_memory_update": 0.003
      },
-     "total_ms": 0.686,
+     "total_ms": 0.723,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -11089,16 +11098,16 @@
      "node_ms": {
       "receive_case": 0.004,
       "load_inputs": 0.002,
-      "validate_evidence": 0.056,
-      "retrieve_memory": 0.109,
-      "computational_baseline": 0.325,
-      "independent_verify": 0.171,
-      "authority_check": 0.042,
+      "validate_evidence": 0.054,
+      "retrieve_memory": 0.08,
+      "computational_baseline": 0.3,
+      "independent_verify": 0.208,
+      "authority_check": 0.056,
       "execute_action": 0.002,
-      "record_decision": 0.014,
+      "record_decision": 0.012,
       "validate_memory_update": 0.003
      },
-     "total_ms": 0.711,
+     "total_ms": 0.706,
      "evidence": [
       {
        "metric": "insights.reverted",
@@ -11273,23 +11282,23 @@
      },
      "node_ms": {
       "receive_case": 0.004,
-      "load_inputs": 0.006,
-      "validate_evidence": 0.053,
-      "retrieve_memory": 0.089,
-      "computational_baseline": 0.215,
-      "llm_plan_investigation": 1.165,
+      "load_inputs": 0.005,
+      "validate_evidence": 0.048,
+      "retrieve_memory": 0.082,
+      "computational_baseline": 0.187,
+      "llm_plan_investigation": 1.109,
       "validate_tool_request": 0.007,
-      "execute_authorised_tool": 0.167,
+      "execute_authorised_tool": 0.116,
       "validate_tool_result": 0.003,
-      "llm_assess_evidence": 2.948,
+      "llm_assess_evidence": 2.868,
       "formulate_finding": 0.077,
-      "independent_verify": 0.13,
-      "authority_check": 0.036,
+      "independent_verify": 0.131,
+      "authority_check": 0.039,
       "execute_action": 0.002,
-      "record_decision": 0.015,
-      "validate_memory_update": 0.376
+      "record_decision": 0.013,
+      "validate_memory_update": 0.302
      },
-     "total_ms": 4.902,
+     "total_ms": 4.678,
      "evidence": [
       {
        "metric": "insights.secrets",
@@ -11532,8 +11541,9 @@
     "llm_calls": 2,
     "tool_calls": 6,
     "tokens_estimated": 2638,
-    "cost_usd_estimated": 0.015272,
-    "cop_ms": 6.299
+    "cost_usd_estimated": null,
+    "unpriced_llm_calls": 2,
+    "cop_ms": 6.107
    },
    "security_events": [],
    "persisted_decisions": 3,
@@ -11566,9 +11576,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 36.0,
-  "cpu_ms": 35.8,
-  "max_rss_kb": 82220,
+  "wall_ms": 33.0,
+  "cpu_ms": 33.0,
+  "max_rss_kb": 82140,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -11666,18 +11676,18 @@
       "reason": "nothing to remember (SUBSTANTIVE, SUFFICIENT)"
      },
      "node_ms": {
-      "receive_case": 0.005,
+      "receive_case": 0.004,
       "load_inputs": 0.002,
-      "validate_evidence": 0.067,
-      "retrieve_memory": 0.134,
-      "computational_baseline": 0.23,
-      "independent_verify": 0.185,
+      "validate_evidence": 0.061,
+      "retrieve_memory": 0.142,
+      "computational_baseline": 0.251,
+      "independent_verify": 0.169,
       "authority_check": 0.035,
-      "execute_action": 0.002,
+      "execute_action": 0.001,
       "record_decision": 0.013,
       "validate_memory_update": 0.003
      },
-     "total_ms": 0.66,
+     "total_ms": 0.665,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -11805,18 +11815,18 @@
       "status": "VERIFIED"
      },
      "node_ms": {
-      "receive_case": 0.005,
-      "load_inputs": 0.002,
-      "validate_evidence": 0.058,
-      "retrieve_memory": 0.094,
-      "computational_baseline": 0.323,
-      "independent_verify": 0.179,
-      "authority_check": 0.035,
+      "receive_case": 0.004,
+      "load_inputs": 0.003,
+      "validate_evidence": 0.055,
+      "retrieve_memory": 0.104,
+      "computational_baseline": 0.316,
+      "independent_verify": 0.174,
+      "authority_check": 0.042,
       "execute_action": 0.002,
-      "record_decision": 0.013,
-      "validate_memory_update": 0.289
+      "record_decision": 0.012,
+      "validate_memory_update": 0.266
      },
-     "total_ms": 0.698,
+     "total_ms": 0.7,
      "evidence": [
       {
        "metric": "insights.reverted",
@@ -11992,22 +12002,22 @@
      "node_ms": {
       "receive_case": 0.004,
       "load_inputs": 0.005,
-      "validate_evidence": 0.052,
-      "retrieve_memory": 0.136,
-      "computational_baseline": 0.252,
-      "llm_plan_investigation": 1.2,
+      "validate_evidence": 0.048,
+      "retrieve_memory": 0.109,
+      "computational_baseline": 0.202,
+      "llm_plan_investigation": 1.121,
       "validate_tool_request": 0.007,
-      "execute_authorised_tool": 0.124,
+      "execute_authorised_tool": 0.121,
       "validate_tool_result": 0.003,
-      "llm_assess_evidence": 3.06,
-      "formulate_finding": 0.079,
-      "independent_verify": 0.138,
-      "authority_check": 0.038,
+      "llm_assess_evidence": 2.805,
+      "formulate_finding": 0.073,
+      "independent_verify": 0.129,
+      "authority_check": 0.035,
       "execute_action": 0.002,
-      "record_decision": 0.014,
-      "validate_memory_update": 0.299
+      "record_decision": 0.013,
+      "validate_memory_update": 0.273
      },
-     "total_ms": 5.1,
+     "total_ms": 4.664,
      "evidence": [
       {
        "metric": "insights.secrets",
@@ -12262,8 +12272,9 @@
     "llm_calls": 2,
     "tool_calls": 6,
     "tokens_estimated": 2908,
-    "cost_usd_estimated": 0.016576,
-    "cop_ms": 6.458
+    "cost_usd_estimated": null,
+    "unpriced_llm_calls": 2,
+    "cop_ms": 6.029
    },
    "security_events": [],
    "persisted_decisions": 3,
@@ -12305,9 +12316,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 91.6,
-  "cpu_ms": 91.5,
-  "max_rss_kb": 84268,
+  "wall_ms": 86.0,
+  "cpu_ms": 86.0,
+  "max_rss_kb": 84316,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -12406,16 +12417,16 @@
      "node_ms": {
       "receive_case": 0.005,
       "load_inputs": 0.001,
-      "validate_evidence": 0.085,
-      "retrieve_memory": 0.192,
-      "computational_baseline": 0.247,
-      "independent_verify": 0.166,
+      "validate_evidence": 0.066,
+      "retrieve_memory": 0.133,
+      "computational_baseline": 0.223,
+      "independent_verify": 0.208,
       "authority_check": 0.036,
       "execute_action": 0.002,
-      "record_decision": 0.013,
-      "validate_memory_update": 0.003
+      "record_decision": 0.012,
+      "validate_memory_update": 0.002
      },
-     "total_ms": 0.734,
+     "total_ms": 0.674,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -12620,22 +12631,22 @@
      "node_ms": {
       "receive_case": 0.004,
       "load_inputs": 0.003,
-      "validate_evidence": 0.074,
-      "retrieve_memory": 0.154,
-      "computational_baseline": 0.185,
-      "llm_plan_investigation": 1.193,
+      "validate_evidence": 0.082,
+      "retrieve_memory": 0.127,
+      "computational_baseline": 0.168,
+      "llm_plan_investigation": 1.152,
       "validate_tool_request": 0.01,
       "execute_authorised_tool": 0.498,
-      "validate_tool_result": 0.004,
-      "llm_assess_evidence": 3.237,
-      "formulate_finding": 0.099,
-      "independent_verify": 0.386,
-      "authority_check": 0.075,
+      "validate_tool_result": 0.003,
+      "llm_assess_evidence": 2.883,
+      "formulate_finding": 0.076,
+      "independent_verify": 0.308,
+      "authority_check": 0.036,
       "execute_action": 0.002,
-      "record_decision": 0.015,
-      "validate_memory_update": 0.335
+      "record_decision": 0.012,
+      "validate_memory_update": 0.332
      },
-     "total_ms": 5.924,
+     "total_ms": 5.352,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -12970,8 +12981,9 @@
     "llm_calls": 2,
     "tool_calls": 4,
     "tokens_estimated": 3866,
-    "cost_usd_estimated": 0.021752,
-    "cop_ms": 6.658
+    "cost_usd_estimated": null,
+    "unpriced_llm_calls": 2,
+    "cop_ms": 6.026
    },
    "security_events": [],
    "persisted_decisions": 6,
@@ -13198,24 +13210,24 @@
      "status": "VERIFIED"
     },
     "node_ms": {
-     "receive_case": 0.005,
-     "load_inputs": 0.006,
-     "validate_evidence": 0.118,
-     "retrieve_memory": 0.115,
-     "computational_baseline": 0.219,
-     "llm_plan_investigation": 1.286,
-     "validate_tool_request": 0.012,
-     "execute_authorised_tool": 0.315,
+     "receive_case": 0.004,
+     "load_inputs": 0.003,
+     "validate_evidence": 0.076,
+     "retrieve_memory": 0.081,
+     "computational_baseline": 0.156,
+     "llm_plan_investigation": 1.126,
+     "validate_tool_request": 0.01,
+     "execute_authorised_tool": 0.231,
      "validate_tool_result": 0.004,
-     "llm_assess_evidence": 3.099,
-     "formulate_finding": 0.103,
-     "independent_verify": 0.237,
-     "authority_check": 0.047,
+     "llm_assess_evidence": 2.889,
+     "formulate_finding": 0.084,
+     "independent_verify": 0.204,
+     "authority_check": 0.036,
      "execute_action": 0.002,
-     "record_decision": 0.017,
-     "validate_memory_update": 0.403
+     "record_decision": 0.015,
+     "validate_memory_update": 0.386
     },
-    "total_ms": 5.568,
+    "total_ms": 4.906,
     "evidence": [
      {
       "metric": "insights.token_outlier",
@@ -13437,22 +13449,22 @@
     "node_ms": {
      "receive_case": 0.005,
      "load_inputs": 0.003,
-     "validate_evidence": 0.077,
-     "retrieve_memory": 0.146,
-     "computational_baseline": 0.157,
-     "llm_plan_investigation": 1.152,
+     "validate_evidence": 0.081,
+     "retrieve_memory": 0.148,
+     "computational_baseline": 0.177,
+     "llm_plan_investigation": 1.082,
      "validate_tool_request": 0.009,
-     "execute_authorised_tool": 0.609,
-     "validate_tool_result": 0.004,
-     "llm_assess_evidence": 3.048,
-     "formulate_finding": 0.089,
-     "independent_verify": 0.402,
-     "authority_check": 0.04,
+     "execute_authorised_tool": 0.635,
+     "validate_tool_result": 0.003,
+     "llm_assess_evidence": 2.878,
+     "formulate_finding": 0.074,
+     "independent_verify": 0.347,
+     "authority_check": 0.036,
      "execute_action": 0.002,
-     "record_decision": 0.016,
-     "validate_memory_update": 0.339
+     "record_decision": 0.013,
+     "validate_memory_update": 0.304
     },
-    "total_ms": 5.743,
+    "total_ms": 5.48,
     "evidence": [
      {
       "metric": "insights.token_outlier",
@@ -13546,9 +13558,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 45.8,
-  "cpu_ms": 45.7,
-  "max_rss_kb": 85036,
+  "wall_ms": 43.5,
+  "cpu_ms": 43.5,
+  "max_rss_kb": 84956,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -13646,18 +13658,18 @@
       "reason": "nothing to remember (SUBSTANTIVE, SUFFICIENT)"
      },
      "node_ms": {
-      "receive_case": 0.008,
+      "receive_case": 0.005,
       "load_inputs": 0.001,
-      "validate_evidence": 0.08,
-      "retrieve_memory": 0.117,
-      "computational_baseline": 0.233,
-      "independent_verify": 0.159,
-      "authority_check": 0.038,
+      "validate_evidence": 0.076,
+      "retrieve_memory": 0.112,
+      "computational_baseline": 0.229,
+      "independent_verify": 0.157,
+      "authority_check": 0.041,
       "execute_action": 0.002,
-      "record_decision": 0.016,
+      "record_decision": 0.012,
       "validate_memory_update": 0.003
      },
-     "total_ms": 0.638,
+     "total_ms": 0.623,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -13821,21 +13833,21 @@
       "status": "UNVALIDATED"
      },
      "node_ms": {
-      "receive_case": 0.005,
-      "load_inputs": 0.004,
-      "validate_evidence": 0.091,
-      "retrieve_memory": 0.109,
-      "computational_baseline": 0.179,
-      "llm_plan_investigation": 1.207,
-      "llm_assess_evidence": 2.78,
-      "formulate_finding": 0.073,
-      "independent_verify": 0.404,
+      "receive_case": 0.004,
+      "load_inputs": 0.003,
+      "validate_evidence": 0.08,
+      "retrieve_memory": 0.117,
+      "computational_baseline": 0.188,
+      "llm_plan_investigation": 1.145,
+      "llm_assess_evidence": 2.825,
+      "formulate_finding": 0.072,
+      "independent_verify": 0.372,
       "authority_check": 0.037,
       "execute_action": 0.002,
-      "record_decision": 0.01,
-      "validate_memory_update": 0.282
+      "record_decision": 0.009,
+      "validate_memory_update": 0.302
      },
-     "total_ms": 4.891,
+     "total_ms": 4.845,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -14002,24 +14014,24 @@
       "reason": "nothing to remember (INCONCLUSIVE, INCONCLUSIVE)"
      },
      "node_ms": {
-      "receive_case": 0.005,
+      "receive_case": 0.004,
       "load_inputs": 0.004,
-      "validate_evidence": 0.029,
-      "retrieve_memory": 0.224,
-      "computational_baseline": 0.592,
-      "llm_plan_investigation": 1.117,
-      "validate_tool_request": 0.044,
-      "execute_authorised_tool": 0.35,
+      "validate_evidence": 0.025,
+      "retrieve_memory": 0.143,
+      "computational_baseline": 0.507,
+      "llm_plan_investigation": 1.047,
+      "validate_tool_request": 0.038,
+      "execute_authorised_tool": 0.339,
       "validate_tool_result": 0.004,
-      "llm_assess_evidence": 2.823,
-      "formulate_finding": 0.049,
-      "independent_verify": 0.092,
-      "authority_check": 0.045,
+      "llm_assess_evidence": 2.696,
+      "formulate_finding": 0.047,
+      "independent_verify": 0.09,
+      "authority_check": 0.042,
       "execute_action": 0.002,
       "record_decision": 0.015,
       "validate_memory_update": 0.003
      },
-     "total_ms": 5.38,
+     "total_ms": 4.988,
      "evidence": []
     }
    },
@@ -14263,8 +14275,9 @@
     "llm_calls": 4,
     "tool_calls": 5,
     "tokens_estimated": 4630,
-    "cost_usd_estimated": 0.023864,
-    "cop_ms": 10.909
+    "cost_usd_estimated": null,
+    "unpriced_llm_calls": 4,
+    "cop_ms": 10.456
    },
    "security_events": [
     {
@@ -14357,9 +14370,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 32.6,
-  "cpu_ms": 32.4,
-  "max_rss_kb": 85676,
+  "wall_ms": 33.1,
+  "cpu_ms": 31.2,
+  "max_rss_kb": 85596,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -14456,18 +14469,18 @@
       "reason": "nothing to remember (SUBSTANTIVE, SUFFICIENT)"
      },
      "node_ms": {
-      "receive_case": 0.006,
+      "receive_case": 0.005,
       "load_inputs": 0.001,
-      "validate_evidence": 0.082,
-      "retrieve_memory": 0.137,
-      "computational_baseline": 0.247,
-      "independent_verify": 0.234,
-      "authority_check": 0.041,
+      "validate_evidence": 0.092,
+      "retrieve_memory": 0.157,
+      "computational_baseline": 0.262,
+      "independent_verify": 0.167,
+      "authority_check": 0.037,
       "execute_action": 0.002,
-      "record_decision": 0.013,
+      "record_decision": 0.014,
       "validate_memory_update": 0.003
      },
-     "total_ms": 0.75,
+     "total_ms": 0.723,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -14665,24 +14678,24 @@
       "record_type": "anomaly_observation"
      },
      "node_ms": {
-      "receive_case": 0.007,
-      "load_inputs": 0.004,
-      "validate_evidence": 0.087,
-      "retrieve_memory": 0.112,
-      "computational_baseline": 0.185,
-      "llm_plan_investigation": 1.232,
-      "validate_tool_request": 0.033,
+      "receive_case": 0.004,
+      "load_inputs": 0.003,
+      "validate_evidence": 0.082,
+      "retrieve_memory": 0.104,
+      "computational_baseline": 0.149,
+      "llm_plan_investigation": 1.135,
+      "validate_tool_request": 0.03,
       "execute_authorised_tool": 0.002,
       "validate_tool_result": 0.002,
-      "llm_assess_evidence": 2.918,
-      "formulate_finding": 0.068,
-      "independent_verify": 0.174,
-      "authority_check": 0.039,
+      "llm_assess_evidence": 2.925,
+      "formulate_finding": 0.067,
+      "independent_verify": 0.146,
+      "authority_check": 0.038,
       "execute_action": 0.002,
-      "record_decision": 0.016,
-      "validate_memory_update": 0.086
+      "record_decision": 0.014,
+      "validate_memory_update": 0.085
      },
-     "total_ms": 4.865,
+     "total_ms": 4.689,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -14885,8 +14898,9 @@
     "llm_calls": 3,
     "tool_calls": 4,
     "tokens_estimated": 4462,
-    "cost_usd_estimated": 0.022376,
-    "cop_ms": 5.615
+    "cost_usd_estimated": null,
+    "unpriced_llm_calls": 3,
+    "cop_ms": 5.412
    },
    "security_events": [
     {
@@ -14954,9 +14968,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 32.1,
-  "cpu_ms": 32.0,
-  "max_rss_kb": 86444,
+  "wall_ms": 30.4,
+  "cpu_ms": 30.4,
+  "max_rss_kb": 86364,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -15053,18 +15067,18 @@
       "reason": "nothing to remember (SUBSTANTIVE, SUFFICIENT)"
      },
      "node_ms": {
-      "receive_case": 0.005,
-      "load_inputs": 0.002,
-      "validate_evidence": 0.069,
-      "retrieve_memory": 0.143,
-      "computational_baseline": 0.238,
-      "independent_verify": 0.185,
-      "authority_check": 0.037,
+      "receive_case": 0.004,
+      "load_inputs": 0.001,
+      "validate_evidence": 0.085,
+      "retrieve_memory": 0.134,
+      "computational_baseline": 0.221,
+      "independent_verify": 0.157,
+      "authority_check": 0.038,
       "execute_action": 0.002,
-      "record_decision": 0.014,
+      "record_decision": 0.012,
       "validate_memory_update": 0.003
      },
-     "total_ms": 0.681,
+     "total_ms": 0.642,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -15305,22 +15319,22 @@
      "node_ms": {
       "receive_case": 0.005,
       "load_inputs": 0.004,
-      "validate_evidence": 0.107,
-      "retrieve_memory": 0.091,
-      "computational_baseline": 0.15,
-      "llm_plan_investigation": 1.23,
+      "validate_evidence": 0.073,
+      "retrieve_memory": 0.084,
+      "computational_baseline": 0.128,
+      "llm_plan_investigation": 1.159,
       "validate_tool_request": 0.008,
-      "execute_authorised_tool": 0.159,
-      "validate_tool_result": 0.004,
-      "llm_assess_evidence": 3.089,
-      "formulate_finding": 0.085,
-      "independent_verify": 0.203,
-      "authority_check": 0.038,
+      "execute_authorised_tool": 0.175,
+      "validate_tool_result": 0.003,
+      "llm_assess_evidence": 2.867,
+      "formulate_finding": 0.077,
+      "independent_verify": 0.208,
+      "authority_check": 0.039,
       "execute_action": 0.002,
-      "record_decision": 0.017,
-      "validate_memory_update": 0.003
+      "record_decision": 0.016,
+      "validate_memory_update": 0.002
      },
-     "total_ms": 5.175,
+     "total_ms": 4.832,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -15523,8 +15537,9 @@
     "llm_calls": 3,
     "tool_calls": 7,
     "tokens_estimated": 4881,
-    "cost_usd_estimated": 0.02594,
-    "cop_ms": 5.856
+    "cost_usd_estimated": null,
+    "unpriced_llm_calls": 3,
+    "cop_ms": 5.474
    },
    "security_events": [
     {
@@ -15610,7 +15625,7 @@
    {
     "expectation": "checkpoint persisted on disk",
     "passed": true,
-    "actual": 1454080
+    "actual": 1437696
    },
    {
     "expectation": "only the approved action reached the gateway",
@@ -15626,9 +15641,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 243.1,
-  "cpu_ms": 167.2,
-  "max_rss_kb": 90308,
+  "wall_ms": 221.5,
+  "cpu_ms": 138.8,
+  "max_rss_kb": 89948,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -15727,18 +15742,18 @@
       "reason": "nothing to remember (SUBSTANTIVE, SUFFICIENT)"
      },
      "node_ms": {
-      "receive_case": 0.006,
-      "load_inputs": 0.001,
-      "validate_evidence": 0.218,
-      "retrieve_memory": 1.33,
-      "computational_baseline": 0.277,
-      "independent_verify": 0.176,
-      "authority_check": 0.04,
+      "receive_case": 0.005,
+      "load_inputs": 0.002,
+      "validate_evidence": 0.117,
+      "retrieve_memory": 1.618,
+      "computational_baseline": 0.265,
+      "independent_verify": 0.186,
+      "authority_check": 0.039,
       "execute_action": 0.002,
-      "record_decision": 0.014,
+      "record_decision": 0.013,
       "validate_memory_update": 0.003
      },
-     "total_ms": 2.05,
+     "total_ms": 2.234,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -15872,16 +15887,16 @@
      "node_ms": {
       "receive_case": 0.006,
       "load_inputs": 0.003,
-      "validate_evidence": 0.078,
-      "retrieve_memory": 2.132,
-      "computational_baseline": 1.664,
-      "independent_verify": 0.184,
-      "authority_check": 0.042,
+      "validate_evidence": 0.081,
+      "retrieve_memory": 1.418,
+      "computational_baseline": 1.682,
+      "independent_verify": 0.191,
+      "authority_check": 0.04,
       "execute_action": 0.002,
-      "record_decision": 0.015,
+      "record_decision": 0.014,
       "validate_memory_update": 0.003
      },
-     "total_ms": 4.111,
+     "total_ms": 3.423,
      "evidence": [
       {
        "metric": "interaction.subagent_lanes",
@@ -15998,7 +16013,7 @@
        "decision": "approve",
        "reviewer": "security-lead@tenant-a.example",
        "note": "",
-       "at": "2026-10-29T04:49:35Z"
+       "at": "2026-10-29T04:54:06Z"
       },
       "execution_status": "EXECUTED_MOCK",
       "execution_outcome": {
@@ -16058,19 +16073,19 @@
       "status": "VERIFIED"
      },
      "node_ms": {
-      "receive_case": 0.007,
-      "load_inputs": 0.007,
-      "validate_evidence": 0.108,
-      "retrieve_memory": 1.647,
-      "computational_baseline": 1.025,
-      "independent_verify": 0.344,
-      "authority_check": 0.099,
-      "await_approval": 0.064,
-      "execute_action": 0.102,
-      "record_decision": 0.027,
-      "validate_memory_update": 4.052
+      "receive_case": 0.005,
+      "load_inputs": 0.006,
+      "validate_evidence": 0.075,
+      "retrieve_memory": 2.044,
+      "computational_baseline": 0.641,
+      "independent_verify": 0.212,
+      "authority_check": 0.059,
+      "await_approval": 0.039,
+      "execute_action": 0.071,
+      "record_decision": 0.018,
+      "validate_memory_update": 3.27
      },
-     "total_ms": 3.403,
+     "total_ms": 3.152,
      "evidence": [
       {
        "metric": "insights.blocked",
@@ -16252,7 +16267,7 @@
        "decision": "reject",
        "reviewer": "security-lead@tenant-a.example",
        "note": "",
-       "at": "2026-10-29T04:49:36Z"
+       "at": "2026-10-29T04:54:06Z"
       },
       "execution_status": "APPROVAL_REJECTED",
       "execution_outcome": null,
@@ -16334,25 +16349,25 @@
       "status": "VERIFIED"
      },
      "node_ms": {
-      "receive_case": 0.006,
-      "load_inputs": 0.01,
-      "validate_evidence": 0.085,
-      "retrieve_memory": 1.55,
-      "computational_baseline": 0.314,
-      "llm_plan_investigation": 1.385,
+      "receive_case": 0.005,
+      "load_inputs": 0.008,
+      "validate_evidence": 0.065,
+      "retrieve_memory": 1.452,
+      "computational_baseline": 0.295,
+      "llm_plan_investigation": 1.386,
       "validate_tool_request": 0.008,
-      "execute_authorised_tool": 1.837,
+      "execute_authorised_tool": 2.368,
       "validate_tool_result": 0.005,
-      "llm_assess_evidence": 3.203,
-      "formulate_finding": 0.113,
-      "independent_verify": 0.215,
-      "authority_check": 0.055,
-      "await_approval": 0.036,
-      "execute_action": 0.058,
-      "record_decision": 0.026,
-      "validate_memory_update": 3.302
+      "llm_assess_evidence": 3.051,
+      "formulate_finding": 0.089,
+      "independent_verify": 0.167,
+      "authority_check": 0.05,
+      "await_approval": 0.033,
+      "execute_action": 0.046,
+      "record_decision": 0.023,
+      "validate_memory_update": 3.28
      },
-     "total_ms": 8.88,
+     "total_ms": 9.028,
      "evidence": [
       {
        "metric": "insights.secrets",
@@ -16663,8 +16678,9 @@
     "llm_calls": 3,
     "tool_calls": 11,
     "tokens_estimated": 5215,
-    "cost_usd_estimated": 0.02982,
-    "cop_ms": 18.444
+    "cost_usd_estimated": null,
+    "unpriced_llm_calls": 3,
+    "cop_ms": 17.837
    },
    "security_events": [],
    "persisted_decisions": 4,
@@ -16701,7 +16717,7 @@
      "target": "c15"
     }
    ],
-   "checkpoint_file_bytes": 1454080
+   "checkpoint_file_bytes": 1437696
   }
  },
  {
@@ -16738,9 +16754,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 224.0,
-  "cpu_ms": 139.0,
-  "max_rss_kb": 91332,
+  "wall_ms": 265.0,
+  "cpu_ms": 126.5,
+  "max_rss_kb": 91100,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -16841,16 +16857,16 @@
      "node_ms": {
       "receive_case": 0.006,
       "load_inputs": 0.002,
-      "validate_evidence": 0.085,
-      "retrieve_memory": 1.412,
-      "computational_baseline": 0.279,
-      "independent_verify": 0.182,
-      "authority_check": 0.043,
-      "execute_action": 0.002,
-      "record_decision": 0.021,
+      "validate_evidence": 0.074,
+      "retrieve_memory": 1.389,
+      "computational_baseline": 0.379,
+      "independent_verify": 0.311,
+      "authority_check": 0.061,
+      "execute_action": 0.003,
+      "record_decision": 0.019,
       "validate_memory_update": 0.005
      },
-     "total_ms": 2.011,
+     "total_ms": 2.225,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -16982,18 +16998,18 @@
       "reason": "nothing to remember (SUBSTANTIVE, CONTAINED)"
      },
      "node_ms": {
-      "receive_case": 0.007,
-      "load_inputs": 0.003,
-      "validate_evidence": 0.07,
-      "retrieve_memory": 1.49,
-      "computational_baseline": 1.881,
-      "independent_verify": 0.184,
-      "authority_check": 0.046,
-      "execute_action": 0.002,
-      "record_decision": 0.015,
-      "validate_memory_update": 0.003
+      "receive_case": 0.006,
+      "load_inputs": 0.005,
+      "validate_evidence": 0.069,
+      "retrieve_memory": 1.881,
+      "computational_baseline": 2.441,
+      "independent_verify": 0.317,
+      "authority_check": 0.067,
+      "execute_action": 0.003,
+      "record_decision": 0.023,
+      "validate_memory_update": 0.005
      },
-     "total_ms": 3.683,
+     "total_ms": 4.789,
      "evidence": [
       {
        "metric": "interaction.subagent_lanes",
@@ -17110,7 +17126,7 @@
        "decision": "approve",
        "reviewer": "security-lead@tenant-a.example",
        "note": "",
-       "at": "2026-10-29T04:49:36Z"
+       "at": "2026-10-29T04:54:07Z"
       },
       "execution_status": "EXECUTION_FAILED",
       "execution_outcome": {
@@ -17172,19 +17188,19 @@
       "status": "VERIFIED"
      },
      "node_ms": {
-      "receive_case": 0.006,
-      "load_inputs": 0.005,
-      "validate_evidence": 0.073,
-      "retrieve_memory": 1.808,
-      "computational_baseline": 0.783,
-      "independent_verify": 0.238,
-      "authority_check": 0.085,
-      "await_approval": 0.033,
-      "execute_action": 0.074,
+      "receive_case": 0.007,
+      "load_inputs": 0.007,
+      "validate_evidence": 0.139,
+      "retrieve_memory": 1.986,
+      "computational_baseline": 0.659,
+      "independent_verify": 0.265,
+      "authority_check": 0.063,
+      "await_approval": 0.04,
+      "execute_action": 0.138,
       "record_decision": 0.023,
-      "validate_memory_update": 3.381
+      "validate_memory_update": 3.757
      },
-     "total_ms": 3.105,
+     "total_ms": 3.304,
      "evidence": [
       {
        "metric": "insights.blocked",
@@ -17366,7 +17382,7 @@
        "decision": "reject",
        "reviewer": "security-lead@tenant-a.example",
        "note": "",
-       "at": "2026-10-29T04:49:36Z"
+       "at": "2026-10-29T04:54:07Z"
       },
       "execution_status": "APPROVAL_REJECTED",
       "execution_outcome": null,
@@ -17448,25 +17464,25 @@
       "status": "VERIFIED"
      },
      "node_ms": {
-      "receive_case": 0.007,
-      "load_inputs": 0.007,
-      "validate_evidence": 0.078,
-      "retrieve_memory": 1.546,
-      "computational_baseline": 0.357,
-      "llm_plan_investigation": 1.323,
-      "validate_tool_request": 0.009,
-      "execute_authorised_tool": 1.634,
-      "validate_tool_result": 0.005,
-      "llm_assess_evidence": 3.257,
-      "formulate_finding": 0.247,
-      "independent_verify": 0.185,
-      "authority_check": 0.05,
-      "await_approval": 0.031,
-      "execute_action": 0.049,
-      "record_decision": 0.023,
-      "validate_memory_update": 3.038
+      "receive_case": 0.008,
+      "load_inputs": 0.011,
+      "validate_evidence": 0.099,
+      "retrieve_memory": 1.788,
+      "computational_baseline": 0.504,
+      "llm_plan_investigation": 2.078,
+      "validate_tool_request": 0.013,
+      "execute_authorised_tool": 2.279,
+      "validate_tool_result": 0.007,
+      "llm_assess_evidence": 5.53,
+      "formulate_finding": 0.14,
+      "independent_verify": 0.276,
+      "authority_check": 0.077,
+      "await_approval": 0.08,
+      "execute_action": 0.069,
+      "record_decision": 0.03,
+      "validate_memory_update": 3.491
      },
-     "total_ms": 8.785,
+     "total_ms": 12.959,
      "evidence": [
       {
        "metric": "insights.secrets",
@@ -17777,8 +17793,9 @@
     "llm_calls": 3,
     "tool_calls": 11,
     "tokens_estimated": 5215,
-    "cost_usd_estimated": 0.02982,
-    "cop_ms": 17.584
+    "cost_usd_estimated": null,
+    "unpriced_llm_calls": 3,
+    "cop_ms": 23.277
    },
    "security_events": [],
    "persisted_decisions": 4,
@@ -17815,7 +17832,7 @@
      "target": "c15"
     }
    ],
-   "checkpoint_file_bytes": 1449984
+   "checkpoint_file_bytes": 1437696
   }
  },
  {
@@ -17854,9 +17871,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 28.5,
-  "cpu_ms": 28.5,
-  "max_rss_kb": 91588,
+  "wall_ms": 30.0,
+  "cpu_ms": 29.3,
+  "max_rss_kb": 91356,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -17953,18 +17970,18 @@
       "reason": "nothing to remember (SUBSTANTIVE, SUFFICIENT)"
      },
      "node_ms": {
-      "receive_case": 0.005,
+      "receive_case": 0.007,
       "load_inputs": 0.002,
-      "validate_evidence": 0.07,
-      "retrieve_memory": 0.151,
-      "computational_baseline": 0.282,
-      "independent_verify": 0.221,
-      "authority_check": 0.046,
+      "validate_evidence": 0.101,
+      "retrieve_memory": 0.22,
+      "computational_baseline": 0.327,
+      "independent_verify": 0.249,
+      "authority_check": 0.045,
       "execute_action": 0.002,
-      "record_decision": 0.014,
-      "validate_memory_update": 0.004
+      "record_decision": 0.015,
+      "validate_memory_update": 0.003
      },
-     "total_ms": 0.779,
+     "total_ms": 0.953,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -18130,19 +18147,19 @@
      "node_ms": {
       "receive_case": 0.005,
       "load_inputs": 0.004,
-      "validate_evidence": 0.077,
-      "retrieve_memory": 0.148,
-      "computational_baseline": 0.17,
-      "llm_plan_investigation": 1.255,
-      "llm_assess_evidence": 3.047,
-      "formulate_finding": 0.108,
-      "independent_verify": 0.232,
-      "authority_check": 0.04,
+      "validate_evidence": 0.08,
+      "retrieve_memory": 0.116,
+      "computational_baseline": 0.146,
+      "llm_plan_investigation": 1.447,
+      "llm_assess_evidence": 3.213,
+      "formulate_finding": 0.078,
+      "independent_verify": 0.234,
+      "authority_check": 0.041,
       "execute_action": 0.002,
-      "record_decision": 0.013,
-      "validate_memory_update": 0.358
+      "record_decision": 0.01,
+      "validate_memory_update": 0.423
      },
-     "total_ms": 5.088,
+     "total_ms": 5.366,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -18357,8 +18374,9 @@
     "llm_calls": 2,
     "tool_calls": 2,
     "tokens_estimated": 2772,
-    "cost_usd_estimated": 0.014576,
-    "cop_ms": 5.867
+    "cost_usd_estimated": null,
+    "unpriced_llm_calls": 2,
+    "cop_ms": 6.319
    },
    "security_events": [],
    "persisted_decisions": 2,
@@ -18427,9 +18445,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 31.7,
-  "cpu_ms": 31.7,
-  "max_rss_kb": 92484,
+  "wall_ms": 38.0,
+  "cpu_ms": 37.4,
+  "max_rss_kb": 92252,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -18526,18 +18544,18 @@
       "reason": "nothing to remember (SUBSTANTIVE, SUFFICIENT)"
      },
      "node_ms": {
-      "receive_case": 0.023,
+      "receive_case": 0.005,
       "load_inputs": 0.002,
-      "validate_evidence": 0.086,
-      "retrieve_memory": 0.151,
-      "computational_baseline": 0.229,
-      "independent_verify": 0.16,
-      "authority_check": 0.037,
+      "validate_evidence": 0.084,
+      "retrieve_memory": 0.133,
+      "computational_baseline": 0.283,
+      "independent_verify": 0.162,
+      "authority_check": 0.038,
       "execute_action": 0.002,
-      "record_decision": 0.012,
+      "record_decision": 0.014,
       "validate_memory_update": 0.003
      },
-     "total_ms": 0.69,
+     "total_ms": 0.709,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -18726,24 +18744,24 @@
       "status": "UNVALIDATED"
      },
      "node_ms": {
-      "receive_case": 0.004,
+      "receive_case": 0.005,
       "load_inputs": 0.004,
-      "validate_evidence": 0.108,
-      "retrieve_memory": 0.133,
-      "computational_baseline": 0.171,
-      "llm_plan_investigation": 1.225,
-      "validate_tool_request": 0.008,
-      "execute_authorised_tool": 0.206,
+      "validate_evidence": 0.082,
+      "retrieve_memory": 0.132,
+      "computational_baseline": 0.278,
+      "llm_plan_investigation": 1.234,
+      "validate_tool_request": 0.01,
+      "execute_authorised_tool": 0.213,
       "validate_tool_result": 0.003,
-      "llm_assess_evidence": 2.902,
-      "formulate_finding": 0.076,
-      "independent_verify": 0.333,
-      "authority_check": 0.038,
+      "llm_assess_evidence": 3.339,
+      "formulate_finding": 0.08,
+      "independent_verify": 0.452,
+      "authority_check": 0.044,
       "execute_action": 0.002,
-      "record_decision": 0.013,
-      "validate_memory_update": 0.37
+      "record_decision": 0.014,
+      "validate_memory_update": 0.662
      },
-     "total_ms": 5.213,
+     "total_ms": 5.878,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -19018,8 +19036,9 @@
     "llm_calls": 2,
     "tool_calls": 3,
     "tokens_estimated": 2965,
-    "cost_usd_estimated": 0.016868,
-    "cop_ms": 5.903
+    "cost_usd_estimated": null,
+    "unpriced_llm_calls": 2,
+    "cop_ms": 6.587
    },
    "security_events": [],
    "persisted_decisions": 2,
@@ -19099,9 +19118,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 23.5,
-  "cpu_ms": 23.5,
-  "max_rss_kb": 93124,
+  "wall_ms": 30.4,
+  "cpu_ms": 28.6,
+  "max_rss_kb": 92892,
   "view": {
    "order": [
     "governance_architecture"
@@ -19288,23 +19307,23 @@
      },
      "node_ms": {
       "receive_case": 0.005,
-      "load_inputs": 0.003,
-      "validate_evidence": 0.078,
-      "retrieve_memory": 0.155,
-      "computational_baseline": 1.251,
-      "llm_plan_investigation": 1.105,
+      "load_inputs": 0.005,
+      "validate_evidence": 0.049,
+      "retrieve_memory": 0.203,
+      "computational_baseline": 1.35,
+      "llm_plan_investigation": 1.18,
       "validate_tool_request": 0.01,
-      "execute_authorised_tool": 1.542,
-      "validate_tool_result": 0.007,
-      "llm_assess_evidence": 2.982,
-      "formulate_finding": 0.085,
-      "independent_verify": 0.151,
-      "authority_check": 0.038,
+      "execute_authorised_tool": 1.804,
+      "validate_tool_result": 0.005,
+      "llm_assess_evidence": 3.798,
+      "formulate_finding": 0.151,
+      "independent_verify": 0.138,
+      "authority_check": 0.053,
       "execute_action": 0.002,
-      "record_decision": 0.017,
-      "validate_memory_update": 0.351
+      "record_decision": 0.052,
+      "validate_memory_update": 0.365
      },
-     "total_ms": 7.414,
+     "total_ms": 8.753,
      "evidence": [
       {
        "metric": "telemetry.unknown_share",
@@ -19491,8 +19510,9 @@
     "llm_calls": 2,
     "tool_calls": 5,
     "tokens_estimated": 4202,
-    "cost_usd_estimated": 0.023336,
-    "cop_ms": 7.414
+    "cost_usd_estimated": null,
+    "unpriced_llm_calls": 2,
+    "cop_ms": 8.753
    },
    "security_events": [],
    "persisted_decisions": 1,
@@ -19512,9 +19532,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 22.4,
-  "cpu_ms": 22.4,
-  "max_rss_kb": 93764,
+  "wall_ms": 29.6,
+  "cpu_ms": 28.7,
+  "max_rss_kb": 93532,
   "view": {
    "order": [
     "governance_architecture"
@@ -19668,24 +19688,24 @@
       "reason": "nothing to remember (SUBSTANTIVE, ADEQUATE)"
      },
      "node_ms": {
-      "receive_case": 0.005,
-      "load_inputs": 0.003,
-      "validate_evidence": 0.037,
-      "retrieve_memory": 0.132,
-      "computational_baseline": 1.123,
-      "llm_plan_investigation": 1.017,
+      "receive_case": 0.006,
+      "load_inputs": 0.004,
+      "validate_evidence": 0.083,
+      "retrieve_memory": 0.143,
+      "computational_baseline": 1.135,
+      "llm_plan_investigation": 1.194,
       "validate_tool_request": 0.009,
-      "execute_authorised_tool": 1.491,
-      "validate_tool_result": 0.004,
-      "llm_assess_evidence": 2.985,
+      "execute_authorised_tool": 1.478,
+      "validate_tool_result": 0.005,
+      "llm_assess_evidence": 3.782,
       "formulate_finding": 0.07,
-      "independent_verify": 0.135,
-      "authority_check": 0.038,
-      "execute_action": 0.003,
-      "record_decision": 0.018,
+      "independent_verify": 0.126,
+      "authority_check": 0.037,
+      "execute_action": 0.002,
+      "record_decision": 0.015,
       "validate_memory_update": 0.003
      },
-     "total_ms": 7.052,
+     "total_ms": 8.074,
      "evidence": [
       {
        "metric": "telemetry.unknown_share",
@@ -19860,8 +19880,9 @@
     "llm_calls": 2,
     "tool_calls": 5,
     "tokens_estimated": 4031,
-    "cost_usd_estimated": 0.020092,
-    "cop_ms": 7.052
+    "cost_usd_estimated": null,
+    "unpriced_llm_calls": 2,
+    "cop_ms": 8.074
    },
    "security_events": [],
    "persisted_decisions": 1,
@@ -19895,9 +19916,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 59.1,
-  "cpu_ms": 59.1,
-  "max_rss_kb": 95300,
+  "wall_ms": 75.3,
+  "cpu_ms": 69.9,
+  "max_rss_kb": 94940,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -19994,18 +20015,18 @@
       "reason": "nothing to remember (SUBSTANTIVE, SUFFICIENT)"
      },
      "node_ms": {
-      "receive_case": 0.025,
-      "load_inputs": 0.001,
-      "validate_evidence": 0.075,
-      "retrieve_memory": 0.132,
-      "computational_baseline": 0.235,
-      "independent_verify": 0.16,
-      "authority_check": 0.081,
+      "receive_case": 0.005,
+      "load_inputs": 0.002,
+      "validate_evidence": 0.073,
+      "retrieve_memory": 0.14,
+      "computational_baseline": 0.33,
+      "independent_verify": 0.321,
+      "authority_check": 0.039,
       "execute_action": 0.002,
       "record_decision": 0.014,
-      "validate_memory_update": 0.003
+      "validate_memory_update": 0.004
      },
-     "total_ms": 0.711,
+     "total_ms": 0.912,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -20219,24 +20240,24 @@
       "status": "VERIFIED"
      },
      "node_ms": {
-      "receive_case": 0.004,
-      "load_inputs": 0.002,
-      "validate_evidence": 0.025,
-      "retrieve_memory": 0.114,
-      "computational_baseline": 0.406,
-      "llm_plan_investigation": 1.031,
-      "validate_tool_request": 0.007,
-      "execute_authorised_tool": 0.161,
-      "validate_tool_result": 0.004,
-      "llm_assess_evidence": 2.78,
-      "formulate_finding": 0.077,
-      "independent_verify": 0.231,
-      "authority_check": 0.039,
+      "receive_case": 0.005,
+      "load_inputs": 0.003,
+      "validate_evidence": 0.028,
+      "retrieve_memory": 0.133,
+      "computational_baseline": 0.423,
+      "llm_plan_investigation": 1.083,
+      "validate_tool_request": 0.011,
+      "execute_authorised_tool": 0.465,
+      "validate_tool_result": 0.005,
+      "llm_assess_evidence": 2.922,
+      "formulate_finding": 0.079,
+      "independent_verify": 0.191,
+      "authority_check": 0.038,
       "execute_action": 0.002,
       "record_decision": 0.017,
-      "validate_memory_update": 0.293
+      "validate_memory_update": 0.284
      },
-     "total_ms": 4.883,
+     "total_ms": 5.388,
      "evidence": []
     }
    },
@@ -20448,8 +20469,9 @@
     "llm_calls": 2,
     "tool_calls": 8,
     "tokens_estimated": 2749,
-    "cost_usd_estimated": 0.016324,
-    "cop_ms": 5.594
+    "cost_usd_estimated": null,
+    "unpriced_llm_calls": 2,
+    "cop_ms": 6.3
    },
    "security_events": [],
    "persisted_decisions": 4,
@@ -20684,24 +20706,24 @@
      "status": "VERIFIED"
     },
     "node_ms": {
-     "receive_case": 0.004,
-     "load_inputs": 0.003,
-     "validate_evidence": 0.03,
-     "retrieve_memory": 0.086,
-     "computational_baseline": 0.397,
-     "llm_plan_investigation": 1.153,
-     "validate_tool_request": 0.009,
-     "execute_authorised_tool": 0.264,
+     "receive_case": 0.005,
+     "load_inputs": 0.004,
+     "validate_evidence": 0.027,
+     "retrieve_memory": 0.095,
+     "computational_baseline": 0.449,
+     "llm_plan_investigation": 1.128,
+     "validate_tool_request": 0.01,
+     "execute_authorised_tool": 0.24,
      "validate_tool_result": 0.009,
-     "llm_assess_evidence": 2.956,
-     "formulate_finding": 0.087,
-     "independent_verify": 0.129,
-     "authority_check": 0.04,
+     "llm_assess_evidence": 2.974,
+     "formulate_finding": 0.089,
+     "independent_verify": 0.125,
+     "authority_check": 0.045,
      "execute_action": 0.002,
-     "record_decision": 0.023,
-     "validate_memory_update": 0.357
+     "record_decision": 0.021,
+     "validate_memory_update": 0.345
     },
-    "total_ms": 5.169,
+    "total_ms": 5.202,
     "evidence": []
    },
    "validated_record": "2697c92b-743d-52ca-add1-62d311f2b542"
@@ -20734,9 +20756,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 101.8,
-  "cpu_ms": 101.1,
-  "max_rss_kb": 96324,
+  "wall_ms": 109.0,
+  "cpu_ms": 105.3,
+  "max_rss_kb": 96092,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -20836,17 +20858,17 @@
      },
      "node_ms": {
       "receive_case": 0.005,
-      "load_inputs": 0.001,
-      "validate_evidence": 0.068,
-      "retrieve_memory": 0.166,
-      "computational_baseline": 0.228,
-      "independent_verify": 0.163,
-      "authority_check": 0.038,
+      "load_inputs": 0.002,
+      "validate_evidence": 0.07,
+      "retrieve_memory": 0.143,
+      "computational_baseline": 0.226,
+      "independent_verify": 0.161,
+      "authority_check": 0.035,
       "execute_action": 0.002,
-      "record_decision": 0.012,
+      "record_decision": 0.013,
       "validate_memory_update": 0.003
      },
-     "total_ms": 0.671,
+     "total_ms": 0.644,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -20978,18 +21000,18 @@
       "reason": "nothing to remember (SUBSTANTIVE, CONTAINED)"
      },
      "node_ms": {
-      "receive_case": 0.004,
+      "receive_case": 0.005,
       "load_inputs": 0.003,
-      "validate_evidence": 0.065,
-      "retrieve_memory": 0.138,
-      "computational_baseline": 0.41,
-      "independent_verify": 0.168,
-      "authority_check": 0.037,
+      "validate_evidence": 0.067,
+      "retrieve_memory": 0.186,
+      "computational_baseline": 0.51,
+      "independent_verify": 0.208,
+      "authority_check": 0.065,
       "execute_action": 0.002,
       "record_decision": 0.013,
       "validate_memory_update": 0.003
      },
-     "total_ms": 0.827,
+     "total_ms": 1.046,
      "evidence": [
       {
        "metric": "interaction.subagent_lanes",
@@ -21154,18 +21176,18 @@
       "status": "VERIFIED"
      },
      "node_ms": {
-      "receive_case": 0.005,
+      "receive_case": 0.004,
       "load_inputs": 0.005,
-      "validate_evidence": 0.066,
-      "retrieve_memory": 0.138,
-      "computational_baseline": 0.653,
-      "independent_verify": 0.205,
-      "authority_check": 0.037,
+      "validate_evidence": 0.067,
+      "retrieve_memory": 0.175,
+      "computational_baseline": 0.615,
+      "independent_verify": 0.199,
+      "authority_check": 0.059,
       "execute_action": 0.002,
-      "record_decision": 0.013,
-      "validate_memory_update": 0.247
+      "record_decision": 0.014,
+      "validate_memory_update": 0.304
      },
-     "total_ms": 1.111,
+     "total_ms": 1.126,
      "evidence": [
       {
        "metric": "insights.blocked",
@@ -21436,24 +21458,24 @@
       "status": "VERIFIED"
      },
      "node_ms": {
-      "receive_case": 0.005,
+      "receive_case": 0.004,
       "load_inputs": 0.006,
-      "validate_evidence": 0.052,
-      "retrieve_memory": 0.144,
-      "computational_baseline": 0.242,
-      "llm_plan_investigation": 1.247,
+      "validate_evidence": 0.056,
+      "retrieve_memory": 0.227,
+      "computational_baseline": 0.259,
+      "llm_plan_investigation": 1.198,
       "validate_tool_request": 0.008,
-      "execute_authorised_tool": 0.487,
-      "validate_tool_result": 0.005,
-      "llm_assess_evidence": 3.872,
-      "formulate_finding": 0.09,
-      "independent_verify": 0.338,
-      "authority_check": 0.041,
-      "execute_action": 0.003,
-      "record_decision": 0.019,
-      "validate_memory_update": 0.335
+      "execute_authorised_tool": 0.608,
+      "validate_tool_result": 0.004,
+      "llm_assess_evidence": 3.839,
+      "formulate_finding": 0.091,
+      "independent_verify": 0.293,
+      "authority_check": 0.043,
+      "execute_action": 0.002,
+      "record_decision": 0.017,
+      "validate_memory_update": 0.414
      },
-     "total_ms": 6.54,
+     "total_ms": 6.638,
      "evidence": [
       {
        "metric": "insights.secrets",
@@ -21860,8 +21882,9 @@
     "llm_calls": 3,
     "tool_calls": 11,
     "tokens_estimated": 6438,
-    "cost_usd_estimated": 0.035496,
-    "cop_ms": 9.149
+    "cost_usd_estimated": null,
+    "unpriced_llm_calls": 3,
+    "cop_ms": 9.454
    },
    "security_events": [],
    "persisted_decisions": 8,
@@ -22087,24 +22110,24 @@
      "status": "VERIFIED"
     },
     "node_ms": {
-     "receive_case": 0.004,
-     "load_inputs": 0.005,
-     "validate_evidence": 0.05,
-     "retrieve_memory": 0.122,
-     "computational_baseline": 0.246,
-     "llm_plan_investigation": 1.499,
-     "validate_tool_request": 0.009,
-     "execute_authorised_tool": 0.344,
-     "validate_tool_result": 0.035,
-     "llm_assess_evidence": 3.182,
-     "formulate_finding": 0.115,
-     "independent_verify": 0.216,
-     "authority_check": 0.044,
+     "receive_case": 0.005,
+     "load_inputs": 0.006,
+     "validate_evidence": 0.054,
+     "retrieve_memory": 0.174,
+     "computational_baseline": 0.267,
+     "llm_plan_investigation": 1.586,
+     "validate_tool_request": 0.008,
+     "execute_authorised_tool": 0.396,
+     "validate_tool_result": 0.005,
+     "llm_assess_evidence": 5.542,
+     "formulate_finding": 0.1,
+     "independent_verify": 0.162,
+     "authority_check": 0.042,
      "execute_action": 0.002,
-     "record_decision": 0.023,
-     "validate_memory_update": 0.355
+     "record_decision": 0.016,
+     "validate_memory_update": 0.348
     },
-    "total_ms": 5.873,
+    "total_ms": 8.349,
     "evidence": [
      {
       "metric": "insights.secrets",
@@ -22162,9 +22185,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 269.8,
-  "cpu_ms": 266.6,
-  "max_rss_kb": 98500,
+  "wall_ms": 323.6,
+  "cpu_ms": 319.4,
+  "max_rss_kb": 98268,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -22277,18 +22300,18 @@
       "reason": "nothing to remember (SUBSTANTIVE, SUFFICIENT)"
      },
      "node_ms": {
-      "receive_case": 0.005,
-      "load_inputs": 0.001,
-      "validate_evidence": 0.069,
-      "retrieve_memory": 0.13,
-      "computational_baseline": 0.219,
-      "independent_verify": 0.179,
-      "authority_check": 0.035,
-      "execute_action": 0.002,
-      "record_decision": 0.012,
-      "validate_memory_update": 0.003
+      "receive_case": 0.007,
+      "load_inputs": 0.002,
+      "validate_evidence": 0.12,
+      "retrieve_memory": 0.197,
+      "computational_baseline": 0.349,
+      "independent_verify": 0.255,
+      "authority_check": 0.056,
+      "execute_action": 0.003,
+      "record_decision": 0.018,
+      "validate_memory_update": 0.004
      },
-     "total_ms": 0.64,
+     "total_ms": 0.989,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -22510,24 +22533,24 @@
       "reason": "nothing to remember (SUBSTANTIVE, NORMAL)"
      },
      "node_ms": {
-      "receive_case": 0.004,
-      "load_inputs": 0.003,
-      "validate_evidence": 0.058,
-      "retrieve_memory": 0.081,
-      "computational_baseline": 0.387,
-      "llm_plan_investigation": 1.189,
-      "validate_tool_request": 0.008,
-      "execute_authorised_tool": 0.251,
-      "validate_tool_result": 0.005,
-      "llm_assess_evidence": 3.197,
-      "formulate_finding": 0.082,
-      "independent_verify": 0.137,
-      "authority_check": 0.035,
+      "receive_case": 0.006,
+      "load_inputs": 0.004,
+      "validate_evidence": 0.139,
+      "retrieve_memory": 0.125,
+      "computational_baseline": 0.423,
+      "llm_plan_investigation": 1.804,
+      "validate_tool_request": 0.012,
+      "execute_authorised_tool": 0.246,
+      "validate_tool_result": 0.007,
+      "llm_assess_evidence": 3.599,
+      "formulate_finding": 0.131,
+      "independent_verify": 0.136,
+      "authority_check": 0.037,
       "execute_action": 0.002,
-      "record_decision": 0.016,
-      "validate_memory_update": 0.009
+      "record_decision": 0.017,
+      "validate_memory_update": 0.003
      },
-     "total_ms": 5.439,
+     "total_ms": 6.671,
      "evidence": [
       {
        "metric": "insights.stalled",
@@ -22708,22 +22731,22 @@
      "node_ms": {
       "receive_case": 0.004,
       "load_inputs": 0.003,
-      "validate_evidence": 0.023,
-      "retrieve_memory": 0.086,
-      "computational_baseline": 0.274,
-      "llm_plan_investigation": 1.023,
-      "validate_tool_request": 0.007,
-      "execute_authorised_tool": 0.133,
+      "validate_evidence": 0.022,
+      "retrieve_memory": 0.09,
+      "computational_baseline": 0.266,
+      "llm_plan_investigation": 1.185,
+      "validate_tool_request": 0.011,
+      "execute_authorised_tool": 0.148,
       "validate_tool_result": 0.005,
-      "llm_assess_evidence": 2.863,
-      "formulate_finding": 0.051,
-      "independent_verify": 0.093,
-      "authority_check": 0.039,
+      "llm_assess_evidence": 3.138,
+      "formulate_finding": 0.053,
+      "independent_verify": 0.092,
+      "authority_check": 0.051,
       "execute_action": 0.002,
-      "record_decision": 0.018,
-      "validate_memory_update": 0.003
+      "record_decision": 0.025,
+      "validate_memory_update": 0.004
      },
-     "total_ms": 4.606,
+     "total_ms": 5.07,
      "evidence": []
     },
     "behavior_analytics": {
@@ -22853,18 +22876,18 @@
       "reason": "nothing to remember (SUBSTANTIVE, STABLE)"
      },
      "node_ms": {
-      "receive_case": 0.005,
-      "load_inputs": 0.005,
-      "validate_evidence": 0.14,
-      "retrieve_memory": 0.107,
-      "computational_baseline": 0.497,
-      "independent_verify": 0.236,
-      "authority_check": 0.035,
+      "receive_case": 0.006,
+      "load_inputs": 0.007,
+      "validate_evidence": 0.102,
+      "retrieve_memory": 0.122,
+      "computational_baseline": 0.569,
+      "independent_verify": 0.302,
+      "authority_check": 0.038,
       "execute_action": 0.002,
-      "record_decision": 0.017,
-      "validate_memory_update": 0.004
+      "record_decision": 0.014,
+      "validate_memory_update": 0.003
      },
-     "total_ms": 1.027,
+     "total_ms": 1.148,
      "evidence": [
       {
        "metric": "insights.repetition",
@@ -23108,24 +23131,24 @@
       "reason": "nothing to remember (SUBSTANTIVE, NORMAL)"
      },
      "node_ms": {
-      "receive_case": 0.004,
-      "load_inputs": 0.003,
-      "validate_evidence": 0.076,
-      "retrieve_memory": 0.083,
-      "computational_baseline": 0.138,
-      "llm_plan_investigation": 1.167,
-      "validate_tool_request": 0.01,
-      "execute_authorised_tool": 0.666,
+      "receive_case": 0.005,
+      "load_inputs": 0.004,
+      "validate_evidence": 0.079,
+      "retrieve_memory": 0.093,
+      "computational_baseline": 0.142,
+      "llm_plan_investigation": 1.142,
+      "validate_tool_request": 0.238,
+      "execute_authorised_tool": 0.705,
       "validate_tool_result": 0.004,
-      "llm_assess_evidence": 3.18,
-      "formulate_finding": 0.088,
-      "independent_verify": 0.236,
-      "authority_check": 0.037,
-      "execute_action": 0.002,
-      "record_decision": 0.013,
-      "validate_memory_update": 0.003
+      "llm_assess_evidence": 3.152,
+      "formulate_finding": 0.122,
+      "independent_verify": 0.4,
+      "authority_check": 0.053,
+      "execute_action": 0.003,
+      "record_decision": 0.019,
+      "validate_memory_update": 0.004
      },
-     "total_ms": 5.694,
+     "total_ms": 6.142,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -23269,18 +23292,18 @@
       "reason": "nothing to remember (SUBSTANTIVE, CONTAINED)"
      },
      "node_ms": {
-      "receive_case": 0.005,
-      "load_inputs": 0.003,
-      "validate_evidence": 0.065,
-      "retrieve_memory": 0.09,
-      "computational_baseline": 0.455,
-      "independent_verify": 0.165,
-      "authority_check": 0.037,
+      "receive_case": 0.007,
+      "load_inputs": 0.004,
+      "validate_evidence": 0.097,
+      "retrieve_memory": 0.119,
+      "computational_baseline": 0.578,
+      "independent_verify": 0.255,
+      "authority_check": 0.055,
       "execute_action": 0.002,
-      "record_decision": 0.014,
-      "validate_memory_update": 0.002
+      "record_decision": 0.02,
+      "validate_memory_update": 0.004
      },
-     "total_ms": 0.822,
+     "total_ms": 1.117,
      "evidence": [
       {
        "metric": "interaction.subagent_lanes",
@@ -23388,18 +23411,18 @@
       "reason": "nothing to remember (SUBSTANTIVE, UNCHANGED)"
      },
      "node_ms": {
-      "receive_case": 0.004,
-      "load_inputs": 0.003,
-      "validate_evidence": 0.036,
-      "retrieve_memory": 0.084,
-      "computational_baseline": 0.343,
-      "independent_verify": 0.168,
-      "authority_check": 0.037,
-      "execute_action": 0.002,
-      "record_decision": 0.014,
-      "validate_memory_update": 0.003
+      "receive_case": 0.007,
+      "load_inputs": 0.005,
+      "validate_evidence": 0.052,
+      "retrieve_memory": 0.123,
+      "computational_baseline": 0.419,
+      "independent_verify": 0.173,
+      "authority_check": 0.05,
+      "execute_action": 0.003,
+      "record_decision": 0.02,
+      "validate_memory_update": 0.005
      },
-     "total_ms": 0.677,
+     "total_ms": 0.832,
      "evidence": [
       {
        "metric": "access.first_seen_mcp",
@@ -23534,18 +23557,18 @@
       "status": "VERIFIED"
      },
      "node_ms": {
-      "receive_case": 0.004,
-      "load_inputs": 0.005,
-      "validate_evidence": 0.069,
-      "retrieve_memory": 0.082,
-      "computational_baseline": 0.609,
-      "independent_verify": 0.195,
-      "authority_check": 0.038,
-      "execute_action": 0.002,
-      "record_decision": 0.013,
-      "validate_memory_update": 0.286
+      "receive_case": 0.073,
+      "load_inputs": 0.006,
+      "validate_evidence": 0.095,
+      "retrieve_memory": 0.116,
+      "computational_baseline": 0.967,
+      "independent_verify": 0.336,
+      "authority_check": 0.057,
+      "execute_action": 0.003,
+      "record_decision": 0.019,
+      "validate_memory_update": 0.412
      },
-     "total_ms": 1.004,
+     "total_ms": 1.653,
      "evidence": [
       {
        "metric": "insights.blocked",
@@ -23664,18 +23687,18 @@
       "reason": "nothing to remember (MISSING_DEPENDENCY, INCONCLUSIVE)"
      },
      "node_ms": {
-      "receive_case": 0.005,
+      "receive_case": 0.004,
       "load_inputs": 0.003,
       "validate_evidence": 0.051,
-      "retrieve_memory": 0.133,
-      "computational_baseline": 0.241,
-      "independent_verify": 0.137,
-      "authority_check": 0.035,
+      "retrieve_memory": 0.126,
+      "computational_baseline": 0.297,
+      "independent_verify": 0.158,
+      "authority_check": 0.036,
       "execute_action": 0.002,
-      "record_decision": 0.012,
-      "validate_memory_update": 0.003
+      "record_decision": 0.013,
+      "validate_memory_update": 0.002
      },
-     "total_ms": 0.607,
+     "total_ms": 0.677,
      "evidence": [
       {
        "metric": "insights.reverted",
@@ -23925,21 +23948,21 @@
       "receive_case": 0.004,
       "load_inputs": 0.007,
       "validate_evidence": 0.053,
-      "retrieve_memory": 0.175,
-      "computational_baseline": 0.319,
-      "llm_plan_investigation": 1.189,
-      "validate_tool_request": 0.008,
-      "execute_authorised_tool": 0.324,
-      "validate_tool_result": 0.009,
-      "llm_assess_evidence": 2.997,
-      "formulate_finding": 0.094,
-      "independent_verify": 0.175,
-      "authority_check": 0.105,
+      "retrieve_memory": 0.152,
+      "computational_baseline": 0.392,
+      "llm_plan_investigation": 2.066,
+      "validate_tool_request": 0.011,
+      "execute_authorised_tool": 0.484,
+      "validate_tool_result": 0.006,
+      "llm_assess_evidence": 4.923,
+      "formulate_finding": 0.128,
+      "independent_verify": 0.281,
+      "authority_check": 0.063,
       "execute_action": 0.002,
-      "record_decision": 0.018,
-      "validate_memory_update": 0.339
+      "record_decision": 0.024,
+      "validate_memory_update": 0.457
      },
-     "total_ms": 5.461,
+     "total_ms": 8.572,
      "evidence": [
       {
        "metric": "insights.secrets",
@@ -24088,24 +24111,24 @@
       "reason": "nothing to remember (INCONCLUSIVE, INCONCLUSIVE)"
      },
      "node_ms": {
-      "receive_case": 0.005,
-      "load_inputs": 0.003,
+      "receive_case": 0.004,
+      "load_inputs": 0.004,
       "validate_evidence": 0.06,
-      "retrieve_memory": 0.135,
-      "computational_baseline": 0.373,
-      "llm_plan_investigation": 1.283,
-      "validate_tool_request": 0.008,
-      "execute_authorised_tool": 0.316,
+      "retrieve_memory": 0.181,
+      "computational_baseline": 0.539,
+      "llm_plan_investigation": 2.213,
+      "validate_tool_request": 0.013,
+      "execute_authorised_tool": 0.393,
       "validate_tool_result": 0.004,
-      "llm_assess_evidence": 3.023,
-      "formulate_finding": 0.059,
-      "independent_verify": 0.136,
-      "authority_check": 0.037,
-      "execute_action": 0.002,
-      "record_decision": 0.015,
-      "validate_memory_update": 0.003
+      "llm_assess_evidence": 3.93,
+      "formulate_finding": 0.067,
+      "independent_verify": 0.312,
+      "authority_check": 0.059,
+      "execute_action": 0.003,
+      "record_decision": 0.02,
+      "validate_memory_update": 0.004
      },
-     "total_ms": 5.444,
+     "total_ms": 7.782,
      "evidence": [
       {
        "metric": "insights.secrets",
@@ -24227,18 +24250,18 @@
       "reason": "nothing to remember (SUBSTANTIVE, NORMAL)"
      },
      "node_ms": {
-      "receive_case": 0.005,
-      "load_inputs": 0.003,
-      "validate_evidence": 0.06,
-      "retrieve_memory": 0.138,
-      "computational_baseline": 0.297,
-      "independent_verify": 0.147,
-      "authority_check": 0.039,
+      "receive_case": 0.007,
+      "load_inputs": 0.004,
+      "validate_evidence": 0.084,
+      "retrieve_memory": 0.186,
+      "computational_baseline": 0.439,
+      "independent_verify": 0.27,
+      "authority_check": 0.048,
       "execute_action": 0.002,
-      "record_decision": 0.013,
-      "validate_memory_update": 0.003
+      "record_decision": 0.018,
+      "validate_memory_update": 0.004
      },
-     "total_ms": 0.691,
+     "total_ms": 1.04,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -24462,24 +24485,24 @@
       "status": "VERIFIED"
      },
      "node_ms": {
-      "receive_case": 0.004,
-      "load_inputs": 0.005,
-      "validate_evidence": 0.064,
-      "retrieve_memory": 0.143,
-      "computational_baseline": 0.327,
-      "llm_plan_investigation": 1.238,
-      "validate_tool_request": 0.009,
-      "execute_authorised_tool": 0.31,
-      "validate_tool_result": 0.004,
-      "llm_assess_evidence": 3.034,
-      "formulate_finding": 0.107,
-      "independent_verify": 0.153,
-      "authority_check": 0.039,
+      "receive_case": 0.006,
+      "load_inputs": 0.008,
+      "validate_evidence": 0.102,
+      "retrieve_memory": 0.193,
+      "computational_baseline": 0.603,
+      "llm_plan_investigation": 1.994,
+      "validate_tool_request": 0.014,
+      "execute_authorised_tool": 0.411,
+      "validate_tool_result": 0.007,
+      "llm_assess_evidence": 4.195,
+      "formulate_finding": 0.088,
+      "independent_verify": 0.151,
+      "authority_check": 0.036,
       "execute_action": 0.002,
-      "record_decision": 0.021,
-      "validate_memory_update": 0.601
+      "record_decision": 0.023,
+      "validate_memory_update": 0.331
      },
-     "total_ms": 5.439,
+     "total_ms": 7.81,
      "evidence": [
       {
        "metric": "insights.secrets",
@@ -24651,21 +24674,21 @@
       "receive_case": 0.005,
       "load_inputs": 0.004,
       "validate_evidence": 0.026,
-      "retrieve_memory": 0.165,
-      "computational_baseline": 2.157,
-      "llm_plan_investigation": 1.099,
-      "validate_tool_request": 0.009,
-      "execute_authorised_tool": 2.585,
+      "retrieve_memory": 0.159,
+      "computational_baseline": 2.285,
+      "llm_plan_investigation": 1.078,
+      "validate_tool_request": 0.01,
+      "execute_authorised_tool": 2.483,
       "validate_tool_result": 0.004,
-      "llm_assess_evidence": 3.037,
-      "formulate_finding": 0.078,
-      "independent_verify": 0.113,
-      "authority_check": 0.036,
+      "llm_assess_evidence": 2.709,
+      "formulate_finding": 0.069,
+      "independent_verify": 0.105,
+      "authority_check": 0.038,
       "execute_action": 0.002,
-      "record_decision": 0.015,
+      "record_decision": 0.013,
       "validate_memory_update": 0.003
      },
-     "total_ms": 9.32,
+     "total_ms": 8.977,
      "evidence": []
     },
     "workload_optimization": {
@@ -24884,24 +24907,24 @@
       "reason": "nothing to remember (SUBSTANTIVE, EFFICIENT)"
      },
      "node_ms": {
-      "receive_case": 0.005,
+      "receive_case": 0.004,
       "load_inputs": 0.003,
-      "validate_evidence": 0.06,
-      "retrieve_memory": 0.148,
-      "computational_baseline": 0.328,
-      "llm_plan_investigation": 1.119,
+      "validate_evidence": 0.058,
+      "retrieve_memory": 0.175,
+      "computational_baseline": 0.286,
+      "llm_plan_investigation": 0.97,
       "validate_tool_request": 0.008,
-      "execute_authorised_tool": 0.156,
+      "execute_authorised_tool": 0.144,
       "validate_tool_result": 0.005,
-      "llm_assess_evidence": 3.1,
-      "formulate_finding": 0.116,
-      "independent_verify": 0.219,
-      "authority_check": 0.038,
+      "llm_assess_evidence": 2.719,
+      "formulate_finding": 0.083,
+      "independent_verify": 0.21,
+      "authority_check": 0.036,
       "execute_action": 0.002,
-      "record_decision": 0.017,
+      "record_decision": 0.015,
       "validate_memory_update": 0.003
      },
-     "total_ms": 5.307,
+     "total_ms": 4.703,
      "evidence": [
       {
        "metric": "insights.repetition",
@@ -25036,16 +25059,16 @@
      "node_ms": {
       "receive_case": 0.005,
       "load_inputs": 0.004,
-      "validate_evidence": 0.063,
-      "retrieve_memory": 0.151,
-      "computational_baseline": 0.376,
-      "independent_verify": 0.159,
-      "authority_check": 0.036,
-      "execute_action": 0.008,
+      "validate_evidence": 0.059,
+      "retrieve_memory": 0.145,
+      "computational_baseline": 0.284,
+      "independent_verify": 0.194,
+      "authority_check": 0.037,
+      "execute_action": 0.002,
       "record_decision": 0.013,
-      "validate_memory_update": 0.003
+      "validate_memory_update": 0.002
      },
-     "total_ms": 0.802,
+     "total_ms": 0.73,
      "evidence": [
       {
        "metric": "insights.unattributed",
@@ -25231,24 +25254,24 @@
       "reason": "nothing to remember (SUBSTANTIVE, CURRENT)"
      },
      "node_ms": {
-      "receive_case": 0.005,
+      "receive_case": 0.004,
       "load_inputs": 0.004,
-      "validate_evidence": 0.025,
-      "retrieve_memory": 0.16,
-      "computational_baseline": 0.375,
-      "llm_plan_investigation": 1.039,
+      "validate_evidence": 0.022,
+      "retrieve_memory": 0.147,
+      "computational_baseline": 0.374,
+      "llm_plan_investigation": 1.016,
       "validate_tool_request": 0.01,
-      "execute_authorised_tool": 0.177,
+      "execute_authorised_tool": 0.159,
       "validate_tool_result": 0.004,
-      "llm_assess_evidence": 2.8,
-      "formulate_finding": 0.068,
-      "independent_verify": 0.101,
-      "authority_check": 0.037,
+      "llm_assess_evidence": 3.032,
+      "formulate_finding": 0.067,
+      "independent_verify": 0.129,
+      "authority_check": 0.035,
       "execute_action": 0.002,
       "record_decision": 0.017,
       "validate_memory_update": 0.003
      },
-     "total_ms": 4.807,
+     "total_ms": 5.005,
      "evidence": []
     },
     "governance_architecture": {
@@ -25409,24 +25432,24 @@
       "reason": "nothing to remember (SUBSTANTIVE, ADEQUATE)"
      },
      "node_ms": {
-      "receive_case": 0.005,
-      "load_inputs": 0.005,
-      "validate_evidence": 0.041,
-      "retrieve_memory": 0.156,
-      "computational_baseline": 1.16,
-      "llm_plan_investigation": 1.73,
+      "receive_case": 0.004,
+      "load_inputs": 0.004,
+      "validate_evidence": 0.039,
+      "retrieve_memory": 0.179,
+      "computational_baseline": 1.045,
+      "llm_plan_investigation": 1.282,
       "validate_tool_request": 0.008,
-      "execute_authorised_tool": 1.427,
+      "execute_authorised_tool": 1.311,
       "validate_tool_result": 0.004,
-      "llm_assess_evidence": 2.88,
-      "formulate_finding": 0.091,
-      "independent_verify": 0.125,
-      "authority_check": 0.036,
+      "llm_assess_evidence": 2.749,
+      "formulate_finding": 0.068,
+      "independent_verify": 0.117,
+      "authority_check": 0.034,
       "execute_action": 0.002,
-      "record_decision": 0.015,
+      "record_decision": 0.013,
       "validate_memory_update": 0.003
      },
-     "total_ms": 7.67,
+     "total_ms": 6.846,
      "evidence": [
       {
        "metric": "telemetry.unknown_share",
@@ -26261,8 +26284,9 @@
     "llm_calls": 21,
     "tool_calls": 59,
     "tokens_estimated": 34205,
-    "cost_usd_estimated": 0.194772,
-    "cop_ms": 65.457
+    "cost_usd_estimated": null,
+    "unpriced_llm_calls": 21,
+    "cop_ms": 75.764
    },
    "security_events": [],
    "persisted_decisions": 22,
@@ -26691,24 +26715,24 @@
      "status": "VERIFIED"
     },
     "node_ms": {
-     "receive_case": 0.005,
-     "load_inputs": 0.006,
-     "validate_evidence": 0.052,
-     "retrieve_memory": 0.218,
-     "computational_baseline": 0.258,
-     "llm_plan_investigation": 1.202,
+     "receive_case": 0.004,
+     "load_inputs": 0.005,
+     "validate_evidence": 0.054,
+     "retrieve_memory": 0.166,
+     "computational_baseline": 0.243,
+     "llm_plan_investigation": 1.214,
      "validate_tool_request": 0.008,
-     "execute_authorised_tool": 0.509,
+     "execute_authorised_tool": 0.489,
      "validate_tool_result": 0.004,
-     "llm_assess_evidence": 3.074,
-     "formulate_finding": 0.092,
-     "independent_verify": 0.178,
-     "authority_check": 0.041,
+     "llm_assess_evidence": 2.896,
+     "formulate_finding": 0.085,
+     "independent_verify": 0.156,
+     "authority_check": 0.042,
      "execute_action": 0.002,
      "record_decision": 0.017,
-     "validate_memory_update": 0.378
+     "validate_memory_update": 0.393
     },
-    "total_ms": 5.649,
+    "total_ms": 5.368,
     "evidence": [
      {
       "metric": "insights.secrets",

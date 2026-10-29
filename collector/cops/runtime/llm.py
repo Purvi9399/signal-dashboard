@@ -16,8 +16,8 @@ Providers
                          counts are estimates from payload size, not measured.
     UnavailableProvider  always fails, for the no-provider path.
     AnthropicProvider    the real Messages API. Refuses to start unless
-                         COPS_LLM_LIVE=1 and COPS_LLM_DATA_APPROVED=1 are set
-                         alongside credentials, so it can never be reached by
+                         COPS_LLM_LIVE=1, COPS_LLM_DATA_APPROVED=1 and
+                         COPS_MODEL are set alongside credentials, so it can never be reached by
                          accident, incur charges silently, or send enterprise
                          data without an explicit decision.
 """
@@ -30,17 +30,20 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from .contracts import LLMInvocation, CLAIM_KINDS, stable_id
 
-# List prices per million tokens (input, output), Anthropic first-party API.
-# Source: claude-api skill model table, cached 2026-10-06. Used only to
-# estimate cost; a measured cost from the provider overrides it.
-PRICING = {
-    "claude-opus-5-5": (4.00, 20.00),
-    "claude-sonnet-5-5": (2.00, 10.00),
-    "claude-haiku-5-5": (0.10, 0.50),
-    "claude-fable-5-1": (10.00, 50.00),
-}
-DEFAULT_MODEL = "claude-opus-5-5"
+def load_pricing():
+    """Prices per million tokens, from configuration only.
 
+    COPS_PRICING is JSON: {"<model>": [input_usd_per_mtok, output_usd_per_mtok]}.
+    No prices are built in, so a cost is never shown for a model whose price
+    nobody configured; such calls are recorded with cost_basis "unpriced".
+    """
+    raw = os.environ.get("COPS_PRICING")
+    if not raw:
+        return {}
+    return {k: (float(v[0]), float(v[1])) for k, v in json.loads(raw).items()}
+
+
+FIXTURE_MODEL = "fixture-model"
 
 # ---------------------------------------------------------------- schemas
 
@@ -153,7 +156,7 @@ class FixtureProvider:
     name = "fixture"
     simulated = True
 
-    def __init__(self, script, model=DEFAULT_MODEL, label="scripted"):
+    def __init__(self, script, model=FIXTURE_MODEL, label="scripted"):
         self.script, self.model, self.label = script, model, label
         self.calls = []
 
@@ -191,7 +194,9 @@ class AnthropicProvider:
             import anthropic
         except ImportError as e:
             raise ProviderUnavailable("the anthropic SDK is not installed") from e
-        self.model = model or os.environ.get("COPS_MODEL") or DEFAULT_MODEL
+        self.model = model or os.environ.get("COPS_MODEL")
+        if not self.model:
+            raise ProviderUnavailable("no model configured (set COPS_MODEL)")
         self.client = anthropic.Anthropic()
 
     def complete(self, cop, purpose, system, payload, schema, timeout_s):
@@ -228,17 +233,18 @@ def _strip_titles(schema):
 # ---------------------------------------------------------------- gateway
 
 class LLMGateway:
-    def __init__(self, provider):
+    def __init__(self, provider, pricing=None):
         self.provider = provider
+        self.pricing = load_pricing() if pricing is None else dict(pricing)
 
     def _cost(self, model, i, o, measured):
         if measured is not None:
             return measured, "measured"
         base = model.split("+")[0]
-        if base in PRICING and i is not None and o is not None:
-            pi, po = PRICING[base]
-            basis = ("simulated_tokens_x_list_price" if self.provider.simulated
-                     else "list_price_estimate")
+        if base in self.pricing and i is not None and o is not None:
+            pi, po = self.pricing[base]
+            basis = ("simulated_tokens_x_configured_price" if self.provider.simulated
+                     else "configured_price_estimate")
             return round(i / 1e6 * pi + o / 1e6 * po, 6), basis
         return None, "unpriced"
 
