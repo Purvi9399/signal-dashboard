@@ -21,6 +21,12 @@ ACTIONS = ("NONE", "WATCH", "ALERT", "INSTRUCT", "REQUEST_CONTEXT",
 # since a finished session cannot be paused, and refused in dry-run.
 INTERVENING = ("PAUSE", "BLOCK")
 
+# A reading every COP may return, outside its own vocabulary: the evidence
+# did not support any substantive label. It is never the quiet reading and
+# never counts as "nothing happened".
+INCONCLUSIVE = "INCONCLUSIVE"
+RESERVED_INTERPRETATIONS = (INCONCLUSIVE,)
+
 
 @dataclass(frozen=True)
 class MetricEvent:

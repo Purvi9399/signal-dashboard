@@ -79,8 +79,13 @@ def finalise(spec, out, env, upstream=None):
             out["downstream"].append("audit_traceability")
 
     # ---- Rule 2 ----------------------------------------------------------
-    blocked_up = [k for k, v in upstream.items()
-                  if (v or {}).get("decision_status") == BLOCKED]
+    def _status(v):
+        # upstream may be a harness dict or a COPDecision-like object
+        if isinstance(v, dict):
+            return v.get("decision_status")
+        return getattr(v, "decision_status", None)
+
+    blocked_up = [k for k, v in upstream.items() if v and _status(v) == BLOCKED]
     if blocked_up:
         quiet = out.get("interpretation") == _quiet_label(spec)
         if quiet or out.get("action") in ("NONE", None):
