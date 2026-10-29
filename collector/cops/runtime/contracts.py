@@ -203,8 +203,10 @@ class MemoryRecord:
 
     def __post_init__(self):
         if not self.record_id:
-            self.record_id = stable_id(self.tenant_id, self.owner_cop, self.record_type,
-                                       digest(self.payload), self.provenance.get("case_id"))
+            # same finding written twice upserts; different agents or findings never collide
+            self.record_id = stable_id(self.tenant_id, self.agent_scope, self.owner_cop, self.record_type,
+                                       digest(self.payload), self.provenance.get("case_id"),
+                                       self.provenance.get("finding_id"))
 
     def to_dict(self):
         return asdict(self)

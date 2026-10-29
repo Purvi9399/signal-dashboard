@@ -278,9 +278,10 @@ def policy_enforcement(ctx):
     else:
         label, action = "ALLOWED", "NONE"
         reason = ""
+        allowed = [o for o in ev["observed"] if o["decision"] == "ALLOW"]
         claims.append(tclaim(ctx["tools"], "evaluate_session_operations", "observed[decision=ALLOW]",
-                             len(ev["observed"]), f"all {len(ev['observed'])} operations allowed by "
-                             f"{ev['policy_version']}"))
+                             len(allowed), f"{len(allowed)} operations allowed by {ev['policy_version']}"
+                             + (f"; {len(need)} needed approval and approval is recorded" if need else "")))
     return F(label, 0.85 if label != "UNCERTAIN" else 0.4, action, reason,
              f"evaluated against policy {ev['policy_version']}; {len(blocked)} attempts stopped by hooks",
              claims, sev, missing_deps=miss,

@@ -903,10 +903,15 @@ def t_check_decision_linkage(case, a, ctx):
     steps = {x["step_id"] for x in (case.session.steps if case.session else [])}
     out = []
     for cop, f in up.items():
-        refs = sorted({ref for c in f.get("claims", []) for ref in c.get("evidence_refs", [])})
+        allrefs = sorted({ref for c in f.get("claims", []) for ref in c.get("evidence_refs", [])})
+        # Only references to recorded events must resolve here. metric:, tool:,
+        # finding: and memory: refs point into the runtime's own records, which
+        # the upstream COP's verifiers (EV-02) already resolved.
+        refs = [r for r in allrefs if r.startswith(("observable:", "step:"))]
         ok = [r for r in refs if (r.startswith("observable:") and r.split(":", 1)[1] in ids)
               or (r.startswith("step:") and r.split(":", 1)[1] in steps)]
         out.append({"cop": cop, "refs": len(refs), "resolvable": len(ok),
+                    "internal_refs": len(allrefs) - len(refs),
                     "unresolvable": [r for r in refs if r not in ok][:5]})
     return {"decisions": out}
 

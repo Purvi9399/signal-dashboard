@@ -59,8 +59,12 @@ class Session:
             self.add(observable_type="tool_request", tool_name="Read", file_path="/ws/app.py",
                      tool_arguments={"p": "app.py"}, collectors_agree=True, outside_workspace=False)
             self.add(observable_type="session_start", collector="cli_wrapper")
+            # the agent's edit, then the watcher seeing it two seconds later, so the
+            # disk change is attributable (signal_traces matches by path and time)
+            e = self.add(observable_type="tool_request", tool_name="Edit", file_path="/ws/app.py",
+                         tool_arguments={"p": "app.py", "edit": 1}, success=True)
             self.add(observable_type="file_modify", collector="fs_watcher", file_path="/ws/app.py",
-                     content_hash="h1")
+                     content_hash="h1", occurred_at=e["occurred_at"].replace(":00Z", ":02Z"))
         return self
 
     def end(self, minute=None):

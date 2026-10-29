@@ -367,9 +367,17 @@ def verify_finding(ctx):
     quiet = spec.interpretations[0] if spec.interpretations else None
     direct = [x for x in claims if x.get("kind") != CLAIM_UPSTREAM]
     attention = f.get("status") == SUBSTANTIVE and f.get("label") not in (quiet, INCONCLUSIVE)
-    if attention and not direct:
+    ups = [up.get(x.get("upstream_cop")) for x in claims if x.get("kind") == CLAIM_UPSTREAM]
+    transitive = bool(ups) and all(u and u.get("verified") and u.get("status") == SUBSTANTIVE
+                                   and u.get("lineage") for u in ups)
+    if attention and not direct and transitive:
+        # Support through verified upstream findings that carry their own lineage
+        # is traceable to direct evidence; it stands, qualified.
+        out.append(R("SC-02", WARN, "transitive_support",
+                     "attention label rests on verified upstream findings with recorded lineage"))
+    elif attention and not direct:
         out.append(R("SC-02", FAIL, "no_direct_support",
-                     "attention label rests only on upstream findings or on nothing"))
+                     "attention label rests only on unverified or untraceable upstream findings, or on nothing"))
     elif attention and ctx.get("evidence_ceiling") is not None and c is not None \
             and c > ctx["evidence_ceiling"] + 0.1:
         out.append(R("SC-02", WARN, "confidence_above_evidence",
@@ -388,6 +396,15 @@ def verify_finding(ctx):
         if f.get("label") == quiet and pic["judgeable"] is False and (pic["unknown"] + pic["missing"]) \
                 and not tool_ok:
             probs.append("quiet label on unknown or missing evidence: lack of evidence is not normality")
+        # Runtime Monitoring's verdict on the telemetry bounds what a quiet label may claim.
+        rm = up.get("runtime_monitoring")
+        rm_label = rm["label"] if rm and rm.get("verified") else None
+        dark = [r["metric"] for r in pic["rows"] if r["evidence"] in ("UNKNOWN", "MISSING")]
+        if f.get("label") == quiet and rm_label == "INSUFFICIENT" and spec.key != "runtime_monitoring":
+            probs.append("quiet label while Runtime Monitoring reports the telemetry INSUFFICIENT")
+        elif f.get("label") == quiet and dark and rm_label is not None and rm_label != "SUFFICIENT" \
+                and spec.key != "runtime_monitoring":
+            probs.append(f"quiet label with {', '.join(dark)} unobservable under {rm_label} telemetry")
         cited = [rows_by.get(x.get("metric_id")) for x in claims if x.get("metric_id")]
         if attention and cited and all(r and r["evidence"] == NOT_APPLICABLE for r in cited):
             probs.append("attention label from NOT_APPLICABLE rows only")
