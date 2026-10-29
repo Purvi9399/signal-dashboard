@@ -1043,31 +1043,42 @@ class ToolGateway:
                     return "invalid_arguments", f"{k} must be a string"
         return None, ""
 
-    def request(self, cop, tool, args, requested_by, budget, ctx):
-        """budget: dict with 'tool_calls' used and 'max_tool_calls'. Mutated."""
-        t0 = time.perf_counter()
-        n = len([x for x in self.log if x["cop"] == cop and x["case_id"] == self.case.case_id])
-        call_id = stable_id(self.case.case_id, cop, n, tool)
-        rec = {"tool_call_id": call_id, "cop": cop, "case_id": self.case.case_id, "tool": tool,
-               "args": args, "requested_by": requested_by, "status": None,
-               "rejection_reason": None, "result_summary": None, "injection_flags": [],
-               "latency_ms": 0.0}
-        reason = None
+    def precheck(self, cop, tool, args, budget):
+        """validate_tool_request: (code, reason) when the request may not run, else None.
+
+        Order matters: an unknown or unlisted tool is a security event whatever
+        its arguments; argument and budget problems are ordinary refusals."""
         if tool not in TOOLS:
-            reason = ("unknown_tool", f"no tool named {tool}")
-        elif tool not in self.allow.get(cop, ()):
-            reason = ("not_in_allowlist", f"{tool} is not on {cop}'s allowlist")
-        else:
-            code, why = self._check_args(cop, tool, args or {})
-            if code:
-                reason = (code, why)
-            elif budget["tool_calls"] >= budget["max_tool_calls"]:
-                reason = ("budget_exhausted", f"{budget['max_tool_calls']} tool calls used")
+            return ("unknown_tool", f"no tool named {tool}")
+        if tool not in self.allow.get(cop, ()):
+            return ("not_in_allowlist", f"{tool} is not on {cop}'s allowlist")
+        code, why = self._check_args(cop, tool, args or {})
+        if code:
+            return (code, why)
+        if budget["tool_calls"] >= budget["max_tool_calls"]:
+            return ("budget_exhausted", f"{budget['max_tool_calls']} tool calls used")
+        return None
+
+    def _record(self, cop, tool, args, requested_by):
+        n = len([x for x in self.log if x["cop"] == cop and x["case_id"] == self.case.case_id])
+        return {"tool_call_id": stable_id(self.case.case_id, cop, n, tool), "cop": cop,
+                "case_id": self.case.case_id, "tool": tool, "args": args,
+                "requested_by": requested_by, "status": None, "rejection_reason": None,
+                "result_summary": None, "injection_flags": [], "latency_ms": 0.0}
+
+    def reject(self, cop, tool, args, requested_by, reason):
+        rec = self._record(cop, tool, args, requested_by)
+        rec.update(status="REJECTED", rejection_reason=f"{reason[0]}: {reason[1]}")
+        self.log.append(rec)
+        return {**rec, "result": None}
+
+    def execute(self, cop, tool, args, requested_by, budget, ctx):
+        """execute_authorised_tool. Re-checks, so it can never run an unchecked request."""
+        reason = self.precheck(cop, tool, args, budget)
         if reason:
-            rec.update(status="REJECTED", rejection_reason=f"{reason[0]}: {reason[1]}")
-            rec["latency_ms"] = round((time.perf_counter() - t0) * 1000, 3)
-            self.log.append(rec)
-            return {**rec, "result": None}
+            return self.reject(cop, tool, args, requested_by, reason)
+        t0 = time.perf_counter()
+        rec = self._record(cop, tool, args, requested_by)
         budget["tool_calls"] += 1
         try:
             result = TOOLS[tool][0](self.case, args or {}, {**ctx, "cop": cop, "memory": self.memory})
@@ -1080,3 +1091,7 @@ class ToolGateway:
         rec["latency_ms"] = round((time.perf_counter() - t0) * 1000, 3)
         self.log.append(rec)
         return {**rec, "result": result}
+
+    def request(self, cop, tool, args, requested_by, budget, ctx):
+        """precheck then execute, for callers that do not need the two steps apart."""
+        return self.execute(cop, tool, args, requested_by, budget, ctx)
