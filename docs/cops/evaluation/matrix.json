@@ -1,0 +1,1464 @@
+[
+ {
+  "cop": "runtime_monitoring",
+  "graph": "cops/runtime/graph.py build_cop_graph (shared subgraph), profile profiles.build_profiles()['runtime_monitoring']",
+  "question": "Is the evidence required for this governance decision present, reliable and sufficiently complete?",
+  "metrics": [
+   "telemetry.collector_coverage",
+   "telemetry.source_agreement",
+   "telemetry.turn_linkage",
+   "telemetry.lane_linkage",
+   "telemetry.unknown_share"
+  ],
+  "classification": "deterministic",
+  "llm_nodes": "none",
+  "provider": "none",
+  "tools": [
+   "get_collector_breakdown",
+   "check_collector_expectations"
+  ],
+  "rule": "rules.runtime_monitoring (decision)",
+  "verifiers": [
+   "EV-01",
+   "EV-02",
+   "ID-01",
+   "ID-02",
+   "MC-01",
+   "SC-01",
+   "SC-02",
+   "DS-01",
+   "DS-02",
+   "PE-01",
+   "AU-01",
+   "AU-02",
+   "EX-01",
+   "MU-01",
+   "RP-01 (diagnostic)"
+  ],
+  "working_state": [
+   "collector_breakdown",
+   "expected_collectors",
+   "evidence_level"
+  ],
+  "memory_writes": [
+   "collector_reliability"
+  ],
+  "memory_reads": [
+   "collector_reliability"
+  ],
+  "memory_scope": "tenant",
+  "actions": [
+   "NONE (OBSERVE)",
+   "WATCH (RECORD)",
+   "ALERT (ALERT)",
+   "REQUEST_CONTEXT (REQUEST)",
+   "PASS_TO_COP (NOTIFY)"
+  ],
+  "approval_in_supervised": [],
+  "consumes": [],
+  "consumers": [
+   "interaction_discovery",
+   "agent_lifecycle_management",
+   "context_memory",
+   "workflow_orchestration",
+   "behavior_analytics",
+   "anomaly_detection",
+   "resource_management",
+   "workload_optimization",
+   "policy_enforcement",
+   "incident_response",
+   "audit_traceability"
+  ],
+  "scenarios": [
+   "C01",
+   "C02",
+   "C03",
+   "C04",
+   "C05",
+   "C06",
+   "C07",
+   "C08",
+   "C09",
+   "C10a",
+   "C10b",
+   "C11",
+   "C12",
+   "C13",
+   "C14",
+   "C15",
+   "C15b",
+   "C16",
+   "C17",
+   "D-CM",
+   "D-IR",
+   "E2E"
+  ],
+  "verified_attention_labels_seen": [
+   "DEGRADED",
+   "INSUFFICIENT"
+  ],
+  "labels_not_exercised_in_evaluation": [],
+  "missing_dependencies": []
+ },
+ {
+  "cop": "workflow_orchestration",
+  "graph": "cops/runtime/graph.py build_cop_graph (shared subgraph), profile profiles.build_profiles()['workflow_orchestration']",
+  "question": "Is the task progressing coherently toward its intended state?",
+  "metrics": [
+   "insights.stalled",
+   "insights.repetition",
+   "oversight.declined_inferred",
+   "interaction.subagent_lanes"
+  ],
+  "classification": "llm",
+  "llm_nodes": "llm_plan_investigation, llm_assess_evidence",
+  "provider": "LLMGateway(FixtureProvider|AnthropicProvider opt-in), prompt workflow_orchestration/prompt-1",
+  "tools": [
+   "get_task_milestones",
+   "analyse_execution_transitions",
+   "inspect_delegation_traces",
+   "compare_workflow_failures",
+   "retrieve_trace_window"
+  ],
+  "rule": "rules.workflow_orchestration (computational baseline)",
+  "verifiers": [
+   "EV-01",
+   "EV-02",
+   "ID-01",
+   "ID-02",
+   "MC-01",
+   "SC-01",
+   "SC-02",
+   "DS-01",
+   "DS-02",
+   "PE-01",
+   "AU-01",
+   "AU-02",
+   "EX-01",
+   "MU-01",
+   "RP-01 (diagnostic)"
+  ],
+  "working_state": [
+   "hypothesis",
+   "milestones",
+   "transitions"
+  ],
+  "memory_writes": [
+   "workflow_failure"
+  ],
+  "memory_reads": [
+   "workflow_failure",
+   "context_integrity_finding"
+  ],
+  "memory_scope": "agent",
+  "actions": [
+   "NONE (OBSERVE)",
+   "WATCH (RECORD)",
+   "ALERT (ALERT)",
+   "INSTRUCT (RECOMMEND)",
+   "PASS_TO_COP (NOTIFY)"
+  ],
+  "approval_in_supervised": [
+   "INSTRUCT"
+  ],
+  "consumes": [
+   "runtime_monitoring"
+  ],
+  "consumers": [
+   "behavior_analytics",
+   "incident_response"
+  ],
+  "scenarios": [
+   "C03",
+   "C07",
+   "C09",
+   "E2E"
+  ],
+  "verified_attention_labels_seen": [
+   "STALLED"
+  ],
+  "labels_not_exercised_in_evaluation": [
+   "DRIFTING",
+   "EXCESSIVE_DELEGATION",
+   "UNEXPECTED_BRANCH"
+  ],
+  "missing_dependencies": [
+   "task_plan"
+  ]
+ },
+ {
+  "cop": "context_memory",
+  "graph": "cops/runtime/graph.py build_cop_graph (shared subgraph), profile profiles.build_profiles()['context_memory']",
+  "question": "Is the current context internally consistent, relevant to the task, and supported by useful precedent?",
+  "metrics": [],
+  "classification": "llm",
+  "llm_nodes": "llm_plan_investigation, llm_assess_evidence",
+  "provider": "LLMGateway(FixtureProvider|AnthropicProvider opt-in), prompt context_memory/prompt-1",
+  "tools": [
+   "get_context_snapshots",
+   "inspect_context_references",
+   "compare_instruction_versions",
+   "verify_context_provenance"
+  ],
+  "rule": "rules.context_memory (computational baseline)",
+  "verifiers": [
+   "EV-01",
+   "EV-02",
+   "ID-01",
+   "ID-02",
+   "MC-01",
+   "SC-01",
+   "SC-02",
+   "DS-01",
+   "DS-02",
+   "PE-01",
+   "AU-01",
+   "AU-02",
+   "EX-01",
+   "MU-01",
+   "RP-01 (diagnostic)"
+  ],
+  "working_state": [
+   "hypothesis",
+   "snapshots",
+   "constraint_diff"
+  ],
+  "memory_writes": [
+   "context_integrity_finding"
+  ],
+  "memory_reads": [
+   "context_integrity_finding"
+  ],
+  "memory_scope": "agent",
+  "actions": [
+   "NONE (OBSERVE)",
+   "WATCH (RECORD)"
+  ],
+  "approval_in_supervised": [],
+  "consumes": [
+   "runtime_monitoring"
+  ],
+  "consumers": [
+   "behavior_analytics"
+  ],
+  "scenarios": [
+   "C09",
+   "D-CM",
+   "E2E"
+  ],
+  "verified_attention_labels_seen": [
+   "CONTEXT_LOSS"
+  ],
+  "labels_not_exercised_in_evaluation": [
+   "STALE",
+   "CONTRADICTORY",
+   "PRECEDENT_FOUND"
+  ],
+  "missing_dependencies": [
+   "context_snapshots"
+  ]
+ },
+ {
+  "cop": "behavior_analytics",
+  "graph": "cops/runtime/graph.py build_cop_graph (shared subgraph), profile profiles.build_profiles()['behavior_analytics']",
+  "question": "What behavioural pattern best characterizes this execution or sequence of executions?",
+  "metrics": [
+   "insights.repetition",
+   "insights.retry",
+   "insights.stalled",
+   "insights.failed",
+   "oversight.fast_approvals"
+  ],
+  "classification": "deterministic",
+  "llm_nodes": "none",
+  "provider": "none",
+  "tools": [
+   "compute_sequence_statistics",
+   "compare_behaviour_history"
+  ],
+  "rule": "rules.behavior_analytics (decision)",
+  "verifiers": [
+   "EV-01",
+   "EV-02",
+   "ID-01",
+   "ID-02",
+   "MC-01",
+   "SC-01",
+   "SC-02",
+   "DS-01",
+   "DS-02",
+   "PE-01",
+   "AU-01",
+   "AU-02",
+   "EX-01",
+   "MU-01",
+   "RP-01 (diagnostic)"
+  ],
+  "working_state": [
+   "sequence_statistics",
+   "history_comparison"
+  ],
+  "memory_writes": [
+   "behaviour_baseline"
+  ],
+  "memory_reads": [
+   "behaviour_baseline",
+   "context_integrity_finding",
+   "workflow_failure"
+  ],
+  "memory_scope": "agent",
+  "actions": [
+   "NONE (OBSERVE)",
+   "WATCH (RECORD)"
+  ],
+  "approval_in_supervised": [],
+  "consumes": [
+   "runtime_monitoring",
+   "context_memory",
+   "workflow_orchestration"
+  ],
+  "consumers": [
+   "anomaly_detection",
+   "recovery_resilience"
+  ],
+  "scenarios": [
+   "C01",
+   "C03",
+   "C07",
+   "C09",
+   "E2E"
+  ],
+  "verified_attention_labels_seen": [
+   "DRIFTING",
+   "POOR_RECOVERY"
+  ],
+  "labels_not_exercised_in_evaluation": [
+   "LOOPING",
+   "OVER_EXPLORING"
+  ],
+  "missing_dependencies": []
+ },
+ {
+  "cop": "anomaly_detection",
+  "graph": "cops/runtime/graph.py build_cop_graph (shared subgraph), profile profiles.build_profiles()['anomaly_detection']",
+  "question": "Is the observed behaviour materially different from what is expected in this context?",
+  "metrics": [
+   "insights.token_outlier",
+   "insights.duration_outlier",
+   "path.transition_novelty",
+   "activity.action_rate_ratio",
+   "access.first_seen_mcp",
+   "insights.retry",
+   "insights.repetition"
+  ],
+  "classification": "llm",
+  "llm_nodes": "llm_plan_investigation, llm_assess_evidence",
+  "provider": "LLMGateway(FixtureProvider|AnthropicProvider opt-in), prompt anomaly_detection/prompt-1",
+  "tools": [
+   "retrieve_trace_window",
+   "compare_versioned_baseline",
+   "find_similar_validated_cases",
+   "calculate_deviation",
+   "analyse_tool_call_sequence"
+  ],
+  "rule": "rules.anomaly_detection (computational baseline)",
+  "verifiers": [
+   "EV-01",
+   "EV-02",
+   "ID-01",
+   "ID-02",
+   "MC-01",
+   "SC-01",
+   "SC-02",
+   "DS-01",
+   "DS-02",
+   "PE-01",
+   "AU-01",
+   "AU-02",
+   "EX-01",
+   "MU-01",
+   "RP-01 (diagnostic)"
+  ],
+  "working_state": [
+   "hypothesis",
+   "baseline_version",
+   "deviations"
+  ],
+  "memory_writes": [
+   "anomaly_observation"
+  ],
+  "memory_reads": [
+   "anomaly_observation",
+   "behaviour_baseline"
+  ],
+  "memory_scope": "agent",
+  "actions": [
+   "NONE (OBSERVE)",
+   "WATCH (RECORD)",
+   "ALERT (ALERT)",
+   "REQUEST_CONTEXT (REQUEST)",
+   "PASS_TO_COP (NOTIFY)"
+  ],
+  "approval_in_supervised": [],
+  "consumes": [
+   "runtime_monitoring",
+   "behavior_analytics"
+  ],
+  "consumers": [
+   "policy_enforcement",
+   "classification_tagging",
+   "incident_response",
+   "risk_mitigation"
+  ],
+  "scenarios": [
+   "C01",
+   "C02",
+   "C03",
+   "C04",
+   "C05",
+   "C06",
+   "C11",
+   "C12",
+   "C13",
+   "C14",
+   "C16",
+   "C17",
+   "E2E"
+  ],
+  "verified_attention_labels_seen": [
+   "ANOMALOUS",
+   "INDETERMINATE"
+  ],
+  "labels_not_exercised_in_evaluation": [],
+  "missing_dependencies": []
+ },
+ {
+  "cop": "interaction_discovery",
+  "graph": "cops/runtime/graph.py build_cop_graph (shared subgraph), profile profiles.build_profiles()['interaction_discovery']",
+  "question": "Who or what is interacting with whom, through what route, and how is the activity propagating?",
+  "metrics": [
+   "interaction.subagent_lanes",
+   "interaction.mcp_servers",
+   "access.first_seen_mcp",
+   "telemetry.lane_linkage",
+   "insights.outside"
+  ],
+  "classification": "deterministic",
+  "llm_nodes": "none",
+  "provider": "none",
+  "tools": [
+   "build_interaction_graph",
+   "compare_known_routes"
+  ],
+  "rule": "rules.interaction_discovery (decision)",
+  "verifiers": [
+   "EV-01",
+   "EV-02",
+   "ID-01",
+   "ID-02",
+   "MC-01",
+   "SC-01",
+   "SC-02",
+   "DS-01",
+   "DS-02",
+   "PE-01",
+   "AU-01",
+   "AU-02",
+   "EX-01",
+   "MU-01",
+   "RP-01 (diagnostic)"
+  ],
+  "working_state": [
+   "edges",
+   "new_routes"
+  ],
+  "memory_writes": [
+   "route_record"
+  ],
+  "memory_reads": [
+   "route_record"
+  ],
+  "memory_scope": "agent",
+  "actions": [
+   "NONE (OBSERVE)",
+   "WATCH (RECORD)",
+   "PASS_TO_COP (NOTIFY)"
+  ],
+  "approval_in_supervised": [],
+  "consumes": [
+   "runtime_monitoring"
+  ],
+  "consumers": [
+   "agent_lifecycle_management",
+   "policy_enforcement",
+   "incident_response",
+   "risk_mitigation",
+   "audit_traceability"
+  ],
+  "scenarios": [
+   "C04",
+   "C05",
+   "C15",
+   "C15b",
+   "D-IR",
+   "E2E"
+  ],
+  "verified_attention_labels_seen": [
+   "NEW_ROUTE"
+  ],
+  "labels_not_exercised_in_evaluation": [
+   "PROPAGATING",
+   "PATH_PARTIAL"
+  ],
+  "missing_dependencies": []
+ },
+ {
+  "cop": "agent_lifecycle_management",
+  "graph": "cops/runtime/graph.py build_cop_graph (shared subgraph), profile profiles.build_profiles()['agent_lifecycle_management']",
+  "question": "Has an agent's identity, version, configuration, capability or connectivity changed in a way requiring governance attention?",
+  "metrics": [
+   "access.first_seen_mcp"
+  ],
+  "classification": "deterministic",
+  "llm_nodes": "none",
+  "provider": "none",
+  "tools": [
+   "get_agent_registry",
+   "detect_configuration_changes"
+  ],
+  "rule": "rules.agent_lifecycle_management (decision)",
+  "verifiers": [
+   "EV-01",
+   "EV-02",
+   "ID-01",
+   "ID-02",
+   "MC-01",
+   "SC-01",
+   "SC-02",
+   "DS-01",
+   "DS-02",
+   "PE-01",
+   "AU-01",
+   "AU-02",
+   "EX-01",
+   "MU-01",
+   "RP-01 (diagnostic)"
+  ],
+  "working_state": [
+   "registry_entry",
+   "configuration_changes"
+  ],
+  "memory_writes": [
+   "agent_profile"
+  ],
+  "memory_reads": [
+   "agent_profile",
+   "route_record"
+  ],
+  "memory_scope": "agent",
+  "actions": [
+   "NONE (OBSERVE)",
+   "WATCH (RECORD)",
+   "ALERT (ALERT)"
+  ],
+  "approval_in_supervised": [],
+  "consumes": [
+   "runtime_monitoring",
+   "interaction_discovery"
+  ],
+  "consumers": [
+   "policy_enforcement",
+   "classification_tagging"
+  ],
+  "scenarios": [
+   "C04",
+   "E2E"
+  ],
+  "verified_attention_labels_seen": [
+   "CHANGED"
+  ],
+  "labels_not_exercised_in_evaluation": [
+   "NEW",
+   "DRIFTED",
+   "INACTIVE",
+   "RETIRED"
+  ],
+  "missing_dependencies": [
+   "agent_registry"
+  ]
+ },
+ {
+  "cop": "policy_enforcement",
+  "graph": "cops/runtime/graph.py build_cop_graph (shared subgraph), profile profiles.build_profiles()['policy_enforcement']",
+  "question": "Does the observed behaviour violate an explicit permission, policy, entitlement, boundary, or approval requirement?",
+  "metrics": [
+   "insights.blocked",
+   "insights.sensitive_unasked",
+   "insights.outside",
+   "insights.secrets",
+   "oversight.declined_inferred"
+  ],
+  "classification": "deterministic",
+  "llm_nodes": "none",
+  "provider": "none",
+  "tools": [
+   "evaluate_session_operations",
+   "check_entitlements"
+  ],
+  "rule": "rules.policy_enforcement (decision)",
+  "verifiers": [
+   "EV-01",
+   "EV-02",
+   "ID-01",
+   "ID-02",
+   "MC-01",
+   "SC-01",
+   "SC-02",
+   "DS-01",
+   "DS-02",
+   "PE-01",
+   "AU-01",
+   "AU-02",
+   "EX-01",
+   "MU-01",
+   "RP-01 (diagnostic)"
+  ],
+  "working_state": [
+   "policy_version",
+   "operation_decisions",
+   "approval_needed"
+  ],
+  "memory_writes": [
+   "enforcement_record"
+  ],
+  "memory_reads": [
+   "enforcement_record",
+   "route_record"
+  ],
+  "memory_scope": "agent",
+  "actions": [
+   "NONE (OBSERVE)",
+   "WATCH (RECORD)",
+   "ALERT (ALERT)",
+   "REQUEST_APPROVAL (REQUEST)",
+   "BLOCK (INTERVENE)",
+   "PASS_TO_COP (NOTIFY)"
+  ],
+  "approval_in_supervised": [
+   "REQUEST_APPROVAL",
+   "BLOCK"
+  ],
+  "consumes": [
+   "runtime_monitoring",
+   "interaction_discovery",
+   "agent_lifecycle_management",
+   "anomaly_detection"
+  ],
+  "consumers": [
+   "incident_response",
+   "risk_mitigation",
+   "audit_traceability",
+   "knowledge_policy_management"
+  ],
+  "scenarios": [
+   "C01",
+   "C04",
+   "C05",
+   "C15",
+   "C15b",
+   "D-IR",
+   "E2E"
+  ],
+  "verified_attention_labels_seen": [
+   "UNCERTAIN",
+   "VIOLATION"
+  ],
+  "labels_not_exercised_in_evaluation": [
+   "APPROVAL_REQUIRED"
+  ],
+  "missing_dependencies": [
+   "entitlements",
+   "policy_store"
+  ]
+ },
+ {
+  "cop": "recovery_resilience",
+  "graph": "cops/runtime/graph.py build_cop_graph (shared subgraph), profile profiles.build_profiles()['recovery_resilience']",
+  "question": "After failure or intervention, did the system return to a viable state without compounding the problem?",
+  "metrics": [
+   "insights.reverted",
+   "insights.retry",
+   "insights.failed"
+  ],
+  "classification": "deterministic",
+  "llm_nodes": "none",
+  "provider": "none",
+  "tools": [
+   "get_recovery_records",
+   "validate_checkpoints"
+  ],
+  "rule": "rules.recovery_resilience (decision)",
+  "verifiers": [
+   "EV-01",
+   "EV-02",
+   "ID-01",
+   "ID-02",
+   "MC-01",
+   "SC-01",
+   "SC-02",
+   "DS-01",
+   "DS-02",
+   "PE-01",
+   "AU-01",
+   "AU-02",
+   "EX-01",
+   "MU-01",
+   "RP-01 (diagnostic)"
+  ],
+  "working_state": [
+   "recovery_records",
+   "checkpoint_validity"
+  ],
+  "memory_writes": [
+   "recovery_outcome"
+  ],
+  "memory_reads": [
+   "recovery_outcome"
+  ],
+  "memory_scope": "tenant",
+  "actions": [
+   "NONE (OBSERVE)",
+   "WATCH (RECORD)",
+   "ALERT (ALERT)"
+  ],
+  "approval_in_supervised": [],
+  "consumes": [
+   "behavior_analytics"
+  ],
+  "consumers": [
+   "incident_response",
+   "governance_intelligence"
+  ],
+  "scenarios": [
+   "C10a",
+   "C10b",
+   "E2E"
+  ],
+  "verified_attention_labels_seen": [
+   "FAILED_RECOVERY"
+  ],
+  "labels_not_exercised_in_evaluation": [
+   "PARTIAL_RECOVERY",
+   "IRREVERSIBLE"
+  ],
+  "missing_dependencies": [
+   "recovery_records"
+  ]
+ },
+ {
+  "cop": "incident_response",
+  "graph": "cops/runtime/graph.py build_cop_graph (shared subgraph), profile profiles.build_profiles()['incident_response']",
+  "question": "Do the current findings constitute an actionable incident, and what should happen now?",
+  "metrics": [
+   "insights.secrets",
+   "insights.sensitive_unasked",
+   "insights.blocked"
+  ],
+  "classification": "llm",
+  "llm_nodes": "llm_plan_investigation, llm_assess_evidence",
+  "provider": "LLMGateway(FixtureProvider|AnthropicProvider opt-in), prompt incident_response/prompt-1",
+  "tools": [
+   "get_incident_evidence",
+   "get_verified_findings",
+   "check_exposure",
+   "check_approval_requirements",
+   "get_incident_outcomes"
+  ],
+  "rule": "rules.incident_response (computational baseline)",
+  "verifiers": [
+   "EV-01",
+   "EV-02",
+   "ID-01",
+   "ID-02",
+   "MC-01",
+   "SC-01",
+   "SC-02",
+   "DS-01",
+   "DS-02",
+   "PE-01",
+   "AU-01",
+   "AU-02",
+   "EX-01",
+   "MU-01",
+   "RP-01 (diagnostic)"
+  ],
+  "working_state": [
+   "hypothesis",
+   "scope",
+   "exposure",
+   "upstream_basis"
+  ],
+  "memory_writes": [
+   "incident_outcome"
+  ],
+  "memory_reads": [
+   "incident_outcome",
+   "anomaly_observation",
+   "enforcement_record",
+   "recovery_outcome"
+  ],
+  "memory_scope": "tenant",
+  "actions": [
+   "NONE (OBSERVE)",
+   "WATCH (RECORD)",
+   "ALERT (ALERT)",
+   "INSTRUCT (RECOMMEND)",
+   "REQUEST_APPROVAL (REQUEST)",
+   "PAUSE (INTERVENE)",
+   "BLOCK (INTERVENE)",
+   "ESCALATE (INITIATE)"
+  ],
+  "approval_in_supervised": [
+   "INSTRUCT",
+   "REQUEST_APPROVAL",
+   "PAUSE",
+   "BLOCK",
+   "ESCALATE"
+  ],
+  "consumes": [
+   "runtime_monitoring",
+   "anomaly_detection",
+   "policy_enforcement",
+   "interaction_discovery",
+   "workflow_orchestration",
+   "recovery_resilience"
+  ],
+  "consumers": [
+   "risk_mitigation",
+   "governance_intelligence"
+  ],
+  "scenarios": [
+   "C01",
+   "C05",
+   "C06",
+   "C10a",
+   "C10b",
+   "C15",
+   "C15b",
+   "D-IR",
+   "E2E"
+  ],
+  "verified_attention_labels_seen": [
+   "INCIDENT",
+   "WATCH"
+  ],
+  "labels_not_exercised_in_evaluation": [],
+  "missing_dependencies": [
+   "policy_store"
+  ]
+ },
+ {
+  "cop": "classification_tagging",
+  "graph": "cops/runtime/graph.py build_cop_graph (shared subgraph), profile profiles.build_profiles()['classification_tagging']",
+  "question": "What kind of governance event is this, and which entities should remain associated with it?",
+  "metrics": [
+   "insights.secrets",
+   "insights.sensitive_unasked",
+   "insights.outside",
+   "insights.blocked"
+  ],
+  "classification": "llm",
+  "llm_nodes": "llm_plan_investigation, llm_assess_evidence",
+  "provider": "LLMGateway(FixtureProvider|AnthropicProvider opt-in), prompt classification_tagging/prompt-1",
+  "tools": [
+   "query_taxonomy",
+   "compare_validated_examples",
+   "inspect_event_metadata"
+  ],
+  "rule": "rules.classification_tagging (computational baseline)",
+  "verifiers": [
+   "EV-01",
+   "EV-02",
+   "ID-01",
+   "ID-02",
+   "MC-01",
+   "SC-01",
+   "SC-02",
+   "DS-01",
+   "DS-02",
+   "PE-01",
+   "AU-01",
+   "AU-02",
+   "EX-01",
+   "MU-01",
+   "RP-01 (diagnostic)"
+  ],
+  "working_state": [
+   "hypothesis",
+   "taxonomy_version",
+   "candidate_families"
+  ],
+  "memory_writes": [
+   "classification_example"
+  ],
+  "memory_reads": [
+   "classification_example"
+  ],
+  "memory_scope": "tenant",
+  "actions": [
+   "NONE (OBSERVE)"
+  ],
+  "approval_in_supervised": [],
+  "consumes": [
+   "anomaly_detection",
+   "agent_lifecycle_management"
+  ],
+  "consumers": [
+   "governance_intelligence"
+  ],
+  "scenarios": [
+   "C08",
+   "E2E"
+  ],
+  "verified_attention_labels_seen": [
+   "INTEGRITY"
+  ],
+  "labels_not_exercised_in_evaluation": [
+   "BOUNDARY",
+   "OVERSIGHT",
+   "LOOPS",
+   "OUTCOME",
+   "COST"
+  ],
+  "missing_dependencies": [
+   "taxonomy"
+  ]
+ },
+ {
+  "cop": "resource_management",
+  "graph": "cops/runtime/graph.py build_cop_graph (shared subgraph), profile profiles.build_profiles()['resource_management']",
+  "question": "Is resource consumption within entitlement and acceptable operating bounds?",
+  "metrics": [
+   "insights.token_outlier",
+   "insights.duration_outlier",
+   "insights.stalled",
+   "activity.action_rate_ratio"
+  ],
+  "classification": "deterministic",
+  "llm_nodes": "none",
+  "provider": "none",
+  "tools": [
+   "compute_consumption",
+   "get_quota"
+  ],
+  "rule": "rules.resource_management (decision)",
+  "verifiers": [
+   "EV-01",
+   "EV-02",
+   "ID-01",
+   "ID-02",
+   "MC-01",
+   "SC-01",
+   "SC-02",
+   "DS-01",
+   "DS-02",
+   "PE-01",
+   "AU-01",
+   "AU-02",
+   "EX-01",
+   "MU-01",
+   "RP-01 (diagnostic)"
+  ],
+  "working_state": [
+   "consumption",
+   "quota"
+  ],
+  "memory_writes": [
+   "usage_baseline"
+  ],
+  "memory_reads": [
+   "usage_baseline"
+  ],
+  "memory_scope": "agent",
+  "actions": [
+   "NONE (OBSERVE)",
+   "WATCH (RECORD)",
+   "ALERT (ALERT)"
+  ],
+  "approval_in_supervised": [],
+  "consumes": [
+   "runtime_monitoring"
+  ],
+  "consumers": [
+   "workload_optimization",
+   "risk_mitigation"
+  ],
+  "scenarios": [
+   "C01",
+   "C02",
+   "C03",
+   "C05",
+   "E2E"
+  ],
+  "verified_attention_labels_seen": [
+   "EXCESSIVE"
+  ],
+  "labels_not_exercised_in_evaluation": [
+   "INEFFICIENT",
+   "UNAUTHORIZED",
+   "INDETERMINATE"
+  ],
+  "missing_dependencies": [
+   "budget_or_quota"
+  ]
+ },
+ {
+  "cop": "risk_mitigation",
+  "graph": "cops/runtime/graph.py build_cop_graph (shared subgraph), profile profiles.build_profiles()['risk_mitigation']",
+  "question": "Do the combined findings create a material or emerging risk, and what residual risk remains after available controls?",
+  "metrics": [
+   "insights.secrets",
+   "insights.sensitive_unasked",
+   "insights.outside",
+   "insights.reverted",
+   "insights.token_outlier"
+  ],
+  "classification": "llm",
+  "llm_nodes": "llm_plan_investigation, llm_assess_evidence",
+  "provider": "LLMGateway(FixtureProvider|AnthropicProvider opt-in), prompt risk_mitigation/prompt-1",
+  "tools": [
+   "read_risk_register",
+   "evaluate_control_prerequisites",
+   "get_mitigation_outcomes",
+   "calculate_risk_components"
+  ],
+  "rule": "rules.risk_mitigation (computational baseline)",
+  "verifiers": [
+   "EV-01",
+   "EV-02",
+   "ID-01",
+   "ID-02",
+   "MC-01",
+   "SC-01",
+   "SC-02",
+   "DS-01",
+   "DS-02",
+   "PE-01",
+   "AU-01",
+   "AU-02",
+   "EX-01",
+   "MU-01",
+   "RP-01 (diagnostic)"
+  ],
+  "working_state": [
+   "hypothesis",
+   "components",
+   "controls"
+  ],
+  "memory_writes": [
+   "mitigation_outcome"
+  ],
+  "memory_reads": [
+   "mitigation_outcome",
+   "incident_outcome"
+  ],
+  "memory_scope": "tenant",
+  "actions": [
+   "NONE (OBSERVE)",
+   "WATCH (RECORD)",
+   "INSTRUCT (RECOMMEND)",
+   "ESCALATE (INITIATE)",
+   "PASS_TO_COP (NOTIFY)"
+  ],
+  "approval_in_supervised": [
+   "INSTRUCT",
+   "ESCALATE"
+  ],
+  "consumes": [
+   "anomaly_detection",
+   "interaction_discovery",
+   "policy_enforcement",
+   "resource_management",
+   "incident_response"
+  ],
+  "consumers": [],
+  "scenarios": [
+   "C05",
+   "E2E"
+  ],
+  "verified_attention_labels_seen": [
+   "EMERGING"
+  ],
+  "labels_not_exercised_in_evaluation": [
+   "MATERIAL"
+  ],
+  "missing_dependencies": [
+   "risk_register"
+  ]
+ },
+ {
+  "cop": "governance_intelligence",
+  "graph": "cops/runtime/graph.py build_cop_graph (shared subgraph), profile profiles.build_profiles()['governance_intelligence']",
+  "question": "What recurring patterns, concentrations or blind spots indicate a broader governance problem?",
+  "metrics": [],
+  "classification": "llm",
+  "llm_nodes": "llm_plan_investigation, llm_assess_evidence",
+  "provider": "LLMGateway(FixtureProvider|AnthropicProvider opt-in), prompt governance_intelligence/prompt-1",
+  "tools": [
+   "query_aggregate_report",
+   "compare_time_windows",
+   "get_confirmed_incidents",
+   "get_previous_reviews"
+  ],
+  "rule": "rules.governance_intelligence (computational baseline)",
+  "verifiers": [
+   "EV-01",
+   "EV-02",
+   "ID-01",
+   "ID-02",
+   "MC-01",
+   "SC-01",
+   "SC-02",
+   "DS-01",
+   "DS-02",
+   "PE-01",
+   "AU-01",
+   "AU-02",
+   "EX-01",
+   "MU-01",
+   "RP-01 (diagnostic)"
+  ],
+  "working_state": [
+   "hypothesis",
+   "aggregates",
+   "windows"
+  ],
+  "memory_writes": [
+   "governance_review"
+  ],
+  "memory_reads": [
+   "governance_review",
+   "incident_outcome",
+   "classification_example"
+  ],
+  "memory_scope": "tenant",
+  "actions": [
+   "NONE (OBSERVE)",
+   "WATCH (RECORD)"
+  ],
+  "approval_in_supervised": [],
+  "consumes": [
+   "classification_tagging",
+   "recovery_resilience",
+   "incident_response"
+  ],
+  "consumers": [
+   "knowledge_policy_management",
+   "governance_architecture"
+  ],
+  "scenarios": [
+   "C12",
+   "E2E"
+  ],
+  "verified_attention_labels_seen": [],
+  "labels_not_exercised_in_evaluation": [
+   "RECURRING",
+   "CONCENTRATED",
+   "BLIND_SPOT"
+  ],
+  "missing_dependencies": [
+   "decision_store"
+  ]
+ },
+ {
+  "cop": "workload_optimization",
+  "graph": "cops/runtime/graph.py build_cop_graph (shared subgraph), profile profiles.build_profiles()['workload_optimization']",
+  "question": "Is the workload using tools, models, time and resources efficiently for the task being performed?",
+  "metrics": [
+   "insights.repetition",
+   "insights.duration_outlier",
+   "insights.token_outlier",
+   "activity.action_rate_ratio"
+  ],
+  "classification": "llm",
+  "llm_nodes": "llm_plan_investigation, llm_assess_evidence",
+  "provider": "LLMGateway(FixtureProvider|AnthropicProvider opt-in), prompt workload_optimization/prompt-1",
+  "tools": [
+   "calculate_usage_rates",
+   "compare_task_classes",
+   "inspect_repeated_operations",
+   "evaluate_previous_changes"
+  ],
+  "rule": "rules.workload_optimization (computational baseline)",
+  "verifiers": [
+   "EV-01",
+   "EV-02",
+   "ID-01",
+   "ID-02",
+   "MC-01",
+   "SC-01",
+   "SC-02",
+   "DS-01",
+   "DS-02",
+   "PE-01",
+   "AU-01",
+   "AU-02",
+   "EX-01",
+   "MU-01",
+   "RP-01 (diagnostic)"
+  ],
+  "working_state": [
+   "hypothesis",
+   "usage",
+   "peer_comparison"
+  ],
+  "memory_writes": [
+   "optimisation_outcome"
+  ],
+  "memory_reads": [
+   "optimisation_outcome",
+   "usage_baseline"
+  ],
+  "memory_scope": "tenant",
+  "actions": [
+   "NONE (OBSERVE)",
+   "WATCH (RECORD)",
+   "INSTRUCT (RECOMMEND)"
+  ],
+  "approval_in_supervised": [
+   "INSTRUCT"
+  ],
+  "consumes": [
+   "runtime_monitoring",
+   "resource_management"
+  ],
+  "consumers": [],
+  "scenarios": [
+   "C01",
+   "C02",
+   "E2E"
+  ],
+  "verified_attention_labels_seen": [],
+  "labels_not_exercised_in_evaluation": [
+   "REDUNDANT",
+   "BOTTLENECK",
+   "OVERPROVISIONED",
+   "UNDERPROVISIONED"
+  ],
+  "missing_dependencies": [
+   "task_classes"
+  ]
+ },
+ {
+  "cop": "audit_traceability",
+  "graph": "cops/runtime/graph.py build_cop_graph (shared subgraph), profile profiles.build_profiles()['audit_traceability']",
+  "question": "Can every consequential finding, decision and action be attributed and reconstructed from trustworthy evidence?",
+  "metrics": [
+   "insights.unattributed",
+   "telemetry.turn_linkage",
+   "telemetry.lane_linkage",
+   "telemetry.source_agreement"
+  ],
+  "classification": "deterministic",
+  "llm_nodes": "none",
+  "provider": "none",
+  "tools": [
+   "reconstruct_trace",
+   "check_decision_linkage"
+  ],
+  "rule": "rules.audit_traceability (decision)",
+  "verifiers": [
+   "EV-01",
+   "EV-02",
+   "ID-01",
+   "ID-02",
+   "MC-01",
+   "SC-01",
+   "SC-02",
+   "DS-01",
+   "DS-02",
+   "PE-01",
+   "AU-01",
+   "AU-02",
+   "EX-01",
+   "MU-01",
+   "RP-01 (diagnostic)"
+  ],
+  "working_state": [
+   "trace",
+   "decision_linkage"
+  ],
+  "memory_writes": [
+   "trace_gap"
+  ],
+  "memory_reads": [
+   "trace_gap"
+  ],
+  "memory_scope": "tenant",
+  "actions": [
+   "NONE (OBSERVE)",
+   "WATCH (RECORD)",
+   "ALERT (ALERT)"
+  ],
+  "approval_in_supervised": [],
+  "consumes": [
+   "runtime_monitoring",
+   "interaction_discovery",
+   "policy_enforcement"
+  ],
+  "consumers": [
+   "governance_architecture"
+  ],
+  "scenarios": [
+   "C01",
+   "E2E"
+  ],
+  "verified_attention_labels_seen": [],
+  "labels_not_exercised_in_evaluation": [
+   "PARTIAL",
+   "BROKEN_TRACE",
+   "UNATTRIBUTABLE"
+  ],
+  "missing_dependencies": []
+ },
+ {
+  "cop": "knowledge_policy_management",
+  "graph": "cops/runtime/graph.py build_cop_graph (shared subgraph), profile profiles.build_profiles()['knowledge_policy_management']",
+  "question": "Are the rules, policies and governance knowledge currently being used still current, coherent and internally consistent?",
+  "metrics": [],
+  "classification": "llm",
+  "llm_nodes": "llm_plan_investigation, llm_assess_evidence",
+  "provider": "LLMGateway(FixtureProvider|AnthropicProvider opt-in), prompt knowledge_policy_management/prompt-1",
+  "tools": [
+   "get_policy_versions",
+   "compare_policy_documents",
+   "inspect_rule_dependencies",
+   "check_authorisation_records"
+  ],
+  "rule": "rules.knowledge_policy_management (computational baseline)",
+  "verifiers": [
+   "EV-01",
+   "EV-02",
+   "ID-01",
+   "ID-02",
+   "MC-01",
+   "SC-01",
+   "SC-02",
+   "DS-01",
+   "DS-02",
+   "PE-01",
+   "AU-01",
+   "AU-02",
+   "EX-01",
+   "MU-01",
+   "RP-01 (diagnostic)"
+  ],
+  "working_state": [
+   "hypothesis",
+   "versions",
+   "conflicts"
+  ],
+  "memory_writes": [
+   "policy_conflict"
+  ],
+  "memory_reads": [
+   "policy_conflict"
+  ],
+  "memory_scope": "tenant",
+  "actions": [
+   "NONE (OBSERVE)",
+   "WATCH (RECORD)"
+  ],
+  "approval_in_supervised": [],
+  "consumes": [
+   "governance_intelligence",
+   "policy_enforcement"
+  ],
+  "consumers": [
+   "governance_architecture"
+  ],
+  "scenarios": [
+   "E2E"
+  ],
+  "verified_attention_labels_seen": [],
+  "labels_not_exercised_in_evaluation": [
+   "STALE",
+   "CONFLICT",
+   "UPDATE_REQUIRED"
+  ],
+  "missing_dependencies": [
+   "policy_store"
+  ]
+ },
+ {
+  "cop": "governance_architecture",
+  "graph": "cops/runtime/graph.py build_cop_graph (shared subgraph), profile profiles.build_profiles()['governance_architecture']",
+  "question": "Does the current governance architecture adequately cover the estate and the behaviours actually occurring?",
+  "metrics": [
+   "telemetry.unknown_share"
+  ],
+  "classification": "llm",
+  "llm_nodes": "llm_plan_investigation, llm_assess_evidence",
+  "provider": "LLMGateway(FixtureProvider|AnthropicProvider opt-in), prompt governance_architecture/prompt-1",
+  "tools": [
+   "inspect_cop_catalogue",
+   "query_coverage_matrix",
+   "validate_cop_relationships",
+   "get_confirmed_coverage_gaps"
+  ],
+  "rule": "rules.governance_architecture (computational baseline)",
+  "verifiers": [
+   "EV-01",
+   "EV-02",
+   "ID-01",
+   "ID-02",
+   "MC-01",
+   "SC-01",
+   "SC-02",
+   "DS-01",
+   "DS-02",
+   "PE-01",
+   "AU-01",
+   "AU-02",
+   "EX-01",
+   "MU-01",
+   "RP-01 (diagnostic)"
+  ],
+  "working_state": [
+   "hypothesis",
+   "coverage",
+   "relationships"
+  ],
+  "memory_writes": [
+   "coverage_gap"
+  ],
+  "memory_reads": [
+   "coverage_gap",
+   "governance_review"
+  ],
+  "memory_scope": "tenant",
+  "actions": [
+   "NONE (OBSERVE)",
+   "WATCH (RECORD)"
+  ],
+  "approval_in_supervised": [],
+  "consumes": [
+   "governance_intelligence",
+   "knowledge_policy_management",
+   "audit_traceability"
+  ],
+  "consumers": [],
+  "scenarios": [
+   "C18",
+   "C18n",
+   "E2E"
+  ],
+  "verified_attention_labels_seen": [
+   "GAP"
+  ],
+  "labels_not_exercised_in_evaluation": [
+   "STRUCTURAL_CHANGE_RECOMMENDED"
+  ],
+  "missing_dependencies": []
+ }
+]
