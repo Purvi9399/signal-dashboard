@@ -134,3 +134,65 @@ def test_rp01_is_diagnostic_and_never_blocks():
     f, v = verify_with(lambda p: [FX.cm(p, "insights.token_outlier"), FX.ct(p, "calculate_deviation", "current")],
                        label="NORMAL")
     assert v["RP-01"]["effect"] == "DIAGNOSTIC" and not v["RP-01"]["independent"]
+
+
+# ---------------------------------------------------------------- AU-01 on the original proposal
+
+def run_with_action(action, mode="dry_run", live=False, cop="anomaly_detection"):
+    def script(c, purpose, p, n):
+        if purpose == "plan":
+            return FX.plan("x", [], [], [], FX.req("calculate_deviation", "t", quantity="tokens"))
+        return FX.conclude("x", "NORMAL", 0.7, [FX.cm(p, "insights.token_outlier"),
+                                                FX.ct(p, "calculate_deviation", "current")], "r", action)
+    rt = E.make_runtime(f"au-{action}-{mode}", "v1", ROWS, {}, provider=FixtureProvider(script),
+                        mode=mode, live=live)
+    out = run_cop(rt, cop)
+    assert out["finding"]["verified"]                    # the finding itself is sound
+    return out["proposed_action"], out["verifier_results"]
+
+
+def test_au01_fails_directly_on_an_unauthorised_action():
+    from cops.runtime.verifiers import au01, verify_action
+    from cops.specs import BY_KEY
+    ad, pe = BY_KEY["anomaly_detection"], BY_KEY["policy_enforcement"]
+    assert au01(ad, "BLOCK", "supervised", "x")["result"] == "FAIL"
+    assert au01(ad, "BLOCK", "supervised", "x")["reason_code"] == "not_permitted"
+    assert au01(ad, "SELF_GRANT", "supervised", "x")["reason_code"] == "not_permitted"   # not in the vocabulary
+    assert au01(pe, "BLOCK", "dry_run", "x")["reason_code"] == "intervene_in_dry_run"
+    assert au01(pe, "BLOCK", "supervised", "x")["result"] == "PASS"
+    case = __import__("cops.runtime.case", fromlist=["CaseData"]).CaseData("x", "t1", "v1", ROWS, synthetic=True)
+    first = verify_action(ad, {"action": "BLOCK"}, "supervised", case, {})[0]
+    assert (first["check_id"], first["result"], first["subject"]) == ("AU-01", "FAIL", "final_action")
+
+
+def test_au01_fails_on_an_unauthorised_proposal_inside_the_graph():
+    pa, vr = run_with_action("BLOCK", mode="supervised", live=True)   # Anomaly Detection may not BLOCK
+    orig = pa["original_verification"]
+    assert pa["original_proposal"]["action"] == "BLOCK"
+    assert (orig["check_id"], orig["result"], orig["reason_code"], orig["subject"]) == \
+        ("AU-01", "FAIL", "not_permitted", "original_proposal")
+    assert pa["corrected_proposal"]["action"] == "WATCH"
+    assert pa["corrected_proposal"]["source"] == "authority.check substitute"
+    assert pa["action"] == "WATCH" and pa["final_authority"]["action"] == "WATCH"
+    final = [c for c in pa["final_authority"]["checks"] if c["check_id"] == "AU-01"][0]
+    assert final["result"] == "PASS" and final["subject"] == "final_action"
+    assert pa["execution_status"] == "NOT_EXECUTED_NO_ACTION"     # BLOCK never reached execution
+    au = [r for r in vr if r["check_id"] == "AU-01"]
+    assert [r["subject"] for r in au] == ["original_proposal", "final_action"]
+
+
+def test_au01_records_the_dry_run_substitution_as_a_failed_original():
+    from cops.runtime.graph import run_cop as rc
+    rows = E._estate(E.sensitive_session("au-pe", 9))
+    rt = E.make_runtime("au-pe", "au-pe", rows, {**E.c05_art()}, None)
+    pa = rc(rt, "policy_enforcement")["proposed_action"]
+    assert pa["original_proposal"]["action"] == "BLOCK"
+    assert pa["original_verification"]["reason_code"] == "intervene_in_dry_run"
+    assert pa["corrected_proposal"]["action"] == "ALERT"
+    assert pa["final_authority"]["authorised"] and pa["execution_status"] == "NOT_EXECUTED_DRY_RUN"
+
+
+def test_au01_passes_and_records_no_correction_for_a_permitted_proposal():
+    pa, vr = run_with_action("ALERT")
+    assert pa["original_verification"]["result"] == "PASS" and pa["corrected_proposal"] is None
+    assert pa["final_authority"]["action"] == "ALERT"

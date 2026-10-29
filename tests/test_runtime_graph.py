@@ -142,11 +142,17 @@ def test_policy_enforcement_never_turns_a_new_route_into_a_violation():
 def test_resource_management_alternate_outcomes():
     normal = E._estate(S.normal_session("rm1", 9))
     spike = E._estate(E.spike_session("rm2", 9))
-    assert pub(det("resource_management", normal, "rm1"))["label"] == "NORMAL"
+    ample = {"quotas": {S.OPS: {"token_budget": 10_000_000, "synthetic": True}}}
+    assert pub(det("resource_management", normal, "rm1", ample))["label"] == "NORMAL"
+    # EXCESSIVE is observed against the baseline; it does not need a quota
     assert pub(det("resource_management", spike, "rm2"))["label"] == "EXCESSIVE"
     over = det("resource_management", normal, "rm1", {"quotas": {S.OPS: {"token_budget": 500, "synthetic": True}}})
     assert over["published"]["label"] == "UNAUTHORIZED"
+    # NORMAL asserts "within entitlement": without a quota it is withheld, not assumed
     noquota = det("resource_management", normal, "rm1")
+    assert noquota["finding"]["label"] == "INCONCLUSIVE"
+    assert noquota["finding"]["status"] == "MISSING_DEPENDENCY"
+    assert noquota["finding"]["gated_label"] == "NORMAL"
     assert noquota["finding"]["missing_dependencies"][0]["dependency"] == "budget_or_quota"
 
 

@@ -38,6 +38,7 @@ from .contracts import (VerifierResult, PASS, FAIL, WARN, NOT_RUN, BLOCKS_FINDIN
 from .rules import independent_upstream
 from .memory import POLICIES
 from .tools import scan, latest_policy, evaluate_operation
+from .requirements import required_unavailable
 
 REGISTRY_VERSION = "2026-10-29.1"
 
@@ -74,10 +75,10 @@ CHECKS = {
 }
 
 
-def R(check_id, result, reason, detail="", refs=()):
+def R(check_id, result, reason, detail="", refs=(), subject=""):
     v, cat, eff, ind, _ = CHECKS[check_id]
     return VerifierResult(check_id, v, CATEGORIES[cat], result, eff, reason, detail,
-                          list(refs)[:20], ind).to_dict()
+                          list(refs)[:20], ind, subject).to_dict()
 
 
 def describe():
@@ -405,6 +406,11 @@ def verify_finding(ctx):
         elif f.get("label") == quiet and dark and rm_label is not None and rm_label != "SUFFICIENT" \
                 and spec.key != "runtime_monitoring":
             probs.append(f"quiet label with {', '.join(dark)} unobservable under {rm_label} telemetry")
+        # A label backed by a required artifact that is absent is unsupported (runtime/requirements.py).
+        gaps = required_unavailable(spec.key, ctx["case"], f.get("label"), quiet) if ctx.get("case") else []
+        if gaps:
+            probs.append("required evidence unavailable: " + ", ".join(
+                f"{g['artifact']} ({g['backs']})" for g in gaps))
         cited = [rows_by.get(x.get("metric_id")) for x in claims if x.get("metric_id")]
         if attention and cited and all(r and r["evidence"] == NOT_APPLICABLE for r in cited):
             probs.append("attention label from NOT_APPLICABLE rows only")
@@ -443,18 +449,25 @@ def verify_finding(ctx):
     return out
 
 
+def au01(spec, a, mode, subject):
+    """AU-01 on one action. The graph runs it twice: on the action as the COP
+    proposed it, before authority.check substitutes anything, and on the action
+    that goes forward. Only the first can see an unauthorised proposal."""
+    tier = TIER.get(a)
+    if a not in spec.permitted_actions or tier is None:
+        return R("AU-01", FAIL, "not_permitted", f"{spec.key} may not {a}", subject=subject)
+    if tier in HUMAN_APPROVED_ONLY and mode == "dry_run":
+        return R("AU-01", FAIL, "intervene_in_dry_run", f"{a} is recorded, not executed, in dry-run",
+                 subject=subject)
+    return R("AU-01", PASS, "permitted", subject=subject)
+
+
 def verify_action(spec, action, mode, case, finding, approval=None, execution=None):
     """Action-level checks: PE-01, AU-01, AU-02, EX-01."""
     out = []
     a = action.get("action", "NONE")
     tier = TIER.get(a)
-    # AU-01
-    if a not in spec.permitted_actions or tier is None:
-        out.append(R("AU-01", FAIL, "not_permitted", f"{spec.key} may not {a}"))
-    elif tier in HUMAN_APPROVED_ONLY and mode == "dry_run":
-        out.append(R("AU-01", FAIL, "intervene_in_dry_run", f"{a} is recorded, not executed, in dry-run"))
-    else:
-        out.append(R("AU-01", PASS, "permitted"))
+    out.append(au01(spec, a, mode, "final_action"))
     # PE-01 an intervening or approval action needs a policy basis
     if tier in HUMAN_APPROVED_ONLY or a == "REQUEST_APPROVAL":
         ver = latest_policy(case)

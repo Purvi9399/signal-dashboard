@@ -49,10 +49,11 @@ from .contracts import (Finding, ProposedAction, ORIGIN_LLM, ORIGIN_RULES, SUBST
                         CLAIM_METRIC_STATE, CLAIM_METRIC_VALUE, CLAIM_TOOL_OBSERVATION,
                         CLAIM_UPSTREAM, CONTRACT_VERSION, stable_id)
 from .evidence import assess, usable
+from .requirements import assess_requirements, required_unavailable
 from .memory import MemoryAccessDenied, POLICIES, VERIFIED
 from .rules import RULES, DETERMINISTIC_TOOLS, evidence_conf
 from .tools import TOOLS, scan
-from .verifiers import (verify_finding, verify_action, verify_memory_update, blocking,
+from .verifiers import (au01, verify_finding, verify_action, verify_memory_update, blocking,
                         REGISTRY_VERSION)
 from .profiles import build_profiles
 from .llm import LLMBudget
@@ -280,8 +281,32 @@ def _as_finding(rt, cop, f, origin, extra=None):
                  hypothesis_trail=list(f.get("hypothesis_trail", []))).to_dict()
     fd["proposed_action"] = {"action": f.get("action") or _fallback_action(spec),
                              "reason": f.get("action_reason", "")}
+    fd["evidence_requirements"] = assess_requirements(cop, rt.case)
     fd.update(extra or {})
     return fd
+
+
+def _gate_required(rt, cop, out):
+    """A rule may not reach a label that a required, absent artifact backs.
+    The quiet label becomes INCONCLUSIVE with status MISSING_DEPENDENCY."""
+    spec = BY_KEY[cop]
+    quiet = spec.interpretations[0] if spec.interpretations else None
+    if out.get("status", SUBSTANTIVE) != SUBSTANTIVE or out["label"] == INCONCLUSIVE_LABEL:
+        return out
+    gaps = required_unavailable(cop, rt.case, out["label"], quiet)
+    if not gaps:
+        return out
+    names = ", ".join(g["artifact"] for g in gaps)
+    deps = list(out.get("missing_dependencies", []))
+    for g in gaps:
+        if not any(d.get("dependency") == g["artifact"] for d in deps):
+            deps.append({"dependency": g["artifact"], "required_for": f"{cop}: {g['backs']}",
+                         "how_to_supply": "an authoritative source; see runtime/requirements.py"})
+    return {**out, "label": INCONCLUSIVE_LABEL, "status": MISSING_DEPENDENCY, "confidence": 0.0,
+            "action": _fallback_action(spec), "missing_dependencies": deps,
+            "gated_label": out["label"],
+            "rationale": f"{out['label']} withheld: required evidence unavailable ({names}). "
+                         + (out.get("rationale") or "")[:200]}
 
 
 @timed("computational_baseline")
@@ -304,13 +329,15 @@ def computational_baseline(state):
         out = {"label": INCONCLUSIVE_LABEL, "confidence": 0.0, "action": "NONE",
                "rationale": f"rule error {type(e).__name__}: {e}"[:300], "claims": [],
                "status": FAILED}
+    out = _gate_required(rt, cop, out)
     if missing and out.get("status", SUBSTANTIVE) == SUBSTANTIVE and out["label"] == INCONCLUSIVE_LABEL:
         out["status"] = MISSING_DEPENDENCY
     out.setdefault("missing_dependencies", [])
     for m in missing:
         if m not in out["missing_dependencies"]:
             out["missing_dependencies"].append(m)
-    f = _as_finding(rt, cop, out, ORIGIN_RULES)
+    f = _as_finding(rt, cop, out, ORIGIN_RULES,
+                    {"gated_label": out["gated_label"]} if out.get("gated_label") else None)
     if state["classification"] == "deterministic":
         return {"tool_calls": state["tool_calls"] + calls, "finding": f, "baseline": None}
     f["baseline_note"] = "computational baseline; not the decision and not a verifier"
@@ -619,12 +646,21 @@ def authority_check(state):
     f = state["finding"]
     requested = (f.get("proposed_action") or {}).get("action", "NONE")
     reason = (f.get("proposed_action") or {}).get("reason", "")
+    # AU-01 on the proposal exactly as the COP made it, before any substitution.
+    original_check = au01(spec, requested, rt.mode, "original_proposal")
     allowed, sub, why = authority_check_fn(spec, requested, rt.mode, rt.live_session)
     action = requested if allowed else (sub if sub in spec.permitted_actions else _fallback_action(spec))
     pa = ProposedAction(cop=cop, action=action, reason=reason,
                         target=rt.case.session_id, authority_tier=TIER.get(action, ""),
                         authorised=allowed, authority_reason=why).to_dict()
     pa["requested_action"] = requested
+    pa["original_proposal"] = {"action": requested, "reason": reason,
+                               "authority_tier": TIER.get(requested, "")}
+    pa["original_verification"] = original_check
+    pa["corrected_proposal"] = None if action == requested else {
+        "action": action, "authority_tier": TIER.get(action, ""),
+        "source": "authority.check substitute" if (not allowed and sub == action) else "fallback action",
+        "reason": why}
     checks = [r.to_dict() if not isinstance(r, dict) else r
               for r in verify_action(spec, pa, rt.mode, rt.case, f)]
     pre = [r for r in checks if r["check_id"] in ("AU-01", "PE-01")]
@@ -642,7 +678,11 @@ def authority_check(state):
     else:
         # ALERT, PASS_TO_COP, REQUEST_CONTEXT: informational, nothing to enforce
         pa["execution_status"] = NOT_EXECUTED_NO_ACTION
-    return {"proposed_action": pa, "verifier_results": state["verifier_results"] + pre}
+    pa["final_authority"] = {"action": action, "authorised": not blocking(pre, BLOCKS_ACTION),
+                             "checks": [{k: r[k] for k in ("check_id", "result", "reason_code", "subject")}
+                                        for r in pre],
+                             "execution_status": pa["execution_status"]}
+    return {"proposed_action": pa, "verifier_results": state["verifier_results"] + [original_check] + pre}
 
 
 def route_after_authority(state):

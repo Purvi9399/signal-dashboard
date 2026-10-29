@@ -157,6 +157,7 @@ class VerifierResult:
     detail: str = ""
     evidence_refs: list = field(default_factory=list)
     independent: bool = True         # False for diagnostics that re-run the same logic
+    subject: str = ""                # what was checked, when one check runs on more than one thing
 
     def to_dict(self):
         return asdict(self)

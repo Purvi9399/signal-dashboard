@@ -128,6 +128,8 @@ def summarise(out, rt, extra=None):
                            for t in r["tool_calls"]],
             "security_events": r["security_events"],
             "memory_write": r.get("memory_write"),
+            "evidence_requirements": f.get("evidence_requirements", []),
+            "gated_label": f.get("gated_label"),
             "node_ms": r["node_timings"], "total_ms": round(r["total_ms"], 3),
             "evidence": [{"metric": x["metric"], "evidence": x["evidence"], "state": x["state"],
                           "value": x["value"]} for x in r["evidence"]["rows"]],
@@ -1012,6 +1014,56 @@ def e2e(ctx):
     return v1
 
 
+def e2e_full(ctx):
+    """All eighteen COPs with every authoritative artifact supplied, on a
+    session where a deploy failed and a restore passed every check."""
+    store = SQLiteStore()
+    sid = "e2ef"
+    rows = _estate(recovery_session(sid, 9))
+    peers = sorted({r["session_id"] for r in rows if r.get("session_id")})
+    constraints = [{"id": "C1", "text": "Do not modify files under /ws/migrations/"},
+                   {"id": "C2", "text": "Keep the public API unchanged"}]
+    art = {
+        "policy_store": allow_all(), "risk_register": S.risk_register(), "taxonomy": S.taxonomy(),
+        "agent_registry": {"synthetic": True, "agents": [{"agent": S.OPS, "approved_versions": [],
+                                                          "approved_models": [], "approved_mcp_servers": []}],
+                           "approved_changes": []},
+        "entitlements": {S.OPS: {"mcp_servers": []}},
+        "task_plan": {"synthetic": True, "objective": "deploy, restoring the last checkpoint on failure",
+                      "milestones": [{"id": "M1", "name": "restore succeeds",
+                                      "done_signal": {"field": "command", "pattern": "make restore",
+                                                      "require_success": True}}]},
+        "context_snapshots": S.context_snapshots(constraints, [], "2026-10-09T10:20:00Z",
+                                                 "2026-10-09T10:00:00Z"),
+        "recovery_records": [S.recovery_record("ckpt-1", {"files": {"app.py": "v41"}, "db_schema": 12}, 3, 3)],
+        "quotas": {S.OPS: {"token_budget": 10_000_000, "synthetic": True}},
+        "task_classes": {x: "deploy" for x in peers},
+    }
+    # Context & Memory uses its own investigation script: the generic reply can cite only
+    # scalar tool fields, and the snapshot tools return lists (first run of this scenario).
+    rt = make_runtime("e2e-full", sid, rows, art, FX.Script(
+        {"incident_response": ir_recovery_steps(), "context_memory": cm_steps()},
+        default=FX.generic_careful),
+        store=store, decision_store=store)
+    return summarise(run(rt, None), rt)
+
+
+def _requirements_met(v):
+    gaps = {k: [r["artifact"] for r in c["evidence_requirements"]
+                if r["kind"] == "REQUIRED" and r["status"] == "UNAVAILABLE"]
+            for k, c in v["cops"].items()}
+    gaps = {k: g for k, g in gaps.items() if g}
+    return not gaps, gaps
+
+
+def _withheld_for(v, cop, artifact):
+    """The COP did not reach its quiet label and names the missing artifact."""
+    c = v["cops"][cop]
+    named = any(d.get("dependency") == artifact for d in c["missing_dependencies"]) or \
+        any(m.get("source") == artifact for m in c["missing_evidence"])
+    return c["label"] != QUIET[cop] and named, (c["label"], c["status"], named)
+
+
 # ====================================================================== expectations (fixed before running)
 
 def _fail_codes(v, cop):
@@ -1304,9 +1356,30 @@ SCENARIOS = [
                  c.get("record_id") == v["validated_record"] for c in v["cops"]["incident_response"]["claims"]),
              v["cops"]["incident_response"]["verifier_fail"])),
      ]},
-    {"id": "E2E", "title": "All 18 COPs through one case graph", "run": e2e,
-     "ground_truth": "secret read and a denied proposed write; all artifacts present",
+    {"id": "E2E", "title": "All 18 COPs through one case graph, five artifacts absent", "run": e2e,
+     "ground_truth": "secret read and a denied proposed write. Supplied: policy store, risk register, "
+                     "taxonomy, agent registry, entitlements, proposed operations. Not supplied: task plan, "
+                     "context snapshots, recovery records, quota, task classes",
      "expect": [
+         ("Policy Enforcement VIOLATION, verified", lambda v: (
+             v["cops"]["policy_enforcement"]["label"] == "VIOLATION" and v["cops"]["policy_enforcement"]["verified"],
+             v["cops"]["policy_enforcement"]["label"])),
+         ("Incident Response INCIDENT, verified", lambda v: (
+             v["cops"]["incident_response"]["label"] == "INCIDENT" and v["cops"]["incident_response"]["verified"],
+             v["cops"]["incident_response"]["label"])),
+         ("Risk Mitigation EMERGING or MATERIAL, verified", lambda v: (
+             v["cops"]["risk_mitigation"]["label"] in ("EMERGING", "MATERIAL")
+             and v["cops"]["risk_mitigation"]["verified"], v["cops"]["risk_mitigation"]["label"])),
+         ("Workflow Orchestration withholds NORMAL: no task plan",
+          lambda v: _withheld_for(v, "workflow_orchestration", "task_plan")),
+         ("Context & Memory withholds CONTEXT_OK: no context snapshots",
+          lambda v: _withheld_for(v, "context_memory", "context_snapshots")),
+         ("Recovery & Resilience withholds RECOVERED: no recovery records",
+          lambda v: _withheld_for(v, "recovery_resilience", "recovery_records")),
+         ("Resource Management withholds NORMAL: no quota",
+          lambda v: _withheld_for(v, "resource_management", "budget_or_quota")),
+         ("Workload Optimization withholds EFFICIENT: no task classes",
+          lambda v: _withheld_for(v, "workload_optimization", "task_classes")),
          ("all 18 COPs ran in dependency order", lambda v: (v["order"] == topological_order(), len(v["order"]))),
          ("18 decisions persisted", "persisted_decisions", ">=", 18),
          ("Incident Response consumed Policy Enforcement", lambda v: (
@@ -1315,6 +1388,32 @@ SCENARIOS = [
          ("nothing executed in dry run", "executed", "==", []),
          ("second case read memory the first wrote", lambda v: (len(v["second_case_retrieved"]) > 0,
                                                               len(v["second_case_retrieved"]))),
+     ]},
+    # Added after the acceptance review (2026-10-29); expectations written before its first run.
+    {"id": "E2E-full", "title": "All 18 COPs through one case graph, every artifact supplied", "run": e2e_full,
+     "ground_truth": "deploy failed, restore passed 3/3 checks; every authoritative artifact supplied; "
+                     "no constraint dropped; quota ample",
+     "expect": [
+         ("all 18 COPs ran in dependency order", lambda v: (v["order"] == topological_order(), len(v["order"]))),
+         ("no required artifact is unavailable for any COP", _requirements_met),
+         ("no finding is MISSING_DEPENDENCY", lambda v: (
+             not [k for k, c in v["cops"].items() if c["status"] == "MISSING_DEPENDENCY"],
+             [k for k, c in v["cops"].items() if c["status"] == "MISSING_DEPENDENCY"])),
+         ("Recovery & Resilience RECOVERED, verified", lambda v: (
+             v["cops"]["recovery_resilience"]["label"] == "RECOVERED"
+             and v["cops"]["recovery_resilience"]["verified"], v["cops"]["recovery_resilience"]["label"])),
+         ("the five COPs gated in E2E reach a verified substantive finding", lambda v: (
+             all(v["cops"][k]["status"] == "SUBSTANTIVE" and v["cops"][k]["verified"]
+                 for k in ("workflow_orchestration", "context_memory", "recovery_resilience",
+                           "resource_management", "workload_optimization")),
+             {k: (v["cops"][k]["label"], v["cops"][k]["status"]) for k in (
+                 "workflow_orchestration", "context_memory", "recovery_resilience",
+                 "resource_management", "workload_optimization")})),
+         ("Policy Enforcement ALLOWED, verified", lambda v: (
+             v["cops"]["policy_enforcement"]["label"] == "ALLOWED" and v["cops"]["policy_enforcement"]["verified"],
+             v["cops"]["policy_enforcement"]["label"])),
+         ("Incident Response does not read INCIDENT", "cops.incident_response.label", "!=", "INCIDENT"),
+         ("nothing executed in dry run", "executed", "==", []),
      ]},
 ]
 
@@ -1367,7 +1466,7 @@ def table(results):
     for r in results:
         v = r["view"]
         cops = v.get("cops", {})
-        short = lambda k: "".join(w[0] for w in k.split("_")).upper()
+        short = lambda k: f"`{k}`"           # the spec key: initials were ambiguous (RM was three COPs)
         found = "; ".join(f"{short(k)} {c['label']}" + (" (LLM)" if c["origin"] == "llm_hypothesis" else "")
                           + ("" if c["verified"] or c["status"] != "SUBSTANTIVE" else " unverified")
                           + (f" [rejected {c['rejected_candidate']}]" if c["rejected_candidate"] else "")
