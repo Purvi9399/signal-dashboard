@@ -40,7 +40,10 @@ create table if not exists cop_llm_invocations (
   validation           jsonb,
   retry_count          int,
   error                text,
-  timed_out            boolean
+  timed_out            boolean,
+  tokens_measured      boolean,
+  stop_reason          text,
+  request_id           text
 );
 create table if not exists cop_tool_calls (
   tool_call_id         text primary key,

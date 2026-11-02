@@ -231,12 +231,15 @@ class LLMInvocation:
     output_tokens: Optional[int]
     latency_ms: float
     cost_usd: Optional[float]
-    cost_basis: str                  # measured | list_price_estimate | unpriced
+    cost_basis: str                  # measured | configured_price_estimate | simulated_tokens_x_configured_price | unpriced
     structured_response: Optional[dict]
     validation: dict                 # {ok, errors}
     retry_count: int = 0
     error: Optional[str] = None
     timed_out: bool = False
+    tokens_measured: bool = False    # True only when the provider reported the counts
+    stop_reason: Optional[str] = None
+    request_id: Optional[str] = None # provider request id, for tracing a live call
 
     def to_dict(self):
         return asdict(self)

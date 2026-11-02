@@ -51,7 +51,8 @@ TABLES = {
         ("tools_exposed", "text[]"), ("input_tokens", "int"), ("output_tokens", "int"),
         ("latency_ms", "numeric"), ("cost_usd", "numeric"), ("cost_basis", "text"),
         ("structured_response", "jsonb"), ("validation", "jsonb"), ("retry_count", "int"),
-        ("error", "text"), ("timed_out", "boolean")]},
+        ("error", "text"), ("timed_out", "boolean"), ("tokens_measured", "boolean"),
+        ("stop_reason", "text"), ("request_id", "text")]},
     "cop_tool_calls": {"key": "tool_call_id", "columns": [
         ("tool_call_id", "text"), ("decision_id", "uuid"), ("cop", "text"), ("case_id", "text"),
         ("tool", "text"), ("args", "jsonb"), ("requested_by", "text"), ("status", "text"),

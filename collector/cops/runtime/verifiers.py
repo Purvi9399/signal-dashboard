@@ -30,7 +30,7 @@ import fnmatch, statistics
 
 from ..models import INCONCLUSIVE
 from ..authority import TIER, HUMAN_APPROVED_ONLY
-from .contracts import (VerifierResult, PASS, FAIL, WARN, NOT_RUN, BLOCKS_FINDING, BLOCKS_ACTION,
+from .contracts import (VerifierResult, ORIGIN_LLM, PASS, FAIL, WARN, NOT_RUN, BLOCKS_FINDING, BLOCKS_ACTION,
                         BLOCKS_MEMORY, DIAGNOSTIC, FINDING_STATUSES, CLAIM_KINDS, SUBSTANTIVE,
                         CLAIM_METRIC_STATE, CLAIM_METRIC_VALUE, CLAIM_TOOL_OBSERVATION,
                         CLAIM_MEMORY_PRECEDENT, CLAIM_UPSTREAM, CLAIM_ABSENCE, OBSERVED,
@@ -66,6 +66,7 @@ CHECKS = {
     "SC-02": ("1", "SC", BLOCKS_FINDING, True, "an attention label has direct evidential support"),
     "DS-01": ("1", "DS", BLOCKS_FINDING, True, "the label is one the evidence state permits"),
     "DS-02": ("1", "DS", BLOCKS_FINDING, True, "no correlated upstream finding counted as independent"),
+    "DS-03": ("1", "DS", BLOCKS_FINDING, True, "a quiet model reading is not contradicted by the rule baseline"),
     "PE-01": ("1", "PE", BLOCKS_ACTION, True, "an intervening action has a policy basis"),
     "AU-01": ("1", "AU", BLOCKS_ACTION, True, "the action is permitted for this COP and mode"),
     "AU-02": ("1", "AU", BLOCKS_ACTION, True, "an action needing approval has it before execution"),
@@ -433,9 +434,20 @@ def verify_finding(ctx):
     else:
         out.append(R("DS-02", NOT_RUN, "no_corroboration_claimed"))
 
+    # DS-03 a quiet label from the model against a substantive non-quiet rule baseline
+    base = ctx.get("baseline")
+    quiet = spec.interpretations[0]
+    if f.get("origin") == ORIGIN_LLM and f.get("label") == quiet and base:
+        contra = (base.get("status") == "SUBSTANTIVE" and base.get("label") not in (None, quiet)
+                  and base.get("label") in spec.interpretations)
+        out.append(R("DS-03", FAIL if contra else PASS, "baseline_contradicts_quiet" if contra else "no_contradiction",
+                     f"the rules read {base.get('label')} on the same evidence; a quiet reading must "
+                     f"explain that, and cannot be published over it" if contra else ""))
+    else:
+        out.append(R("DS-03", NOT_RUN, "not_a_quiet_model_reading"))
+
     # RP-01 diagnostic only
     rr = ctx.get("rule_rerun")
-    base = ctx.get("baseline")
     if rr is not None:
         out.append(R("RP-01", PASS if rr == f.get("label") else WARN,
                      "rerun_agrees" if rr == f.get("label") else "rerun_differs",

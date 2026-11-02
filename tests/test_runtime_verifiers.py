@@ -196,3 +196,24 @@ def test_au01_passes_and_records_no_correction_for_a_permitted_proposal():
     pa, vr = run_with_action("ALERT")
     assert pa["original_verification"]["result"] == "PASS" and pa["corrected_proposal"] is None
     assert pa["final_authority"]["action"] == "ALERT"
+
+
+def test_ds03_rejects_a_quiet_model_reading_the_rule_baseline_contradicts():
+    from cops.runtime import live_eval as L
+    case = next(c for c in L.CASES if c["id"] == "knowledge_policy_management:abnormal")
+    r = L.run_one(case, L.offline_provider(), None)       # the scripted reply says CURRENT
+    assert r["baseline_label"] == "CONFLICT" and r["rejected_candidate"] == "CURRENT"
+    assert r["status"] == "REJECTED_BY_VERIFIER" and r["label"] == "INCONCLUSIVE"
+    assert "DS-03" in r["verifier_fail"]
+
+
+def test_ds03_passes_when_baseline_agrees_and_is_not_run_on_attention_labels():
+    from cops.runtime import live_eval as L
+    ok = L.run_one(next(c for c in L.CASES if c["id"] == "knowledge_policy_management:normal"),
+                   L.offline_provider(), None)
+    assert ok["label"] == "CURRENT" and ok["verified"] and "DS-03" not in ok["verifier_fail"]
+    rt = E.make_runtime("ds03-attn", "c02x", E._estate(E.spike_session("c02x", 9)), {},
+                        provider=FixtureProvider(lambda c, purpose, p, n: E.ad_spike_steps()[min(n, 2)](p)))
+    out = run_cop(rt, "anomaly_detection")
+    ds03 = {x["check_id"]: x for x in out["verifier_results"]}["DS-03"]
+    assert out["finding"]["label"] == "ANOMALOUS" and ds03["result"] == "NOT_RUN"

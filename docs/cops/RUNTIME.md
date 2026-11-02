@@ -89,6 +89,7 @@ INVALID rows are withheld from rules. A COP concludes only from OBSERVED rows or
 | SC-02 | claim-to-evidence | BLOCKS_FINDING | yes | An attention label has direct support, or transitive support through verified upstream findings with lineage (qualified) |
 | DS-01 | decision state | BLOCKS_FINDING | yes | The label is one the evidence permits. A quiet label fails when Runtime Monitoring says INSUFFICIENT, when the COP's own metrics are unobservable under non-sufficient telemetry, or when a REQUIRED artifact is unavailable (`requirements.py`). |
 | DS-02 | decision state | BLOCKS_FINDING | yes | Correlated upstream evidence (shared lineage) is not counted as independent |
+| DS-03 | decision state | BLOCKS_FINDING | yes | A quiet label from the model fails when the COP's computational baseline, on the same evidence, reads a substantive non-quiet label. The model's quiet reading is then published as INCONCLUSIVE with the candidate kept as `rejected_candidate` |
 | PE-01 | policy | BLOCKS_ACTION | yes | An intervening action has a basis in the policy in force |
 | AU-01 | authority | BLOCKS_ACTION | yes | The action is permitted for this COP and mode. Runs on the original proposal (where it can fail) and on the final action |
 | AU-02 | authority | BLOCKS_ACTION | yes | An action needing approval has it |
@@ -112,7 +113,11 @@ On B8: the only re-run check in this repository was `harness.reverify`. It is no
 
 `runtime/llm.py` `LLMGateway.invoke` checks the call, token, cost and time budgets before every call. The defaults (`LLMBudget`) are 4 LLM calls, 6 tool calls, 60k tokens, 60 s, $0.50, 1 retry and a 30 s timeout, all configurable per profile.
 
-It validates replies against pydantic schemas with `extra="forbid"` (`PlanOut`, `AssessmentOut`, `CandidateFindingOut`, plus a per-COP detail schema). It records an `LLMInvocation` for every attempt, with: COP, case, purpose, provider, model, model version, prompt version, evidence refs, tools exposed, tokens, latency, cost and cost basis, structured response, validation, retry count, error and timeout.
+It validates replies against pydantic schemas with `extra="forbid"` (`PlanOut`, `AssessmentOut`, `CandidateFindingOut`, plus a per-COP detail schema). It records an `LLMInvocation` for every attempt, with: COP, case, purpose, provider, model, model version, prompt version, evidence refs, tools exposed, tokens, whether the tokens were measured by the provider, latency, cost and cost basis, stop reason, provider request id, structured response, validation, retry count, error and timeout.
+
+Provider failures are typed and none of them stops a case. A timeout and a rate-limit or overload response (429, 5xx) are retried once within the call budget. A rejected request (400, 401, 403, ...), a connection failure and a refusal are not retried. A reply cut at the output limit is malformed and retried. Anything else the provider raises is recorded as `provider_error`. In every case the COP's finding is INCONCLUSIVE with the stop reason, and no scripted reply is substituted.
+
+`AnthropicProvider` sends `wire_schema(...)`, the reply schema in the subset the API's structured outputs accept: numeric, length and item-count bounds are dropped (pydantic still enforces them on the decoded reply), open objects (tool `args`, the COP `detail`) travel as JSON-encoded strings because every wire object must set `additionalProperties: false`, and an untyped value becomes a scalar. `decode_wire` undoes this before validation. The live path is tested offline against a stub client (`tests/test_runtime_live_path.py`).
 
 There are three providers:
 
@@ -123,6 +128,8 @@ There are three providers:
 | `AnthropicProvider` | Real calls. It refuses to start unless `COPS_LLM_LIVE=1`, `COPS_LLM_DATA_APPROVED=1` and `COPS_MODEL` are set and credentials exist. No model or price is hard-coded; prices come from `COPS_PRICING`, and calls without a configured price are recorded with `cost_basis: unpriced`. |
 
 The live smoke test `tests/test_runtime_llm.py::test_live_provider_smoke` is skipped unless all of these are present. It has not been run.
+
+The opt-in live evaluation (`runtime/live_eval.py`) has 30 fictional cases, a normal, an abnormal and a missing-evidence case for each LLM COP, with accepted labels fixed in `live_eval.EXPECTED` before any run. Each case runs the target COP with its deterministic upstream COPs only. It refuses to start unless `COPS_PRICING` has a price for `COPS_MODEL` and `COPS_LIVE_MAX_TOTAL_USD` is set, and it stops scheduling cases before the total cap can be crossed. After the run it checks every invocation record (`verify_records`): `simulated=False`, provider and model present, and measured tokens and a request id on every successful call. It has not been run against the provider; `--offline` runs the same cases on scripted replies to check the harness.
 
 ### Persistence (B1)
 
@@ -253,7 +260,7 @@ The tests ran with Python 3.13.17, langgraph 1.2.18, langgraph-checkpoint-sqlite
 
 ```
 python3 -m pytest -p no:cacheprovider tests/ -q -rs
-196 passed, 1 skipped
+243 passed, 1 skipped
 SKIPPED tests/test_runtime_llm.py: opt-in live smoke test: needs COPS_LLM_LIVE=1, COPS_LLM_DATA_APPROVED=1, COPS_MODEL and credentials
 ```
 
@@ -264,9 +271,11 @@ SKIPPED tests/test_runtime_llm.py: opt-in live smoke test: needs COPS_LLM_LIVE=1
 | `tests/test_runtime_llm.py` | 58 | For each of the 10 LLM COPs: wiring, unavailable, timeout, malformed and prohibited tool. Also the allocation, distinct prompts, call/tool/token/cost budgets, configured-price costing, the live-provider guard and the live smoke test (skipped) |
 | `tests/test_runtime_graph.py` | 17 | B6 edges and cycles. B7: Runtime Monitoring DEGRADED/INSUFFICIENT, Anomaly Detection INDETERMINATE, Policy Enforcement paths, Resource Management outcomes, Recovery and Agent Lifecycle outcomes. B3 approvals: approve, reject, fail-closed and resume after restart. Unconfirmed outcome, dry run, consumption and double counting |
 | `tests/test_runtime_memory.py` | 8 | Namespaces, policy fixes, ownership, self-validation, feedback lifecycle, tenant isolation, agent scope, retention, proposal-only adaptation |
-| `tests/test_runtime_verifiers.py` | 17 | B4 evidence states, Audit and Classification on empty input; B8 registry structure, each independent check failing on wrong input, RP-01 diagnostic; AU-01 failing on an unauthorised original proposal, directly and inside the graph |
+| `tests/test_runtime_verifiers.py` | 19 | B4 evidence states, Audit and Classification on empty input; B8 registry structure, each independent check failing on wrong input, RP-01 diagnostic; AU-01 failing on an unauthorised original proposal, directly and inside the graph; DS-03 rejecting a quiet model reading the rule baseline contradicts |
 | `tests/test_runtime_error_paths.py` | 35 | Required evidence (deterministic gate, DS-01 on LLM quiet labels, conditional and optional requirements); confidence ceiling; invalid detail schema; conclude without a finding; assess-stage provider failure; empty evidence request; tool-budget stop; a rule that raises; an enforcement gateway that raises; memory denied or absent; EV-01, ID-01, MC-01, SC-01, DS-01, PE-01, AU-02 and MU-01 failure branches; an intervention blocked by PE-01 |
 | `tests/test_runtime_evaluation.py` | 26 | Every evaluation scenario as a pytest case, plus a check that every LLM record is simulated |
+| `tests/test_runtime_live_path.py` | 28 | The live provider path against a stub client, with no network call: wire schema accepted by structured outputs, round trip of open objects, request shape, invocation record (simulated=False, model, measured tokens, request id, latency), cost with and without a configured price; timeout, 429, 529, 400, 401, connection failure, truncation at max_tokens, refusal and an unexpected exception; a schema-breaking reply; model text claiming approval and an action outside the vocabulary; crash and recovery from the checkpoint without re-asking finished COPs |
+| `tests/test_runtime_live_eval.py` | 17 | The live evaluation harness offline: three cases per LLM COP with expectations fixed in advance, deterministic-only upstreams, all 30 cases simulated and verifiable, outcome classes, refusal without every precondition, the total cap, no model calls by deterministic COPs, the 18-row fleet matrix |
 
 Not run:
 
@@ -285,14 +294,15 @@ Not run:
 1. **Contracts.** `runtime/contracts.py` follows this repository's `models.py`. Malhar's `collector_framework/cops/contracts.py` could not be read, so mapping onto it has not been done and is not claimed.
 2. **Verifier ids.** VR01 to VR10 (PR #9), V01 to V16 (Malhar's audited branch) and the possible seventeenth check could not be read. EV/ID/MC/SC/DS/PE/AU/EX/MU/RP is a new registry, and mapping the old ids onto it is open. VR06, VR07 and KP-1 were not reviewed.
 3. **Edges.** `specs.CONSUMES` is now the single source, and `downstream_cops` is derived from it. Compared with the hand-written lists, 14 consumed edges were never declared and 2 declared edges were never consumed (`specs.edge_report()`). Two cycles were broken: Resource Management → Workload Optimization, and Incident Response → Risk Mitigation. Both are spec changes.
-4. **Quiet-label rule (DS-01) and required evidence.** A quiet label is refused when Runtime Monitoring says INSUFFICIENT, when the COP's own metrics are UNKNOWN or MISSING under non-sufficient telemetry, or when an artifact `runtime/requirements.py` marks REQUIRED is unavailable. Which artifacts are REQUIRED, OPTIONAL or conditionally NOT_APPLICABLE is a semantic choice. It turns some STABLE, NORMAL and EFFICIENT readings into INCONCLUSIVE.
+4. **Quiet-label rule (DS-01) and required evidence.** A quiet label is refused when Runtime Monitoring says INSUFFICIENT, when the COP's own metrics are UNKNOWN or MISSING under non-sufficient telemetry, or when an artifact `runtime/requirements.py` marks REQUIRED is unavailable. Which artifacts are REQUIRED, OPTIONAL or conditionally NOT_APPLICABLE is a semantic choice. It turns some STABLE, NORMAL and EFFICIENT readings into INCONCLUSIVE. DS-03 adds one more: a quiet model reading is refused when the computational baseline reads a substantive non-quiet label on the same evidence. This makes the rules a veto over a quiet LLM reading, but never over an attention reading.
 5. **Activation.** `specs.ACTIVE` still lists four COPs for the legacy `COPRunner`. The runtime runs all 18 regardless. Whether to change `active` flags is open.
 6. **Decision schema.** `cop_decisions` gains 13 runtime columns, and four tables are added (`collector/cops_runtime_schema.sql`). The migration has not been applied anywhere, and RLS policies still need writing.
 7. **Authoritative sources.** The policy store, taxonomy, risk register (including its EMERGING/MATERIAL thresholds), task plans, context snapshots, recovery records, agent registry, quotas, entitlements and task classes exist only as synthetic artifacts in the evaluation. Real ones are needed for substantive decisions on those questions. The tools return typed missing dependencies without them.
 
 ## Limitations
 
-- **All model behaviour is scripted.** The harness, tool policy, budgets and verifiers are exercised for real; model judgement is not.
+- **All model behaviour is scripted.** The harness, tool policy, budgets and verifiers are exercised for real; model judgement is not. No live provider call has been made from this repository.
+- **Verifiers check that claims are true, not that a reading is complete.** DS-03 catches a quiet model reading that the rule baseline contradicts. A quiet reading that the rules also miss (the offline check's `workload_optimization:abnormal`) still passes.
 - **Memory is durable in SQLite only.** The Postgres schema exists, and `SupabaseRuntimeWriter` builds decision, invocation and tool-call upserts. There is no PostgREST-backed `MemoryGateway` store yet.
 - **Enforcement is mock only.** Supervised mode executes nothing real.
 - **The injection scan is a regex list.** It catches the patterns it names, not every possible injection. The defence that does not depend on it is that no tool can change permissions, policy or thresholds.

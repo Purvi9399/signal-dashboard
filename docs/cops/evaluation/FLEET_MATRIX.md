@@ -1,0 +1,24 @@
+# COPS fleet results matrix
+
+Offline columns come from the 25 evaluation scenarios. Deterministic COPs run their rules for real and make no model call. LLM COPs run on scripted replies there, so their offline findings are **simulated**. **no live run yet**: every live column reads `not run`.
+
+| COP | Implementation | Type | Test scenarios | Findings | Verification | Failures | Latency | Token usage | Cost |
+|---|---|---|---|---|---|---|---|---|---|
+| `runtime_monitoring` | complete | deterministic | 23 offline | DEGRADED x1, INSUFFICIENT x1, SUFFICIENT x21 | 23 verified, 0 rejected, 0 inconclusive | 0 | median 1 ms per run | none (no model call) | $0 (no model call) |
+| `workflow_orchestration` | complete | LLM | 5 offline + 3 live (not run) | INCONCLUSIVE x2, NORMAL x2, STALLED x1 (simulated) | 3 verified, 2 rejected, 0 inconclusive | 0 | median 9 ms per run (simulated) | 10 simulated calls, estimated only; live not run | live not run |
+| `context_memory` | complete | LLM | 4 offline + 3 live (not run) | CONTEXT_LOSS x2, CONTEXT_OK x1, INCONCLUSIVE x1 (simulated) | 3 verified, 0 rejected, 1 inconclusive | 0 | median 6 ms per run (simulated) | 10 simulated calls, estimated only; live not run | live not run |
+| `behavior_analytics` | complete | deterministic | 6 offline | DRIFTING x1, INCONCLUSIVE x1, POOR_RECOVERY x1, STABLE x3 | 5 verified, 1 rejected, 0 inconclusive | 0 | median 2 ms per run | none (no model call) | $0 (no model call) |
+| `anomaly_detection` | complete | LLM | 14 offline + 3 live (not run) | ANOMALOUS x4, INCONCLUSIVE x4, INDETERMINATE x2, NORMAL x4 (simulated) | 10 verified, 3 rejected, 1 inconclusive | 0 | median 6 ms per run (simulated) | 31 simulated calls, estimated only; live not run | live not run |
+| `interaction_discovery` | complete | deterministic | 7 offline | CONTAINED x6, NEW_ROUTE x1 | 7 verified, 0 rejected, 0 inconclusive | 0 | median 1 ms per run | none (no model call) | $0 (no model call) |
+| `agent_lifecycle_management` | complete | deterministic | 3 offline | CHANGED x1, UNCHANGED x2 | 3 verified, 0 rejected, 0 inconclusive | 0 | median 1 ms per run | none (no model call) | $0 (no model call) |
+| `policy_enforcement` | complete | deterministic | 8 offline | ALLOWED x2, UNCERTAIN x1, VIOLATION x5 | 8 verified, 0 rejected, 0 inconclusive | 0 | median 2 ms per run | none (no model call) | $0 (no model call) |
+| `recovery_resilience` | complete | deterministic | 4 offline | FAILED_RECOVERY x1, INCONCLUSIVE x1, RECOVERED x2 | 3 verified, 0 rejected, 0 inconclusive | 0 | median 1 ms per run | none (no model call) | $0 (no model call) |
+| `incident_response` | complete | LLM | 10 offline + 3 live (not run) | INCIDENT x6, INCONCLUSIVE x1, NO_INCIDENT x1, WATCH x2 (simulated) | 9 verified, 1 rejected, 0 inconclusive | 0 | median 9 ms per run (simulated) | 25 simulated calls, estimated only; live not run | live not run |
+| `classification_tagging` | complete | LLM | 3 offline + 3 live (not run) | INCONCLUSIVE x1, INTEGRITY x1, UNCLASSIFIED x1 (simulated) | 2 verified, 0 rejected, 1 inconclusive | 0 | median 6 ms per run (simulated) | 6 simulated calls, estimated only; live not run | live not run |
+| `resource_management` | complete | deterministic | 6 offline | EXCESSIVE x1, INCONCLUSIVE x4, NORMAL x1 | 2 verified, 0 rejected, 0 inconclusive | 0 | median 1 ms per run | none (no model call) | $0 (no model call) |
+| `risk_mitigation` | complete | LLM | 3 offline + 3 live (not run) | EMERGING x2, INCONCLUSIVE x1 (simulated) | 2 verified, 1 rejected, 0 inconclusive | 0 | median 7 ms per run (simulated) | 6 simulated calls, estimated only; live not run | live not run |
+| `governance_intelligence` | complete | LLM | 3 offline + 3 live (not run) | INCONCLUSIVE x1, NO_PATTERN x2 (simulated) | 2 verified, 0 rejected, 1 inconclusive | 0 | median 13 ms per run (simulated) | 6 simulated calls, estimated only; live not run | live not run |
+| `workload_optimization` | complete | LLM | 4 offline + 3 live (not run) | EFFICIENT x1, INCONCLUSIVE x3 (simulated) | 1 verified, 2 rejected, 1 inconclusive | 0 | median 6 ms per run (simulated) | 8 simulated calls, estimated only; live not run | live not run |
+| `audit_traceability` | complete | deterministic | 3 offline | COMPLETE x3 | 3 verified, 0 rejected, 0 inconclusive | 0 | median 1 ms per run | none (no model call) | $0 (no model call) |
+| `knowledge_policy_management` | complete | LLM | 2 offline + 3 live (not run) | CURRENT x1, INCONCLUSIVE x1 (simulated) | 1 verified, 1 rejected, 0 inconclusive | 0 | median 8 ms per run (simulated) | 4 simulated calls, estimated only; live not run | live not run |
+| `governance_architecture` | complete | LLM | 4 offline + 3 live (not run) | ADEQUATE x3, GAP x1 (simulated) | 4 verified, 0 rejected, 0 inconclusive | 0 | median 11 ms per run (simulated) | 8 simulated calls, estimated only; live not run | live not run |

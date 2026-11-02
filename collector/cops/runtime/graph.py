@@ -926,6 +926,15 @@ def resume_case(rt, decision, cops=None, checkpointer=None, thread_id=None):
     return _shape(graph.invoke(Command(resume=decision), cfg))
 
 
+def recover_case(rt, cops=None, checkpointer=None, thread_id=None):
+    """Continue a case whose process died mid-run, from its last checkpoint.
+    COPs that finished before the failure are not run again."""
+    register(rt)
+    graph, _ = build_case_graph(cops, checkpointer)
+    cfg = {"configurable": {"thread_id": thread_id or rt.case.case_id}, "recursion_limit": 200}
+    return _shape(graph.invoke(None, cfg))
+
+
 def _shape(out):
     intr = out.get("__interrupt__") or []
     res = {k: v for k, v in out.items() if k != "__interrupt__"}

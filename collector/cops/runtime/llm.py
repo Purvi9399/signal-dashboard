@@ -137,6 +137,14 @@ class ProviderTimeout(RuntimeError):
     pass
 
 
+class ProviderTransient(RuntimeError):
+    """Rate limited or overloaded: worth one retry within the call budget."""
+
+
+class ProviderTruncated(RuntimeError):
+    """The reply stopped at the output limit, so its JSON is incomplete."""
+
+
 @dataclass
 class ProviderResponse:
     data: Any                         # parsed JSON (dict) or raw text
@@ -145,6 +153,8 @@ class ProviderResponse:
     model_version: str
     measured_cost_usd: Optional[float] = None
     tokens_measured: bool = False
+    stop_reason: Optional[str] = None
+    request_id: Optional[str] = None
 
 
 class FixtureProvider:
@@ -180,43 +190,139 @@ class UnavailableProvider:
 
 
 class AnthropicProvider:
-    """Real provider. Opt-in only; see module docstring."""
+    """Real provider. Opt-in only; see module docstring.
+
+    The request carries a wire version of the reply schema (see wire_schema):
+    the API's structured outputs accept a subset of JSON Schema, so bounds the
+    API cannot express are dropped from the wire and still enforced by the
+    gateway's pydantic validation of the decoded reply.
+    """
     name = "anthropic"
     simulated = False
 
-    def __init__(self, model=None):
+    def __init__(self, model=None, client=None, max_output_tokens=None, effort=None):
         if os.environ.get("COPS_LLM_LIVE") != "1":
             raise ProviderUnavailable("live LLM calls are off (set COPS_LLM_LIVE=1 to enable)")
         if os.environ.get("COPS_LLM_DATA_APPROVED") != "1":
             raise ProviderUnavailable("sending case data to a provider has not been approved "
                                       "(COPS_LLM_DATA_APPROVED=1)")
         try:
-            import anthropic
+            import anthropic  # noqa: F401
         except ImportError as e:
             raise ProviderUnavailable("the anthropic SDK is not installed") from e
         self.model = model or os.environ.get("COPS_MODEL")
         if not self.model:
             raise ProviderUnavailable("no model configured (set COPS_MODEL)")
-        self.client = anthropic.Anthropic()
+        self.max_output_tokens = int(max_output_tokens or os.environ.get("COPS_MAX_OUTPUT_TOKENS") or 16000)
+        self.effort = effort or os.environ.get("COPS_EFFORT") or None
+        if client is None:
+            import anthropic
+            client = anthropic.Anthropic()
+        self.client = client
 
     def complete(self, cop, purpose, system, payload, schema, timeout_s):
         import anthropic
+        wire = wire_schema(schema)
+        cfg = {"format": {"type": "json_schema", "schema": wire}}
+        if self.effort:
+            cfg["effort"] = self.effort
         try:
             resp = self.client.with_options(timeout=timeout_s, max_retries=0).messages.create(
-                model=self.model, max_tokens=4000, system=system,
+                model=self.model, max_tokens=self.max_output_tokens, system=system,
                 messages=[{"role": "user", "content": json.dumps(payload, default=str)}],
-                output_config={"format": {"type": "json_schema", "schema": schema}})
+                output_config=cfg)
         except anthropic.APITimeoutError as e:
             raise ProviderTimeout(str(e)) from e
         except anthropic.APIConnectionError as e:
-            raise ProviderUnavailable(str(e)) from e
+            raise ProviderUnavailable(f"connection: {e}") from e
+        except (anthropic.RateLimitError, anthropic.InternalServerError) as e:
+            raise ProviderTransient(f"{e.status_code} {getattr(e, 'type', '')}: {e}") from e
+        except anthropic.APIStatusError as e:      # 400, 401, 402, 403, 404 and the rest: not retried
+            raise ProviderUnavailable(f"{e.status_code} {getattr(e, 'type', '')}: {e}") from e
+        rid = getattr(resp, "_request_id", None)
         if resp.stop_reason == "refusal":
-            raise ProviderUnavailable("the model declined the request")
+            raise ProviderUnavailable(f"the model declined the request (request {rid})")
+        usage = dict(input_tokens=resp.usage.input_tokens, output_tokens=resp.usage.output_tokens)
+        if resp.stop_reason == "max_tokens":
+            raise ProviderTruncated(f"reply stopped at max_tokens={self.max_output_tokens} "
+                                    f"(request {rid}, output_tokens {usage['output_tokens']})")
         text = next((b.text for b in resp.content if b.type == "text"), "")
-        return ProviderResponse(data=json.loads(text) if text else text,
-                                input_tokens=resp.usage.input_tokens,
-                                output_tokens=resp.usage.output_tokens,
-                                model_version=resp.model, tokens_measured=True)
+        data = decode_wire(schema, json.loads(text)) if text else text
+        return ProviderResponse(data=data, model_version=resp.model, tokens_measured=True,
+                                stop_reason=resp.stop_reason, request_id=rid, **usage)
+
+
+# ---------------------------------------------------------------- wire schema
+
+_DROP = ("title", "default", "minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum",
+         "multipleOf", "minLength", "maxLength", "maxItems", "pattern")
+_JSON_TEXT = "A JSON object, encoded as a string."
+_SCALAR = {"anyOf": [{"type": "string"}, {"type": "number"}, {"type": "boolean"}, {"type": "null"}]}
+
+
+def _free_object(node):
+    return (isinstance(node, dict) and node.get("type") == "object" and not node.get("properties")
+            and node.get("additionalProperties", True) is not False)
+
+
+def wire_schema(schema):
+    """The reply schema in the subset the provider's structured outputs accept.
+
+    - numeric, string-length and array-length bounds are dropped (pydantic
+      still enforces them on the decoded reply);
+    - an open object (tool args, the COP detail) becomes a JSON-encoded string,
+      since every object on the wire must set additionalProperties false;
+    - an untyped value (asserted_value) becomes a scalar.
+    """
+    import copy
+
+    def walk(n):
+        if isinstance(n, list):
+            return [walk(x) for x in n]
+        if not isinstance(n, dict):
+            return n
+        if _free_object(n):
+            return {"type": "string", "description": _JSON_TEXT}
+        if n == {} or set(n) <= {"title", "default", "description"}:
+            return {**_SCALAR, **({"description": n["description"]} if "description" in n else {})}
+        out = {k: walk(v) for k, v in n.items() if k not in _DROP}
+        if out.get("type") == "array" and out.get("minItems", 0) > 1:
+            out.pop("minItems")
+        if out.get("type") == "object":
+            out["additionalProperties"] = False
+        return out
+
+    return walk(copy.deepcopy(schema))
+
+
+def decode_wire(schema, data):
+    """Undo wire_schema on a reply: parse the JSON-encoded open objects. A value
+    that does not parse is left as it is, for pydantic to reject."""
+    defs = schema.get("$defs", {})
+
+    def resolve(n):
+        while isinstance(n, dict) and "$ref" in n:
+            n = defs.get(n["$ref"].split("/")[-1], {})
+        return n
+
+    def walk(n, v):
+        n = resolve(n)
+        if _free_object(n) and isinstance(v, str):
+            try:
+                return json.loads(v)
+            except json.JSONDecodeError:
+                return v
+        if isinstance(v, dict) and "properties" in n:
+            return {k: walk(n["properties"].get(k, {}), x) for k, x in v.items()}
+        if isinstance(v, list) and "items" in n:
+            return [walk(n["items"], x) for x in v]
+        if isinstance(v, dict) and "anyOf" in n:
+            for alt in n["anyOf"]:
+                if "properties" in resolve(alt):
+                    return walk(alt, v)
+        return v
+
+    return walk(schema, data)
 
 
 def _strip_titles(schema):
@@ -241,6 +347,8 @@ class LLMGateway:
         if measured is not None:
             return measured, "measured"
         base = model.split("+")[0]
+        if base not in self.pricing:                 # the API may name a dated version of the requested id
+            base = getattr(self.provider, "model", base)
         if base in self.pricing and i is not None and o is not None:
             pi, po = self.pricing[base]
             basis = ("simulated_tokens_x_configured_price" if self.provider.simulated
@@ -279,12 +387,19 @@ class LLMGateway:
                 validation = {"ok": True, "errors": []}
             except ProviderTimeout as e:
                 err, timed_out, validation = f"timeout: {e}", True, {"ok": False, "errors": ["timeout"]}
+            except ProviderTransient as e:
+                err, validation = f"transient: {e}", {"ok": False, "errors": ["transient"]}
+            except ProviderTruncated as e:
+                err, validation = "malformed_output", {"ok": False, "errors": [f"truncated: {e}"]}
             except ProviderUnavailable as e:
                 err, validation = f"unavailable: {e}", {"ok": False, "errors": ["unavailable"]}
             except (ValidationError, json.JSONDecodeError, TypeError) as e:
                 msg = str(e).splitlines()
                 err = "malformed_output"
                 validation = {"ok": False, "errors": msg[:6]}
+            except Exception as e:                  # anything else the provider raises: recorded, never fatal
+                err = f"provider_error: {type(e).__name__}: {e}"
+                validation = {"ok": False, "errors": ["provider_error"]}
             latency = round((time.perf_counter() - t0) * 1000, 3)
             i = resp.input_tokens if resp else None
             o = resp.output_tokens if resp else None
@@ -300,11 +415,17 @@ class LLMGateway:
                 tools_exposed=list(tools_exposed), input_tokens=i, output_tokens=o,
                 latency_ms=latency, cost_usd=cost, cost_basis=basis,
                 structured_response=data, validation=validation, retry_count=attempt,
-                error=err, timed_out=timed_out).to_dict())
+                error=err, timed_out=timed_out,
+                tokens_measured=bool(resp and resp.tokens_measured),
+                stop_reason=resp.stop_reason if resp else None,
+                request_id=resp.request_id if resp else None).to_dict())
             if data is not None:
                 return data, records, None
             if err and err.startswith("unavailable"):
                 return None, records, "llm_unavailable"
+            if err and err.startswith("provider_error"):
+                return None, records, "llm_provider_error"
             attempt += 1
             if attempt > budget.max_retries:
-                return None, records, "llm_timeout" if timed_out else "llm_output_invalid"
+                return None, records, ("llm_timeout" if timed_out else
+                                       "llm_transient" if err.startswith("transient") else "llm_output_invalid")

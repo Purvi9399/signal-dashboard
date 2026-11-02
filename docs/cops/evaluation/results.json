@@ -98,9 +98,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 152.8,
-  "cpu_ms": 146.0,
-  "max_rss_kb": 74492,
+  "wall_ms": 118.8,
+  "cpu_ms": 113.7,
+  "max_rss_kb": 74548,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -209,6 +209,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -243,17 +244,17 @@
      "gated_label": null,
      "node_ms": {
       "receive_case": 0.009,
-      "load_inputs": 0.005,
-      "validate_evidence": 0.177,
-      "retrieve_memory": 0.322,
-      "computational_baseline": 0.7,
-      "independent_verify": 0.688,
-      "authority_check": 0.112,
+      "load_inputs": 0.003,
+      "validate_evidence": 0.257,
+      "retrieve_memory": 0.245,
+      "computational_baseline": 0.368,
+      "independent_verify": 0.327,
+      "authority_check": 0.118,
       "execute_action": 0.004,
-      "record_decision": 0.029,
-      "validate_memory_update": 0.01
+      "record_decision": 0.022,
+      "validate_memory_update": 0.006
      },
-     "total_ms": 2.017,
+     "total_ms": 1.331,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -420,6 +421,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -453,18 +455,18 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.01,
-      "load_inputs": 0.007,
-      "validate_evidence": 0.138,
-      "retrieve_memory": 0.17,
-      "computational_baseline": 1.046,
-      "independent_verify": 0.382,
-      "authority_check": 0.065,
+      "receive_case": 0.008,
+      "load_inputs": 0.008,
+      "validate_evidence": 0.098,
+      "retrieve_memory": 0.136,
+      "computational_baseline": 0.664,
+      "independent_verify": 0.338,
+      "authority_check": 0.056,
       "execute_action": 0.003,
-      "record_decision": 0.017,
-      "validate_memory_update": 0.005
+      "record_decision": 0.016,
+      "validate_memory_update": 0.004
      },
-     "total_ms": 1.821,
+     "total_ms": 1.311,
      "evidence": [
       {
        "metric": "insights.repetition",
@@ -711,6 +713,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "PASS",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -747,24 +750,24 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.009,
-      "load_inputs": 0.005,
-      "validate_evidence": 0.084,
-      "retrieve_memory": 0.178,
-      "computational_baseline": 0.251,
-      "llm_plan_investigation": 2.916,
-      "validate_tool_request": 0.027,
-      "execute_authorised_tool": 0.959,
-      "validate_tool_result": 0.026,
-      "llm_assess_evidence": 4.681,
-      "formulate_finding": 0.175,
-      "independent_verify": 0.354,
-      "authority_check": 0.075,
-      "execute_action": 0.004,
-      "record_decision": 0.024,
-      "validate_memory_update": 0.005
+      "receive_case": 0.005,
+      "load_inputs": 0.004,
+      "validate_evidence": 0.093,
+      "retrieve_memory": 0.092,
+      "computational_baseline": 0.162,
+      "llm_plan_investigation": 1.887,
+      "validate_tool_request": 0.015,
+      "execute_authorised_tool": 0.683,
+      "validate_tool_result": 0.006,
+      "llm_assess_evidence": 3.611,
+      "formulate_finding": 0.105,
+      "independent_verify": 0.287,
+      "authority_check": 0.056,
+      "execute_action": 0.002,
+      "record_decision": 0.014,
+      "validate_memory_update": 0.004
      },
-     "total_ms": 9.744,
+     "total_ms": 7.008,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -919,6 +922,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -967,18 +971,18 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.007,
-      "load_inputs": 0.008,
-      "validate_evidence": 0.13,
-      "retrieve_memory": 0.161,
-      "computational_baseline": 1.132,
-      "independent_verify": 0.413,
-      "authority_check": 0.08,
-      "execute_action": 0.004,
-      "record_decision": 0.022,
-      "validate_memory_update": 0.005
+      "receive_case": 0.006,
+      "load_inputs": 0.005,
+      "validate_evidence": 0.085,
+      "retrieve_memory": 0.096,
+      "computational_baseline": 0.855,
+      "independent_verify": 0.249,
+      "authority_check": 0.051,
+      "execute_action": 0.002,
+      "record_decision": 0.013,
+      "validate_memory_update": 0.003
      },
-     "total_ms": 1.935,
+     "total_ms": 1.349,
      "evidence": [
       {
        "metric": "insights.blocked",
@@ -1195,6 +1199,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "PASS",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -1246,24 +1251,24 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.008,
-      "load_inputs": 0.01,
-      "validate_evidence": 0.112,
-      "retrieve_memory": 0.201,
-      "computational_baseline": 0.639,
-      "llm_plan_investigation": 2.042,
+      "receive_case": 0.005,
+      "load_inputs": 0.006,
+      "validate_evidence": 0.061,
+      "retrieve_memory": 0.09,
+      "computational_baseline": 0.392,
+      "llm_plan_investigation": 1.816,
       "validate_tool_request": 0.016,
-      "execute_authorised_tool": 0.309,
-      "validate_tool_result": 0.008,
-      "llm_assess_evidence": 4.407,
-      "formulate_finding": 0.172,
-      "independent_verify": 0.304,
-      "authority_check": 0.086,
-      "execute_action": 0.003,
-      "record_decision": 0.024,
-      "validate_memory_update": 0.005
+      "execute_authorised_tool": 0.301,
+      "validate_tool_result": 0.007,
+      "llm_assess_evidence": 4.526,
+      "formulate_finding": 0.168,
+      "independent_verify": 0.235,
+      "authority_check": 0.057,
+      "execute_action": 0.002,
+      "record_decision": 0.018,
+      "validate_memory_update": 0.004
      },
-     "total_ms": 8.317,
+     "total_ms": 7.682,
      "evidence": [
       {
        "metric": "insights.secrets",
@@ -1385,6 +1390,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "WARN",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -1426,18 +1432,18 @@
      ],
      "gated_label": "NORMAL",
      "node_ms": {
-      "receive_case": 0.008,
-      "load_inputs": 0.005,
-      "validate_evidence": 0.104,
-      "retrieve_memory": 0.171,
-      "computational_baseline": 0.496,
-      "independent_verify": 0.268,
-      "authority_check": 0.075,
-      "execute_action": 0.005,
-      "record_decision": 0.021,
-      "validate_memory_update": 0.005
+      "receive_case": 0.006,
+      "load_inputs": 0.004,
+      "validate_evidence": 0.092,
+      "retrieve_memory": 0.157,
+      "computational_baseline": 0.376,
+      "independent_verify": 0.196,
+      "authority_check": 0.052,
+      "execute_action": 0.002,
+      "record_decision": 0.015,
+      "validate_memory_update": 0.004
      },
-     "total_ms": 1.132,
+     "total_ms": 0.885,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -1670,6 +1676,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "FAIL",
       "DS-02": "NOT_RUN",
+      "DS-03": "PASS",
       "RP-01": "WARN",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -1733,24 +1740,24 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.042,
-      "load_inputs": 0.006,
-      "validate_evidence": 0.108,
-      "retrieve_memory": 0.144,
-      "computational_baseline": 0.638,
-      "llm_plan_investigation": 2.257,
-      "validate_tool_request": 0.016,
-      "execute_authorised_tool": 0.297,
-      "validate_tool_result": 0.008,
-      "llm_assess_evidence": 4.602,
-      "formulate_finding": 0.157,
-      "independent_verify": 0.41,
-      "authority_check": 0.086,
+      "receive_case": 0.004,
+      "load_inputs": 0.004,
+      "validate_evidence": 0.074,
+      "retrieve_memory": 0.179,
+      "computational_baseline": 0.36,
+      "llm_plan_investigation": 1.569,
+      "validate_tool_request": 0.01,
+      "execute_authorised_tool": 0.153,
+      "validate_tool_result": 0.005,
+      "llm_assess_evidence": 3.103,
+      "formulate_finding": 0.11,
+      "independent_verify": 0.295,
+      "authority_check": 0.068,
       "execute_action": 0.003,
-      "record_decision": 0.025,
-      "validate_memory_update": 0.719
+      "record_decision": 0.02,
+      "validate_memory_update": 0.702
      },
-     "total_ms": 8.774,
+     "total_ms": 5.937,
      "evidence": [
       {
        "metric": "insights.repetition",
@@ -1882,6 +1889,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -1915,18 +1923,18 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.008,
-      "load_inputs": 0.008,
-      "validate_evidence": 0.11,
-      "retrieve_memory": 0.285,
-      "computational_baseline": 0.437,
-      "independent_verify": 0.382,
-      "authority_check": 0.08,
-      "execute_action": 0.005,
-      "record_decision": 0.024,
-      "validate_memory_update": 0.006
+      "receive_case": 0.006,
+      "load_inputs": 0.005,
+      "validate_evidence": 0.089,
+      "retrieve_memory": 0.147,
+      "computational_baseline": 0.371,
+      "independent_verify": 0.238,
+      "authority_check": 0.054,
+      "execute_action": 0.003,
+      "record_decision": 0.028,
+      "validate_memory_update": 0.005
      },
-     "total_ms": 1.315,
+     "total_ms": 0.913,
      "evidence": [
       {
        "metric": "insights.unattributed",
@@ -2373,7 +2381,7 @@
     "tokens_estimated": 9819,
     "cost_usd_estimated": null,
     "unpriced_llm_calls": 6,
-    "cop_ms": 35.055
+    "cop_ms": 26.416
    },
    "security_events": [],
    "persisted_decisions": 8,
@@ -2444,9 +2452,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 85.2,
-  "cpu_ms": 85.2,
-  "max_rss_kb": 74876,
+  "wall_ms": 56.1,
+  "cpu_ms": 56.1,
+  "max_rss_kb": 74932,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -2551,6 +2559,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -2584,18 +2593,18 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.008,
-      "load_inputs": 0.004,
-      "validate_evidence": 0.136,
-      "retrieve_memory": 0.276,
-      "computational_baseline": 0.558,
-      "independent_verify": 0.261,
-      "authority_check": 0.104,
-      "execute_action": 0.004,
-      "record_decision": 0.024,
-      "validate_memory_update": 0.006
+      "receive_case": 0.007,
+      "load_inputs": 0.002,
+      "validate_evidence": 0.129,
+      "retrieve_memory": 0.21,
+      "computational_baseline": 0.373,
+      "independent_verify": 0.201,
+      "authority_check": 0.053,
+      "execute_action": 0.002,
+      "record_decision": 0.013,
+      "validate_memory_update": 0.003
      },
-     "total_ms": 1.351,
+     "total_ms": 0.977,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -2836,6 +2845,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -2890,24 +2900,24 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.008,
-      "load_inputs": 0.007,
-      "validate_evidence": 0.105,
-      "retrieve_memory": 0.154,
-      "computational_baseline": 0.438,
-      "llm_plan_investigation": 2.331,
-      "validate_tool_request": 0.015,
-      "execute_authorised_tool": 0.393,
-      "validate_tool_result": 0.007,
-      "llm_assess_evidence": 4.174,
-      "formulate_finding": 0.15,
-      "independent_verify": 0.36,
-      "authority_check": 0.125,
-      "execute_action": 0.004,
-      "record_decision": 0.052,
-      "validate_memory_update": 0.799
+      "receive_case": 0.004,
+      "load_inputs": 0.004,
+      "validate_evidence": 0.089,
+      "retrieve_memory": 0.093,
+      "computational_baseline": 0.2,
+      "llm_plan_investigation": 1.435,
+      "validate_tool_request": 0.01,
+      "execute_authorised_tool": 0.296,
+      "validate_tool_result": 0.004,
+      "llm_assess_evidence": 3.063,
+      "formulate_finding": 0.104,
+      "independent_verify": 0.299,
+      "authority_check": 0.055,
+      "execute_action": 0.002,
+      "record_decision": 0.019,
+      "validate_memory_update": 0.496
      },
-     "total_ms": 8.271,
+     "total_ms": 5.658,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -3070,6 +3080,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -3114,18 +3125,18 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.007,
+      "receive_case": 0.006,
       "load_inputs": 0.004,
-      "validate_evidence": 0.102,
-      "retrieve_memory": 0.261,
-      "computational_baseline": 0.572,
-      "independent_verify": 0.456,
-      "authority_check": 0.088,
-      "execute_action": 0.004,
-      "record_decision": 0.06,
-      "validate_memory_update": 0.433
+      "validate_evidence": 0.075,
+      "retrieve_memory": 0.182,
+      "computational_baseline": 0.338,
+      "independent_verify": 0.312,
+      "authority_check": 0.058,
+      "execute_action": 0.002,
+      "record_decision": 0.014,
+      "validate_memory_update": 0.271
      },
-     "total_ms": 1.494,
+     "total_ms": 0.977,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -3270,6 +3281,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -3335,24 +3347,24 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.007,
-      "load_inputs": 0.014,
-      "validate_evidence": 0.154,
-      "retrieve_memory": 0.273,
-      "computational_baseline": 0.476,
-      "llm_plan_investigation": 1.672,
-      "validate_tool_request": 0.017,
-      "execute_authorised_tool": 0.366,
-      "validate_tool_result": 0.01,
-      "llm_assess_evidence": 4.894,
-      "formulate_finding": 0.21,
-      "independent_verify": 0.193,
-      "authority_check": 0.072,
-      "execute_action": 0.011,
-      "record_decision": 0.027,
-      "validate_memory_update": 0.006
+      "receive_case": 0.005,
+      "load_inputs": 0.004,
+      "validate_evidence": 0.071,
+      "retrieve_memory": 0.174,
+      "computational_baseline": 0.324,
+      "llm_plan_investigation": 1.204,
+      "validate_tool_request": 0.01,
+      "execute_authorised_tool": 0.199,
+      "validate_tool_result": 0.006,
+      "llm_assess_evidence": 3.418,
+      "formulate_finding": 0.059,
+      "independent_verify": 0.159,
+      "authority_check": 0.132,
+      "execute_action": 0.003,
+      "record_decision": 0.029,
+      "validate_memory_update": 0.003
      },
-     "total_ms": 8.369,
+     "total_ms": 5.768,
      "evidence": [
       {
        "metric": "insights.repetition",
@@ -3611,7 +3623,7 @@
     "tokens_estimated": 7947,
     "cost_usd_estimated": null,
     "unpriced_llm_calls": 5,
-    "cop_ms": 19.485
+    "cop_ms": 13.38
    },
    "security_events": [],
    "persisted_decisions": 4,
@@ -3646,9 +3658,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 80.7,
-  "cpu_ms": 70.6,
-  "max_rss_kb": 75900,
+  "wall_ms": 61.2,
+  "cpu_ms": 61.1,
+  "max_rss_kb": 76136,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -3754,6 +3766,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -3787,18 +3800,18 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.007,
+      "receive_case": 0.006,
       "load_inputs": 0.002,
-      "validate_evidence": 0.134,
-      "retrieve_memory": 0.33,
-      "computational_baseline": 1.113,
-      "independent_verify": 0.226,
-      "authority_check": 0.05,
-      "execute_action": 0.004,
-      "record_decision": 0.02,
-      "validate_memory_update": 0.005
+      "validate_evidence": 0.096,
+      "retrieve_memory": 0.198,
+      "computational_baseline": 0.601,
+      "independent_verify": 0.207,
+      "authority_check": 0.052,
+      "execute_action": 0.002,
+      "record_decision": 0.015,
+      "validate_memory_update": 0.003
      },
-     "total_ms": 1.866,
+     "total_ms": 1.164,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -3990,6 +4003,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "WARN",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -4051,24 +4065,24 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.007,
+      "receive_case": 0.005,
       "load_inputs": 0.004,
-      "validate_evidence": 0.094,
-      "retrieve_memory": 0.144,
-      "computational_baseline": 0.517,
-      "llm_plan_investigation": 1.735,
-      "validate_tool_request": 0.012,
-      "execute_authorised_tool": 0.296,
+      "validate_evidence": 0.071,
+      "retrieve_memory": 0.109,
+      "computational_baseline": 0.506,
+      "llm_plan_investigation": 1.484,
+      "validate_tool_request": 0.009,
+      "execute_authorised_tool": 0.213,
       "validate_tool_result": 0.004,
-      "llm_assess_evidence": 3.749,
-      "formulate_finding": 0.201,
-      "independent_verify": 0.159,
-      "authority_check": 0.059,
+      "llm_assess_evidence": 3.22,
+      "formulate_finding": 0.101,
+      "independent_verify": 0.23,
+      "authority_check": 0.055,
       "execute_action": 0.002,
       "record_decision": 0.024,
-      "validate_memory_update": 0.339
+      "validate_memory_update": 0.368
      },
-     "total_ms": 6.983,
+     "total_ms": 6.013,
      "evidence": [
       {
        "metric": "insights.stalled",
@@ -4232,6 +4246,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -4268,18 +4283,18 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.011,
-      "load_inputs": 0.006,
-      "validate_evidence": 0.073,
-      "retrieve_memory": 0.165,
-      "computational_baseline": 0.573,
-      "independent_verify": 0.275,
-      "authority_check": 0.07,
-      "execute_action": 0.003,
-      "record_decision": 0.017,
-      "validate_memory_update": 0.525
+      "receive_case": 0.005,
+      "load_inputs": 0.005,
+      "validate_evidence": 0.087,
+      "retrieve_memory": 0.138,
+      "computational_baseline": 0.552,
+      "independent_verify": 0.268,
+      "authority_check": 0.054,
+      "execute_action": 0.002,
+      "record_decision": 0.015,
+      "validate_memory_update": 0.317
      },
-     "total_ms": 1.176,
+     "total_ms": 1.111,
      "evidence": [
       {
        "metric": "insights.repetition",
@@ -4467,6 +4482,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -4499,24 +4515,24 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.006,
-      "load_inputs": 0.005,
-      "validate_evidence": 0.164,
-      "retrieve_memory": 0.16,
-      "computational_baseline": 0.283,
-      "llm_plan_investigation": 1.634,
-      "validate_tool_request": 0.009,
-      "execute_authorised_tool": 0.168,
+      "receive_case": 0.005,
+      "load_inputs": 0.004,
+      "validate_evidence": 0.095,
+      "retrieve_memory": 0.147,
+      "computational_baseline": 0.233,
+      "llm_plan_investigation": 1.51,
+      "validate_tool_request": 0.011,
+      "execute_authorised_tool": 0.146,
       "validate_tool_result": 0.004,
-      "llm_assess_evidence": 3.029,
-      "formulate_finding": 0.095,
-      "independent_verify": 0.193,
-      "authority_check": 0.083,
-      "execute_action": 0.003,
-      "record_decision": 0.017,
-      "validate_memory_update": 0.508
+      "llm_assess_evidence": 3.322,
+      "formulate_finding": 0.088,
+      "independent_verify": 0.246,
+      "authority_check": 0.056,
+      "execute_action": 0.002,
+      "record_decision": 0.014,
+      "validate_memory_update": 0.363
      },
-     "total_ms": 5.836,
+     "total_ms": 5.869,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -4662,6 +4678,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "WARN",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -4703,18 +4720,18 @@
      ],
      "gated_label": "NORMAL",
      "node_ms": {
-      "receive_case": 0.008,
+      "receive_case": 0.007,
       "load_inputs": 0.004,
-      "validate_evidence": 0.064,
-      "retrieve_memory": 0.176,
-      "computational_baseline": 0.292,
-      "independent_verify": 0.199,
-      "authority_check": 0.047,
+      "validate_evidence": 0.083,
+      "retrieve_memory": 0.157,
+      "computational_baseline": 0.398,
+      "independent_verify": 0.177,
+      "authority_check": 0.052,
       "execute_action": 0.002,
-      "record_decision": 0.04,
+      "record_decision": 0.017,
       "validate_memory_update": 0.003
      },
-     "total_ms": 0.792,
+     "total_ms": 0.88,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -5025,7 +5042,7 @@
     "tokens_estimated": 6411,
     "cost_usd_estimated": null,
     "unpriced_llm_calls": 4,
-    "cop_ms": 16.653
+    "cop_ms": 15.037
    },
    "security_events": [],
    "persisted_decisions": 5,
@@ -5077,9 +5094,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 110.1,
-  "cpu_ms": 100.3,
-  "max_rss_kb": 76668,
+  "wall_ms": 56.5,
+  "cpu_ms": 55.6,
+  "max_rss_kb": 76904,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -5185,6 +5202,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -5218,18 +5236,18 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.011,
-      "load_inputs": 0.004,
-      "validate_evidence": 0.201,
-      "retrieve_memory": 0.395,
-      "computational_baseline": 0.628,
-      "independent_verify": 0.28,
-      "authority_check": 0.072,
-      "execute_action": 0.004,
-      "record_decision": 0.024,
-      "validate_memory_update": 0.007
+      "receive_case": 0.007,
+      "load_inputs": 0.002,
+      "validate_evidence": 0.287,
+      "retrieve_memory": 0.252,
+      "computational_baseline": 0.353,
+      "independent_verify": 0.218,
+      "authority_check": 0.059,
+      "execute_action": 0.002,
+      "record_decision": 0.017,
+      "validate_memory_update": 0.004
      },
-     "total_ms": 1.595,
+     "total_ms": 1.18,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -5415,6 +5433,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -5454,24 +5473,24 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.01,
-      "load_inputs": 0.006,
-      "validate_evidence": 0.132,
-      "retrieve_memory": 0.138,
-      "computational_baseline": 0.352,
-      "llm_plan_investigation": 1.907,
-      "validate_tool_request": 0.021,
-      "execute_authorised_tool": 0.759,
-      "validate_tool_result": 0.009,
-      "llm_assess_evidence": 8.558,
-      "formulate_finding": 0.136,
-      "independent_verify": 0.339,
-      "authority_check": 0.08,
-      "execute_action": 0.004,
-      "record_decision": 0.024,
-      "validate_memory_update": 0.535
+      "receive_case": 0.006,
+      "load_inputs": 0.004,
+      "validate_evidence": 0.102,
+      "retrieve_memory": 0.14,
+      "computational_baseline": 0.232,
+      "llm_plan_investigation": 1.538,
+      "validate_tool_request": 0.013,
+      "execute_authorised_tool": 0.432,
+      "validate_tool_result": 0.004,
+      "llm_assess_evidence": 3.452,
+      "formulate_finding": 0.114,
+      "independent_verify": 0.258,
+      "authority_check": 0.056,
+      "execute_action": 0.002,
+      "record_decision": 0.016,
+      "validate_memory_update": 0.407
      },
-     "total_ms": 12.451,
+     "total_ms": 6.353,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -5666,6 +5685,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -5702,18 +5722,18 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.008,
-      "load_inputs": 0.005,
-      "validate_evidence": 0.134,
-      "retrieve_memory": 0.289,
-      "computational_baseline": 1.405,
-      "independent_verify": 0.617,
-      "authority_check": 0.108,
-      "execute_action": 0.006,
-      "record_decision": 0.043,
-      "validate_memory_update": 0.826
+      "receive_case": 0.006,
+      "load_inputs": 0.004,
+      "validate_evidence": 0.097,
+      "retrieve_memory": 0.147,
+      "computational_baseline": 0.56,
+      "independent_verify": 0.318,
+      "authority_check": 0.051,
+      "execute_action": 0.003,
+      "record_decision": 0.015,
+      "validate_memory_update": 0.322
      },
-     "total_ms": 2.572,
+     "total_ms": 1.186,
      "evidence": [
       {
        "metric": "interaction.subagent_lanes",
@@ -5888,6 +5908,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -5933,17 +5954,17 @@
      "gated_label": null,
      "node_ms": {
       "receive_case": 0.006,
-      "load_inputs": 0.005,
-      "validate_evidence": 0.061,
-      "retrieve_memory": 0.201,
-      "computational_baseline": 0.538,
-      "independent_verify": 0.314,
-      "authority_check": 0.06,
-      "execute_action": 0.003,
-      "record_decision": 0.028,
-      "validate_memory_update": 0.955
+      "load_inputs": 0.004,
+      "validate_evidence": 0.054,
+      "retrieve_memory": 0.15,
+      "computational_baseline": 0.426,
+      "independent_verify": 0.271,
+      "authority_check": 0.051,
+      "execute_action": 0.002,
+      "record_decision": 0.014,
+      "validate_memory_update": 0.39
      },
-     "total_ms": 1.188,
+     "total_ms": 0.964,
      "evidence": [
       {
        "metric": "access.first_seen_mcp",
@@ -6079,6 +6100,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -6130,18 +6152,18 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.012,
-      "load_inputs": 0.01,
-      "validate_evidence": 0.118,
-      "retrieve_memory": 0.268,
-      "computational_baseline": 1.429,
-      "independent_verify": 0.585,
-      "authority_check": 0.105,
-      "execute_action": 0.005,
-      "record_decision": 0.143,
-      "validate_memory_update": 0.662
+      "receive_case": 0.006,
+      "load_inputs": 0.005,
+      "validate_evidence": 0.072,
+      "retrieve_memory": 0.156,
+      "computational_baseline": 0.83,
+      "independent_verify": 0.283,
+      "authority_check": 0.05,
+      "execute_action": 0.003,
+      "record_decision": 0.014,
+      "validate_memory_update": 0.29
      },
-     "total_ms": 2.532,
+     "total_ms": 1.405,
      "evidence": [
       {
        "metric": "insights.blocked",
@@ -6486,7 +6508,7 @@
     "tokens_estimated": 3113,
     "cost_usd_estimated": null,
     "unpriced_llm_calls": 2,
-    "cop_ms": 20.338
+    "cop_ms": 11.088
    },
    "security_events": [],
    "persisted_decisions": 5,
@@ -6538,9 +6560,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 187.1,
-  "cpu_ms": 183.5,
-  "max_rss_kb": 77948,
+  "wall_ms": 89.3,
+  "cpu_ms": 89.1,
+  "max_rss_kb": 78056,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -6648,6 +6670,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -6681,18 +6704,18 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.015,
-      "load_inputs": 0.006,
-      "validate_evidence": 0.182,
-      "retrieve_memory": 0.49,
-      "computational_baseline": 0.887,
-      "independent_verify": 0.443,
-      "authority_check": 0.169,
-      "execute_action": 0.01,
-      "record_decision": 0.104,
-      "validate_memory_update": 0.01
+      "receive_case": 0.008,
+      "load_inputs": 0.002,
+      "validate_evidence": 0.077,
+      "retrieve_memory": 0.211,
+      "computational_baseline": 0.283,
+      "independent_verify": 0.193,
+      "authority_check": 0.054,
+      "execute_action": 0.002,
+      "record_decision": 0.026,
+      "validate_memory_update": 0.003
      },
-     "total_ms": 2.202,
+     "total_ms": 0.83,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -6939,6 +6962,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "PASS",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -6975,24 +6999,24 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.011,
-      "load_inputs": 0.019,
-      "validate_evidence": 0.248,
-      "retrieve_memory": 0.289,
-      "computational_baseline": 0.417,
-      "llm_plan_investigation": 3.325,
-      "validate_tool_request": 0.024,
-      "execute_authorised_tool": 1.455,
-      "validate_tool_result": 0.008,
-      "llm_assess_evidence": 7.081,
-      "formulate_finding": 0.232,
-      "independent_verify": 0.607,
-      "authority_check": 0.103,
-      "execute_action": 0.005,
-      "record_decision": 0.029,
-      "validate_memory_update": 0.008
+      "receive_case": 0.006,
+      "load_inputs": 0.004,
+      "validate_evidence": 0.123,
+      "retrieve_memory": 0.126,
+      "computational_baseline": 0.26,
+      "llm_plan_investigation": 1.514,
+      "validate_tool_request": 0.011,
+      "execute_authorised_tool": 0.71,
+      "validate_tool_result": 0.004,
+      "llm_assess_evidence": 3.167,
+      "formulate_finding": 0.101,
+      "independent_verify": 0.286,
+      "authority_check": 0.057,
+      "execute_action": 0.002,
+      "record_decision": 0.015,
+      "validate_memory_update": 0.004
      },
-     "total_ms": 13.824,
+     "total_ms": 6.371,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -7142,6 +7166,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -7176,17 +7201,17 @@
      "gated_label": null,
      "node_ms": {
       "receive_case": 0.01,
-      "load_inputs": 0.005,
-      "validate_evidence": 0.155,
-      "retrieve_memory": 0.232,
-      "computational_baseline": 1.008,
-      "independent_verify": 0.401,
-      "authority_check": 0.131,
-      "execute_action": 0.005,
-      "record_decision": 0.025,
-      "validate_memory_update": 0.005
+      "load_inputs": 0.003,
+      "validate_evidence": 0.089,
+      "retrieve_memory": 0.108,
+      "computational_baseline": 0.417,
+      "independent_verify": 0.234,
+      "authority_check": 0.05,
+      "execute_action": 0.002,
+      "record_decision": 0.015,
+      "validate_memory_update": 0.003
      },
-     "total_ms": 1.947,
+     "total_ms": 0.913,
      "evidence": [
       {
        "metric": "interaction.subagent_lanes",
@@ -7359,6 +7384,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -7412,18 +7438,18 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.01,
-      "load_inputs": 0.011,
-      "validate_evidence": 0.139,
-      "retrieve_memory": 0.177,
-      "computational_baseline": 1.199,
-      "independent_verify": 0.376,
-      "authority_check": 0.124,
-      "execute_action": 0.004,
-      "record_decision": 0.022,
-      "validate_memory_update": 0.485
+      "receive_case": 0.005,
+      "load_inputs": 0.006,
+      "validate_evidence": 0.071,
+      "retrieve_memory": 0.088,
+      "computational_baseline": 0.934,
+      "independent_verify": 0.239,
+      "authority_check": 0.055,
+      "execute_action": 0.002,
+      "record_decision": 0.014,
+      "validate_memory_update": 0.309
      },
-     "total_ms": 2.04,
+     "total_ms": 1.4,
      "evidence": [
       {
        "metric": "insights.blocked",
@@ -7658,6 +7684,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "PASS",
@@ -7727,24 +7754,24 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.014,
-      "load_inputs": 0.016,
-      "validate_evidence": 0.138,
-      "retrieve_memory": 0.321,
-      "computational_baseline": 0.851,
-      "llm_plan_investigation": 3.277,
-      "validate_tool_request": 0.017,
-      "execute_authorised_tool": 0.801,
-      "validate_tool_result": 0.026,
-      "llm_assess_evidence": 8.3,
-      "formulate_finding": 0.153,
-      "independent_verify": 0.302,
-      "authority_check": 0.076,
-      "execute_action": 0.003,
-      "record_decision": 0.043,
-      "validate_memory_update": 0.474
+      "receive_case": 0.005,
+      "load_inputs": 0.007,
+      "validate_evidence": 0.064,
+      "retrieve_memory": 0.161,
+      "computational_baseline": 0.316,
+      "llm_plan_investigation": 1.417,
+      "validate_tool_request": 0.008,
+      "execute_authorised_tool": 0.475,
+      "validate_tool_result": 0.004,
+      "llm_assess_evidence": 3.031,
+      "formulate_finding": 0.12,
+      "independent_verify": 0.247,
+      "authority_check": 0.061,
+      "execute_action": 0.002,
+      "record_decision": 0.02,
+      "validate_memory_update": 0.374
      },
-     "total_ms": 14.295,
+     "total_ms": 5.918,
      "evidence": [
       {
        "metric": "insights.secrets",
@@ -7866,6 +7893,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "WARN",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -7907,18 +7935,18 @@
      ],
      "gated_label": "NORMAL",
      "node_ms": {
-      "receive_case": 0.01,
-      "load_inputs": 0.007,
-      "validate_evidence": 0.18,
-      "retrieve_memory": 0.334,
-      "computational_baseline": 0.812,
-      "independent_verify": 0.351,
-      "authority_check": 0.076,
-      "execute_action": 0.006,
-      "record_decision": 0.026,
-      "validate_memory_update": 0.006
+      "receive_case": 0.006,
+      "load_inputs": 0.003,
+      "validate_evidence": 0.123,
+      "retrieve_memory": 0.147,
+      "computational_baseline": 0.375,
+      "independent_verify": 0.187,
+      "authority_check": 0.055,
+      "execute_action": 0.002,
+      "record_decision": 0.018,
+      "validate_memory_update": 0.004
      },
-     "total_ms": 1.776,
+     "total_ms": 0.898,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -8121,6 +8149,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -8189,24 +8218,24 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.008,
-      "load_inputs": 0.011,
-      "validate_evidence": 0.152,
-      "retrieve_memory": 0.322,
-      "computational_baseline": 0.806,
-      "llm_plan_investigation": 2.889,
-      "validate_tool_request": 0.019,
-      "execute_authorised_tool": 0.556,
-      "validate_tool_result": 0.023,
-      "llm_assess_evidence": 6.225,
-      "formulate_finding": 0.232,
-      "independent_verify": 0.436,
-      "authority_check": 0.091,
-      "execute_action": 0.004,
-      "record_decision": 0.043,
-      "validate_memory_update": 0.669
+      "receive_case": 0.005,
+      "load_inputs": 0.007,
+      "validate_evidence": 0.075,
+      "retrieve_memory": 0.15,
+      "computational_baseline": 0.351,
+      "llm_plan_investigation": 1.582,
+      "validate_tool_request": 0.011,
+      "execute_authorised_tool": 0.279,
+      "validate_tool_result": 0.005,
+      "llm_assess_evidence": 3.356,
+      "formulate_finding": 0.103,
+      "independent_verify": 0.19,
+      "authority_check": 0.054,
+      "execute_action": 0.002,
+      "record_decision": 0.017,
+      "validate_memory_update": 0.361
      },
-     "total_ms": 11.774,
+     "total_ms": 6.17,
      "evidence": [
       {
        "metric": "insights.secrets",
@@ -8655,7 +8684,7 @@
     "tokens_estimated": 13546,
     "cost_usd_estimated": null,
     "unpriced_llm_calls": 7,
-    "cop_ms": 47.858
+    "cop_ms": 22.5
    },
    "security_events": [],
    "persisted_decisions": 7,
@@ -8709,9 +8738,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 90.8,
-  "cpu_ms": 90.6,
-  "max_rss_kb": 78588,
+  "wall_ms": 44.8,
+  "cpu_ms": 44.9,
+  "max_rss_kb": 78696,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -8867,6 +8896,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -8903,18 +8933,18 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.033,
-      "load_inputs": 0.004,
-      "validate_evidence": 0.215,
-      "retrieve_memory": 0.513,
-      "computational_baseline": 0.645,
-      "independent_verify": 0.552,
-      "authority_check": 0.121,
-      "execute_action": 0.005,
-      "record_decision": 0.029,
-      "validate_memory_update": 0.993
+      "receive_case": 0.007,
+      "load_inputs": 0.002,
+      "validate_evidence": 0.085,
+      "retrieve_memory": 0.196,
+      "computational_baseline": 0.31,
+      "independent_verify": 0.252,
+      "authority_check": 0.052,
+      "execute_action": 0.002,
+      "record_decision": 0.013,
+      "validate_memory_update": 0.44
      },
-     "total_ms": 2.088,
+     "total_ms": 0.906,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -9100,6 +9130,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -9132,24 +9163,24 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.009,
-      "load_inputs": 0.008,
-      "validate_evidence": 0.175,
-      "retrieve_memory": 0.276,
-      "computational_baseline": 0.42,
-      "llm_plan_investigation": 2.785,
-      "validate_tool_request": 0.021,
-      "execute_authorised_tool": 0.313,
-      "validate_tool_result": 0.006,
-      "llm_assess_evidence": 6.145,
-      "formulate_finding": 0.166,
-      "independent_verify": 0.407,
-      "authority_check": 0.063,
-      "execute_action": 0.004,
-      "record_decision": 0.023,
-      "validate_memory_update": 0.556
+      "receive_case": 0.005,
+      "load_inputs": 0.004,
+      "validate_evidence": 0.085,
+      "retrieve_memory": 0.123,
+      "computational_baseline": 0.148,
+      "llm_plan_investigation": 1.343,
+      "validate_tool_request": 0.011,
+      "execute_authorised_tool": 0.173,
+      "validate_tool_result": 0.003,
+      "llm_assess_evidence": 3.116,
+      "formulate_finding": 0.152,
+      "independent_verify": 0.197,
+      "authority_check": 0.053,
+      "execute_action": 0.002,
+      "record_decision": 0.014,
+      "validate_memory_update": 0.367
      },
-     "total_ms": 10.798,
+     "total_ms": 5.415,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -9368,13 +9399,15 @@
       "SC-02": "NOT_RUN",
       "DS-01": "FAIL",
       "DS-02": "NOT_RUN",
+      "DS-03": "FAIL",
       "RP-01": "WARN",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
       "MU-01": "PASS"
      },
      "verifier_fail": [
-      "DS-01"
+      "DS-01",
+      "DS-03"
      ],
      "llm_calls": 2,
      "llm_purposes": [
@@ -9409,7 +9442,7 @@
      "security_events": [],
      "memory_write": {
       "written": true,
-      "record_id": "d0f5cb4a-21f0-5fe2-bfa8-9e7ff42c1f4f",
+      "record_id": "f5f73e0a-0e57-5e5e-b716-8d1900fa8a3c",
       "record_type": "incident_outcome",
       "status": "UNVALIDATED"
      },
@@ -9424,24 +9457,24 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.009,
-      "load_inputs": 0.009,
-      "validate_evidence": 0.093,
-      "retrieve_memory": 0.209,
-      "computational_baseline": 0.343,
-      "llm_plan_investigation": 1.592,
-      "validate_tool_request": 0.016,
-      "execute_authorised_tool": 0.268,
-      "validate_tool_result": 0.009,
-      "llm_assess_evidence": 7.438,
-      "formulate_finding": 0.215,
-      "independent_verify": 0.355,
-      "authority_check": 0.068,
-      "execute_action": 0.005,
-      "record_decision": 0.024,
-      "validate_memory_update": 0.653
+      "receive_case": 0.005,
+      "load_inputs": 0.007,
+      "validate_evidence": 0.084,
+      "retrieve_memory": 0.153,
+      "computational_baseline": 0.282,
+      "llm_plan_investigation": 1.275,
+      "validate_tool_request": 0.01,
+      "execute_authorised_tool": 0.184,
+      "validate_tool_result": 0.004,
+      "llm_assess_evidence": 3.137,
+      "formulate_finding": 0.098,
+      "independent_verify": 0.194,
+      "authority_check": 0.054,
+      "execute_action": 0.002,
+      "record_decision": 0.016,
+      "validate_memory_update": 0.4
      },
-     "total_ms": 10.629,
+     "total_ms": 5.489,
      "evidence": [
       {
        "metric": "insights.secrets",
@@ -9700,14 +9733,14 @@
      "reason": "0 established, 1 pending, 0 unverified"
     },
     {
-     "access_id": "80ec9669-bdec-555e-bec6-51a884e22d3b",
+     "access_id": "f10d8d7d-7c8b-5b97-9813-62f11ad893e5",
      "at": "2026-10-29T12:00:00+00:00",
      "cop": "incident_response",
      "case_id": "case-06",
      "tenant_id": "tenant-a",
      "operation": "write",
      "record_type": "incident_outcome",
-     "record_id": "d0f5cb4a-21f0-5fe2-bfa8-9e7ff42c1f4f",
+     "record_id": "f5f73e0a-0e57-5e5e-b716-8d1900fa8a3c",
      "outcome": "OK",
      "reason": "UNVALIDATED"
     }
@@ -9718,7 +9751,7 @@
     "tokens_estimated": 6295,
     "cost_usd_estimated": null,
     "unpriced_llm_calls": 4,
-    "cop_ms": 23.515
+    "cop_ms": 11.81
    },
    "security_events": [],
    "persisted_decisions": 3,
@@ -9767,9 +9800,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 45.9,
-  "cpu_ms": 45.6,
-  "max_rss_kb": 79228,
+  "wall_ms": 38.4,
+  "cpu_ms": 38.4,
+  "max_rss_kb": 79464,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -9888,6 +9921,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -9924,18 +9958,18 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.007,
+      "receive_case": 0.006,
       "load_inputs": 0.002,
       "validate_evidence": 0.09,
-      "retrieve_memory": 0.2,
-      "computational_baseline": 0.348,
-      "independent_verify": 0.184,
-      "authority_check": 0.049,
+      "retrieve_memory": 0.203,
+      "computational_baseline": 0.296,
+      "independent_verify": 0.261,
+      "authority_check": 0.054,
       "execute_action": 0.002,
       "record_decision": 0.014,
-      "validate_memory_update": 0.332
+      "validate_memory_update": 0.339
      },
-     "total_ms": 0.882,
+     "total_ms": 0.914,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -10135,6 +10169,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "FAIL",
       "DS-02": "NOT_RUN",
+      "DS-03": "PASS",
       "RP-01": "WARN",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -10198,24 +10233,24 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.006,
+      "receive_case": 0.005,
       "load_inputs": 0.003,
-      "validate_evidence": 0.068,
-      "retrieve_memory": 0.156,
-      "computational_baseline": 0.315,
-      "llm_plan_investigation": 1.631,
+      "validate_evidence": 0.065,
+      "retrieve_memory": 0.131,
+      "computational_baseline": 0.328,
+      "llm_plan_investigation": 1.495,
       "validate_tool_request": 0.01,
-      "execute_authorised_tool": 0.186,
-      "validate_tool_result": 0.006,
-      "llm_assess_evidence": 2.86,
-      "formulate_finding": 0.092,
-      "independent_verify": 0.167,
-      "authority_check": 0.046,
+      "execute_authorised_tool": 0.251,
+      "validate_tool_result": 0.011,
+      "llm_assess_evidence": 3.262,
+      "formulate_finding": 0.1,
+      "independent_verify": 0.224,
+      "authority_check": 0.05,
       "execute_action": 0.002,
       "record_decision": 0.019,
-      "validate_memory_update": 0.345
+      "validate_memory_update": 0.342
      },
-     "total_ms": 5.548,
+     "total_ms": 5.937,
      "evidence": [
       {
        "metric": "insights.stalled",
@@ -10360,6 +10395,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "FAIL",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -10400,16 +10436,16 @@
      "node_ms": {
       "receive_case": 0.005,
       "load_inputs": 0.006,
-      "validate_evidence": 0.182,
-      "retrieve_memory": 0.168,
-      "computational_baseline": 0.501,
-      "independent_verify": 0.241,
-      "authority_check": 0.07,
-      "execute_action": 0.005,
-      "record_decision": 0.024,
-      "validate_memory_update": 0.395
+      "validate_evidence": 0.122,
+      "retrieve_memory": 0.157,
+      "computational_baseline": 0.518,
+      "independent_verify": 0.277,
+      "authority_check": 0.051,
+      "execute_action": 0.002,
+      "record_decision": 0.015,
+      "validate_memory_update": 0.294
      },
-     "total_ms": 1.178,
+     "total_ms": 1.138,
      "evidence": [
       {
        "metric": "insights.repetition",
@@ -10678,7 +10714,7 @@
     "tokens_estimated": 2811,
     "cost_usd_estimated": null,
     "unpriced_llm_calls": 2,
-    "cop_ms": 7.608
+    "cop_ms": 7.989
    },
    "security_events": [],
    "persisted_decisions": 3,
@@ -10731,9 +10767,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 29.4,
-  "cpu_ms": 28.7,
-  "max_rss_kb": 79996,
+  "wall_ms": 29.5,
+  "cpu_ms": 29.2,
+  "max_rss_kb": 80232,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -10836,6 +10872,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -10871,16 +10908,16 @@
      "node_ms": {
       "receive_case": 0.006,
       "load_inputs": 0.002,
-      "validate_evidence": 0.091,
-      "retrieve_memory": 0.179,
-      "computational_baseline": 0.315,
-      "independent_verify": 0.189,
-      "authority_check": 0.051,
+      "validate_evidence": 0.087,
+      "retrieve_memory": 0.198,
+      "computational_baseline": 0.277,
+      "independent_verify": 0.192,
+      "authority_check": 0.058,
       "execute_action": 0.002,
-      "record_decision": 0.016,
-      "validate_memory_update": 0.029
+      "record_decision": 0.013,
+      "validate_memory_update": 0.003
      },
-     "total_ms": 0.835,
+     "total_ms": 0.822,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -11100,6 +11137,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "WARN",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -11168,24 +11206,24 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.006,
+      "receive_case": 0.005,
       "load_inputs": 0.004,
-      "validate_evidence": 0.082,
-      "retrieve_memory": 0.092,
-      "computational_baseline": 0.431,
-      "llm_plan_investigation": 1.389,
-      "validate_tool_request": 0.01,
-      "execute_authorised_tool": 0.375,
-      "validate_tool_result": 0.005,
-      "llm_assess_evidence": 3.899,
-      "formulate_finding": 0.115,
-      "independent_verify": 0.195,
-      "authority_check": 0.052,
-      "execute_action": 0.006,
+      "validate_evidence": 0.063,
+      "retrieve_memory": 0.132,
+      "computational_baseline": 0.387,
+      "llm_plan_investigation": 1.263,
+      "validate_tool_request": 0.011,
+      "execute_authorised_tool": 0.338,
+      "validate_tool_result": 0.011,
+      "llm_assess_evidence": 3.064,
+      "formulate_finding": 0.098,
+      "independent_verify": 0.187,
+      "authority_check": 0.053,
+      "execute_action": 0.003,
       "record_decision": 0.018,
-      "validate_memory_update": 0.35
+      "validate_memory_update": 0.441
      },
-     "total_ms": 6.661,
+     "total_ms": 5.619,
      "evidence": [
       {
        "metric": "insights.secrets",
@@ -11384,7 +11422,7 @@
     "tokens_estimated": 2737,
     "cost_usd_estimated": null,
     "unpriced_llm_calls": 2,
-    "cop_ms": 7.496
+    "cop_ms": 6.441
    },
    "security_events": [],
    "persisted_decisions": 2,
@@ -11435,9 +11473,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 64.9,
-  "cpu_ms": 62.5,
-  "max_rss_kb": 80764,
+  "wall_ms": 89.6,
+  "cpu_ms": 89.4,
+  "max_rss_kb": 81000,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -11542,6 +11580,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -11575,18 +11614,18 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.009,
+      "receive_case": 0.007,
       "load_inputs": 0.002,
-      "validate_evidence": 0.082,
-      "retrieve_memory": 0.183,
-      "computational_baseline": 0.282,
-      "independent_verify": 0.184,
+      "validate_evidence": 0.1,
+      "retrieve_memory": 0.316,
+      "computational_baseline": 0.353,
+      "independent_verify": 0.36,
       "authority_check": 0.056,
       "execute_action": 0.002,
-      "record_decision": 0.014,
-      "validate_memory_update": 0.003
+      "record_decision": 0.015,
+      "validate_memory_update": 0.005
      },
-     "total_ms": 0.8,
+     "total_ms": 1.196,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -11803,6 +11842,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "PASS",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -11861,24 +11901,24 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.006,
+      "receive_case": 0.008,
       "load_inputs": 0.004,
-      "validate_evidence": 0.065,
-      "retrieve_memory": 0.096,
-      "computational_baseline": 1.651,
-      "llm_plan_investigation": 1.525,
-      "validate_tool_request": 0.01,
-      "execute_authorised_tool": 0.212,
-      "validate_tool_result": 0.005,
-      "llm_assess_evidence": 2.999,
-      "formulate_finding": 0.158,
-      "independent_verify": 0.183,
-      "authority_check": 0.058,
-      "execute_action": 0.004,
-      "record_decision": 0.02,
-      "validate_memory_update": 0.004
+      "validate_evidence": 0.109,
+      "retrieve_memory": 0.147,
+      "computational_baseline": 0.563,
+      "llm_plan_investigation": 2.252,
+      "validate_tool_request": 0.015,
+      "execute_authorised_tool": 0.399,
+      "validate_tool_result": 0.006,
+      "llm_assess_evidence": 5.775,
+      "formulate_finding": 0.173,
+      "independent_verify": 0.311,
+      "authority_check": 0.093,
+      "execute_action": 0.003,
+      "record_decision": 0.03,
+      "validate_memory_update": 0.006
      },
-     "total_ms": 6.976,
+     "total_ms": 9.858,
      "evidence": [
       {
        "metric": "insights.stalled",
@@ -12093,6 +12133,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -12183,24 +12224,24 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.005,
-      "load_inputs": 0.004,
-      "validate_evidence": 0.038,
-      "retrieve_memory": 0.163,
-      "computational_baseline": 0.425,
-      "llm_plan_investigation": 1.26,
-      "validate_tool_request": 0.01,
-      "execute_authorised_tool": 0.313,
+      "receive_case": 0.01,
+      "load_inputs": 0.005,
+      "validate_evidence": 0.068,
+      "retrieve_memory": 0.233,
+      "computational_baseline": 0.862,
+      "llm_plan_investigation": 1.99,
+      "validate_tool_request": 0.014,
+      "execute_authorised_tool": 0.47,
       "validate_tool_result": 0.007,
-      "llm_assess_evidence": 2.729,
-      "formulate_finding": 0.1,
-      "independent_verify": 0.164,
-      "authority_check": 0.051,
-      "execute_action": 0.002,
-      "record_decision": 0.025,
-      "validate_memory_update": 0.495
+      "llm_assess_evidence": 5.668,
+      "formulate_finding": 0.173,
+      "independent_verify": 0.263,
+      "authority_check": 0.128,
+      "execute_action": 0.003,
+      "record_decision": 0.046,
+      "validate_memory_update": 0.943
      },
-     "total_ms": 5.271,
+     "total_ms": 9.894,
      "evidence": []
     },
     "behavior_analytics": {
@@ -12307,6 +12348,7 @@
       "SC-02": "WARN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -12343,18 +12385,18 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.005,
-      "load_inputs": 0.006,
-      "validate_evidence": 0.117,
-      "retrieve_memory": 0.213,
-      "computational_baseline": 0.533,
-      "independent_verify": 0.224,
-      "authority_check": 0.098,
-      "execute_action": 0.002,
-      "record_decision": 0.015,
-      "validate_memory_update": 0.313
+      "receive_case": 0.008,
+      "load_inputs": 0.008,
+      "validate_evidence": 0.183,
+      "retrieve_memory": 0.209,
+      "computational_baseline": 0.869,
+      "independent_verify": 0.367,
+      "authority_check": 0.089,
+      "execute_action": 0.003,
+      "record_decision": 0.022,
+      "validate_memory_update": 0.469
      },
-     "total_ms": 1.198,
+     "total_ms": 1.736,
      "evidence": [
       {
        "metric": "insights.repetition",
@@ -12631,7 +12673,7 @@
     "tokens_estimated": 6821,
     "cost_usd_estimated": null,
     "unpriced_llm_calls": 5,
-    "cop_ms": 14.245
+    "cop_ms": 22.684
    },
    "security_events": [],
    "persisted_decisions": 4,
@@ -12656,9 +12698,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 35.0,
-  "cpu_ms": 33.9,
-  "max_rss_kb": 81532,
+  "wall_ms": 62.5,
+  "cpu_ms": 62.5,
+  "max_rss_kb": 81768,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -12762,6 +12804,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -12795,18 +12838,18 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.005,
-      "load_inputs": 0.001,
-      "validate_evidence": 0.078,
-      "retrieve_memory": 0.158,
-      "computational_baseline": 0.293,
-      "independent_verify": 0.167,
-      "authority_check": 0.048,
-      "execute_action": 0.002,
-      "record_decision": 0.039,
-      "validate_memory_update": 0.004
+      "receive_case": 0.011,
+      "load_inputs": 0.003,
+      "validate_evidence": 0.141,
+      "retrieve_memory": 0.296,
+      "computational_baseline": 0.482,
+      "independent_verify": 0.383,
+      "authority_check": 0.092,
+      "execute_action": 0.003,
+      "record_decision": 0.029,
+      "validate_memory_update": 0.005
      },
-     "total_ms": 0.752,
+     "total_ms": 1.411,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -12937,6 +12980,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -12978,18 +13022,18 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.005,
-      "load_inputs": 0.003,
-      "validate_evidence": 0.064,
-      "retrieve_memory": 0.102,
-      "computational_baseline": 0.328,
-      "independent_verify": 0.172,
-      "authority_check": 0.045,
-      "execute_action": 0.002,
-      "record_decision": 0.017,
-      "validate_memory_update": 0.003
+      "receive_case": 0.008,
+      "load_inputs": 0.004,
+      "validate_evidence": 0.097,
+      "retrieve_memory": 0.225,
+      "computational_baseline": 0.605,
+      "independent_verify": 0.388,
+      "authority_check": 0.084,
+      "execute_action": 0.003,
+      "record_decision": 0.022,
+      "validate_memory_update": 0.006
      },
-     "total_ms": 0.721,
+     "total_ms": 1.414,
      "evidence": [
       {
        "metric": "insights.reverted",
@@ -13163,6 +13207,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "WARN",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -13210,24 +13255,24 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.004,
-      "load_inputs": 0.006,
-      "validate_evidence": 0.058,
-      "retrieve_memory": 0.09,
-      "computational_baseline": 0.23,
-      "llm_plan_investigation": 1.279,
-      "validate_tool_request": 0.008,
-      "execute_authorised_tool": 0.119,
-      "validate_tool_result": 0.004,
-      "llm_assess_evidence": 2.959,
-      "formulate_finding": 0.095,
-      "independent_verify": 0.187,
-      "authority_check": 0.05,
-      "execute_action": 0.002,
-      "record_decision": 0.019,
-      "validate_memory_update": 0.46
+      "receive_case": 0.009,
+      "load_inputs": 0.009,
+      "validate_evidence": 0.104,
+      "retrieve_memory": 0.168,
+      "computational_baseline": 0.39,
+      "llm_plan_investigation": 2.118,
+      "validate_tool_request": 0.012,
+      "execute_authorised_tool": 0.222,
+      "validate_tool_result": 0.005,
+      "llm_assess_evidence": 5.572,
+      "formulate_finding": 0.146,
+      "independent_verify": 0.317,
+      "authority_check": 0.087,
+      "execute_action": 0.003,
+      "record_decision": 0.022,
+      "validate_memory_update": 0.712
      },
-     "total_ms": 5.091,
+     "total_ms": 9.162,
      "evidence": [
       {
        "metric": "insights.secrets",
@@ -13472,7 +13517,7 @@
     "tokens_estimated": 2638,
     "cost_usd_estimated": null,
     "unpriced_llm_calls": 2,
-    "cop_ms": 6.564
+    "cop_ms": 11.987
    },
    "security_events": [],
    "persisted_decisions": 3,
@@ -13505,9 +13550,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 39.0,
-  "cpu_ms": 38.3,
-  "max_rss_kb": 82300,
+  "wall_ms": 55.9,
+  "cpu_ms": 53.1,
+  "max_rss_kb": 82536,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -13611,6 +13656,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -13644,18 +13690,18 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.005,
-      "load_inputs": 0.002,
-      "validate_evidence": 0.076,
-      "retrieve_memory": 0.244,
-      "computational_baseline": 0.259,
-      "independent_verify": 0.163,
-      "authority_check": 0.048,
-      "execute_action": 0.002,
-      "record_decision": 0.016,
-      "validate_memory_update": 0.004
+      "receive_case": 0.008,
+      "load_inputs": 0.003,
+      "validate_evidence": 0.116,
+      "retrieve_memory": 0.338,
+      "computational_baseline": 0.462,
+      "independent_verify": 0.434,
+      "authority_check": 0.087,
+      "execute_action": 0.003,
+      "record_decision": 0.03,
+      "validate_memory_update": 0.005
      },
-     "total_ms": 0.799,
+     "total_ms": 1.451,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -13786,6 +13832,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -13830,18 +13877,18 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.004,
-      "load_inputs": 0.003,
-      "validate_evidence": 0.065,
-      "retrieve_memory": 0.099,
-      "computational_baseline": 0.343,
-      "independent_verify": 0.177,
-      "authority_check": 0.047,
+      "receive_case": 0.005,
+      "load_inputs": 0.004,
+      "validate_evidence": 0.074,
+      "retrieve_memory": 0.121,
+      "computational_baseline": 0.348,
+      "independent_verify": 0.377,
+      "authority_check": 0.052,
       "execute_action": 0.002,
-      "record_decision": 0.013,
-      "validate_memory_update": 0.333
+      "record_decision": 0.014,
+      "validate_memory_update": 0.352
      },
-     "total_ms": 0.74,
+     "total_ms": 0.983,
      "evidence": [
       {
        "metric": "insights.reverted",
@@ -14015,6 +14062,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -14062,24 +14110,24 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.006,
+      "receive_case": 0.004,
       "load_inputs": 0.007,
-      "validate_evidence": 0.079,
-      "retrieve_memory": 0.146,
-      "computational_baseline": 0.329,
-      "llm_plan_investigation": 1.516,
+      "validate_evidence": 0.053,
+      "retrieve_memory": 0.123,
+      "computational_baseline": 0.274,
+      "llm_plan_investigation": 1.505,
       "validate_tool_request": 0.008,
-      "execute_authorised_tool": 0.281,
+      "execute_authorised_tool": 0.214,
       "validate_tool_result": 0.005,
-      "llm_assess_evidence": 3.624,
-      "formulate_finding": 0.125,
-      "independent_verify": 0.157,
-      "authority_check": 0.054,
-      "execute_action": 0.002,
-      "record_decision": 0.016,
-      "validate_memory_update": 0.397
+      "llm_assess_evidence": 4.121,
+      "formulate_finding": 0.117,
+      "independent_verify": 0.216,
+      "authority_check": 0.083,
+      "execute_action": 0.003,
+      "record_decision": 0.017,
+      "validate_memory_update": 0.385
      },
-     "total_ms": 6.339,
+     "total_ms": 6.733,
      "evidence": [
       {
        "metric": "insights.secrets",
@@ -14336,7 +14384,7 @@
     "tokens_estimated": 2908,
     "cost_usd_estimated": null,
     "unpriced_llm_calls": 2,
-    "cop_ms": 7.878
+    "cop_ms": 9.167
    },
    "security_events": [],
    "persisted_decisions": 3,
@@ -14378,9 +14426,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 124.8,
-  "cpu_ms": 124.4,
-  "max_rss_kb": 84348,
+  "wall_ms": 109.2,
+  "cpu_ms": 99.3,
+  "max_rss_kb": 84584,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -14483,6 +14531,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -14516,18 +14565,18 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.007,
-      "load_inputs": 0.003,
-      "validate_evidence": 0.122,
-      "retrieve_memory": 0.256,
-      "computational_baseline": 0.399,
-      "independent_verify": 0.302,
-      "authority_check": 0.067,
-      "execute_action": 0.004,
-      "record_decision": 0.024,
+      "receive_case": 0.006,
+      "load_inputs": 0.002,
+      "validate_evidence": 0.084,
+      "retrieve_memory": 0.193,
+      "computational_baseline": 0.306,
+      "independent_verify": 0.206,
+      "authority_check": 0.057,
+      "execute_action": 0.002,
+      "record_decision": 0.015,
       "validate_memory_update": 0.006
      },
-     "total_ms": 1.16,
+     "total_ms": 0.856,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -14730,6 +14779,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -14769,24 +14819,24 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.009,
+      "receive_case": 0.008,
       "load_inputs": 0.005,
-      "validate_evidence": 0.133,
-      "retrieve_memory": 0.32,
-      "computational_baseline": 0.335,
-      "llm_plan_investigation": 2.059,
-      "validate_tool_request": 0.016,
-      "execute_authorised_tool": 0.766,
+      "validate_evidence": 1.921,
+      "retrieve_memory": 0.199,
+      "computational_baseline": 0.296,
+      "llm_plan_investigation": 1.529,
+      "validate_tool_request": 0.013,
+      "execute_authorised_tool": 0.52,
       "validate_tool_result": 0.005,
-      "llm_assess_evidence": 4.555,
-      "formulate_finding": 0.143,
-      "independent_verify": 0.513,
-      "authority_check": 0.08,
-      "execute_action": 0.003,
-      "record_decision": 0.022,
-      "validate_memory_update": 0.509
+      "llm_assess_evidence": 3.212,
+      "formulate_finding": 0.098,
+      "independent_verify": 0.453,
+      "authority_check": 0.055,
+      "execute_action": 0.002,
+      "record_decision": 0.015,
+      "validate_memory_update": 0.361
      },
-     "total_ms": 8.942,
+     "total_ms": 8.316,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -15123,7 +15173,7 @@
     "tokens_estimated": 3866,
     "cost_usd_estimated": null,
     "unpriced_llm_calls": 2,
-    "cop_ms": 10.102
+    "cop_ms": 9.172
    },
    "security_events": [],
    "persisted_decisions": 6,
@@ -15335,6 +15385,7 @@
      "SC-02": "PASS",
      "DS-01": "PASS",
      "DS-02": "NOT_RUN",
+     "DS-03": "NOT_RUN",
      "RP-01": "PASS",
      "AU-01": "PASS",
      "PE-01": "NOT_RUN",
@@ -15390,23 +15441,23 @@
     "gated_label": null,
     "node_ms": {
      "receive_case": 0.007,
-     "load_inputs": 0.006,
-     "validate_evidence": 0.092,
-     "retrieve_memory": 0.142,
-     "computational_baseline": 0.239,
-     "llm_plan_investigation": 1.805,
-     "validate_tool_request": 0.012,
-     "execute_authorised_tool": 0.351,
-     "validate_tool_result": 0.007,
-     "llm_assess_evidence": 4.56,
-     "formulate_finding": 0.262,
-     "independent_verify": 0.378,
-     "authority_check": 0.063,
-     "execute_action": 0.004,
-     "record_decision": 0.025,
-     "validate_memory_update": 0.605
+     "load_inputs": 0.005,
+     "validate_evidence": 0.162,
+     "retrieve_memory": 0.143,
+     "computational_baseline": 0.35,
+     "llm_plan_investigation": 1.929,
+     "validate_tool_request": 0.015,
+     "execute_authorised_tool": 0.33,
+     "validate_tool_result": 0.006,
+     "llm_assess_evidence": 3.317,
+     "formulate_finding": 0.132,
+     "independent_verify": 0.282,
+     "authority_check": 0.062,
+     "execute_action": 0.003,
+     "record_decision": 0.019,
+     "validate_memory_update": 0.451
     },
-    "total_ms": 7.928,
+    "total_ms": 6.743,
     "evidence": [
      {
       "metric": "insights.token_outlier",
@@ -15624,6 +15675,7 @@
      "SC-02": "PASS",
      "DS-01": "PASS",
      "DS-02": "NOT_RUN",
+     "DS-03": "NOT_RUN",
      "RP-01": "PASS",
      "AU-01": "PASS",
      "PE-01": "NOT_RUN",
@@ -15666,23 +15718,23 @@
     "gated_label": null,
     "node_ms": {
      "receive_case": 0.005,
-     "load_inputs": 0.005,
-     "validate_evidence": 0.106,
-     "retrieve_memory": 0.183,
-     "computational_baseline": 0.194,
-     "llm_plan_investigation": 1.36,
-     "validate_tool_request": 0.018,
-     "execute_authorised_tool": 0.64,
+     "load_inputs": 0.004,
+     "validate_evidence": 0.126,
+     "retrieve_memory": 0.166,
+     "computational_baseline": 0.221,
+     "llm_plan_investigation": 1.366,
+     "validate_tool_request": 0.012,
+     "execute_authorised_tool": 0.653,
      "validate_tool_result": 0.004,
-     "llm_assess_evidence": 3.082,
-     "formulate_finding": 0.106,
-     "independent_verify": 0.46,
-     "authority_check": 0.051,
-     "execute_action": 0.002,
-     "record_decision": 0.015,
-     "validate_memory_update": 0.329
+     "llm_assess_evidence": 3.298,
+     "formulate_finding": 0.133,
+     "independent_verify": 0.572,
+     "authority_check": 0.055,
+     "execute_action": 0.003,
+     "record_decision": 0.016,
+     "validate_memory_update": 0.352
     },
-    "total_ms": 6.216,
+    "total_ms": 6.618,
     "evidence": [
      {
       "metric": "insights.token_outlier",
@@ -15776,9 +15828,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 46.7,
-  "cpu_ms": 46.7,
-  "max_rss_kb": 85116,
+  "wall_ms": 49.2,
+  "cpu_ms": 48.7,
+  "max_rss_kb": 85352,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -15882,6 +15934,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -15915,18 +15968,18 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.006,
+      "receive_case": 0.007,
       "load_inputs": 0.002,
-      "validate_evidence": 0.094,
-      "retrieve_memory": 0.15,
-      "computational_baseline": 0.296,
-      "independent_verify": 0.173,
-      "authority_check": 0.056,
+      "validate_evidence": 0.084,
+      "retrieve_memory": 0.159,
+      "computational_baseline": 0.304,
+      "independent_verify": 0.226,
+      "authority_check": 0.05,
       "execute_action": 0.002,
       "record_decision": 0.014,
       "validate_memory_update": 0.004
      },
-     "total_ms": 0.779,
+     "total_ms": 0.834,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -16102,6 +16155,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -16130,20 +16184,20 @@
      "gated_label": null,
      "node_ms": {
       "receive_case": 0.005,
-      "load_inputs": 0.004,
-      "validate_evidence": 0.092,
-      "retrieve_memory": 0.131,
-      "computational_baseline": 0.201,
-      "llm_plan_investigation": 1.381,
-      "llm_assess_evidence": 2.858,
-      "formulate_finding": 0.103,
-      "independent_verify": 0.447,
-      "authority_check": 0.053,
-      "execute_action": 0.002,
-      "record_decision": 0.011,
-      "validate_memory_update": 0.332
+      "load_inputs": 0.012,
+      "validate_evidence": 0.087,
+      "retrieve_memory": 0.118,
+      "computational_baseline": 0.266,
+      "llm_plan_investigation": 1.289,
+      "llm_assess_evidence": 3.012,
+      "formulate_finding": 0.109,
+      "independent_verify": 0.41,
+      "authority_check": 0.052,
+      "execute_action": 0.003,
+      "record_decision": 0.012,
+      "validate_memory_update": 0.293
      },
-     "total_ms": 5.277,
+     "total_ms": 5.363,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -16297,6 +16351,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "WARN",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -16357,24 +16412,24 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.006,
+      "receive_case": 0.005,
       "load_inputs": 0.004,
       "validate_evidence": 0.033,
-      "retrieve_memory": 0.138,
-      "computational_baseline": 0.645,
-      "llm_plan_investigation": 1.129,
-      "validate_tool_request": 0.045,
-      "execute_authorised_tool": 0.48,
+      "retrieve_memory": 0.127,
+      "computational_baseline": 0.609,
+      "llm_plan_investigation": 1.154,
+      "validate_tool_request": 0.04,
+      "execute_authorised_tool": 0.376,
       "validate_tool_result": 0.004,
-      "llm_assess_evidence": 2.745,
-      "formulate_finding": 0.061,
-      "independent_verify": 0.122,
-      "authority_check": 0.059,
-      "execute_action": 0.004,
-      "record_decision": 0.02,
-      "validate_memory_update": 0.005
+      "llm_assess_evidence": 2.939,
+      "formulate_finding": 0.056,
+      "independent_verify": 0.117,
+      "authority_check": 0.091,
+      "execute_action": 0.003,
+      "record_decision": 0.018,
+      "validate_memory_update": 0.004
      },
-     "total_ms": 5.475,
+     "total_ms": 5.558,
      "evidence": []
     }
    },
@@ -16620,7 +16675,7 @@
     "tokens_estimated": 4630,
     "cost_usd_estimated": null,
     "unpriced_llm_calls": 4,
-    "cop_ms": 11.531
+    "cop_ms": 11.755
    },
    "security_events": [
     {
@@ -16713,9 +16768,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 42.1,
-  "cpu_ms": 34.2,
-  "max_rss_kb": 85756,
+  "wall_ms": 34.0,
+  "cpu_ms": 33.9,
+  "max_rss_kb": 85864,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -16818,6 +16873,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -16853,16 +16909,16 @@
      "node_ms": {
       "receive_case": 0.006,
       "load_inputs": 0.002,
-      "validate_evidence": 0.156,
-      "retrieve_memory": 0.209,
-      "computational_baseline": 0.351,
-      "independent_verify": 0.279,
-      "authority_check": 0.065,
-      "execute_action": 0.004,
+      "validate_evidence": 0.088,
+      "retrieve_memory": 0.162,
+      "computational_baseline": 0.276,
+      "independent_verify": 0.225,
+      "authority_check": 0.054,
+      "execute_action": 0.003,
       "record_decision": 0.021,
-      "validate_memory_update": 0.005
+      "validate_memory_update": 0.004
      },
-     "total_ms": 1.072,
+     "total_ms": 0.816,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -17037,6 +17093,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "WARN",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -17099,24 +17156,24 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.007,
-      "load_inputs": 0.005,
-      "validate_evidence": 0.114,
-      "retrieve_memory": 0.135,
-      "computational_baseline": 0.237,
-      "llm_plan_investigation": 1.671,
-      "validate_tool_request": 0.047,
-      "execute_authorised_tool": 0.003,
+      "receive_case": 0.005,
+      "load_inputs": 0.004,
+      "validate_evidence": 0.08,
+      "retrieve_memory": 0.096,
+      "computational_baseline": 0.176,
+      "llm_plan_investigation": 1.32,
+      "validate_tool_request": 0.036,
+      "execute_authorised_tool": 0.002,
       "validate_tool_result": 0.003,
-      "llm_assess_evidence": 3.807,
-      "formulate_finding": 0.12,
-      "independent_verify": 0.252,
-      "authority_check": 0.06,
+      "llm_assess_evidence": 2.987,
+      "formulate_finding": 0.076,
+      "independent_verify": 0.181,
+      "authority_check": 0.055,
       "execute_action": 0.003,
-      "record_decision": 0.022,
-      "validate_memory_update": 0.119
+      "record_decision": 0.016,
+      "validate_memory_update": 0.09
      },
-     "total_ms": 6.464,
+     "total_ms": 5.024,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -17321,7 +17378,7 @@
     "tokens_estimated": 4462,
     "cost_usd_estimated": null,
     "unpriced_llm_calls": 3,
-    "cop_ms": 7.536
+    "cop_ms": 5.84
    },
    "security_events": [
     {
@@ -17389,9 +17446,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 44.1,
-  "cpu_ms": 44.1,
-  "max_rss_kb": 86396,
+  "wall_ms": 33.5,
+  "cpu_ms": 33.5,
+  "max_rss_kb": 86632,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -17494,6 +17551,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -17527,18 +17585,18 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.008,
+      "receive_case": 0.005,
       "load_inputs": 0.002,
-      "validate_evidence": 0.115,
-      "retrieve_memory": 0.246,
-      "computational_baseline": 0.333,
-      "independent_verify": 0.254,
-      "authority_check": 0.064,
-      "execute_action": 0.004,
-      "record_decision": 0.018,
-      "validate_memory_update": 0.005
+      "validate_evidence": 0.086,
+      "retrieve_memory": 0.188,
+      "computational_baseline": 0.256,
+      "independent_verify": 0.266,
+      "authority_check": 0.052,
+      "execute_action": 0.002,
+      "record_decision": 0.014,
+      "validate_memory_update": 0.004
      },
-     "total_ms": 1.026,
+     "total_ms": 0.857,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -17733,6 +17791,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "PASS",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -17816,24 +17875,24 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.007,
-      "load_inputs": 0.006,
-      "validate_evidence": 0.111,
-      "retrieve_memory": 0.172,
-      "computational_baseline": 0.216,
-      "llm_plan_investigation": 1.874,
-      "validate_tool_request": 0.046,
-      "execute_authorised_tool": 0.24,
-      "validate_tool_result": 0.006,
-      "llm_assess_evidence": 4.162,
-      "formulate_finding": 0.135,
-      "independent_verify": 0.322,
-      "authority_check": 0.065,
-      "execute_action": 0.004,
-      "record_decision": 0.03,
-      "validate_memory_update": 0.006
+      "receive_case": 0.005,
+      "load_inputs": 0.004,
+      "validate_evidence": 0.084,
+      "retrieve_memory": 0.099,
+      "computational_baseline": 0.151,
+      "llm_plan_investigation": 1.377,
+      "validate_tool_request": 0.01,
+      "execute_authorised_tool": 0.161,
+      "validate_tool_result": 0.004,
+      "llm_assess_evidence": 3.263,
+      "formulate_finding": 0.08,
+      "independent_verify": 0.293,
+      "authority_check": 0.051,
+      "execute_action": 0.002,
+      "record_decision": 0.018,
+      "validate_memory_update": 0.004
      },
-     "total_ms": 7.366,
+     "total_ms": 5.584,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -18038,7 +18097,7 @@
     "tokens_estimated": 4881,
     "cost_usd_estimated": null,
     "unpriced_llm_calls": 3,
-    "cop_ms": 8.392
+    "cop_ms": 6.441
    },
    "security_events": [
     {
@@ -18113,6 +18172,7 @@
      "SC-02": "PASS",
      "DS-01": "PASS",
      "DS-02": "NOT_RUN",
+     "DS-03": "NOT_RUN",
      "RP-01": "PASS",
      "AU-01": "PASS",
      "PE-01": "PASS",
@@ -18124,7 +18184,7 @@
    {
     "expectation": "checkpoint persisted on disk",
     "passed": true,
-    "actual": 1601536
+    "actual": 1630208
    },
    {
     "expectation": "only the approved action reached the gateway",
@@ -18140,9 +18200,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 383.0,
-  "cpu_ms": 185.0,
-  "max_rss_kb": 90492,
+  "wall_ms": 333.3,
+  "cpu_ms": 175.3,
+  "max_rss_kb": 90600,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -18247,6 +18307,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -18282,16 +18343,16 @@
      "node_ms": {
       "receive_case": 0.009,
       "load_inputs": 0.003,
-      "validate_evidence": 0.118,
-      "retrieve_memory": 2.164,
-      "computational_baseline": 0.362,
-      "independent_verify": 0.294,
-      "authority_check": 0.054,
-      "execute_action": 0.003,
-      "record_decision": 0.018,
+      "validate_evidence": 0.139,
+      "retrieve_memory": 3.741,
+      "computational_baseline": 0.395,
+      "independent_verify": 0.321,
+      "authority_check": 0.097,
+      "execute_action": 0.002,
+      "record_decision": 0.019,
       "validate_memory_update": 0.005
      },
-     "total_ms": 3.007,
+     "total_ms": 4.707,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -18429,6 +18490,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -18462,18 +18524,18 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.01,
-      "load_inputs": 0.006,
-      "validate_evidence": 0.162,
-      "retrieve_memory": 2.039,
-      "computational_baseline": 3.809,
-      "independent_verify": 0.321,
-      "authority_check": 0.071,
-      "execute_action": 0.003,
-      "record_decision": 0.021,
-      "validate_memory_update": 0.005
+      "receive_case": 0.009,
+      "load_inputs": 0.004,
+      "validate_evidence": 0.108,
+      "retrieve_memory": 2.508,
+      "computational_baseline": 3.889,
+      "independent_verify": 0.224,
+      "authority_check": 0.065,
+      "execute_action": 0.002,
+      "record_decision": 0.017,
+      "validate_memory_update": 0.004
      },
-     "total_ms": 6.421,
+     "total_ms": 6.809,
      "evidence": [
       {
        "metric": "interaction.subagent_lanes",
@@ -18590,7 +18652,7 @@
        "decision": "approve",
        "reviewer": "security-lead@tenant-a.example",
        "note": "",
-       "at": "2026-10-29T08:31:33Z"
+       "at": "2026-11-02T06:23:35Z"
       },
       "execution_status": "EXECUTED_MOCK",
       "execution_outcome": {
@@ -18651,6 +18713,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "PASS",
@@ -18704,19 +18767,19 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.008,
+      "receive_case": 0.009,
       "load_inputs": 0.007,
-      "validate_evidence": 0.144,
-      "retrieve_memory": 2.661,
-      "computational_baseline": 0.856,
-      "independent_verify": 0.26,
-      "authority_check": 0.081,
-      "await_approval": 0.061,
-      "execute_action": 0.104,
-      "record_decision": 0.027,
-      "validate_memory_update": 5.168
+      "validate_evidence": 0.108,
+      "retrieve_memory": 2.524,
+      "computational_baseline": 0.845,
+      "independent_verify": 0.274,
+      "authority_check": 0.089,
+      "await_approval": 0.051,
+      "execute_action": 0.1,
+      "record_decision": 0.031,
+      "validate_memory_update": 4.336
      },
-     "total_ms": 4.182,
+     "total_ms": 4.007,
      "evidence": [
       {
        "metric": "insights.blocked",
@@ -18898,7 +18961,7 @@
        "decision": "reject",
        "reviewer": "security-lead@tenant-a.example",
        "note": "",
-       "at": "2026-10-29T08:31:33Z"
+       "at": "2026-11-02T06:23:35Z"
       },
       "execution_status": "APPROVAL_REJECTED",
       "execution_outcome": null,
@@ -18954,6 +19017,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "PASS",
@@ -19027,25 +19091,25 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.008,
-      "load_inputs": 0.009,
-      "validate_evidence": 0.164,
-      "retrieve_memory": 6.454,
-      "computational_baseline": 0.461,
-      "llm_plan_investigation": 1.647,
-      "validate_tool_request": 0.011,
-      "execute_authorised_tool": 8.754,
-      "validate_tool_result": 0.009,
-      "llm_assess_evidence": 3.888,
-      "formulate_finding": 0.167,
-      "independent_verify": 0.306,
-      "authority_check": 0.092,
-      "await_approval": 0.054,
-      "execute_action": 0.064,
-      "record_decision": 0.034,
-      "validate_memory_update": 7.392
+      "receive_case": 0.009,
+      "load_inputs": 0.012,
+      "validate_evidence": 0.105,
+      "retrieve_memory": 4.85,
+      "computational_baseline": 0.717,
+      "llm_plan_investigation": 1.692,
+      "validate_tool_request": 0.013,
+      "execute_authorised_tool": 2.438,
+      "validate_tool_result": 0.006,
+      "llm_assess_evidence": 3.78,
+      "formulate_finding": 0.137,
+      "independent_verify": 0.356,
+      "authority_check": 0.066,
+      "await_approval": 0.04,
+      "execute_action": 0.066,
+      "record_decision": 0.063,
+      "validate_memory_update": 5.082
      },
-     "total_ms": 22.088,
+     "total_ms": 14.287,
      "evidence": [
       {
        "metric": "insights.secrets",
@@ -19358,7 +19422,7 @@
     "tokens_estimated": 5215,
     "cost_usd_estimated": null,
     "unpriced_llm_calls": 3,
-    "cop_ms": 35.698
+    "cop_ms": 29.81
    },
    "security_events": [],
    "persisted_decisions": 4,
@@ -19395,7 +19459,7 @@
      "target": "c15"
     }
    ],
-   "checkpoint_file_bytes": 1601536
+   "checkpoint_file_bytes": 1630208
   }
  },
  {
@@ -19422,6 +19486,7 @@
      "SC-02": "PASS",
      "DS-01": "PASS",
      "DS-02": "NOT_RUN",
+     "DS-03": "NOT_RUN",
      "RP-01": "PASS",
      "AU-01": "PASS",
      "PE-01": "PASS",
@@ -19432,9 +19497,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 373.7,
-  "cpu_ms": 175.5,
-  "max_rss_kb": 91644,
+  "wall_ms": 332.3,
+  "cpu_ms": 171.8,
+  "max_rss_kb": 91752,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -19539,6 +19604,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -19572,18 +19638,18 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.01,
-      "load_inputs": 0.003,
-      "validate_evidence": 0.124,
-      "retrieve_memory": 2.033,
-      "computational_baseline": 0.479,
-      "independent_verify": 2.053,
-      "authority_check": 0.065,
-      "execute_action": 0.005,
+      "receive_case": 0.009,
+      "load_inputs": 0.002,
+      "validate_evidence": 0.104,
+      "retrieve_memory": 1.749,
+      "computational_baseline": 0.32,
+      "independent_verify": 1.636,
+      "authority_check": 0.064,
+      "execute_action": 0.002,
       "record_decision": 0.019,
-      "validate_memory_update": 0.006
+      "validate_memory_update": 0.005
      },
-     "total_ms": 4.772,
+     "total_ms": 3.886,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -19721,6 +19787,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -19756,16 +19823,16 @@
      "node_ms": {
       "receive_case": 0.011,
       "load_inputs": 0.005,
-      "validate_evidence": 0.134,
-      "retrieve_memory": 1.791,
-      "computational_baseline": 2.913,
-      "independent_verify": 0.237,
-      "authority_check": 0.092,
-      "execute_action": 0.002,
-      "record_decision": 0.016,
-      "validate_memory_update": 0.004
+      "validate_evidence": 0.149,
+      "retrieve_memory": 2.253,
+      "computational_baseline": 3.179,
+      "independent_verify": 0.352,
+      "authority_check": 0.076,
+      "execute_action": 0.003,
+      "record_decision": 0.024,
+      "validate_memory_update": 0.005
      },
-     "total_ms": 5.185,
+     "total_ms": 6.028,
      "evidence": [
       {
        "metric": "interaction.subagent_lanes",
@@ -19882,7 +19949,7 @@
        "decision": "approve",
        "reviewer": "security-lead@tenant-a.example",
        "note": "",
-       "at": "2026-10-29T08:31:33Z"
+       "at": "2026-11-02T06:23:35Z"
       },
       "execution_status": "EXECUTION_FAILED",
       "execution_outcome": {
@@ -19943,6 +20010,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "PASS",
@@ -19998,19 +20066,19 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.011,
-      "load_inputs": 0.012,
-      "validate_evidence": 0.097,
-      "retrieve_memory": 2.751,
-      "computational_baseline": 1.176,
-      "independent_verify": 0.439,
-      "authority_check": 0.147,
-      "await_approval": 0.051,
-      "execute_action": 0.111,
-      "record_decision": 0.033,
-      "validate_memory_update": 5.599
+      "receive_case": 0.01,
+      "load_inputs": 0.01,
+      "validate_evidence": 0.317,
+      "retrieve_memory": 1.829,
+      "computational_baseline": 1.267,
+      "independent_verify": 0.452,
+      "authority_check": 0.112,
+      "await_approval": 0.036,
+      "execute_action": 0.088,
+      "record_decision": 0.021,
+      "validate_memory_update": 4.697
      },
-     "total_ms": 4.795,
+     "total_ms": 4.121,
      "evidence": [
       {
        "metric": "insights.blocked",
@@ -20192,7 +20260,7 @@
        "decision": "reject",
        "reviewer": "security-lead@tenant-a.example",
        "note": "",
-       "at": "2026-10-29T08:31:33Z"
+       "at": "2026-11-02T06:23:35Z"
       },
       "execution_status": "APPROVAL_REJECTED",
       "execution_outcome": null,
@@ -20248,6 +20316,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "PASS",
@@ -20321,25 +20390,25 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.008,
-      "load_inputs": 0.009,
-      "validate_evidence": 0.129,
-      "retrieve_memory": 3.789,
-      "computational_baseline": 0.626,
-      "llm_plan_investigation": 2.084,
-      "validate_tool_request": 0.014,
-      "execute_authorised_tool": 4.881,
+      "receive_case": 0.011,
+      "load_inputs": 0.008,
+      "validate_evidence": 0.103,
+      "retrieve_memory": 2.56,
+      "computational_baseline": 0.379,
+      "llm_plan_investigation": 1.545,
+      "validate_tool_request": 0.01,
+      "execute_authorised_tool": 2.672,
       "validate_tool_result": 0.008,
-      "llm_assess_evidence": 4.64,
-      "formulate_finding": 0.153,
-      "independent_verify": 0.241,
-      "authority_check": 0.074,
-      "await_approval": 0.04,
-      "execute_action": 0.067,
-      "record_decision": 0.041,
-      "validate_memory_update": 5.542
+      "llm_assess_evidence": 6.886,
+      "formulate_finding": 0.166,
+      "independent_verify": 0.381,
+      "authority_check": 0.141,
+      "await_approval": 0.048,
+      "execute_action": 0.09,
+      "record_decision": 0.038,
+      "validate_memory_update": 4.836
      },
-     "total_ms": 16.763,
+     "total_ms": 15.008,
      "evidence": [
       {
        "metric": "insights.secrets",
@@ -20652,7 +20721,7 @@
     "tokens_estimated": 5215,
     "cost_usd_estimated": null,
     "unpriced_llm_calls": 3,
-    "cop_ms": 31.515
+    "cop_ms": 29.043
    },
    "security_events": [],
    "persisted_decisions": 4,
@@ -20689,7 +20758,7 @@
      "target": "c15"
     }
    ],
-   "checkpoint_file_bytes": 1605632
+   "checkpoint_file_bytes": 1630208
   }
  },
  {
@@ -20728,9 +20797,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 45.8,
-  "cpu_ms": 45.5,
-  "max_rss_kb": 91900,
+  "wall_ms": 44.0,
+  "cpu_ms": 43.0,
+  "max_rss_kb": 92008,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -20833,6 +20902,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -20866,18 +20936,18 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.01,
+      "receive_case": 0.011,
       "load_inputs": 0.003,
-      "validate_evidence": 0.146,
-      "retrieve_memory": 0.332,
-      "computational_baseline": 0.611,
-      "independent_verify": 0.303,
-      "authority_check": 0.081,
-      "execute_action": 0.004,
-      "record_decision": 0.023,
-      "validate_memory_update": 0.006
+      "validate_evidence": 0.285,
+      "retrieve_memory": 0.43,
+      "computational_baseline": 0.467,
+      "independent_verify": 0.36,
+      "authority_check": 0.059,
+      "execute_action": 0.003,
+      "record_decision": 0.015,
+      "validate_memory_update": 0.004
      },
-     "total_ms": 1.49,
+     "total_ms": 1.618,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -21053,6 +21123,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "WARN",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -21080,21 +21151,21 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.007,
-      "load_inputs": 0.007,
-      "validate_evidence": 0.131,
-      "retrieve_memory": 0.179,
-      "computational_baseline": 0.278,
-      "llm_plan_investigation": 2.292,
-      "llm_assess_evidence": 4.659,
-      "formulate_finding": 0.339,
-      "independent_verify": 0.49,
-      "authority_check": 0.08,
-      "execute_action": 0.004,
-      "record_decision": 0.02,
-      "validate_memory_update": 0.631
+      "receive_case": 0.005,
+      "load_inputs": 0.004,
+      "validate_evidence": 0.095,
+      "retrieve_memory": 0.097,
+      "computational_baseline": 0.173,
+      "llm_plan_investigation": 1.407,
+      "llm_assess_evidence": 5.371,
+      "formulate_finding": 0.107,
+      "independent_verify": 0.331,
+      "authority_check": 0.054,
+      "execute_action": 0.003,
+      "record_decision": 0.013,
+      "validate_memory_update": 0.476
      },
-     "total_ms": 8.466,
+     "total_ms": 7.647,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -21311,7 +21382,7 @@
     "tokens_estimated": 2772,
     "cost_usd_estimated": null,
     "unpriced_llm_calls": 2,
-    "cop_ms": 9.956
+    "cop_ms": 9.265
    },
    "security_events": [],
    "persisted_decisions": 2,
@@ -21380,9 +21451,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 50.7,
-  "cpu_ms": 50.6,
-  "max_rss_kb": 92796,
+  "wall_ms": 48.8,
+  "cpu_ms": 44.7,
+  "max_rss_kb": 92904,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -21485,6 +21556,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -21518,18 +21590,18 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.008,
+      "receive_case": 0.012,
       "load_inputs": 0.003,
-      "validate_evidence": 0.159,
-      "retrieve_memory": 0.253,
-      "computational_baseline": 0.453,
-      "independent_verify": 0.327,
-      "authority_check": 0.08,
-      "execute_action": 0.004,
-      "record_decision": 0.025,
-      "validate_memory_update": 0.006
+      "validate_evidence": 0.177,
+      "retrieve_memory": 0.408,
+      "computational_baseline": 0.664,
+      "independent_verify": 0.318,
+      "authority_check": 0.082,
+      "execute_action": 0.003,
+      "record_decision": 0.023,
+      "validate_memory_update": 0.005
      },
-     "total_ms": 1.287,
+     "total_ms": 1.667,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -21723,13 +21795,15 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "FAIL",
       "RP-01": "WARN",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
       "MU-01": "PASS"
      },
      "verifier_fail": [
-      "SC-01"
+      "SC-01",
+      "DS-03"
      ],
      "llm_calls": 2,
      "llm_purposes": [
@@ -21750,7 +21824,7 @@
      "security_events": [],
      "memory_write": {
       "written": true,
-      "record_id": "16a29109-18a7-59ce-93b9-72089f9e6570",
+      "record_id": "154ebc46-1678-5040-ad2a-e65eba03fd77",
       "record_type": "anomaly_observation",
       "status": "UNVALIDATED"
      },
@@ -21758,23 +21832,23 @@
      "gated_label": null,
      "node_ms": {
       "receive_case": 0.007,
-      "load_inputs": 0.006,
-      "validate_evidence": 0.125,
-      "retrieve_memory": 0.228,
-      "computational_baseline": 0.317,
-      "llm_plan_investigation": 1.989,
-      "validate_tool_request": 0.012,
-      "execute_authorised_tool": 0.299,
-      "validate_tool_result": 0.005,
-      "llm_assess_evidence": 4.48,
-      "formulate_finding": 0.141,
-      "independent_verify": 0.49,
-      "authority_check": 0.082,
-      "execute_action": 0.004,
-      "record_decision": 0.023,
-      "validate_memory_update": 0.529
+      "load_inputs": 0.005,
+      "validate_evidence": 0.155,
+      "retrieve_memory": 0.241,
+      "computational_baseline": 0.285,
+      "llm_plan_investigation": 2.1,
+      "validate_tool_request": 0.013,
+      "execute_authorised_tool": 0.394,
+      "validate_tool_result": 0.004,
+      "llm_assess_evidence": 5.152,
+      "formulate_finding": 0.151,
+      "independent_verify": 0.712,
+      "authority_check": 0.06,
+      "execute_action": 0.003,
+      "record_decision": 0.016,
+      "validate_memory_update": 0.377
      },
-     "total_ms": 8.185,
+     "total_ms": 9.282,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -22033,14 +22107,14 @@
      "reason": "0 established, 0 pending, 3 unverified"
     },
     {
-     "access_id": "9aca61b1-c598-55a0-8e36-666b4cff6644",
+     "access_id": "bbf17217-d2c7-54ad-9056-06f29141d29b",
      "at": "2026-10-29T12:00:00+00:00",
      "cop": "anomaly_detection",
      "case_id": "case-17",
      "tenant_id": "tenant-a",
      "operation": "write",
      "record_type": "anomaly_observation",
-     "record_id": "16a29109-18a7-59ce-93b9-72089f9e6570",
+     "record_id": "154ebc46-1678-5040-ad2a-e65eba03fd77",
      "outcome": "OK",
      "reason": "UNVALIDATED"
     }
@@ -22051,7 +22125,7 @@
     "tokens_estimated": 2965,
     "cost_usd_estimated": null,
     "unpriced_llm_calls": 2,
-    "cop_ms": 9.472
+    "cop_ms": 10.949
    },
    "security_events": [],
    "persisted_decisions": 2,
@@ -22131,9 +22205,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 38.5,
-  "cpu_ms": 34.7,
-  "max_rss_kb": 93436,
+  "wall_ms": 27.1,
+  "cpu_ms": 27.0,
+  "max_rss_kb": 93544,
   "view": {
    "order": [
     "governance_architecture"
@@ -22298,6 +22372,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -22358,24 +22433,24 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.008,
-      "load_inputs": 0.006,
-      "validate_evidence": 0.076,
-      "retrieve_memory": 0.332,
-      "computational_baseline": 1.574,
-      "llm_plan_investigation": 2.249,
-      "validate_tool_request": 0.016,
-      "execute_authorised_tool": 2.146,
-      "validate_tool_result": 0.009,
-      "llm_assess_evidence": 5.861,
-      "formulate_finding": 0.13,
-      "independent_verify": 0.199,
-      "authority_check": 0.129,
-      "execute_action": 0.004,
-      "record_decision": 0.032,
-      "validate_memory_update": 0.791
+      "receive_case": 0.006,
+      "load_inputs": 0.005,
+      "validate_evidence": 0.059,
+      "retrieve_memory": 0.379,
+      "computational_baseline": 1.269,
+      "llm_plan_investigation": 1.351,
+      "validate_tool_request": 0.011,
+      "execute_authorised_tool": 2.016,
+      "validate_tool_result": 0.005,
+      "llm_assess_evidence": 3.428,
+      "formulate_finding": 0.092,
+      "independent_verify": 0.22,
+      "authority_check": 0.055,
+      "execute_action": 0.002,
+      "record_decision": 0.02,
+      "validate_memory_update": 0.412
      },
-     "total_ms": 12.739,
+     "total_ms": 8.898,
      "evidence": [
       {
        "metric": "telemetry.unknown_share",
@@ -22564,7 +22639,7 @@
     "tokens_estimated": 4202,
     "cost_usd_estimated": null,
     "unpriced_llm_calls": 2,
-    "cop_ms": 12.739
+    "cop_ms": 8.898
    },
    "security_events": [],
    "persisted_decisions": 1,
@@ -22584,9 +22659,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 32.6,
-  "cpu_ms": 32.5,
-  "max_rss_kb": 94076,
+  "wall_ms": 26.2,
+  "cpu_ms": 18.5,
+  "max_rss_kb": 94184,
   "view": {
    "order": [
     "governance_architecture"
@@ -22722,6 +22797,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "PASS",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -22779,24 +22855,24 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.008,
+      "receive_case": 0.007,
       "load_inputs": 0.006,
-      "validate_evidence": 0.088,
-      "retrieve_memory": 0.276,
-      "computational_baseline": 1.825,
-      "llm_plan_investigation": 1.783,
-      "validate_tool_request": 0.015,
-      "execute_authorised_tool": 2.118,
-      "validate_tool_result": 0.007,
-      "llm_assess_evidence": 4.661,
-      "formulate_finding": 0.101,
-      "independent_verify": 0.196,
-      "authority_check": 0.08,
+      "validate_evidence": 0.058,
+      "retrieve_memory": 0.233,
+      "computational_baseline": 1.313,
+      "llm_plan_investigation": 1.312,
+      "validate_tool_request": 0.01,
+      "execute_authorised_tool": 1.696,
+      "validate_tool_result": 0.005,
+      "llm_assess_evidence": 3.429,
+      "formulate_finding": 0.08,
+      "independent_verify": 0.158,
+      "authority_check": 0.054,
       "execute_action": 0.002,
-      "record_decision": 0.042,
+      "record_decision": 0.019,
       "validate_memory_update": 0.004
      },
-     "total_ms": 11.166,
+     "total_ms": 8.363,
      "evidence": [
       {
        "metric": "telemetry.unknown_share",
@@ -22973,7 +23049,7 @@
     "tokens_estimated": 4031,
     "cost_usd_estimated": null,
     "unpriced_llm_calls": 2,
-    "cop_ms": 11.166
+    "cop_ms": 8.363
    },
    "security_events": [],
    "persisted_decisions": 1,
@@ -23007,9 +23083,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 66.9,
-  "cpu_ms": 66.1,
-  "max_rss_kb": 95612,
+  "wall_ms": 81.0,
+  "cpu_ms": 80.9,
+  "max_rss_kb": 95720,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -23112,6 +23188,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -23147,16 +23224,16 @@
      "node_ms": {
       "receive_case": 0.007,
       "load_inputs": 0.002,
-      "validate_evidence": 0.103,
-      "retrieve_memory": 0.165,
-      "computational_baseline": 0.315,
-      "independent_verify": 0.224,
+      "validate_evidence": 0.086,
+      "retrieve_memory": 0.299,
+      "computational_baseline": 0.282,
+      "independent_verify": 0.189,
       "authority_check": 0.054,
       "execute_action": 0.002,
-      "record_decision": 0.015,
+      "record_decision": 0.022,
       "validate_memory_update": 0.003
      },
-     "total_ms": 0.872,
+     "total_ms": 0.921,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -23342,6 +23419,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -23417,24 +23495,24 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.005,
-      "load_inputs": 0.003,
-      "validate_evidence": 0.039,
-      "retrieve_memory": 0.142,
-      "computational_baseline": 0.404,
-      "llm_plan_investigation": 1.282,
-      "validate_tool_request": 0.015,
-      "execute_authorised_tool": 0.193,
-      "validate_tool_result": 0.013,
-      "llm_assess_evidence": 3.466,
-      "formulate_finding": 0.097,
-      "independent_verify": 0.275,
-      "authority_check": 0.164,
+      "receive_case": 0.008,
+      "load_inputs": 0.005,
+      "validate_evidence": 0.049,
+      "retrieve_memory": 0.249,
+      "computational_baseline": 0.698,
+      "llm_plan_investigation": 2.085,
+      "validate_tool_request": 0.013,
+      "execute_authorised_tool": 0.282,
+      "validate_tool_result": 0.007,
+      "llm_assess_evidence": 5.432,
+      "formulate_finding": 0.188,
+      "independent_verify": 0.458,
+      "authority_check": 0.085,
       "execute_action": 0.003,
-      "record_decision": 0.042,
-      "validate_memory_update": 0.485
+      "record_decision": 0.031,
+      "validate_memory_update": 0.591
      },
-     "total_ms": 6.101,
+     "total_ms": 9.562,
      "evidence": []
     }
    },
@@ -23648,7 +23726,7 @@
     "tokens_estimated": 2749,
     "cost_usd_estimated": null,
     "unpriced_llm_calls": 2,
-    "cop_ms": 6.973
+    "cop_ms": 10.483
    },
    "security_events": [],
    "persisted_decisions": 4,
@@ -23840,6 +23918,7 @@
      "SC-02": "PASS",
      "DS-01": "PASS",
      "DS-02": "NOT_RUN",
+     "DS-03": "NOT_RUN",
      "RP-01": "PASS",
      "AU-01": "PASS",
      "PE-01": "NOT_RUN",
@@ -23932,22 +24011,22 @@
     "node_ms": {
      "receive_case": 0.005,
      "load_inputs": 0.004,
-     "validate_evidence": 0.034,
-     "retrieve_memory": 0.134,
-     "computational_baseline": 0.467,
-     "llm_plan_investigation": 1.319,
-     "validate_tool_request": 0.01,
-     "execute_authorised_tool": 0.251,
+     "validate_evidence": 0.031,
+     "retrieve_memory": 0.143,
+     "computational_baseline": 0.543,
+     "llm_plan_investigation": 1.275,
+     "validate_tool_request": 0.011,
+     "execute_authorised_tool": 0.288,
      "validate_tool_result": 0.005,
-     "llm_assess_evidence": 3.113,
-     "formulate_finding": 0.156,
-     "independent_verify": 0.277,
-     "authority_check": 0.067,
+     "llm_assess_evidence": 3.704,
+     "formulate_finding": 0.139,
+     "independent_verify": 0.169,
+     "authority_check": 0.161,
      "execute_action": 0.003,
-     "record_decision": 0.029,
-     "validate_memory_update": 0.529
+     "record_decision": 0.031,
+     "validate_memory_update": 0.425
     },
-    "total_ms": 5.845,
+    "total_ms": 6.481,
     "evidence": []
    },
    "validated_record": "2697c92b-743d-52ca-add1-62d311f2b542"
@@ -23980,9 +24059,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 130.6,
-  "cpu_ms": 120.9,
-  "max_rss_kb": 96764,
+  "wall_ms": 138.3,
+  "cpu_ms": 134.5,
+  "max_rss_kb": 96872,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -24087,6 +24166,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -24120,18 +24200,18 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.006,
+      "receive_case": 0.007,
       "load_inputs": 0.002,
-      "validate_evidence": 0.319,
-      "retrieve_memory": 0.25,
-      "computational_baseline": 0.306,
-      "independent_verify": 0.242,
-      "authority_check": 0.085,
+      "validate_evidence": 0.099,
+      "retrieve_memory": 0.211,
+      "computational_baseline": 0.327,
+      "independent_verify": 0.203,
+      "authority_check": 0.055,
       "execute_action": 0.002,
-      "record_decision": 0.03,
-      "validate_memory_update": 0.022
+      "record_decision": 0.015,
+      "validate_memory_update": 0.003
      },
-     "total_ms": 1.212,
+     "total_ms": 0.906,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -24269,6 +24349,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -24302,18 +24383,18 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.005,
-      "load_inputs": 1.551,
-      "validate_evidence": 0.111,
-      "retrieve_memory": 0.243,
-      "computational_baseline": 0.713,
-      "independent_verify": 0.222,
-      "authority_check": 0.071,
-      "execute_action": 0.004,
-      "record_decision": 0.022,
-      "validate_memory_update": 0.005
+      "receive_case": 0.006,
+      "load_inputs": 0.004,
+      "validate_evidence": 0.082,
+      "retrieve_memory": 0.17,
+      "computational_baseline": 0.514,
+      "independent_verify": 0.19,
+      "authority_check": 0.056,
+      "execute_action": 0.003,
+      "record_decision": 0.017,
+      "validate_memory_update": 0.003
      },
-     "total_ms": 2.92,
+     "total_ms": 1.025,
      "evidence": [
       {
        "metric": "interaction.subagent_lanes",
@@ -24486,6 +24567,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -24539,18 +24621,18 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.006,
-      "load_inputs": 0.007,
-      "validate_evidence": 0.109,
-      "retrieve_memory": 0.318,
-      "computational_baseline": 0.884,
-      "independent_verify": 0.339,
-      "authority_check": 0.068,
-      "execute_action": 0.003,
-      "record_decision": 0.023,
-      "validate_memory_update": 0.354
+      "receive_case": 0.005,
+      "load_inputs": 0.005,
+      "validate_evidence": 0.084,
+      "retrieve_memory": 0.169,
+      "computational_baseline": 0.674,
+      "independent_verify": 0.257,
+      "authority_check": 0.054,
+      "execute_action": 0.002,
+      "record_decision": 0.015,
+      "validate_memory_update": 0.369
      },
-     "total_ms": 1.734,
+     "total_ms": 1.25,
      "evidence": [
       {
        "metric": "insights.blocked",
@@ -24799,6 +24881,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "PASS",
@@ -24868,24 +24951,24 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.007,
-      "load_inputs": 0.01,
-      "validate_evidence": 0.078,
-      "retrieve_memory": 0.207,
-      "computational_baseline": 0.433,
-      "llm_plan_investigation": 1.788,
-      "validate_tool_request": 0.011,
-      "execute_authorised_tool": 0.788,
-      "validate_tool_result": 0.007,
-      "llm_assess_evidence": 5.851,
-      "formulate_finding": 0.141,
-      "independent_verify": 0.481,
-      "authority_check": 0.072,
-      "execute_action": 0.004,
-      "record_decision": 0.029,
-      "validate_memory_update": 0.497
+      "receive_case": 0.006,
+      "load_inputs": 0.007,
+      "validate_evidence": 0.077,
+      "retrieve_memory": 0.177,
+      "computational_baseline": 0.412,
+      "llm_plan_investigation": 1.407,
+      "validate_tool_request": 0.01,
+      "execute_authorised_tool": 0.643,
+      "validate_tool_result": 0.005,
+      "llm_assess_evidence": 4.08,
+      "formulate_finding": 0.151,
+      "independent_verify": 0.408,
+      "authority_check": 0.068,
+      "execute_action": 0.003,
+      "record_decision": 0.021,
+      "validate_memory_update": 0.393
      },
-     "total_ms": 9.878,
+     "total_ms": 7.454,
      "evidence": [
       {
        "metric": "insights.secrets",
@@ -25294,7 +25377,7 @@
     "tokens_estimated": 6438,
     "cost_usd_estimated": null,
     "unpriced_llm_calls": 3,
-    "cop_ms": 15.744
+    "cop_ms": 10.635
    },
    "security_events": [],
    "persisted_decisions": 8,
@@ -25498,6 +25581,7 @@
      "SC-02": "PASS",
      "DS-01": "PASS",
      "DS-02": "NOT_RUN",
+     "DS-03": "NOT_RUN",
      "RP-01": "PASS",
      "AU-01": "PASS",
      "PE-01": "PASS",
@@ -25567,24 +25651,24 @@
     ],
     "gated_label": null,
     "node_ms": {
-     "receive_case": 0.005,
-     "load_inputs": 0.007,
-     "validate_evidence": 0.066,
-     "retrieve_memory": 0.221,
-     "computational_baseline": 0.276,
-     "llm_plan_investigation": 1.531,
-     "validate_tool_request": 0.008,
-     "execute_authorised_tool": 0.358,
-     "validate_tool_result": 0.005,
-     "llm_assess_evidence": 3.022,
-     "formulate_finding": 0.103,
-     "independent_verify": 0.207,
-     "authority_check": 0.053,
+     "receive_case": 0.007,
+     "load_inputs": 0.009,
+     "validate_evidence": 0.11,
+     "retrieve_memory": 0.196,
+     "computational_baseline": 0.513,
+     "llm_plan_investigation": 2.166,
+     "validate_tool_request": 0.013,
+     "execute_authorised_tool": 0.678,
+     "validate_tool_result": 0.006,
+     "llm_assess_evidence": 3.648,
+     "formulate_finding": 0.107,
+     "independent_verify": 0.253,
+     "authority_check": 0.061,
      "execute_action": 0.002,
-     "record_decision": 0.033,
-     "validate_memory_update": 0.36
+     "record_decision": 0.025,
+     "validate_memory_update": 0.361
     },
-    "total_ms": 5.864,
+    "total_ms": 7.769,
     "evidence": [
      {
       "metric": "insights.secrets",
@@ -25702,9 +25786,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 301.9,
-  "cpu_ms": 297.1,
-  "max_rss_kb": 99068,
+  "wall_ms": 302.5,
+  "cpu_ms": 286.8,
+  "max_rss_kb": 99176,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -25823,6 +25907,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -25858,16 +25943,16 @@
      "node_ms": {
       "receive_case": 0.009,
       "load_inputs": 0.002,
-      "validate_evidence": 0.137,
-      "retrieve_memory": 0.328,
-      "computational_baseline": 0.34,
-      "independent_verify": 0.222,
-      "authority_check": 0.058,
-      "execute_action": 0.003,
-      "record_decision": 0.017,
-      "validate_memory_update": 0.004
+      "validate_evidence": 0.101,
+      "retrieve_memory": 0.223,
+      "computational_baseline": 0.351,
+      "independent_verify": 0.206,
+      "authority_check": 0.054,
+      "execute_action": 0.002,
+      "record_decision": 0.015,
+      "validate_memory_update": 0.003
      },
-     "total_ms": 1.099,
+     "total_ms": 0.948,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -26078,6 +26163,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "FAIL",
       "DS-02": "NOT_RUN",
+      "DS-03": "PASS",
       "RP-01": "WARN",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -26141,24 +26227,24 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.007,
+      "receive_case": 0.005,
       "load_inputs": 0.004,
-      "validate_evidence": 0.083,
-      "retrieve_memory": 0.143,
-      "computational_baseline": 0.347,
-      "llm_plan_investigation": 1.539,
-      "validate_tool_request": 0.009,
-      "execute_authorised_tool": 0.244,
-      "validate_tool_result": 0.006,
-      "llm_assess_evidence": 3.147,
-      "formulate_finding": 0.113,
-      "independent_verify": 0.198,
-      "authority_check": 0.057,
-      "execute_action": 0.003,
-      "record_decision": 0.02,
-      "validate_memory_update": 0.418
+      "validate_evidence": 0.068,
+      "retrieve_memory": 0.1,
+      "computational_baseline": 0.311,
+      "llm_plan_investigation": 1.387,
+      "validate_tool_request": 0.008,
+      "execute_authorised_tool": 0.197,
+      "validate_tool_result": 0.005,
+      "llm_assess_evidence": 3.439,
+      "formulate_finding": 0.105,
+      "independent_verify": 0.229,
+      "authority_check": 0.053,
+      "execute_action": 0.002,
+      "record_decision": 0.026,
+      "validate_memory_update": 0.508
      },
-     "total_ms": 5.9,
+     "total_ms": 5.913,
      "evidence": [
       {
        "metric": "insights.stalled",
@@ -26312,6 +26398,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -26385,23 +26472,23 @@
      "gated_label": null,
      "node_ms": {
       "receive_case": 0.007,
-      "load_inputs": 0.004,
-      "validate_evidence": 0.042,
-      "retrieve_memory": 0.172,
-      "computational_baseline": 0.338,
-      "llm_plan_investigation": 1.248,
-      "validate_tool_request": 0.009,
-      "execute_authorised_tool": 0.134,
-      "validate_tool_result": 0.007,
-      "llm_assess_evidence": 2.978,
-      "formulate_finding": 0.067,
-      "independent_verify": 0.131,
-      "authority_check": 0.057,
+      "load_inputs": 0.005,
+      "validate_evidence": 0.057,
+      "retrieve_memory": 0.195,
+      "computational_baseline": 0.347,
+      "llm_plan_investigation": 1.457,
+      "validate_tool_request": 0.012,
+      "execute_authorised_tool": 0.153,
+      "validate_tool_result": 0.006,
+      "llm_assess_evidence": 3.067,
+      "formulate_finding": 0.063,
+      "independent_verify": 0.145,
+      "authority_check": 0.055,
       "execute_action": 0.002,
-      "record_decision": 0.02,
-      "validate_memory_update": 0.005
+      "record_decision": 0.022,
+      "validate_memory_update": 0.004
      },
-     "total_ms": 5.196,
+     "total_ms": 5.571,
      "evidence": []
     },
     "behavior_analytics": {
@@ -26537,6 +26624,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -26571,17 +26659,17 @@
      "gated_label": null,
      "node_ms": {
       "receive_case": 0.006,
-      "load_inputs": 0.005,
-      "validate_evidence": 0.099,
-      "retrieve_memory": 0.178,
-      "computational_baseline": 0.564,
-      "independent_verify": 0.419,
-      "authority_check": 0.053,
-      "execute_action": 0.003,
-      "record_decision": 0.019,
-      "validate_memory_update": 0.004
+      "load_inputs": 0.006,
+      "validate_evidence": 0.105,
+      "retrieve_memory": 0.172,
+      "computational_baseline": 0.558,
+      "independent_verify": 0.258,
+      "authority_check": 0.051,
+      "execute_action": 0.002,
+      "record_decision": 0.014,
+      "validate_memory_update": 0.003
      },
-     "total_ms": 1.327,
+     "total_ms": 1.158,
      "evidence": [
       {
        "metric": "insights.repetition",
@@ -26828,6 +26916,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "PASS",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -26866,22 +26955,22 @@
      "node_ms": {
       "receive_case": 0.006,
       "load_inputs": 0.004,
-      "validate_evidence": 0.1,
-      "retrieve_memory": 0.151,
-      "computational_baseline": 0.194,
-      "llm_plan_investigation": 1.317,
-      "validate_tool_request": 0.012,
-      "execute_authorised_tool": 0.763,
+      "validate_evidence": 0.097,
+      "retrieve_memory": 0.124,
+      "computational_baseline": 0.168,
+      "llm_plan_investigation": 1.498,
+      "validate_tool_request": 0.013,
+      "execute_authorised_tool": 0.742,
       "validate_tool_result": 0.004,
-      "llm_assess_evidence": 3.189,
-      "formulate_finding": 0.144,
-      "independent_verify": 0.306,
-      "authority_check": 0.092,
+      "llm_assess_evidence": 3.386,
+      "formulate_finding": 0.098,
+      "independent_verify": 0.293,
+      "authority_check": 0.121,
       "execute_action": 0.002,
-      "record_decision": 0.019,
-      "validate_memory_update": 0.005
+      "record_decision": 0.016,
+      "validate_memory_update": 0.003
      },
-     "total_ms": 6.284,
+     "total_ms": 6.556,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -27031,6 +27120,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -27066,16 +27156,16 @@
      "node_ms": {
       "receive_case": 0.006,
       "load_inputs": 0.003,
-      "validate_evidence": 0.089,
-      "retrieve_memory": 0.156,
-      "computational_baseline": 0.479,
-      "independent_verify": 0.22,
-      "authority_check": 0.051,
-      "execute_action": 0.003,
-      "record_decision": 0.019,
-      "validate_memory_update": 0.005
+      "validate_evidence": 0.091,
+      "retrieve_memory": 0.161,
+      "computational_baseline": 0.462,
+      "independent_verify": 0.246,
+      "authority_check": 0.052,
+      "execute_action": 0.002,
+      "record_decision": 0.014,
+      "validate_memory_update": 0.004
      },
-     "total_ms": 1.007,
+     "total_ms": 1.023,
      "evidence": [
       {
        "metric": "interaction.subagent_lanes",
@@ -27189,6 +27279,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -27230,18 +27321,18 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.006,
+      "receive_case": 0.005,
       "load_inputs": 0.005,
-      "validate_evidence": 0.073,
-      "retrieve_memory": 0.248,
-      "computational_baseline": 0.373,
-      "independent_verify": 0.188,
-      "authority_check": 0.055,
+      "validate_evidence": 0.046,
+      "retrieve_memory": 0.118,
+      "computational_baseline": 0.31,
+      "independent_verify": 0.241,
+      "authority_check": 0.05,
       "execute_action": 0.002,
-      "record_decision": 0.019,
-      "validate_memory_update": 0.004
+      "record_decision": 0.014,
+      "validate_memory_update": 0.003
      },
-     "total_ms": 0.95,
+     "total_ms": 0.777,
      "evidence": [
       {
        "metric": "access.first_seen_mcp",
@@ -27384,6 +27475,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -27437,18 +27529,18 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.009,
-      "load_inputs": 0.007,
-      "validate_evidence": 0.091,
-      "retrieve_memory": 0.232,
-      "computational_baseline": 0.881,
-      "independent_verify": 0.314,
-      "authority_check": 0.093,
+      "receive_case": 0.006,
+      "load_inputs": 0.006,
+      "validate_evidence": 0.081,
+      "retrieve_memory": 0.134,
+      "computational_baseline": 0.753,
+      "independent_verify": 0.288,
+      "authority_check": 0.053,
       "execute_action": 0.002,
-      "record_decision": 0.025,
-      "validate_memory_update": 0.344
+      "record_decision": 0.014,
+      "validate_memory_update": 0.365
      },
-     "total_ms": 1.629,
+     "total_ms": 1.323,
      "evidence": [
       {
        "metric": "insights.blocked",
@@ -27573,6 +27665,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -27614,18 +27707,18 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.008,
+      "receive_case": 0.005,
       "load_inputs": 0.004,
-      "validate_evidence": 0.109,
-      "retrieve_memory": 0.169,
-      "computational_baseline": 0.381,
-      "independent_verify": 0.291,
-      "authority_check": 0.062,
-      "execute_action": 0.003,
-      "record_decision": 0.019,
-      "validate_memory_update": 0.005
+      "validate_evidence": 0.061,
+      "retrieve_memory": 0.141,
+      "computational_baseline": 0.299,
+      "independent_verify": 0.165,
+      "authority_check": 0.051,
+      "execute_action": 0.002,
+      "record_decision": 0.014,
+      "validate_memory_update": 0.006
      },
-     "total_ms": 1.027,
+     "total_ms": 0.728,
      "evidence": [
       {
        "metric": "insights.reverted",
@@ -27848,6 +27941,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "PASS",
@@ -27918,23 +28012,23 @@
      "gated_label": null,
      "node_ms": {
       "receive_case": 0.006,
-      "load_inputs": 0.01,
-      "validate_evidence": 0.063,
-      "retrieve_memory": 0.184,
-      "computational_baseline": 0.367,
-      "llm_plan_investigation": 1.721,
-      "validate_tool_request": 0.011,
-      "execute_authorised_tool": 0.519,
-      "validate_tool_result": 0.005,
-      "llm_assess_evidence": 3.911,
-      "formulate_finding": 0.14,
-      "independent_verify": 0.226,
-      "authority_check": 0.061,
-      "execute_action": 0.003,
-      "record_decision": 0.026,
-      "validate_memory_update": 0.42
+      "load_inputs": 0.008,
+      "validate_evidence": 0.087,
+      "retrieve_memory": 0.176,
+      "computational_baseline": 0.385,
+      "llm_plan_investigation": 1.458,
+      "validate_tool_request": 0.008,
+      "execute_authorised_tool": 0.407,
+      "validate_tool_result": 0.004,
+      "llm_assess_evidence": 3.101,
+      "formulate_finding": 0.147,
+      "independent_verify": 0.223,
+      "authority_check": 0.089,
+      "execute_action": 0.002,
+      "record_decision": 0.02,
+      "validate_memory_update": 0.371
      },
-     "total_ms": 7.227,
+     "total_ms": 6.101,
      "evidence": [
       {
        "metric": "insights.secrets",
@@ -28072,6 +28166,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "WARN",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -28131,23 +28226,23 @@
      "gated_label": null,
      "node_ms": {
       "receive_case": 0.006,
-      "load_inputs": 0.006,
-      "validate_evidence": 0.101,
-      "retrieve_memory": 0.208,
-      "computational_baseline": 0.499,
-      "llm_plan_investigation": 1.378,
-      "validate_tool_request": 0.042,
-      "execute_authorised_tool": 0.459,
-      "validate_tool_result": 0.005,
-      "llm_assess_evidence": 3.74,
-      "formulate_finding": 0.099,
-      "independent_verify": 0.195,
-      "authority_check": 0.064,
+      "load_inputs": 0.005,
+      "validate_evidence": 0.137,
+      "retrieve_memory": 0.183,
+      "computational_baseline": 0.395,
+      "llm_plan_investigation": 1.29,
+      "validate_tool_request": 0.009,
+      "execute_authorised_tool": 0.331,
+      "validate_tool_result": 0.004,
+      "llm_assess_evidence": 2.932,
+      "formulate_finding": 0.057,
+      "independent_verify": 0.292,
+      "authority_check": 0.074,
       "execute_action": 0.003,
-      "record_decision": 0.026,
-      "validate_memory_update": 0.005
+      "record_decision": 0.032,
+      "validate_memory_update": 0.004
      },
-     "total_ms": 6.805,
+     "total_ms": 5.718,
      "evidence": [
       {
        "metric": "insights.secrets",
@@ -28275,6 +28370,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "WARN",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -28316,18 +28412,18 @@
      ],
      "gated_label": "NORMAL",
      "node_ms": {
-      "receive_case": 0.007,
-      "load_inputs": 0.005,
-      "validate_evidence": 0.083,
-      "retrieve_memory": 0.274,
-      "computational_baseline": 0.506,
-      "independent_verify": 0.192,
-      "authority_check": 0.059,
-      "execute_action": 0.003,
-      "record_decision": 0.019,
-      "validate_memory_update": 0.004
+      "receive_case": 0.005,
+      "load_inputs": 0.004,
+      "validate_evidence": 0.094,
+      "retrieve_memory": 0.177,
+      "computational_baseline": 0.356,
+      "independent_verify": 0.186,
+      "authority_check": 0.05,
+      "execute_action": 0.002,
+      "record_decision": 0.015,
+      "validate_memory_update": 0.003
      },
-     "total_ms": 1.129,
+     "total_ms": 0.874,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -28530,6 +28626,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -28598,24 +28695,24 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.007,
-      "load_inputs": 0.012,
-      "validate_evidence": 0.121,
-      "retrieve_memory": 0.281,
-      "computational_baseline": 0.509,
-      "llm_plan_investigation": 1.771,
-      "validate_tool_request": 0.011,
-      "execute_authorised_tool": 0.308,
-      "validate_tool_result": 0.014,
-      "llm_assess_evidence": 3.153,
-      "formulate_finding": 0.144,
+      "receive_case": 0.005,
+      "load_inputs": 0.007,
+      "validate_evidence": 0.075,
+      "retrieve_memory": 0.266,
+      "computational_baseline": 0.37,
+      "llm_plan_investigation": 1.469,
+      "validate_tool_request": 0.01,
+      "execute_authorised_tool": 0.336,
+      "validate_tool_result": 0.005,
+      "llm_assess_evidence": 3.531,
+      "formulate_finding": 0.098,
       "independent_verify": 0.206,
-      "authority_check": 0.047,
-      "execute_action": 0.002,
-      "record_decision": 0.016,
+      "authority_check": 0.053,
+      "execute_action": 0.003,
+      "record_decision": 0.024,
       "validate_memory_update": 0.416
      },
-     "total_ms": 6.586,
+     "total_ms": 6.434,
      "evidence": [
       {
        "metric": "insights.secrets",
@@ -28780,6 +28877,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "PASS",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -28833,22 +28931,22 @@
      "node_ms": {
       "receive_case": 0.005,
       "load_inputs": 0.005,
-      "validate_evidence": 0.041,
-      "retrieve_memory": 0.205,
-      "computational_baseline": 2.612,
-      "llm_plan_investigation": 1.082,
+      "validate_evidence": 0.061,
+      "retrieve_memory": 0.292,
+      "computational_baseline": 2.519,
+      "llm_plan_investigation": 1.309,
       "validate_tool_request": 0.011,
-      "execute_authorised_tool": 2.887,
-      "validate_tool_result": 0.006,
-      "llm_assess_evidence": 2.906,
-      "formulate_finding": 0.1,
-      "independent_verify": 0.148,
+      "execute_authorised_tool": 3.076,
+      "validate_tool_result": 0.004,
+      "llm_assess_evidence": 3.017,
+      "formulate_finding": 0.084,
+      "independent_verify": 0.158,
       "authority_check": 0.055,
       "execute_action": 0.002,
       "record_decision": 0.015,
       "validate_memory_update": 0.004
      },
-     "total_ms": 10.065,
+     "total_ms": 10.598,
      "evidence": []
     },
     "workload_optimization": {
@@ -29056,6 +29154,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "FAIL",
       "DS-02": "NOT_RUN",
+      "DS-03": "PASS",
       "RP-01": "WARN",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -29121,22 +29220,22 @@
      "node_ms": {
       "receive_case": 0.006,
       "load_inputs": 0.005,
-      "validate_evidence": 0.1,
-      "retrieve_memory": 0.205,
-      "computational_baseline": 0.352,
-      "llm_plan_investigation": 1.155,
-      "validate_tool_request": 0.01,
-      "execute_authorised_tool": 0.161,
-      "validate_tool_result": 0.005,
-      "llm_assess_evidence": 2.671,
-      "formulate_finding": 0.094,
-      "independent_verify": 0.277,
-      "authority_check": 0.054,
+      "validate_evidence": 0.093,
+      "retrieve_memory": 0.176,
+      "computational_baseline": 0.34,
+      "llm_plan_investigation": 1.284,
+      "validate_tool_request": 0.009,
+      "execute_authorised_tool": 0.158,
+      "validate_tool_result": 0.004,
+      "llm_assess_evidence": 3.199,
+      "formulate_finding": 0.102,
+      "independent_verify": 0.293,
+      "authority_check": 0.055,
       "execute_action": 0.002,
-      "record_decision": 0.02,
-      "validate_memory_update": 0.428
+      "record_decision": 0.017,
+      "validate_memory_update": 0.492
      },
-     "total_ms": 5.097,
+     "total_ms": 5.726,
      "evidence": [
       {
        "metric": "insights.repetition",
@@ -29275,6 +29374,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -29310,16 +29410,16 @@
      "node_ms": {
       "receive_case": 0.006,
       "load_inputs": 0.006,
-      "validate_evidence": 0.077,
-      "retrieve_memory": 0.239,
-      "computational_baseline": 0.396,
-      "independent_verify": 0.168,
-      "authority_check": 0.045,
+      "validate_evidence": 0.088,
+      "retrieve_memory": 0.297,
+      "computational_baseline": 0.364,
+      "independent_verify": 0.41,
+      "authority_check": 0.064,
       "execute_action": 0.003,
-      "record_decision": 0.014,
-      "validate_memory_update": 0.004
+      "record_decision": 0.02,
+      "validate_memory_update": 0.005
      },
-     "total_ms": 0.94,
+     "total_ms": 1.238,
      "evidence": [
       {
        "metric": "insights.unattributed",
@@ -29350,11 +29450,11 @@
     "knowledge_policy_management": {
      "classification": "llm",
      "origin": "llm_hypothesis",
-     "label": "CURRENT",
-     "status": "SUBSTANTIVE",
-     "confidence": 0.6,
-     "verified": true,
-     "rejected_candidate": null,
+     "label": "INCONCLUSIVE",
+     "status": "REJECTED_BY_VERIFIER",
+     "confidence": 0.0,
+     "verified": false,
+     "rejected_candidate": "CURRENT",
      "baseline": "CONFLICT",
      "missing_evidence": [],
      "missing_dependencies": [],
@@ -29418,21 +29518,21 @@
      ],
      "proposed_action": {
       "cop": "knowledge_policy_management",
-      "action": "NONE",
-      "reason": "",
+      "action": "WATCH",
+      "reason": "candidate finding failed verification; action withdrawn",
       "target": "e2e1",
       "requires_approval": false,
-      "authority_tier": "OBSERVE",
+      "authority_tier": "RECORD",
       "authorised": true,
       "authority_reason": "",
       "approval": null,
       "execution_status": "NOT_EXECUTED_NO_ACTION",
       "execution_outcome": null,
-      "requested_action": "NONE",
+      "requested_action": "WATCH",
       "original_proposal": {
-       "action": "NONE",
-       "reason": "",
-       "authority_tier": "OBSERVE"
+       "action": "WATCH",
+       "reason": "candidate finding failed verification; action withdrawn",
+       "authority_tier": "RECORD"
       },
       "original_verification": {
        "check_id": "AU-01",
@@ -29448,7 +29548,7 @@
       },
       "corrected_proposal": null,
       "final_authority": {
-       "action": "NONE",
+       "action": "WATCH",
        "authorised": true,
        "checks": [
         {
@@ -29467,8 +29567,8 @@
        "execution_status": "NOT_EXECUTED_NO_ACTION"
       }
      },
-     "action": "NONE",
-     "requested_action": "NONE",
+     "action": "WATCH",
+     "requested_action": "WATCH",
      "execution_status": "NOT_EXECUTED_NO_ACTION",
      "verifier": {
       "EV-01": "PASS",
@@ -29480,11 +29580,15 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "FAIL",
       "RP-01": "WARN",
       "AU-01": "PASS",
-      "PE-01": "NOT_RUN"
+      "PE-01": "NOT_RUN",
+      "MU-01": "PASS"
      },
-     "verifier_fail": [],
+     "verifier_fail": [
+      "DS-03"
+     ],
      "llm_calls": 2,
      "llm_purposes": [
       "plan",
@@ -29538,8 +29642,10 @@
      ],
      "security_events": [],
      "memory_write": {
-      "written": false,
-      "reason": "nothing to remember (SUBSTANTIVE, CURRENT)"
+      "written": true,
+      "record_id": "9d112c62-7bc2-5031-abe9-707ad8f98172",
+      "record_type": "policy_conflict",
+      "status": "UNVALIDATED"
      },
      "evidence_requirements": [
       {
@@ -29552,24 +29658,24 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.005,
-      "load_inputs": 0.005,
-      "validate_evidence": 0.037,
-      "retrieve_memory": 0.22,
-      "computational_baseline": 0.401,
-      "llm_plan_investigation": 1.187,
-      "validate_tool_request": 0.016,
-      "execute_authorised_tool": 0.208,
-      "validate_tool_result": 0.006,
-      "llm_assess_evidence": 2.969,
-      "formulate_finding": 0.109,
-      "independent_verify": 0.147,
+      "receive_case": 0.006,
+      "load_inputs": 0.006,
+      "validate_evidence": 0.089,
+      "retrieve_memory": 0.232,
+      "computational_baseline": 0.468,
+      "llm_plan_investigation": 1.534,
+      "validate_tool_request": 0.011,
+      "execute_authorised_tool": 0.179,
+      "validate_tool_result": 0.005,
+      "llm_assess_evidence": 3.051,
+      "formulate_finding": 0.084,
+      "independent_verify": 0.164,
       "authority_check": 0.051,
-      "execute_action": 0.003,
-      "record_decision": 0.018,
-      "validate_memory_update": 0.01
+      "execute_action": 0.002,
+      "record_decision": 0.02,
+      "validate_memory_update": 0.402
      },
-     "total_ms": 5.364,
+     "total_ms": 5.882,
      "evidence": []
     },
     "governance_architecture": {
@@ -29719,6 +29825,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "PASS",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -29769,24 +29876,24 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.006,
+      "receive_case": 0.005,
       "load_inputs": 0.005,
-      "validate_evidence": 0.091,
-      "retrieve_memory": 0.213,
-      "computational_baseline": 1.064,
-      "llm_plan_investigation": 1.522,
-      "validate_tool_request": 0.009,
-      "execute_authorised_tool": 1.248,
-      "validate_tool_result": 0.004,
-      "llm_assess_evidence": 2.946,
-      "formulate_finding": 0.106,
-      "independent_verify": 0.173,
-      "authority_check": 0.107,
+      "validate_evidence": 0.088,
+      "retrieve_memory": 0.195,
+      "computational_baseline": 1.381,
+      "llm_plan_investigation": 1.521,
+      "validate_tool_request": 0.011,
+      "execute_authorised_tool": 1.304,
+      "validate_tool_result": 0.005,
+      "llm_assess_evidence": 3.159,
+      "formulate_finding": 0.083,
+      "independent_verify": 0.15,
+      "authority_check": 0.051,
       "execute_action": 0.002,
-      "record_decision": 0.022,
+      "record_decision": 0.015,
       "validate_memory_update": 0.004
      },
-     "total_ms": 7.496,
+     "total_ms": 7.96,
      "evidence": [
       {
        "metric": "telemetry.unknown_share",
@@ -30130,9 +30237,9 @@
      "consumer": "governance_architecture",
      "producer": "knowledge_policy_management",
      "finding_id": "158bc448-bc64-5233-95a4-7a3e6a3914ea",
-     "label": "CURRENT",
-     "verified": true,
-     "consumed_as": "evidence"
+     "label": "INCONCLUSIVE",
+     "verified": false,
+     "consumed_as": "context_only_unverified"
     }
    ],
    "interrupted": [],
@@ -30545,6 +30652,18 @@
      "reason": "0 established, 0 pending, 0 unverified"
     },
     {
+     "access_id": "a202e652-7888-512a-8984-6b4b277adef0",
+     "at": "2026-10-29T12:00:00+00:00",
+     "cop": "knowledge_policy_management",
+     "case_id": "e2e-1",
+     "tenant_id": "tenant-a",
+     "operation": "write",
+     "record_type": "policy_conflict",
+     "record_id": "9d112c62-7bc2-5031-abe9-707ad8f98172",
+     "outcome": "OK",
+     "reason": "UNVALIDATED"
+    },
+    {
      "access_id": "09936add-802b-552c-a438-5c0d406f03dc",
      "at": "2026-10-29T12:00:00+00:00",
      "cop": "governance_architecture",
@@ -30644,10 +30763,10 @@
    "totals": {
     "llm_calls": 21,
     "tool_calls": 59,
-    "tokens_estimated": 34118,
+    "tokens_estimated": 34126,
     "cost_usd_estimated": null,
     "unpriced_llm_calls": 21,
-    "cop_ms": 75.128
+    "cop_ms": 74.528
    },
    "security_events": [],
    "persisted_decisions": 22,
@@ -31054,6 +31173,7 @@
      "SC-02": "PASS",
      "DS-01": "PASS",
      "DS-02": "NOT_RUN",
+     "DS-03": "NOT_RUN",
      "RP-01": "PASS",
      "AU-01": "PASS",
      "PE-01": "PASS",
@@ -31124,23 +31244,23 @@
     "gated_label": null,
     "node_ms": {
      "receive_case": 0.004,
-     "load_inputs": 0.006,
-     "validate_evidence": 0.058,
-     "retrieve_memory": 0.221,
-     "computational_baseline": 0.279,
-     "llm_plan_investigation": 1.383,
-     "validate_tool_request": 0.008,
-     "execute_authorised_tool": 0.566,
-     "validate_tool_result": 0.005,
-     "llm_assess_evidence": 2.916,
-     "formulate_finding": 0.103,
-     "independent_verify": 0.223,
-     "authority_check": 0.052,
+     "load_inputs": 0.005,
+     "validate_evidence": 0.089,
+     "retrieve_memory": 0.219,
+     "computational_baseline": 0.37,
+     "llm_plan_investigation": 1.805,
+     "validate_tool_request": 0.009,
+     "execute_authorised_tool": 0.571,
+     "validate_tool_result": 0.004,
+     "llm_assess_evidence": 3.176,
+     "formulate_finding": 0.106,
+     "independent_verify": 0.224,
+     "authority_check": 0.055,
      "execute_action": 0.002,
-     "record_decision": 0.022,
-     "validate_memory_update": 0.407
+     "record_decision": 0.024,
+     "validate_memory_update": 0.34
     },
-    "total_ms": 5.826,
+    "total_ms": 6.639,
     "evidence": [
      {
       "metric": "insights.secrets",
@@ -31233,9 +31353,9 @@
    }
   ],
   "error": null,
-  "wall_ms": 465.4,
-  "cpu_ms": 385.5,
-  "max_rss_kb": 99708,
+  "wall_ms": 301.2,
+  "cpu_ms": 299.9,
+  "max_rss_kb": 99944,
   "view": {
    "order": [
     "runtime_monitoring",
@@ -31354,6 +31474,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -31387,18 +31508,18 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.012,
-      "load_inputs": 0.003,
-      "validate_evidence": 0.164,
-      "retrieve_memory": 0.445,
-      "computational_baseline": 0.475,
-      "independent_verify": 0.279,
+      "receive_case": 0.007,
+      "load_inputs": 0.001,
+      "validate_evidence": 0.093,
+      "retrieve_memory": 0.202,
+      "computational_baseline": 0.288,
+      "independent_verify": 0.196,
       "authority_check": 0.051,
-      "execute_action": 0.003,
-      "record_decision": 0.019,
+      "execute_action": 0.002,
+      "record_decision": 0.015,
       "validate_memory_update": 0.004
      },
-     "total_ms": 1.432,
+     "total_ms": 0.84,
      "evidence": [
       {
        "metric": "telemetry.collector_coverage",
@@ -31615,6 +31736,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "PASS",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -31673,24 +31795,24 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.008,
-      "load_inputs": 0.01,
-      "validate_evidence": 0.097,
-      "retrieve_memory": 0.138,
-      "computational_baseline": 0.66,
-      "llm_plan_investigation": 2.085,
-      "validate_tool_request": 0.013,
-      "execute_authorised_tool": 0.336,
-      "validate_tool_result": 0.008,
-      "llm_assess_evidence": 4.089,
-      "formulate_finding": 0.166,
-      "independent_verify": 0.191,
-      "authority_check": 0.053,
-      "execute_action": 0.003,
-      "record_decision": 0.02,
-      "validate_memory_update": 0.008
+      "receive_case": 0.005,
+      "load_inputs": 0.003,
+      "validate_evidence": 0.062,
+      "retrieve_memory": 0.193,
+      "computational_baseline": 0.419,
+      "llm_plan_investigation": 1.34,
+      "validate_tool_request": 0.01,
+      "execute_authorised_tool": 0.208,
+      "validate_tool_result": 0.005,
+      "llm_assess_evidence": 3.257,
+      "formulate_finding": 0.098,
+      "independent_verify": 0.206,
+      "authority_check": 0.055,
+      "execute_action": 0.002,
+      "record_decision": 0.019,
+      "validate_memory_update": 0.004
      },
-     "total_ms": 7.857,
+     "total_ms": 5.863,
      "evidence": [
       {
        "metric": "insights.stalled",
@@ -31863,6 +31985,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "PASS",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -31950,24 +32073,24 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.006,
+      "receive_case": 0.005,
       "load_inputs": 0.003,
       "validate_evidence": 0.039,
-      "retrieve_memory": 0.138,
-      "computational_baseline": 0.61,
-      "llm_plan_investigation": 1.328,
-      "validate_tool_request": 0.01,
-      "execute_authorised_tool": 0.23,
+      "retrieve_memory": 0.104,
+      "computational_baseline": 0.378,
+      "llm_plan_investigation": 1.245,
+      "validate_tool_request": 0.009,
+      "execute_authorised_tool": 0.251,
       "validate_tool_result": 0.005,
-      "llm_assess_evidence": 2.963,
-      "formulate_finding": 0.114,
-      "independent_verify": 0.183,
-      "authority_check": 0.056,
-      "execute_action": 0.003,
-      "record_decision": 0.023,
-      "validate_memory_update": 0.003
+      "llm_assess_evidence": 2.973,
+      "formulate_finding": 0.081,
+      "independent_verify": 0.154,
+      "authority_check": 0.054,
+      "execute_action": 0.002,
+      "record_decision": 0.022,
+      "validate_memory_update": 0.004
      },
-     "total_ms": 5.688,
+     "total_ms": 5.303,
      "evidence": []
     },
     "behavior_analytics": {
@@ -32119,6 +32242,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -32152,18 +32276,18 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.006,
-      "load_inputs": 0.006,
-      "validate_evidence": 0.097,
-      "retrieve_memory": 0.127,
-      "computational_baseline": 0.491,
-      "independent_verify": 0.271,
-      "authority_check": 0.06,
-      "execute_action": 0.002,
+      "receive_case": 0.005,
+      "load_inputs": 0.005,
+      "validate_evidence": 0.089,
+      "retrieve_memory": 0.095,
+      "computational_baseline": 0.462,
+      "independent_verify": 0.251,
+      "authority_check": 0.048,
+      "execute_action": 0.003,
       "record_decision": 0.014,
       "validate_memory_update": 0.004
      },
-     "total_ms": 1.06,
+     "total_ms": 0.958,
      "evidence": [
       {
        "metric": "insights.repetition",
@@ -32309,6 +32433,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "WARN",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -32345,24 +32470,24 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.01,
+      "receive_case": 0.004,
       "load_inputs": 0.004,
-      "validate_evidence": 0.109,
-      "retrieve_memory": 0.118,
-      "computational_baseline": 0.2,
-      "llm_plan_investigation": 1.393,
-      "validate_tool_request": 0.012,
-      "execute_authorised_tool": 0.665,
-      "validate_tool_result": 0.006,
-      "llm_assess_evidence": 3.635,
-      "formulate_finding": 0.061,
-      "independent_verify": 0.193,
-      "authority_check": 0.072,
-      "execute_action": 0.004,
-      "record_decision": 0.03,
+      "validate_evidence": 0.123,
+      "retrieve_memory": 0.082,
+      "computational_baseline": 0.168,
+      "llm_plan_investigation": 1.394,
+      "validate_tool_request": 0.01,
+      "execute_authorised_tool": 0.654,
+      "validate_tool_result": 0.005,
+      "llm_assess_evidence": 3.217,
+      "formulate_finding": 0.051,
+      "independent_verify": 0.217,
+      "authority_check": 0.058,
+      "execute_action": 0.002,
+      "record_decision": 0.019,
       "validate_memory_update": 0.004
      },
-     "total_ms": 6.482,
+     "total_ms": 5.989,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -32507,6 +32632,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -32541,17 +32667,17 @@
      "gated_label": null,
      "node_ms": {
       "receive_case": 0.006,
-      "load_inputs": 0.005,
-      "validate_evidence": 0.133,
-      "retrieve_memory": 0.155,
-      "computational_baseline": 0.738,
-      "independent_verify": 0.376,
-      "authority_check": 0.081,
+      "load_inputs": 0.004,
+      "validate_evidence": 0.079,
+      "retrieve_memory": 0.096,
+      "computational_baseline": 0.399,
+      "independent_verify": 0.188,
+      "authority_check": 0.049,
       "execute_action": 0.003,
-      "record_decision": 0.022,
-      "validate_memory_update": 0.005
+      "record_decision": 0.014,
+      "validate_memory_update": 0.004
      },
-     "total_ms": 1.497,
+     "total_ms": 0.824,
      "evidence": [
       {
        "metric": "interaction.subagent_lanes",
@@ -32665,6 +32791,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -32706,18 +32833,18 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.008,
-      "load_inputs": 0.005,
-      "validate_evidence": 0.064,
-      "retrieve_memory": 0.256,
-      "computational_baseline": 0.523,
-      "independent_verify": 0.254,
-      "authority_check": 0.07,
-      "execute_action": 0.003,
-      "record_decision": 0.02,
-      "validate_memory_update": 0.005
+      "receive_case": 0.005,
+      "load_inputs": 0.004,
+      "validate_evidence": 0.043,
+      "retrieve_memory": 0.09,
+      "computational_baseline": 0.363,
+      "independent_verify": 0.14,
+      "authority_check": 0.09,
+      "execute_action": 0.002,
+      "record_decision": 0.014,
+      "validate_memory_update": 0.003
      },
-     "total_ms": 1.183,
+     "total_ms": 0.737,
      "evidence": [
       {
        "metric": "access.first_seen_mcp",
@@ -32830,6 +32957,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -32878,18 +33006,18 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.007,
-      "load_inputs": 0.008,
-      "validate_evidence": 0.112,
-      "retrieve_memory": 0.169,
-      "computational_baseline": 0.784,
-      "independent_verify": 0.337,
-      "authority_check": 0.074,
-      "execute_action": 0.004,
-      "record_decision": 0.022,
-      "validate_memory_update": 0.005
+      "receive_case": 0.005,
+      "load_inputs": 0.005,
+      "validate_evidence": 0.085,
+      "retrieve_memory": 0.086,
+      "computational_baseline": 0.526,
+      "independent_verify": 0.282,
+      "authority_check": 0.047,
+      "execute_action": 0.002,
+      "record_decision": 0.014,
+      "validate_memory_update": 0.003
      },
-     "total_ms": 1.495,
+     "total_ms": 1.038,
      "evidence": [
       {
        "metric": "insights.blocked",
@@ -33020,6 +33148,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -33061,18 +33190,18 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.014,
-      "load_inputs": 0.004,
-      "validate_evidence": 0.075,
-      "retrieve_memory": 0.147,
-      "computational_baseline": 0.42,
-      "independent_verify": 0.289,
-      "authority_check": 0.083,
-      "execute_action": 0.003,
-      "record_decision": 0.018,
-      "validate_memory_update": 0.004
+      "receive_case": 0.004,
+      "load_inputs": 0.003,
+      "validate_evidence": 0.058,
+      "retrieve_memory": 0.097,
+      "computational_baseline": 0.311,
+      "independent_verify": 0.26,
+      "authority_check": 0.059,
+      "execute_action": 0.002,
+      "record_decision": 0.013,
+      "validate_memory_update": 0.003
      },
-     "total_ms": 1.035,
+     "total_ms": 0.794,
      "evidence": [
       {
        "metric": "insights.reverted",
@@ -33246,6 +33375,7 @@
       "SC-02": "PASS",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "WARN",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN",
@@ -33293,24 +33423,24 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.007,
-      "load_inputs": 0.013,
-      "validate_evidence": 0.091,
-      "retrieve_memory": 0.164,
-      "computational_baseline": 0.446,
-      "llm_plan_investigation": 1.884,
-      "validate_tool_request": 0.011,
-      "execute_authorised_tool": 0.452,
-      "validate_tool_result": 0.005,
-      "llm_assess_evidence": 5.296,
-      "formulate_finding": 0.127,
-      "independent_verify": 0.321,
-      "authority_check": 0.073,
-      "execute_action": 0.003,
-      "record_decision": 0.02,
-      "validate_memory_update": 0.563
+      "receive_case": 0.006,
+      "load_inputs": 0.007,
+      "validate_evidence": 0.052,
+      "retrieve_memory": 0.087,
+      "computational_baseline": 0.323,
+      "llm_plan_investigation": 1.313,
+      "validate_tool_request": 0.007,
+      "execute_authorised_tool": 0.254,
+      "validate_tool_result": 0.004,
+      "llm_assess_evidence": 3.603,
+      "formulate_finding": 0.09,
+      "independent_verify": 0.166,
+      "authority_check": 0.053,
+      "execute_action": 0.002,
+      "record_decision": 0.014,
+      "validate_memory_update": 0.366
      },
-     "total_ms": 8.893,
+     "total_ms": 5.967,
      "evidence": [
       {
        "metric": "insights.secrets",
@@ -33529,6 +33659,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "PASS",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -33587,24 +33718,24 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.007,
-      "load_inputs": 0.006,
-      "validate_evidence": 0.118,
-      "retrieve_memory": 0.224,
-      "computational_baseline": 0.354,
-      "llm_plan_investigation": 1.554,
-      "validate_tool_request": 0.017,
-      "execute_authorised_tool": 0.463,
-      "validate_tool_result": 0.006,
-      "llm_assess_evidence": 4.063,
-      "formulate_finding": 0.153,
-      "independent_verify": 0.277,
-      "authority_check": 0.163,
-      "execute_action": 0.004,
-      "record_decision": 0.035,
-      "validate_memory_update": 0.006
+      "receive_case": 0.005,
+      "load_inputs": 0.004,
+      "validate_evidence": 0.069,
+      "retrieve_memory": 0.123,
+      "computational_baseline": 0.26,
+      "llm_plan_investigation": 1.15,
+      "validate_tool_request": 0.009,
+      "execute_authorised_tool": 0.378,
+      "validate_tool_result": 0.004,
+      "llm_assess_evidence": 3.278,
+      "formulate_finding": 0.104,
+      "independent_verify": 0.232,
+      "authority_check": 0.052,
+      "execute_action": 0.003,
+      "record_decision": 0.018,
+      "validate_memory_update": 0.005
      },
-     "total_ms": 7.409,
+     "total_ms": 5.671,
      "evidence": [
       {
        "metric": "insights.secrets",
@@ -33743,6 +33874,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -33785,17 +33917,17 @@
      "gated_label": null,
      "node_ms": {
       "receive_case": 0.006,
-      "load_inputs": 0.004,
-      "validate_evidence": 0.115,
-      "retrieve_memory": 0.237,
-      "computational_baseline": 0.595,
-      "independent_verify": 0.336,
-      "authority_check": 0.064,
-      "execute_action": 0.003,
-      "record_decision": 0.021,
-      "validate_memory_update": 0.009
+      "load_inputs": 0.003,
+      "validate_evidence": 0.124,
+      "retrieve_memory": 0.148,
+      "computational_baseline": 0.449,
+      "independent_verify": 0.248,
+      "authority_check": 0.05,
+      "execute_action": 0.002,
+      "record_decision": 0.018,
+      "validate_memory_update": 0.004
      },
-     "total_ms": 1.36,
+     "total_ms": 1.03,
      "evidence": [
       {
        "metric": "insights.token_outlier",
@@ -33826,11 +33958,11 @@
     "risk_mitigation": {
      "classification": "llm",
      "origin": "llm_hypothesis",
-     "label": "LOW",
-     "status": "SUBSTANTIVE",
-     "confidence": 0.6,
-     "verified": true,
-     "rejected_candidate": null,
+     "label": "INCONCLUSIVE",
+     "status": "REJECTED_BY_VERIFIER",
+     "confidence": 0.0,
+     "verified": false,
+     "rejected_candidate": "LOW",
      "baseline": "EMERGING",
      "missing_evidence": [],
      "missing_dependencies": [],
@@ -33978,21 +34110,21 @@
      ],
      "proposed_action": {
       "cop": "risk_mitigation",
-      "action": "NONE",
-      "reason": "",
+      "action": "WATCH",
+      "reason": "candidate finding failed verification; action withdrawn",
       "target": "e2ef",
       "requires_approval": false,
-      "authority_tier": "OBSERVE",
+      "authority_tier": "RECORD",
       "authorised": true,
       "authority_reason": "",
       "approval": null,
       "execution_status": "NOT_EXECUTED_NO_ACTION",
       "execution_outcome": null,
-      "requested_action": "NONE",
+      "requested_action": "WATCH",
       "original_proposal": {
-       "action": "NONE",
-       "reason": "",
-       "authority_tier": "OBSERVE"
+       "action": "WATCH",
+       "reason": "candidate finding failed verification; action withdrawn",
+       "authority_tier": "RECORD"
       },
       "original_verification": {
        "check_id": "AU-01",
@@ -34008,7 +34140,7 @@
       },
       "corrected_proposal": null,
       "final_authority": {
-       "action": "NONE",
+       "action": "WATCH",
        "authorised": true,
        "checks": [
         {
@@ -34027,8 +34159,8 @@
        "execution_status": "NOT_EXECUTED_NO_ACTION"
       }
      },
-     "action": "NONE",
-     "requested_action": "NONE",
+     "action": "WATCH",
+     "requested_action": "WATCH",
      "execution_status": "NOT_EXECUTED_NO_ACTION",
      "verifier": {
       "EV-01": "PASS",
@@ -34040,11 +34172,15 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "FAIL",
       "RP-01": "WARN",
       "AU-01": "PASS",
-      "PE-01": "NOT_RUN"
+      "PE-01": "NOT_RUN",
+      "MU-01": "PASS"
      },
-     "verifier_fail": [],
+     "verifier_fail": [
+      "DS-03"
+     ],
      "llm_calls": 2,
      "llm_purposes": [
       "plan",
@@ -34084,8 +34220,10 @@
      ],
      "security_events": [],
      "memory_write": {
-      "written": false,
-      "reason": "nothing to remember (SUBSTANTIVE, LOW)"
+      "written": true,
+      "record_id": "07ea1205-8b0c-5f51-9afe-c40b02f7ff56",
+      "record_type": "mitigation_outcome",
+      "status": "UNVALIDATED"
      },
      "evidence_requirements": [
       {
@@ -34098,24 +34236,24 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.008,
-      "load_inputs": 0.008,
-      "validate_evidence": 0.1,
-      "retrieve_memory": 0.274,
-      "computational_baseline": 0.547,
-      "llm_plan_investigation": 2.092,
-      "validate_tool_request": 0.012,
-      "execute_authorised_tool": 0.242,
-      "validate_tool_result": 0.006,
-      "llm_assess_evidence": 4.591,
-      "formulate_finding": 0.157,
-      "independent_verify": 0.376,
-      "authority_check": 0.088,
+      "receive_case": 0.007,
+      "load_inputs": 0.037,
+      "validate_evidence": 0.075,
+      "retrieve_memory": 0.145,
+      "computational_baseline": 0.349,
+      "llm_plan_investigation": 1.532,
+      "validate_tool_request": 0.01,
+      "execute_authorised_tool": 0.162,
+      "validate_tool_result": 0.005,
+      "llm_assess_evidence": 3.27,
+      "formulate_finding": 0.103,
+      "independent_verify": 0.295,
+      "authority_check": 0.071,
       "execute_action": 0.003,
-      "record_decision": 0.026,
-      "validate_memory_update": 0.006
+      "record_decision": 0.019,
+      "validate_memory_update": 0.458
      },
-     "total_ms": 8.504,
+     "total_ms": 6.064,
      "evidence": [
       {
        "metric": "insights.secrets",
@@ -34280,6 +34418,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "PASS",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -34331,24 +34470,24 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.011,
-      "load_inputs": 0.007,
-      "validate_evidence": 0.051,
-      "retrieve_memory": 0.221,
-      "computational_baseline": 7.198,
-      "llm_plan_investigation": 1.736,
-      "validate_tool_request": 0.014,
-      "execute_authorised_tool": 4.621,
-      "validate_tool_result": 0.016,
-      "llm_assess_evidence": 4.255,
-      "formulate_finding": 0.137,
-      "independent_verify": 0.19,
-      "authority_check": 0.08,
-      "execute_action": 0.004,
-      "record_decision": 0.027,
-      "validate_memory_update": 0.006
+      "receive_case": 0.006,
+      "load_inputs": 0.005,
+      "validate_evidence": 0.048,
+      "retrieve_memory": 0.156,
+      "computational_baseline": 4.669,
+      "llm_plan_investigation": 1.221,
+      "validate_tool_request": 0.01,
+      "execute_authorised_tool": 3.104,
+      "validate_tool_result": 0.004,
+      "llm_assess_evidence": 3.167,
+      "formulate_finding": 0.084,
+      "independent_verify": 0.229,
+      "authority_check": 0.052,
+      "execute_action": 0.003,
+      "record_decision": 0.015,
+      "validate_memory_update": 0.005
      },
-     "total_ms": 18.541,
+     "total_ms": 12.758,
      "evidence": []
     },
     "workload_optimization": {
@@ -34546,6 +34685,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "PASS",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -34604,24 +34744,24 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.007,
-      "load_inputs": 0.006,
-      "validate_evidence": 0.102,
-      "retrieve_memory": 0.233,
-      "computational_baseline": 0.595,
-      "llm_plan_investigation": 1.63,
-      "validate_tool_request": 0.014,
-      "execute_authorised_tool": 0.226,
-      "validate_tool_result": 0.007,
-      "llm_assess_evidence": 4.219,
-      "formulate_finding": 0.182,
-      "independent_verify": 0.315,
-      "authority_check": 0.07,
-      "execute_action": 0.004,
-      "record_decision": 0.024,
-      "validate_memory_update": 0.009
+      "receive_case": 0.005,
+      "load_inputs": 0.005,
+      "validate_evidence": 0.085,
+      "retrieve_memory": 0.177,
+      "computational_baseline": 0.332,
+      "llm_plan_investigation": 1.091,
+      "validate_tool_request": 0.008,
+      "execute_authorised_tool": 0.21,
+      "validate_tool_result": 0.004,
+      "llm_assess_evidence": 3.096,
+      "formulate_finding": 0.101,
+      "independent_verify": 0.284,
+      "authority_check": 0.051,
+      "execute_action": 0.002,
+      "record_decision": 0.017,
+      "validate_memory_update": 0.004
      },
-     "total_ms": 7.61,
+     "total_ms": 5.451,
      "evidence": [
       {
        "metric": "insights.repetition",
@@ -34760,6 +34900,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "NOT_RUN",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -34793,18 +34934,18 @@
      "evidence_requirements": [],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.007,
-      "load_inputs": 0.051,
-      "validate_evidence": 0.09,
-      "retrieve_memory": 0.247,
-      "computational_baseline": 0.57,
-      "independent_verify": 0.282,
-      "authority_check": 0.08,
-      "execute_action": 0.003,
-      "record_decision": 0.063,
-      "validate_memory_update": 0.006
+      "receive_case": 0.005,
+      "load_inputs": 0.005,
+      "validate_evidence": 0.077,
+      "retrieve_memory": 0.15,
+      "computational_baseline": 0.36,
+      "independent_verify": 0.179,
+      "authority_check": 0.05,
+      "execute_action": 0.002,
+      "record_decision": 0.013,
+      "validate_memory_update": 0.003
      },
-     "total_ms": 1.33,
+     "total_ms": 0.828,
      "evidence": [
       {
        "metric": "insights.unattributed",
@@ -34965,6 +35106,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "PASS",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -35037,24 +35179,24 @@
      ],
      "gated_label": null,
      "node_ms": {
-      "receive_case": 0.007,
-      "load_inputs": 0.006,
-      "validate_evidence": 0.04,
-      "retrieve_memory": 0.219,
-      "computational_baseline": 0.506,
-      "llm_plan_investigation": 1.97,
-      "validate_tool_request": 0.066,
-      "execute_authorised_tool": 0.182,
-      "validate_tool_result": 0.008,
-      "llm_assess_evidence": 4.708,
-      "formulate_finding": 0.14,
-      "independent_verify": 0.222,
-      "authority_check": 0.066,
+      "receive_case": 0.004,
+      "load_inputs": 0.004,
+      "validate_evidence": 0.028,
+      "retrieve_memory": 0.182,
+      "computational_baseline": 0.309,
+      "llm_plan_investigation": 1.247,
+      "validate_tool_request": 0.011,
+      "execute_authorised_tool": 0.126,
+      "validate_tool_result": 0.005,
+      "llm_assess_evidence": 3.377,
+      "formulate_finding": 0.086,
+      "independent_verify": 0.168,
+      "authority_check": 0.051,
       "execute_action": 0.003,
-      "record_decision": 0.021,
-      "validate_memory_update": 0.008
+      "record_decision": 0.018,
+      "validate_memory_update": 0.004
      },
-     "total_ms": 8.143,
+     "total_ms": 5.601,
      "evidence": []
     },
     "governance_architecture": {
@@ -35204,6 +35346,7 @@
       "SC-02": "NOT_RUN",
       "DS-01": "PASS",
       "DS-02": "NOT_RUN",
+      "DS-03": "PASS",
       "RP-01": "PASS",
       "AU-01": "PASS",
       "PE-01": "NOT_RUN"
@@ -35256,22 +35399,22 @@
      "node_ms": {
       "receive_case": 0.005,
       "load_inputs": 0.005,
-      "validate_evidence": 0.077,
-      "retrieve_memory": 0.174,
-      "computational_baseline": 1.168,
-      "llm_plan_investigation": 158.484,
+      "validate_evidence": 0.052,
+      "retrieve_memory": 0.153,
+      "computational_baseline": 1.128,
+      "llm_plan_investigation": 70.647,
       "validate_tool_request": 0.013,
-      "execute_authorised_tool": 1.42,
+      "execute_authorised_tool": 1.325,
       "validate_tool_result": 0.005,
-      "llm_assess_evidence": 3.367,
-      "formulate_finding": 0.111,
-      "independent_verify": 0.201,
-      "authority_check": 0.081,
-      "execute_action": 0.003,
-      "record_decision": 0.02,
+      "llm_assess_evidence": 3.263,
+      "formulate_finding": 0.084,
+      "independent_verify": 0.199,
+      "authority_check": 0.053,
+      "execute_action": 0.002,
+      "record_decision": 0.019,
       "validate_memory_update": 0.004
      },
-     "total_ms": 165.114,
+     "total_ms": 76.934,
      "evidence": [
       {
        "metric": "telemetry.unknown_share",
@@ -35922,6 +36065,18 @@
      "reason": "0 established, 1 pending, 0 unverified"
     },
     {
+     "access_id": "2bf3222a-1c0a-5684-bbf2-bcd48d345b3d",
+     "at": "2026-10-29T12:00:00+00:00",
+     "cop": "risk_mitigation",
+     "case_id": "e2e-full",
+     "tenant_id": "tenant-a",
+     "operation": "write",
+     "record_type": "mitigation_outcome",
+     "record_id": "07ea1205-8b0c-5f51-9afe-c40b02f7ff56",
+     "outcome": "OK",
+     "reason": "UNVALIDATED"
+    },
+    {
      "access_id": "cd9daebd-81b7-5f39-8bb1-58c922431aac",
      "at": "2026-10-29T12:00:00+00:00",
      "cop": "governance_intelligence",
@@ -35985,10 +36140,10 @@
    "totals": {
     "llm_calls": 21,
     "tool_calls": 57,
-    "tokens_estimated": 32340,
+    "tokens_estimated": 32344,
     "cost_usd_estimated": null,
     "unpriced_llm_calls": 21,
-    "cop_ms": 254.633
+    "cop_ms": 142.65
    },
    "security_events": [],
    "persisted_decisions": 18,
