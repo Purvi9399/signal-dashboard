@@ -348,7 +348,9 @@ def run_one(case, provider, budget, store=None):
         "invocations": [{k: i.get(k) for k in (
             "invocation_id", "purpose", "provider", "model", "model_version", "simulated", "input_tokens",
             "output_tokens", "tokens_measured", "latency_ms", "cost_usd", "cost_basis", "request_id",
-            "stop_reason", "error", "retry_count", "validation")} for i in inv],
+            "stop_reason", "error", "retry_count", "validation", "structured_response")} for i in inv],
+        "verifier_results": [{k: x.get(k) for k in ("check_id", "result", "reason_code", "detail", "subject")}
+                             for x in (out.get("results") or {}).get(case["cop"], {}).get("verifier_results", [])],
     }
 
 

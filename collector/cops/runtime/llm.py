@@ -58,17 +58,26 @@ class ToolRequestOut(Strict):
 
 
 class ClaimOut(Strict):
+    # The descriptions travel to the provider in the wire schema; every claim is checked against them.
     statement: str
     kind: Literal[CLAIM_KINDS]  # type: ignore[valid-type]
-    metric_id: Optional[str] = None
-    asserted_state: Optional[str] = None
-    asserted_value: Any = None
-    tool_call_id: Optional[str] = None
-    result_field: Optional[str] = None
-    record_id: Optional[str] = None
-    upstream_cop: Optional[str] = None
-    upstream_label: Optional[str] = None
-    evidence_refs: list[str] = Field(default_factory=list)
+    metric_id: Optional[str] = Field(None, description="For metric_state and metric_value: a metric id "
+                                     "from the evidence rows.")
+    asserted_state: Optional[str] = Field(None, description="For metric_state: the row's state, exactly.")
+    asserted_value: Any = Field(None, description="For metric_value and tool_observation: the exact value "
+                                "you rely on (the metric row's value, or the value at result_field in the "
+                                "tool result). Required for those kinds: a claim without it cannot be "
+                                "checked and is rejected.")
+    tool_call_id: Optional[str] = Field(None, description="For tool_observation: the tool_call_id of a "
+                                        "result in tool_results.")
+    result_field: Optional[str] = Field(None, description="For tool_observation: the key in that tool "
+                                        "result: dotted for nested keys, with list positions as 'list.0.field' or 'list[0].field'.")
+    record_id: Optional[str] = Field(None, description="For memory_precedent: an established record id.")
+    upstream_cop: Optional[str] = Field(None, description="For upstream_finding: the upstream COP key.")
+    upstream_label: Optional[str] = Field(None, description="For upstream_finding: its label, exactly.")
+    evidence_refs: list[str] = Field(default_factory=list, description="Optional extra references, each "
+                                     "'metric:<metric_id>' or 'tool:<tool_call_id>'. Leave the list empty "
+                                     "rather than adding an empty string.")
 
 
 class CandidateFindingOut(Strict):
@@ -257,7 +266,12 @@ class AnthropicProvider:
 _DROP = ("title", "default", "minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum",
          "multipleOf", "minLength", "maxLength", "maxItems", "pattern")
 _JSON_TEXT = "A JSON object, encoded as a string."
-_SCALAR = {"anyOf": [{"type": "string"}, {"type": "number"}, {"type": "boolean"}, {"type": "null"}]}
+_JSON_VALUE = ("Any JSON value (number, string, list, object, true/false or null), encoded as a string, "
+               "e.g. \"40.0\", \"[\\\"C1\\\"]\" or \"null\".")
+
+
+def _untyped(node):
+    return isinstance(node, dict) and (node == {} or set(node) <= {"title", "default", "description"})
 
 
 def _free_object(node):
@@ -272,7 +286,9 @@ def wire_schema(schema):
       still enforces them on the decoded reply);
     - an open object (tool args, the COP detail) becomes a JSON-encoded string,
       since every object on the wire must set additionalProperties false;
-    - an untyped value (asserted_value) becomes a scalar.
+    - an untyped value (asserted_value) becomes a required JSON-encoded string:
+      in the first live runs an optional value was left null on tool
+      observations, which made the claim uncheckable.
     """
     import copy
 
@@ -283,9 +299,23 @@ def wire_schema(schema):
             return n
         if _free_object(n):
             return {"type": "string", "description": _JSON_TEXT}
-        if n == {} or set(n) <= {"title", "default", "description"}:
-            return {**_SCALAR, **({"description": n["description"]} if "description" in n else {})}
+        if _untyped(n):
+            return {"type": "string", "description": (n.get("description", "") + " " if n.get("description")
+                                                      else "") + _JSON_VALUE}
         out = {k: walk(v) for k, v in n.items() if k not in _DROP}
+        if isinstance(n.get("properties"), dict):
+            forced = [k for k, v in n["properties"].items() if _untyped(v)]
+            if forced:
+                out["required"] = list(dict.fromkeys(list(out.get("required", [])) + forced))
+        # A dropped bound still holds: say it in words, since the reply is validated against it.
+        said = [f"at most {n['maxItems']} items" if "maxItems" in n else "",
+                f"minimum {n['minimum']}" if "minimum" in n else "",
+                f"maximum {n['maximum']}" if "maximum" in n else "",
+                f"at most {n['maxLength']} characters" if "maxLength" in n else ""]
+        said = "; ".join(x for x in said if x)
+        if said:
+            out["description"] = (out.get("description", "") + " " if out.get("description") else "") + \
+                f"Must hold: {said}."
         if out.get("type") == "array" and out.get("minItems", 0) > 1:
             out.pop("minItems")
         if out.get("type") == "object":
@@ -307,11 +337,12 @@ def decode_wire(schema, data):
 
     def walk(n, v):
         n = resolve(n)
-        if _free_object(n) and isinstance(v, str):
+        if (_free_object(n) or _untyped(n)) and isinstance(v, str):
             try:
                 return json.loads(v)
             except json.JSONDecodeError:
-                return v
+                return v                       # an object field that does not parse fails pydantic;
+                                               # an untyped one stays a plain string
         if isinstance(v, dict) and "properties" in n:
             return {k: walk(n["properties"].get(k, {}), x) for k, x in v.items()}
         if isinstance(v, list) and "items" in n:

@@ -116,6 +116,9 @@ Rules that hold for every COP:
 - Every claim must cite what it rests on: metric_id and asserted_state for a metric row,
   tool_call_id and result_field for a tool result, record_id for a memory record, upstream_cop and
   upstream_label for an upstream finding. Claims are checked independently against that data.
+- A metric_value or tool_observation claim must put the exact value it relies on in asserted_value
+  (the value of result_field, or of the metric row). A claim without one cannot be checked and is
+  rejected.
 - Only memory in "established" is precedent. "verified_pending" and "unverified" are not
   established truth and must not be cited as precedent.
 - UNKNOWN means could not be observed; NOT_APPLICABLE means the condition did not arise; MISSING

@@ -301,3 +301,28 @@ def test_case_recovers_from_its_checkpoint_after_a_crash(tmp_path):
     assert set(out["results"]) == set(cops)
     assert {c for c, _ in seen} == {"incident_response"}   # finished COPs were not re-asked
     assert out["results"]["anomaly_detection"]["finding"]["label"] == "INCONCLUSIVE"
+
+
+def test_dropped_bounds_are_stated_in_the_wire_descriptions():
+    # first live call (2026-11-02): the model asked for five tools when four are allowed,
+    # because maxItems is not sent; the bound now travels as text and is still enforced
+    plan = wire("plan")
+    assert "at most 4 items" in plan["properties"]["tool_requests"]["description"]
+    conf = wire("assess")["$defs"]["CandidateFindingOut"]["properties"]["confidence"]
+    assert "minimum 0.0" in conf["description"] and "maximum 1.0" in conf["description"]
+    with pytest.raises(Exception):
+        SCHEMAS["plan"].model_validate({**plan_wire(), "tool_requests": [
+            {"tool": "t", "args": {}, "purpose": "p"}] * 5})
+
+
+def test_asserted_value_travels_as_a_required_json_string():
+    w = wire("assess")["$defs"]["ClaimOut"]
+    assert "asserted_value" in w["required"] and w["properties"]["asserted_value"]["type"] == "string"
+    schema = _strip_titles(SCHEMAS["assess"].model_json_schema())
+    claims = [{"statement": "s", "kind": "tool_observation", "asserted_value": v}
+              for v in ("40.0", '["C1"]', "null", "not json")]
+    reply = {"hypothesis": "h", "hypothesis_changed": False, "decision": "conclude",
+             "finding": {"label": "L", "confidence": 0.5, "claims": claims, "rationale": "r",
+                         "proposed_action": "NONE"}}
+    got = SCHEMAS["assess"].model_validate(decode_wire(schema, reply)).finding.claims
+    assert [c.asserted_value for c in got] == [40.0, ["C1"], None, "not json"]

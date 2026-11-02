@@ -118,10 +118,10 @@ def markdown(rs, live):
         find = ", ".join(f"{k} x{v}" for k, v in sorted(r["offline_findings"].items()))
         scen = f"{r['offline_scenarios']} offline" + (f" + {r['live_cases']} live" if llm and r["live_cases"]
                                                        else (" + 3 live (not run)" if llm else ""))
+        if llm:
+            find += " (simulated)"
         if llm and r["live_cases"]:
             find += "; live: " + ", ".join(f"{k}={v}" for k, v in r["live_findings"].items())
-        elif llm:
-            find += " (simulated)"
         ver = (f"{r['offline_verified']} verified, {r['offline_rejected']} rejected, "
                f"{r['offline_inconclusive']} inconclusive")
         if llm and r["live_cases"]:

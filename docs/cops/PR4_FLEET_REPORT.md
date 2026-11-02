@@ -1,16 +1,16 @@
 # PR #4: fleet completion report
 
-Branch `feat/cops-langgraph-runtime` of `Purvi9399/signal-dashboard`, 2026-11-02. Nothing has been pushed. GitHub still shows `8a45418`. Two local commits sit on top of it: `3e53680`, the five acceptance fixes, and the commit that adds this report.
+Branch `feat/cops-langgraph-runtime` of `Purvi9399/signal-dashboard`, 2026-11-02. Nothing has been pushed. GitHub still shows `8a45418`. Local commits on top of it: `3e53680` (the five acceptance fixes), `503e632` (this work), `313f17a` (scoring of a refused live attempt) and the commit that adds the live results.
 
 ## Status
 
 | Item | Result |
 |---|---|
 | Implementation | All 18 COPs pass every check in `fleet_report.implementation_status`: every node of the shared subgraph, a rule, registered tools, and for the 10 LLM COPs a prompt, a detail schema and tools. The split is 10 LLM and 8 deterministic, unchanged. |
-| Offline tests | **244 passed, 0 failed, 1 skipped** (real pytest). The skipped test is the opt-in live smoke test. |
+| Offline tests | **249 passed, 0 failed, 1 skipped** (real pytest). The skipped test is the opt-in live smoke test. |
 | Evaluation scenarios | **25 of 25 pass**, 121 of 121 expectations. LLM replies in them are scripted, so every LLM record is `simulated=True`. |
-| Real LLM calls completed | **0 successful.** A live attempt on 2026-11-02 sent 30 real requests, and the provider refused all 30 with `400 invalid_request_error: Your credit balance is too low`. No tokens were used and nothing was charged. No live finding exists, and no live result is claimed. The record is in `docs/cops/evaluation/live_attempt_2026-11-02.json`. |
-| Live harness | Built, and dry-checked offline on all 30 cases. Every record was verified as simulated, and no problems were found. |
+| Real LLM calls completed | **60 in the full live run**, 2 per case across 30 cases. Every call succeeded, and all 60 records were verified: `simulated=False`, provider `anthropic`, the model id, measured tokens, a request id and latency. Usage was 232,423 input and 80,123 output tokens, **$1.27**, and 594 s spent in model calls. With the smoke runs before it (about $0.43), the total is **about $1.70 of the $5 cap**. An earlier attempt was refused for lack of credits ($0, `live_attempt_2026-11-02.json`). |
+| Live ground-truth agreement | **21 of 30 agree, 8 inconclusive, 1 false positive, 0 missed findings, 0 unsupported quiet labels.** Results are in `docs/cops/evaluation/live_results.json` and `LIVE_RESULTS.md`. |
 
 ## 1. Audit
 
@@ -70,11 +70,11 @@ They are verified on the local branch. They are not on GitHub until a push.
 
 ```
 python3 -m pytest -p no:cacheprovider tests/ -q -rs
-244 passed, 1 skipped
+249 passed, 1 skipped
 SKIPPED tests/test_runtime_llm.py:169: opt-in live smoke test: needs COPS_LLM_LIVE=1, COPS_LLM_DATA_APPROVED=1, COPS_MODEL and credentials
 ```
 
-That is 48 more than the 196 at `3e53680`. 28 are in `test_runtime_live_path.py`, 18 in `test_runtime_live_eval.py`, and 2 are DS-03 tests in `test_runtime_verifiers.py`.
+That is 53 more than the 196 at `3e53680`: 30 in `test_runtime_live_path.py`, 18 in `test_runtime_live_eval.py`, and 5 in `test_runtime_verifiers.py`. The 5 are two DS-03 tests, the unchecked-value test and two path tests, and three of them come from live-run findings.
 
 | Requested area | Tests |
 |---|---|
@@ -104,108 +104,93 @@ The uncovered part of `live_eval.py` is mainly the live branch of `main` and the
 | COP | Implementation | Type | Test scenarios | Findings | Verification | Failures | Latency | Token usage | Cost |
 |---|---|---|---|---|---|---|---|---|---|
 | `runtime_monitoring` | complete | deterministic | 23 offline | DEGRADED x1, INSUFFICIENT x1, SUFFICIENT x21 | 23 verified, 0 rejected, 0 inconclusive | 0 | median 1 ms per run | none (no model call) | $0 (no model call) |
-| `workflow_orchestration` | complete | LLM | 5 offline + 3 live (not run) | INCONCLUSIVE x2, NORMAL x2, STALLED x1 (simulated) | 3 verified, 2 rejected, 0 inconclusive | 0 | median 9 ms per run (simulated) | 10 simulated calls, estimated only; live not run | live not run |
-| `context_memory` | complete | LLM | 4 offline + 3 live (not run) | CONTEXT_LOSS x2, CONTEXT_OK x1, INCONCLUSIVE x1 (simulated) | 3 verified, 0 rejected, 1 inconclusive | 0 | median 6 ms per run (simulated) | 10 simulated calls, estimated only; live not run | live not run |
-| `behavior_analytics` | complete | deterministic | 6 offline | DRIFTING x1, INCONCLUSIVE x1, POOR_RECOVERY x1, STABLE x3 | 5 verified, 1 rejected, 0 inconclusive | 0 | median 2 ms per run | none (no model call) | $0 (no model call) |
-| `anomaly_detection` | complete | LLM | 14 offline + 3 live (not run) | ANOMALOUS x4, INCONCLUSIVE x4, INDETERMINATE x2, NORMAL x4 (simulated) | 10 verified, 3 rejected, 1 inconclusive | 0 | median 6 ms per run (simulated) | 31 simulated calls, estimated only; live not run | live not run |
+| `workflow_orchestration` | complete | LLM | 5 offline + 3 live | INCONCLUSIVE x2, NORMAL x2, STALLED x1 (simulated); live: normal=NORMAL, abnormal=INCONCLUSIVE, missing=INCONCLUSIVE | 3 verified, 2 rejected, 0 inconclusive; live 1/3 verified | 0; live: 0 call errors, disagreed on abnormal | median 6 ms per run (simulated); live 55472 ms in model calls | live 23767 in / 6848 out | $0.1160 (configured price x measured tokens) |
+| `context_memory` | complete | LLM | 4 offline + 3 live | CONTEXT_LOSS x2, CONTEXT_OK x1, INCONCLUSIVE x1 (simulated); live: normal=CONTEXT_OK, abnormal=CONTEXT_LOSS, missing=INCONCLUSIVE | 3 verified, 0 rejected, 1 inconclusive; live 2/3 verified | 0; live: 0 call errors, disagreed on none | median 6 ms per run (simulated); live 41836 ms in model calls | live 19584 in / 5160 out | $0.0908 (configured price x measured tokens) |
+| `behavior_analytics` | complete | deterministic | 6 offline | DRIFTING x1, INCONCLUSIVE x1, POOR_RECOVERY x1, STABLE x3 | 5 verified, 1 rejected, 0 inconclusive | 0 | median 1 ms per run | none (no model call) | $0 (no model call) |
+| `anomaly_detection` | complete | LLM | 14 offline + 3 live | ANOMALOUS x4, INCONCLUSIVE x4, INDETERMINATE x2, NORMAL x4 (simulated); live: normal=NORMAL, abnormal=ANOMALOUS, missing=INCONCLUSIVE | 10 verified, 3 rejected, 1 inconclusive; live 2/3 verified | 0; live: 0 call errors, disagreed on none | median 6 ms per run (simulated); live 70099 ms in model calls | live 25754 in / 10046 out | $0.1520 (configured price x measured tokens) |
 | `interaction_discovery` | complete | deterministic | 7 offline | CONTAINED x6, NEW_ROUTE x1 | 7 verified, 0 rejected, 0 inconclusive | 0 | median 1 ms per run | none (no model call) | $0 (no model call) |
 | `agent_lifecycle_management` | complete | deterministic | 3 offline | CHANGED x1, UNCHANGED x2 | 3 verified, 0 rejected, 0 inconclusive | 0 | median 1 ms per run | none (no model call) | $0 (no model call) |
 | `policy_enforcement` | complete | deterministic | 8 offline | ALLOWED x2, UNCERTAIN x1, VIOLATION x5 | 8 verified, 0 rejected, 0 inconclusive | 0 | median 2 ms per run | none (no model call) | $0 (no model call) |
 | `recovery_resilience` | complete | deterministic | 4 offline | FAILED_RECOVERY x1, INCONCLUSIVE x1, RECOVERED x2 | 3 verified, 0 rejected, 0 inconclusive | 0 | median 1 ms per run | none (no model call) | $0 (no model call) |
-| `incident_response` | complete | LLM | 10 offline + 3 live (not run) | INCIDENT x6, INCONCLUSIVE x1, NO_INCIDENT x1, WATCH x2 (simulated) | 9 verified, 1 rejected, 0 inconclusive | 0 | median 9 ms per run (simulated) | 25 simulated calls, estimated only; live not run | live not run |
-| `classification_tagging` | complete | LLM | 3 offline + 3 live (not run) | INCONCLUSIVE x1, INTEGRITY x1, UNCLASSIFIED x1 (simulated) | 2 verified, 0 rejected, 1 inconclusive | 0 | median 6 ms per run (simulated) | 6 simulated calls, estimated only; live not run | live not run |
+| `incident_response` | complete | LLM | 10 offline + 3 live | INCIDENT x6, INCONCLUSIVE x1, NO_INCIDENT x1, WATCH x2 (simulated); live: normal=NO_INCIDENT, abnormal=INCIDENT, missing=INCONCLUSIVE | 9 verified, 1 rejected, 0 inconclusive; live 2/3 verified | 0; live: 0 call errors, disagreed on none | median 7 ms per run (simulated); live 67718 ms in model calls | live 25281 in / 9652 out | $0.1471 (configured price x measured tokens) |
+| `classification_tagging` | complete | LLM | 3 offline + 3 live | INCONCLUSIVE x1, INTEGRITY x1, UNCLASSIFIED x1 (simulated); live: normal=INCONCLUSIVE, abnormal=INTEGRITY, missing=INCONCLUSIVE | 2 verified, 0 rejected, 1 inconclusive; live 1/3 verified | 0; live: 0 call errors, disagreed on normal | median 6 ms per run (simulated); live 56049 ms in model calls | live 21448 in / 6981 out | $0.1127 (configured price x measured tokens) |
 | `resource_management` | complete | deterministic | 6 offline | EXCESSIVE x1, INCONCLUSIVE x4, NORMAL x1 | 2 verified, 0 rejected, 0 inconclusive | 0 | median 1 ms per run | none (no model call) | $0 (no model call) |
-| `risk_mitigation` | complete | LLM | 3 offline + 3 live (not run) | EMERGING x2, INCONCLUSIVE x1 (simulated) | 2 verified, 1 rejected, 0 inconclusive | 0 | median 7 ms per run (simulated) | 6 simulated calls, estimated only; live not run | live not run |
-| `governance_intelligence` | complete | LLM | 3 offline + 3 live (not run) | INCONCLUSIVE x1, NO_PATTERN x2 (simulated) | 2 verified, 0 rejected, 1 inconclusive | 0 | median 13 ms per run (simulated) | 6 simulated calls, estimated only; live not run | live not run |
-| `workload_optimization` | complete | LLM | 4 offline + 3 live (not run) | EFFICIENT x1, INCONCLUSIVE x3 (simulated) | 1 verified, 2 rejected, 1 inconclusive | 0 | median 6 ms per run (simulated) | 8 simulated calls, estimated only; live not run | live not run |
+| `risk_mitigation` | complete | LLM | 3 offline + 3 live | EMERGING x2, INCONCLUSIVE x1 (simulated); live: normal=INCONCLUSIVE, abnormal=EMERGING, missing=INCONCLUSIVE | 2 verified, 1 rejected, 0 inconclusive; live 1/3 verified | 0; live: 0 call errors, disagreed on normal | median 7 ms per run (simulated); live 63539 ms in model calls | live 23944 in / 8725 out | $0.1351 (configured price x measured tokens) |
+| `governance_intelligence` | complete | LLM | 3 offline + 3 live | INCONCLUSIVE x1, NO_PATTERN x2 (simulated); live: normal=INCONCLUSIVE, abnormal=INCONCLUSIVE, missing=INCONCLUSIVE | 2 verified, 0 rejected, 1 inconclusive; live 0/3 verified | 0; live: 0 call errors, disagreed on normal, abnormal | median 11 ms per run (simulated); live 57800 ms in model calls | live 19830 in / 7358 out | $0.1132 (configured price x measured tokens) |
+| `workload_optimization` | complete | LLM | 4 offline + 3 live | EFFICIENT x1, INCONCLUSIVE x3 (simulated); live: normal=EFFICIENT, abnormal=INCONCLUSIVE, missing=INCONCLUSIVE | 1 verified, 2 rejected, 1 inconclusive; live 1/3 verified | 0; live: 0 call errors, disagreed on abnormal | median 7 ms per run (simulated); live 62333 ms in model calls | live 21344 in / 8612 out | $0.1288 (configured price x measured tokens) |
 | `audit_traceability` | complete | deterministic | 3 offline | COMPLETE x3 | 3 verified, 0 rejected, 0 inconclusive | 0 | median 1 ms per run | none (no model call) | $0 (no model call) |
-| `knowledge_policy_management` | complete | LLM | 2 offline + 3 live (not run) | CURRENT x1, INCONCLUSIVE x1 (simulated) | 1 verified, 1 rejected, 0 inconclusive | 0 | median 8 ms per run (simulated) | 4 simulated calls, estimated only; live not run | live not run |
-| `governance_architecture` | complete | LLM | 4 offline + 3 live (not run) | ADEQUATE x3, GAP x1 (simulated) | 4 verified, 0 rejected, 0 inconclusive | 0 | median 11 ms per run (simulated) | 8 simulated calls, estimated only; live not run | live not run |
+| `knowledge_policy_management` | complete | LLM | 2 offline + 3 live | CURRENT x1, INCONCLUSIVE x1 (simulated); live: normal=CURRENT, abnormal=INCONCLUSIVE, missing=INCONCLUSIVE | 1 verified, 1 rejected, 0 inconclusive; live 1/3 verified | 0; live: 0 call errors, disagreed on abnormal | median 6 ms per run (simulated); live 41504 ms in model calls | live 18679 in / 5304 out | $0.0904 (configured price x measured tokens) |
+| `governance_architecture` | complete | LLM | 4 offline + 3 live | ADEQUATE x3, GAP x1 (simulated); live: normal=GAP, abnormal=INCONCLUSIVE, missing=INCONCLUSIVE | 4 verified, 0 rejected, 0 inconclusive; live 1/3 verified | 0; live: 0 call errors, disagreed on normal, abnormal | median 8 ms per run (simulated); live 78004 ms in model calls | live 32792 in / 11437 out | $0.1800 (configured price x measured tokens) |
 
 How to read it:
 
-- The token and cost columns for LLM COPs stay `live not run` until a live run writes `docs/cops/evaluation/live_results.json`. Then `python -m cops.runtime.fleet_report` fills them from measured usage.
-- Offline LLM findings come from scripted replies. They show the harness working, not a model's judgement.
+- For LLM COPs, the live columns come from the full live run: measured tokens, configured price × measured tokens, and time spent in model calls.
+- Offline LLM findings come from scripted replies and are marked "(simulated)". They show the harness working, not a model's judgement.
 - The failures column counts failed scenario expectations. It is 0 for every COP.
 
 ## 5. Other results
 
 ### Real LLM calls
 
-**0 successful.** On 2026-11-02 the run was started with purvi's choice of model and a $5 total cap. Each of the 30 cases made one real request. The provider rejected every one with `400 invalid_request_error: Your credit balance is too low to access the Anthropic API`, and each request has its request id recorded. Usage was 0 tokens and $0. Every COP's finding was INCONCLUSIVE, and no scripted reply was substituted.
+**The full run (2026-11-02):** 30 cases on the chosen model with dry-run enforcement. That made 60 real calls with 0 errors, 232,423 input and 80,123 output tokens, and cost $1.27 at the configured price. All 60 records passed `verify_records`.
 
-The attempt exposed two harness flaws, both now fixed and tested in `test_a_provider_that_refuses_every_call_is_never_counted_as_agreement`:
+**Before the full run,** five single-case and two-case smoke runs cost about $0.43. Each exposed a gap, which was fixed and tested before going on:
 
-- The 10 missing-evidence cases were scored as "agree" because their expected label is INCONCLUSIVE. A case whose calls all failed is now scored `provider_failure`. It never counts as agreement, and `verify_records` reports every failed call.
-- The harness kept calling after the provider had refused every request. It now stops after 2 cases in a row with no usable reply.
+1. The API accepted the wire schema, but the model asked for five tools when four are allowed. Dropped bounds such as `maxItems` were not stated to it. They are now written into the field descriptions (`test_dropped_bounds_are_stated_in_the_wire_descriptions`).
+2. The model wrote values into the claim text but left `asserted_value` null. SC-01 reported this as a contradiction. It is now `claim_unchecked` (`test_sc01_rejects_a_value_claim_that_states_no_value`). Each claim field is described on the wire, and `asserted_value` travels as a required JSON-encoded string (`test_asserted_value_travels_as_a_required_json_string`). After that change, Anomaly Detection reached a verified ANOMALOUS on the spike case.
+3. The model cited list items as `snapshots.0.ids`, a form the resolver did not accept (`test_result_field_paths_accept_both_list_index_forms`).
 
-To run live, the API organisation behind the key needs credits. The command in section 6 then works unchanged.
+**After the full run,** two more path forms the model used were fixed: a `result.` prefix, and keys that contain dots such as `/ws/app.py` (`test_result_field_paths_from_the_live_run`). The recorded live replies were then **replayed** through the fixed verifiers at no cost (`FixtureProvider` over the recorded `structured_response`s, so the replay is simulated). The outcome is unchanged: 21 agree, 8 inconclusive, 1 false positive. The two affected findings fail on other claims as well, as listed below. The table above is the run as it happened.
 
-### Ground-truth agreement
+**The first attempt** sent 30 requests, and the provider refused all of them for lack of credits. It cost $0. The record is kept in `live_attempt_2026-11-02.json`.
 
-- **Live:** none measured. The one attempt got no usable provider reply (30 of 30 `provider_failure`).
-- **Offline scenarios** (LLM replies scripted): 25 of 25 scenarios, 121 of 121 expectations.
-- **Offline dry check of the 30 live cases** (scripted generic replies, not a model):
-  - 19 agree
-  - 10 inconclusive
-  - 1 missed finding
-  - 0 false positives
-  - 0 unsupported quiet labels
+### Ground-truth agreement (live)
 
-  The scripted reply interprets no attention state, so its inconclusive abnormal cases are expected. These numbers test the cases and the verifiers, not a model.
+The expected labels are `live_eval.EXPECTED`, fixed in `503e632` before any live call and not changed since.
 
-| Case | Expected | Label | Status | Verified | Outcome | Calls | Tokens in/out | Latency ms | Cost |
-|---|---|---|---|---|---|---|---|---|---|
-| `workflow_orchestration:normal` | NORMAL | NORMAL | SUBSTANTIVE | True | agree | 2 | 2495/444 | 8 | unpriced |
-| `workflow_orchestration:abnormal` | STALLED | INCONCLUSIVE | INCONCLUSIVE | False | inconclusive | 2 | 2561/152 | 3 | unpriced |
-| `workflow_orchestration:missing` | INCONCLUSIVE | INCONCLUSIVE | REJECTED_BY_VERIFIER | False | agree | 2 | 2502/363 | 4 | unpriced |
-| `anomaly_detection:normal` | NORMAL | NORMAL | SUBSTANTIVE | True | agree | 2 | 3679/524 | 3 | unpriced |
-| `anomaly_detection:abnormal` | ANOMALOUS | INCONCLUSIVE | INCONCLUSIVE | False | inconclusive | 2 | 3768/159 | 4 | unpriced |
-| `anomaly_detection:missing` | INDETERMINATE, INCONCLUSIVE | INCONCLUSIVE | REJECTED_BY_VERIFIER | False | agree | 2 | 3527/523 | 6 | unpriced |
-| `context_memory:normal` | CONTEXT_OK | INCONCLUSIVE | INCONCLUSIVE | False | inconclusive | 2 | 1992/133 | 3 | unpriced |
-| `context_memory:abnormal` | CONTEXT_LOSS | INCONCLUSIVE | INCONCLUSIVE | False | inconclusive | 2 | 2026/133 | 3 | unpriced |
-| `context_memory:missing` | INCONCLUSIVE | INCONCLUSIVE | INCONCLUSIVE | False | agree | 2 | 2011/148 | 3 | unpriced |
-| `incident_response:normal` | NO_INCIDENT | NO_INCIDENT | SUBSTANTIVE | True | agree | 2 | 2640/416 | 3 | unpriced |
-| `incident_response:abnormal` | INCIDENT, WATCH | INCONCLUSIVE | INCONCLUSIVE | False | inconclusive | 2 | 2962/156 | 3 | unpriced |
-| `incident_response:missing` | INCONCLUSIVE, WATCH | INCONCLUSIVE | REJECTED_BY_VERIFIER | False | agree | 2 | 2642/372 | 5 | unpriced |
-| `classification_tagging:normal` | UNCLASSIFIED | UNCLASSIFIED | SUBSTANTIVE | True | agree | 2 | 2229/465 | 4 | unpriced |
-| `classification_tagging:abnormal` | INTEGRITY | INCONCLUSIVE | INCONCLUSIVE | False | inconclusive | 2 | 2271/157 | 6 | unpriced |
-| `classification_tagging:missing` | INCONCLUSIVE | INCONCLUSIVE | INCONCLUSIVE | False | agree | 2 | 2227/157 | 3 | unpriced |
-| `risk_mitigation:normal` | LOW | LOW | SUBSTANTIVE | True | agree | 2 | 2599/512 | 3 | unpriced |
-| `risk_mitigation:abnormal` | EMERGING, MATERIAL | INCONCLUSIVE | INCONCLUSIVE | False | inconclusive | 2 | 2643/157 | 3 | unpriced |
-| `risk_mitigation:missing` | INCONCLUSIVE | INCONCLUSIVE | REJECTED_BY_VERIFIER | False | agree | 2 | 2577/458 | 5 | unpriced |
-| `governance_intelligence:normal` | NO_PATTERN | NO_PATTERN | SUBSTANTIVE | True | agree | 2 | 2020/280 | 4 | unpriced |
-| `governance_intelligence:abnormal` | RECURRING, CONCENTRATED | INCONCLUSIVE | REJECTED_BY_VERIFIER | False | inconclusive | 2 | 2021/280 | 3 | unpriced |
-| `governance_intelligence:missing` | INCONCLUSIVE | INCONCLUSIVE | INCONCLUSIVE | False | agree | 2 | 1880/148 | 3 | unpriced |
-| `workload_optimization:normal` | EFFICIENT | EFFICIENT | SUBSTANTIVE | True | agree | 2 | 2194/476 | 4 | unpriced |
-| `workload_optimization:abnormal` | REDUNDANT | EFFICIENT | SUBSTANTIVE | True | missed_finding | 2 | 2207/425 | 3 | unpriced |
-| `workload_optimization:missing` | INCONCLUSIVE | INCONCLUSIVE | REJECTED_BY_VERIFIER | False | agree | 2 | 2213/481 | 3 | unpriced |
-| `knowledge_policy_management:normal` | CURRENT | CURRENT | SUBSTANTIVE | True | agree | 2 | 1903/287 | 3 | unpriced |
-| `knowledge_policy_management:abnormal` | CONFLICT | INCONCLUSIVE | REJECTED_BY_VERIFIER | False | inconclusive | 2 | 1942/287 | 3 | unpriced |
-| `knowledge_policy_management:missing` | INCONCLUSIVE | INCONCLUSIVE | INCONCLUSIVE | False | agree | 2 | 1911/150 | 3 | unpriced |
-| `governance_architecture:normal` | ADEQUATE | ADEQUATE | SUBSTANTIVE | True | agree | 2 | 3815/340 | 3 | unpriced |
-| `governance_architecture:abnormal` | GAP | INCONCLUSIVE | REJECTED_BY_VERIFIER | False | inconclusive | 2 | 3828/340 | 4 | unpriced |
-| `governance_architecture:missing` | INCONCLUSIVE | INCONCLUSIVE | INCONCLUSIVE | False | agree | 2 | 3825/151 | 3 | unpriced |
+| Outcome | Count | Cases |
+|---|---|---|
+| agree | 21 | All 10 missing-evidence cases. Normal: workflow_orchestration, anomaly_detection, context_memory, incident_response, workload_optimization, knowledge_policy_management. Abnormal: anomaly_detection ANOMALOUS, context_memory CONTEXT_LOSS, incident_response INCIDENT, classification_tagging INTEGRITY, risk_mitigation EMERGING |
+| inconclusive | 8 | See below |
+| false positive | 1 | `governance_architecture:normal` |
+| missed finding | 0 | |
+| unsupported quiet label | 0 | |
 
 ### False positives, missed findings and inconclusive outcomes
 
-- **False positives:** 0, offline. Live: not run.
-- **Missed findings:** 1, offline. In `workload_optimization:abnormal`, the scripted reply said EFFICIENT and the rule baseline also reads EFFICIENT, so DS-03 cannot catch it. The case has six reads of one file and four identical lint runs, and those are visible only through `inspect_repeated_operations`. A real investigation is expected to request that tool. If it does not, the run will show it.
-- **Inconclusive:** 10, offline.
-  - 6 are abnormal cases where the generic script stops on attention states.
-  - 1 is `context_memory:normal`, where the generic script cannot cite list fields.
-  - 3 are abnormal cases that DS-03 rejected.
+**False positive: `governance_architecture:normal`.**
+- The model read GAP (0.72), and the finding verified.
+- Its claims are true: the coverage matrix lists `insights.no_oversight` and `insights.lockfile` as metrics no COP reads.
+- The frozen expectation and the rule baseline both read ADEQUATE, because they look only at unowned observable types and fields.
+- So the model found a real catalogue fact that the ground truth does not count as a gap. Whether a computed metric that no COP reads is a GAP is a spec question for you and Malhar. The expectation was not changed after the run.
+
+**Inconclusive: 8.** In 6 of these the model's candidate was right, but a claim behind it failed verification.
+
+| Case | Candidate | Why it was not published | Whose error |
+|---|---|---|---|
+| `workflow_orchestration:abnormal` | STALLED (right) | SC-01: claimed a longest run of 4, and the tool says 5 | model (misread) |
+| `risk_mitigation:normal` | LOW (right) | SC-01: cited Resource Management's unverified finding as evidence | model |
+| `governance_intelligence:normal` | NO_PATTERN (right) | SC-01: cited Recovery & Resilience's unverified finding | model |
+| `governance_intelligence:abnormal` | RECURRING (right) | SC-01: same | model |
+| `workload_optimization:abnormal` | REDUNDANT (right) | SC-01: a metric_value claim with no metric id. Its repeated-reads claim (7) was right but failed on the path form, which is fixed now | model, and a harness path gap |
+| `governance_architecture:abnormal` | GAP (right) | SC-01: a metric claim with no metric id | model |
+| `knowledge_policy_management:abnormal` | CURRENT (wrong) | DS-03: the rules read CONFLICT. Without DS-03 this would have been a published **missed finding** | model missed it; verifier caught it |
+| `classification_tagging:normal` | none | The model chose inconclusive itself | model (cautious) |
+
+Every rejection is fail-closed: the published label is INCONCLUSIVE, and the candidate is kept as `rejected_candidate`.
+
+The most frequent cause, citing an upstream finding that is not verified, comes from a rule purvi and Malhar may want to revisit. Today one such claim rejects the whole finding. Dropping only that claim would let the 3 correct candidates through.
 
 ### Remaining blockers
 
-1. **No API credits.** The provider rejects every call with "credit balance is too low". The key purvi pasted works, but it is now in the chat history and should be rotated. The replacement belongs in Project settings, under Cloud environment.
-2. **Budget and model** are decided: the chosen model with a $5 total cap.
-3. **Expected outcomes for two cases are judgement calls** and should be reviewed before the run:
-   - `classification_tagging:abnormal` expects INTEGRITY, while the rule baseline reads BOUNDARY.
-   - `governance_architecture:missing` expects INCONCLUSIVE on thin telemetry, while the baseline reads ADEQUATE.
-4. **DS-03 is a semantic choice.** It makes the rule baseline a veto over a quiet model reading. Malhar should agree to it, alongside DS-01 (RUNTIME.md "Needs agreement", item 4).
-5. **Carried over:** Malhar's contracts and verifier ids are unread, the schema migration has not been applied, and there are no real authoritative artifacts (RUNTIME.md items 1, 2, 6 and 7).
-6. **Not pushed.** GitHub still shows `8a45418`. A push triggers a Vercel preview deploy.
+1. **Decisions for you and Malhar:**
+   - DS-03, which makes the rule baseline a veto over a quiet LLM reading.
+   - Whether one unverified-upstream claim should reject the whole finding or only that claim.
+   - Whether "a metric read by no COP" counts as a GAP.
+   - The two judgement-call expectations: `classification_tagging:abnormal` and `governance_architecture:missing`.
+2. **The pasted API keys** are in the chat history and should be rotated. The replacement belongs in Project settings, under Cloud environment, not in chat.
+3. **Carried over:** Malhar's contracts and verifier ids are unread, the schema migration has not been applied, and there are no real authoritative artifacts (RUNTIME.md items 1, 2, 6 and 7).
+4. **Not pushed.** GitHub still shows `8a45418`. A push triggers a Vercel preview deploy.
 
 ## 6. Commands to reproduce
 
@@ -215,7 +200,7 @@ All commands run from the repository root unless they start with `cd collector`.
 pip install -r collector/requirements-cops-runtime.txt
 pip install anthropic==2.3.0                         # needed for tests/test_runtime_live_path.py (skipped without it)
 
-python3 -m pytest -p no:cacheprovider tests/ -q -rs  # 244 passed, 1 skipped
+python3 -m pytest -p no:cacheprovider tests/ -q -rs  # 249 passed, 1 skipped
 python3 -m pytest -p no:cacheprovider tests/test_runtime_live_path.py tests/test_runtime_live_eval.py -q
 
 cd collector && python3 -m cops.runtime.evaluation           # 25 scenarios -> docs/cops/evaluation/RESULTS.md, results.json
@@ -237,8 +222,8 @@ The model id and its prices are configuration, not code. Use the provider's publ
 
 ## Limitations
 
-- Model judgement is untested. Every finding attributed to an LLM COP comes from a scripted reply.
+- The model's judgement has been tested on one live run of 30 fictional cases with one model. That is not enough to measure run-to-run variance, and the offline scenarios still use scripted replies.
 - Each live case runs the target COP with deterministic upstreams only. LLM upstreams are left out, so, for example, Incident Response runs without Anomaly Detection's finding. Their absence is recorded in the consumption log.
 - Verifiers check that claims are true, not that a reading is complete. DS-03 narrows this gap but does not close it.
-- The structured-output schema has been checked against the documented limits and a stub client, but not against the API itself. A rejection on the first live call would be recorded as `llm_unavailable` with the API's message.
+- The live run used `max_llm_calls=4`, yet every investigation finished in 2 calls (plan, then assess). The multi-step loop of requesting more evidence has not been exercised live.
 - Coverage figures come from this sandbox.

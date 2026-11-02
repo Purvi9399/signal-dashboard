@@ -1,5 +1,5 @@
 {
- "live_source": null,
+ "live_source": "/home/claude/signal-dashboard/collector/cops/runtime/../../../docs/cops/evaluation/live_results.json",
  "rows": [
   {
    "cop": "runtime_monitoring",
@@ -41,16 +41,27 @@
    "offline_rejected": 2,
    "offline_inconclusive": 0,
    "offline_scenario_failures": [],
-   "offline_median_ms": "8",
+   "offline_median_ms": "6",
    "offline_llm_calls": 10,
-   "live_cases": 0,
-   "live_findings": {},
-   "live_outcomes": {},
-   "live_verified": 0,
+   "live_cases": 3,
+   "live_findings": {
+    "normal": "NORMAL",
+    "abnormal": "INCONCLUSIVE",
+    "missing": "INCONCLUSIVE"
+   },
+   "live_outcomes": {
+    "normal": "agree",
+    "abnormal": "inconclusive",
+    "missing": "agree"
+   },
+   "live_verified": 1,
    "live_errors": 0,
-   "live_latency_ms": null,
-   "live_tokens": null,
-   "live_cost_usd": null,
+   "live_latency_ms": 55472.4,
+   "live_tokens": [
+    23767,
+    6848
+   ],
+   "live_cost_usd": 0.116014,
    "live_simulated_records": 0
   },
   {
@@ -67,16 +78,27 @@
    "offline_rejected": 0,
    "offline_inconclusive": 1,
    "offline_scenario_failures": [],
-   "offline_median_ms": "7",
+   "offline_median_ms": "6",
    "offline_llm_calls": 10,
-   "live_cases": 0,
-   "live_findings": {},
-   "live_outcomes": {},
-   "live_verified": 0,
+   "live_cases": 3,
+   "live_findings": {
+    "normal": "CONTEXT_OK",
+    "abnormal": "CONTEXT_LOSS",
+    "missing": "INCONCLUSIVE"
+   },
+   "live_outcomes": {
+    "normal": "agree",
+    "abnormal": "agree",
+    "missing": "agree"
+   },
+   "live_verified": 2,
    "live_errors": 0,
-   "live_latency_ms": null,
-   "live_tokens": null,
-   "live_cost_usd": null,
+   "live_latency_ms": 41836.4,
+   "live_tokens": [
+    19584,
+    5160
+   ],
+   "live_cost_usd": 0.090768,
    "live_simulated_records": 0
   },
   {
@@ -121,16 +143,27 @@
    "offline_rejected": 3,
    "offline_inconclusive": 1,
    "offline_scenario_failures": [],
-   "offline_median_ms": "7",
+   "offline_median_ms": "6",
    "offline_llm_calls": 31,
-   "live_cases": 0,
-   "live_findings": {},
-   "live_outcomes": {},
-   "live_verified": 0,
+   "live_cases": 3,
+   "live_findings": {
+    "normal": "NORMAL",
+    "abnormal": "ANOMALOUS",
+    "missing": "INCONCLUSIVE"
+   },
+   "live_outcomes": {
+    "normal": "agree",
+    "abnormal": "agree",
+    "missing": "agree"
+   },
+   "live_verified": 2,
    "live_errors": 0,
-   "live_latency_ms": null,
-   "live_tokens": null,
-   "live_cost_usd": null,
+   "live_latency_ms": 70099.0,
+   "live_tokens": [
+    25754,
+    10046
+   ],
+   "live_cost_usd": 0.151968,
    "live_simulated_records": 0
   },
   {
@@ -252,14 +285,25 @@
    "offline_scenario_failures": [],
    "offline_median_ms": "7",
    "offline_llm_calls": 25,
-   "live_cases": 0,
-   "live_findings": {},
-   "live_outcomes": {},
-   "live_verified": 0,
+   "live_cases": 3,
+   "live_findings": {
+    "normal": "NO_INCIDENT",
+    "abnormal": "INCIDENT",
+    "missing": "INCONCLUSIVE"
+   },
+   "live_outcomes": {
+    "normal": "agree",
+    "abnormal": "agree",
+    "missing": "agree"
+   },
+   "live_verified": 2,
    "live_errors": 0,
-   "live_latency_ms": null,
-   "live_tokens": null,
-   "live_cost_usd": null,
+   "live_latency_ms": 67718.3,
+   "live_tokens": [
+    25281,
+    9652
+   ],
+   "live_cost_usd": 0.147082,
    "live_simulated_records": 0
   },
   {
@@ -276,16 +320,27 @@
    "offline_rejected": 0,
    "offline_inconclusive": 1,
    "offline_scenario_failures": [],
-   "offline_median_ms": "7",
+   "offline_median_ms": "6",
    "offline_llm_calls": 6,
-   "live_cases": 0,
-   "live_findings": {},
-   "live_outcomes": {},
-   "live_verified": 0,
+   "live_cases": 3,
+   "live_findings": {
+    "normal": "INCONCLUSIVE",
+    "abnormal": "INTEGRITY",
+    "missing": "INCONCLUSIVE"
+   },
+   "live_outcomes": {
+    "normal": "inconclusive",
+    "abnormal": "agree",
+    "missing": "agree"
+   },
+   "live_verified": 1,
    "live_errors": 0,
-   "live_latency_ms": null,
-   "live_tokens": null,
-   "live_cost_usd": null,
+   "live_latency_ms": 56048.6,
+   "live_tokens": [
+    21448,
+    6981
+   ],
+   "live_cost_usd": 0.112706,
    "live_simulated_records": 0
   },
   {
@@ -329,14 +384,25 @@
    "offline_scenario_failures": [],
    "offline_median_ms": "7",
    "offline_llm_calls": 6,
-   "live_cases": 0,
-   "live_findings": {},
-   "live_outcomes": {},
-   "live_verified": 0,
+   "live_cases": 3,
+   "live_findings": {
+    "normal": "INCONCLUSIVE",
+    "abnormal": "EMERGING",
+    "missing": "INCONCLUSIVE"
+   },
+   "live_outcomes": {
+    "normal": "inconclusive",
+    "abnormal": "agree",
+    "missing": "agree"
+   },
+   "live_verified": 1,
    "live_errors": 0,
-   "live_latency_ms": null,
-   "live_tokens": null,
-   "live_cost_usd": null,
+   "live_latency_ms": 63539.2,
+   "live_tokens": [
+    23944,
+    8725
+   ],
+   "live_cost_usd": 0.135138,
    "live_simulated_records": 0
   },
   {
@@ -352,16 +418,27 @@
    "offline_rejected": 0,
    "offline_inconclusive": 1,
    "offline_scenario_failures": [],
-   "offline_median_ms": "13",
+   "offline_median_ms": "11",
    "offline_llm_calls": 6,
-   "live_cases": 0,
-   "live_findings": {},
-   "live_outcomes": {},
+   "live_cases": 3,
+   "live_findings": {
+    "normal": "INCONCLUSIVE",
+    "abnormal": "INCONCLUSIVE",
+    "missing": "INCONCLUSIVE"
+   },
+   "live_outcomes": {
+    "normal": "inconclusive",
+    "abnormal": "inconclusive",
+    "missing": "agree"
+   },
    "live_verified": 0,
    "live_errors": 0,
-   "live_latency_ms": null,
-   "live_tokens": null,
-   "live_cost_usd": null,
+   "live_latency_ms": 57799.7,
+   "live_tokens": [
+    19830,
+    7358
+   ],
+   "live_cost_usd": 0.11324,
    "live_simulated_records": 0
   },
   {
@@ -379,14 +456,25 @@
    "offline_scenario_failures": [],
    "offline_median_ms": "7",
    "offline_llm_calls": 8,
-   "live_cases": 0,
-   "live_findings": {},
-   "live_outcomes": {},
-   "live_verified": 0,
+   "live_cases": 3,
+   "live_findings": {
+    "normal": "EFFICIENT",
+    "abnormal": "INCONCLUSIVE",
+    "missing": "INCONCLUSIVE"
+   },
+   "live_outcomes": {
+    "normal": "agree",
+    "abnormal": "inconclusive",
+    "missing": "agree"
+   },
+   "live_verified": 1,
    "live_errors": 0,
-   "live_latency_ms": null,
-   "live_tokens": null,
-   "live_cost_usd": null,
+   "live_latency_ms": 62332.9,
+   "live_tokens": [
+    21344,
+    8612
+   ],
+   "live_cost_usd": 0.128808,
    "live_simulated_records": 0
   },
   {
@@ -428,14 +516,25 @@
    "offline_scenario_failures": [],
    "offline_median_ms": "6",
    "offline_llm_calls": 4,
-   "live_cases": 0,
-   "live_findings": {},
-   "live_outcomes": {},
-   "live_verified": 0,
+   "live_cases": 3,
+   "live_findings": {
+    "normal": "CURRENT",
+    "abnormal": "INCONCLUSIVE",
+    "missing": "INCONCLUSIVE"
+   },
+   "live_outcomes": {
+    "normal": "agree",
+    "abnormal": "inconclusive",
+    "missing": "agree"
+   },
+   "live_verified": 1,
    "live_errors": 0,
-   "live_latency_ms": null,
-   "live_tokens": null,
-   "live_cost_usd": null,
+   "live_latency_ms": 41503.5,
+   "live_tokens": [
+    18679,
+    5304
+   ],
+   "live_cost_usd": 0.090398,
    "live_simulated_records": 0
   },
   {
@@ -451,16 +550,27 @@
    "offline_rejected": 0,
    "offline_inconclusive": 0,
    "offline_scenario_failures": [],
-   "offline_median_ms": "13",
+   "offline_median_ms": "8",
    "offline_llm_calls": 8,
-   "live_cases": 0,
-   "live_findings": {},
-   "live_outcomes": {},
-   "live_verified": 0,
+   "live_cases": 3,
+   "live_findings": {
+    "normal": "GAP",
+    "abnormal": "INCONCLUSIVE",
+    "missing": "INCONCLUSIVE"
+   },
+   "live_outcomes": {
+    "normal": "false_positive",
+    "abnormal": "inconclusive",
+    "missing": "agree"
+   },
+   "live_verified": 1,
    "live_errors": 0,
-   "live_latency_ms": null,
-   "live_tokens": null,
-   "live_cost_usd": null,
+   "live_latency_ms": 78004.5,
+   "live_tokens": [
+    32792,
+    11437
+   ],
+   "live_cost_usd": 0.179954,
    "live_simulated_records": 0
   }
  ],

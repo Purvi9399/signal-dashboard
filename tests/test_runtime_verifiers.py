@@ -217,3 +217,33 @@ def test_ds03_passes_when_baseline_agrees_and_is_not_run_on_attention_labels():
     out = run_cop(rt, "anomaly_detection")
     ds03 = {x["check_id"]: x for x in out["verifier_results"]}["DS-03"]
     assert out["finding"]["label"] == "ANOMALOUS" and ds03["result"] == "NOT_RUN"
+
+
+def test_sc01_rejects_a_value_claim_that_states_no_value():
+    # first live run (2026-11-02): the model put 40.0 in the statement and left asserted_value empty
+    def script(c, purpose, p, n):
+        if purpose == "plan":
+            return FX.plan("x", [], [], [], FX.req("calculate_deviation", "t", quantity="tokens"))
+        claim = {**FX.ct(p, "calculate_deviation", "current"), "asserted_value": None}
+        return FX.conclude("x", "NORMAL", 0.7, [FX.cm(p, "insights.token_outlier"), claim], "r")
+    rt = E.make_runtime("sc01-novalue", "v1", ROWS, {}, provider=FixtureProvider(script))
+    out = run_cop(rt, "anomaly_detection")
+    sc = {x["check_id"]: x for x in out["verifier_results"]}["SC-01"]
+    assert (sc["result"], sc["reason_code"]) == ("FAIL", "claim_unchecked")
+    assert "no asserted_value" in sc["detail"] and out["finding"]["status"] == "REJECTED_BY_VERIFIER"
+
+
+def test_result_field_paths_accept_both_list_index_forms():
+    from cops.runtime.verifiers import _get_path
+    r = {"snapshots": [{"ids": ["C1", "C2"]}, {"ids": ["C2"]}]}
+    assert _get_path(r, "snapshots.1.ids") == _get_path(r, "snapshots[1].ids") == ["C2"]
+    assert _get_path(r, "snapshots.5.ids") is None
+
+
+def test_result_field_paths_from_the_live_run():
+    # forms the model wrote in the 2026-11-02 live run that the resolver did not understand
+    from cops.runtime.verifiers import _get_path
+    r = {"repeated_reads": {"/ws/app.py": 7}, "risks": [{"impact": 3}, {"impact": 1}]}
+    assert _get_path(r, "repeated_reads./ws/app.py") == 7          # a key containing dots
+    assert _get_path(r, "result.risks.1.impact") == 1              # prefixed with the payload's "result"
+    assert _get_path(r, "risks.1.impact") == 1 and _get_path(r, "risks.1.missing") is None

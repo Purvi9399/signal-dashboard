@@ -16,11 +16,11 @@
   "skipped": 0,
   "llm_calls": 60,
   "llm_errors": 0,
-  "input_tokens": 77110,
+  "input_tokens": 80247,
   "output_tokens": 9074,
   "cost_usd": 0,
   "unpriced_calls": 60,
-  "latency_ms": 124.0,
+  "latency_ms": 115.0,
   "simulated_calls": 60
  },
  "record_problems": [],
@@ -214,7 +214,7 @@
     "workflow_orchestration"
    ],
    "other_llm_calls": 0,
-   "wall_ms": 49.0,
+   "wall_ms": 44.1,
    "error": null,
    "invocations": [
     {
@@ -224,10 +224,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1121,
+     "input_tokens": 1173,
      "output_tokens": 97,
      "tokens_measured": false,
-     "latency_ms": 6.513,
+     "latency_ms": 6.237,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -237,6 +237,28 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "known": [
+       "4 metric rows supplied"
+      ],
+      "unknown": [
+       "whether the case's sources support a reading"
+      ],
+      "uncertain": [],
+      "hypothesis": "workflow_orchestration: nothing specific suspected",
+      "tool_requests": [
+       {
+        "tool": "get_task_milestones",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       },
+       {
+        "tool": "analyse_execution_transitions",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       }
+      ]
      }
     },
     {
@@ -246,10 +268,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1374,
+     "input_tokens": 1427,
      "output_tokens": 347,
      "tokens_measured": false,
-     "latency_ms": 4.749,
+     "latency_ms": 2.967,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -259,7 +281,187 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "hypothesis": "workflow_orchestration: no deviation in what could be observed",
+      "hypothesis_changed": false,
+      "change_reason": "",
+      "decision": "conclude",
+      "tool_requests": [],
+      "finding": {
+       "label": "NORMAL",
+       "confidence": 0.6,
+       "claims": [
+        {
+         "statement": "insights.stalled is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.stalled",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.stalled"
+         ]
+        },
+        {
+         "statement": "insights.repetition is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.repetition",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.repetition"
+         ]
+        },
+        {
+         "statement": "interaction.subagent_lanes is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "interaction.subagent_lanes",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:interaction.subagent_lanes"
+         ]
+        },
+        {
+         "statement": "get_task_milestones.objective = deploy, restoring the last checkpoint on failure",
+         "kind": "tool_observation",
+         "metric_id": null,
+         "asserted_state": null,
+         "asserted_value": "deploy, restoring the last checkpoint on failure",
+         "tool_call_id": "6083bb85-4438-5005-b3df-1202da8ca578",
+         "result_field": "objective",
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "tool:6083bb85-4438-5005-b3df-1202da8ca578"
+         ]
+        }
+       ],
+       "rationale": "quiet reading from the observed rows and tool results (generic simulated fixture)",
+       "alternative_explanations": [],
+       "missing_evidence": [],
+       "proposed_action": "NONE",
+       "action_reason": "",
+       "detail": {}
+      },
+      "missing_evidence": []
      }
+    }
+   ],
+   "verifier_results": [
+    {
+     "check_id": "EV-01",
+     "result": "PASS",
+     "reason_code": "well_formed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "EV-02",
+     "result": "PASS",
+     "reason_code": "refs_resolve",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-01",
+     "result": "PASS",
+     "reason_code": "provenance_ok",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-02",
+     "result": "PASS",
+     "reason_code": "in_scope",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MC-01",
+     "result": "NOT_RUN",
+     "reason_code": "no_recomputable_claim",
+     "detail": "no cited metric has an independent raw recomputation",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-01",
+     "result": "PASS",
+     "reason_code": "claims_supported",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-02",
+     "result": "NOT_RUN",
+     "reason_code": "not_attention_label",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-01",
+     "result": "PASS",
+     "reason_code": "state_consistent",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-02",
+     "result": "NOT_RUN",
+     "reason_code": "no_corroboration_claimed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-03",
+     "result": "PASS",
+     "reason_code": "no_contradiction",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "RP-01",
+     "result": "PASS",
+     "reason_code": "baseline_agrees",
+     "detail": "computational baseline reads NORMAL; diagnostic only",
+     "subject": ""
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "original_proposal"
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "final_action"
+    },
+    {
+     "check_id": "PE-01",
+     "result": "NOT_RUN",
+     "reason_code": "not_intervening",
+     "detail": "",
+     "subject": ""
     }
    ]
   },
@@ -295,7 +497,7 @@
     "workflow_orchestration"
    ],
    "other_llm_calls": 0,
-   "wall_ms": 37.2,
+   "wall_ms": 25.6,
    "error": null,
    "invocations": [
     {
@@ -305,10 +507,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1162,
+     "input_tokens": 1214,
      "output_tokens": 97,
      "tokens_measured": false,
-     "latency_ms": 1.113,
+     "latency_ms": 0.751,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -318,6 +520,28 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "known": [
+       "4 metric rows supplied"
+      ],
+      "unknown": [
+       "whether the case's sources support a reading"
+      ],
+      "uncertain": [],
+      "hypothesis": "workflow_orchestration: nothing specific suspected",
+      "tool_requests": [
+       {
+        "tool": "get_task_milestones",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       },
+       {
+        "tool": "analyse_execution_transitions",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       }
+      ]
      }
     },
     {
@@ -327,10 +551,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1399,
+     "input_tokens": 1451,
      "output_tokens": 55,
      "tokens_measured": false,
-     "latency_ms": 3.059,
+     "latency_ms": 2.697,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -340,7 +564,118 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "hypothesis": "attention states present; no scripted interpretation for them",
+      "hypothesis_changed": false,
+      "change_reason": "",
+      "decision": "inconclusive",
+      "tool_requests": [],
+      "finding": null,
+      "missing_evidence": [
+       "insights.repetition"
+      ]
      }
+    }
+   ],
+   "verifier_results": [
+    {
+     "check_id": "EV-01",
+     "result": "PASS",
+     "reason_code": "well_formed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "EV-02",
+     "result": "PASS",
+     "reason_code": "refs_resolve",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-01",
+     "result": "PASS",
+     "reason_code": "provenance_ok",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-02",
+     "result": "PASS",
+     "reason_code": "in_scope",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MC-01",
+     "result": "NOT_RUN",
+     "reason_code": "no_recomputable_claim",
+     "detail": "no cited metric has an independent raw recomputation",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-01",
+     "result": "NOT_RUN",
+     "reason_code": "no_claims",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-02",
+     "result": "NOT_RUN",
+     "reason_code": "not_attention_label",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-01",
+     "result": "PASS",
+     "reason_code": "state_consistent",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-02",
+     "result": "NOT_RUN",
+     "reason_code": "no_corroboration_claimed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-03",
+     "result": "NOT_RUN",
+     "reason_code": "not_a_quiet_model_reading",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "RP-01",
+     "result": "PASS",
+     "reason_code": "baseline_agrees",
+     "detail": "computational baseline reads INCONCLUSIVE; diagnostic only",
+     "subject": ""
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "original_proposal"
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "final_action"
+    },
+    {
+     "check_id": "PE-01",
+     "result": "NOT_RUN",
+     "reason_code": "not_intervening",
+     "detail": "",
+     "subject": ""
     }
    ]
   },
@@ -432,7 +767,7 @@
     "workflow_orchestration"
    ],
    "other_llm_calls": 0,
-   "wall_ms": 28.6,
+   "wall_ms": 38.2,
    "error": null,
    "invocations": [
     {
@@ -442,10 +777,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1121,
+     "input_tokens": 1173,
      "output_tokens": 97,
      "tokens_measured": false,
-     "latency_ms": 0.735,
+     "latency_ms": 1.155,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -455,6 +790,28 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "known": [
+       "4 metric rows supplied"
+      ],
+      "unknown": [
+       "whether the case's sources support a reading"
+      ],
+      "uncertain": [],
+      "hypothesis": "workflow_orchestration: nothing specific suspected",
+      "tool_requests": [
+       {
+        "tool": "get_task_milestones",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       },
+       {
+        "tool": "analyse_execution_transitions",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       }
+      ]
      }
     },
     {
@@ -464,10 +821,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1381,
+     "input_tokens": 1433,
      "output_tokens": 266,
      "tokens_measured": false,
-     "latency_ms": 3.064,
+     "latency_ms": 4.401,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -477,7 +834,181 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "hypothesis": "workflow_orchestration: no deviation in what could be observed",
+      "hypothesis_changed": false,
+      "change_reason": "",
+      "decision": "conclude",
+      "tool_requests": [],
+      "finding": {
+       "label": "NORMAL",
+       "confidence": 0.6,
+       "claims": [
+        {
+         "statement": "insights.stalled is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.stalled",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.stalled"
+         ]
+        },
+        {
+         "statement": "insights.repetition is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.repetition",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.repetition"
+         ]
+        },
+        {
+         "statement": "interaction.subagent_lanes is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "interaction.subagent_lanes",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:interaction.subagent_lanes"
+         ]
+        }
+       ],
+       "rationale": "quiet reading from the observed rows and tool results (generic simulated fixture)",
+       "alternative_explanations": [],
+       "missing_evidence": [
+        "get_task_milestones"
+       ],
+       "proposed_action": "NONE",
+       "action_reason": "",
+       "detail": {}
+      },
+      "missing_evidence": []
      }
+    }
+   ],
+   "verifier_results": [
+    {
+     "check_id": "EV-01",
+     "result": "PASS",
+     "reason_code": "well_formed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "EV-02",
+     "result": "PASS",
+     "reason_code": "refs_resolve",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-01",
+     "result": "PASS",
+     "reason_code": "provenance_ok",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-02",
+     "result": "PASS",
+     "reason_code": "in_scope",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MC-01",
+     "result": "NOT_RUN",
+     "reason_code": "no_recomputable_claim",
+     "detail": "no cited metric has an independent raw recomputation",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-01",
+     "result": "PASS",
+     "reason_code": "claims_supported",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-02",
+     "result": "NOT_RUN",
+     "reason_code": "not_attention_label",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-01",
+     "result": "FAIL",
+     "reason_code": "state_mismatch",
+     "detail": "required evidence unavailable: task_plan (NORMAL: progress against the declared objective)",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-02",
+     "result": "NOT_RUN",
+     "reason_code": "no_corroboration_claimed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-03",
+     "result": "PASS",
+     "reason_code": "no_contradiction",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "RP-01",
+     "result": "WARN",
+     "reason_code": "baseline_differs",
+     "detail": "computational baseline reads INCONCLUSIVE; diagnostic only",
+     "subject": ""
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "original_proposal"
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "final_action"
+    },
+    {
+     "check_id": "PE-01",
+     "result": "NOT_RUN",
+     "reason_code": "not_intervening",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MU-01",
+     "result": "PASS",
+     "reason_code": "memory_ok",
+     "detail": "",
+     "subject": ""
     }
    ]
   },
@@ -606,7 +1137,7 @@
     "anomaly_detection"
    ],
    "other_llm_calls": 0,
-   "wall_ms": 34.1,
+   "wall_ms": 51.9,
    "error": null,
    "invocations": [
     {
@@ -616,10 +1147,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1330,
+     "input_tokens": 1382,
      "output_tokens": 96,
      "tokens_measured": false,
-     "latency_ms": 0.869,
+     "latency_ms": 1.061,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -629,6 +1160,28 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "known": [
+       "7 metric rows supplied"
+      ],
+      "unknown": [
+       "whether the case's sources support a reading"
+      ],
+      "uncertain": [],
+      "hypothesis": "anomaly_detection: nothing specific suspected",
+      "tool_requests": [
+       {
+        "tool": "retrieve_trace_window",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       },
+       {
+        "tool": "find_similar_validated_cases",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       }
+      ]
      }
     },
     {
@@ -638,10 +1191,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 2349,
+     "input_tokens": 2401,
      "output_tokens": 428,
      "tokens_measured": false,
-     "latency_ms": 2.747,
+     "latency_ms": 4.82,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -651,7 +1204,217 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "hypothesis": "anomaly_detection: no deviation in what could be observed",
+      "hypothesis_changed": false,
+      "change_reason": "",
+      "decision": "conclude",
+      "tool_requests": [],
+      "finding": {
+       "label": "NORMAL",
+       "confidence": 0.6,
+       "claims": [
+        {
+         "statement": "insights.token_outlier is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.token_outlier",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.token_outlier"
+         ]
+        },
+        {
+         "statement": "insights.duration_outlier is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.duration_outlier",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.duration_outlier"
+         ]
+        },
+        {
+         "statement": "path.transition_novelty is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "path.transition_novelty",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:path.transition_novelty"
+         ]
+        },
+        {
+         "statement": "activity.action_rate_ratio is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "activity.action_rate_ratio",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:activity.action_rate_ratio"
+         ]
+        },
+        {
+         "statement": "access.first_seen_mcp is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "access.first_seen_mcp",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:access.first_seen_mcp"
+         ]
+        },
+        {
+         "statement": "retrieve_trace_window.lane = main",
+         "kind": "tool_observation",
+         "metric_id": null,
+         "asserted_state": null,
+         "asserted_value": "main",
+         "tool_call_id": "21f60bf5-7480-5efd-ba5f-9cd12cd7dc86",
+         "result_field": "lane",
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "tool:21f60bf5-7480-5efd-ba5f-9cd12cd7dc86"
+         ]
+        }
+       ],
+       "rationale": "quiet reading from the observed rows and tool results (generic simulated fixture)",
+       "alternative_explanations": [],
+       "missing_evidence": [],
+       "proposed_action": "NONE",
+       "action_reason": "",
+       "detail": {}
+      },
+      "missing_evidence": []
      }
+    }
+   ],
+   "verifier_results": [
+    {
+     "check_id": "EV-01",
+     "result": "PASS",
+     "reason_code": "well_formed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "EV-02",
+     "result": "PASS",
+     "reason_code": "refs_resolve",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-01",
+     "result": "PASS",
+     "reason_code": "provenance_ok",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-02",
+     "result": "PASS",
+     "reason_code": "in_scope",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MC-01",
+     "result": "PASS",
+     "reason_code": "recomputed",
+     "detail": "recomputed ['insights.token_outlier', 'access.first_seen_mcp']",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-01",
+     "result": "PASS",
+     "reason_code": "claims_supported",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-02",
+     "result": "NOT_RUN",
+     "reason_code": "not_attention_label",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-01",
+     "result": "PASS",
+     "reason_code": "state_consistent",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-02",
+     "result": "NOT_RUN",
+     "reason_code": "no_corroboration_claimed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-03",
+     "result": "PASS",
+     "reason_code": "no_contradiction",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "RP-01",
+     "result": "PASS",
+     "reason_code": "baseline_agrees",
+     "detail": "computational baseline reads NORMAL; diagnostic only",
+     "subject": ""
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "original_proposal"
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "final_action"
+    },
+    {
+     "check_id": "PE-01",
+     "result": "NOT_RUN",
+     "reason_code": "not_intervening",
+     "detail": "",
+     "subject": ""
     }
    ]
   },
@@ -692,7 +1455,7 @@
     "anomaly_detection"
    ],
    "other_llm_calls": 0,
-   "wall_ms": 35.3,
+   "wall_ms": 52.1,
    "error": null,
    "invocations": [
     {
@@ -702,10 +1465,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1332,
+     "input_tokens": 1385,
      "output_tokens": 96,
      "tokens_measured": false,
-     "latency_ms": 0.874,
+     "latency_ms": 1.106,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -715,6 +1478,28 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "known": [
+       "7 metric rows supplied"
+      ],
+      "unknown": [
+       "whether the case's sources support a reading"
+      ],
+      "uncertain": [],
+      "hypothesis": "anomaly_detection: nothing specific suspected",
+      "tool_requests": [
+       {
+        "tool": "retrieve_trace_window",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       },
+       {
+        "tool": "find_similar_validated_cases",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       }
+      ]
      }
     },
     {
@@ -724,10 +1509,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 2436,
+     "input_tokens": 2489,
      "output_tokens": 63,
      "tokens_measured": false,
-     "latency_ms": 2.696,
+     "latency_ms": 4.532,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -737,7 +1522,119 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "hypothesis": "attention states present; no scripted interpretation for them",
+      "hypothesis_changed": false,
+      "change_reason": "",
+      "decision": "inconclusive",
+      "tool_requests": [],
+      "finding": null,
+      "missing_evidence": [
+       "insights.token_outlier",
+       "path.transition_novelty"
+      ]
      }
+    }
+   ],
+   "verifier_results": [
+    {
+     "check_id": "EV-01",
+     "result": "PASS",
+     "reason_code": "well_formed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "EV-02",
+     "result": "PASS",
+     "reason_code": "refs_resolve",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-01",
+     "result": "PASS",
+     "reason_code": "provenance_ok",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-02",
+     "result": "PASS",
+     "reason_code": "in_scope",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MC-01",
+     "result": "NOT_RUN",
+     "reason_code": "no_recomputable_claim",
+     "detail": "no cited metric has an independent raw recomputation",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-01",
+     "result": "NOT_RUN",
+     "reason_code": "no_claims",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-02",
+     "result": "NOT_RUN",
+     "reason_code": "not_attention_label",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-01",
+     "result": "PASS",
+     "reason_code": "state_consistent",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-02",
+     "result": "NOT_RUN",
+     "reason_code": "no_corroboration_claimed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-03",
+     "result": "NOT_RUN",
+     "reason_code": "not_a_quiet_model_reading",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "RP-01",
+     "result": "WARN",
+     "reason_code": "baseline_differs",
+     "detail": "computational baseline reads ANOMALOUS; diagnostic only",
+     "subject": ""
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "original_proposal"
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "final_action"
+    },
+    {
+     "check_id": "PE-01",
+     "result": "NOT_RUN",
+     "reason_code": "not_intervening",
+     "detail": "",
+     "subject": ""
     }
    ]
   },
@@ -876,7 +1773,7 @@
     "anomaly_detection"
    ],
    "other_llm_calls": 0,
-   "wall_ms": 38.7,
+   "wall_ms": 35.8,
    "error": null,
    "invocations": [
     {
@@ -886,10 +1783,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1366,
+     "input_tokens": 1419,
      "output_tokens": 96,
      "tokens_measured": false,
-     "latency_ms": 0.902,
+     "latency_ms": 0.77,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -899,6 +1796,28 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "known": [
+       "7 metric rows supplied"
+      ],
+      "unknown": [
+       "whether the case's sources support a reading"
+      ],
+      "uncertain": [],
+      "hypothesis": "anomaly_detection: nothing specific suspected",
+      "tool_requests": [
+       {
+        "tool": "retrieve_trace_window",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       },
+       {
+        "tool": "find_similar_validated_cases",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       }
+      ]
      }
     },
     {
@@ -908,10 +1827,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 2161,
+     "input_tokens": 2213,
      "output_tokens": 427,
      "tokens_measured": false,
-     "latency_ms": 4.444,
+     "latency_ms": 2.786,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -921,7 +1840,224 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "hypothesis": "anomaly_detection: no deviation in what could be observed",
+      "hypothesis_changed": false,
+      "change_reason": "",
+      "decision": "conclude",
+      "tool_requests": [],
+      "finding": {
+       "label": "NORMAL",
+       "confidence": 0.6,
+       "claims": [
+        {
+         "statement": "insights.token_outlier is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.token_outlier",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.token_outlier"
+         ]
+        },
+        {
+         "statement": "insights.duration_outlier is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.duration_outlier",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.duration_outlier"
+         ]
+        },
+        {
+         "statement": "path.transition_novelty is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "path.transition_novelty",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:path.transition_novelty"
+         ]
+        },
+        {
+         "statement": "activity.action_rate_ratio is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "activity.action_rate_ratio",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:activity.action_rate_ratio"
+         ]
+        },
+        {
+         "statement": "insights.repetition is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.repetition",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.repetition"
+         ]
+        },
+        {
+         "statement": "retrieve_trace_window.lane = main",
+         "kind": "tool_observation",
+         "metric_id": null,
+         "asserted_state": null,
+         "asserted_value": "main",
+         "tool_call_id": "2452aafb-322d-5acb-9688-b71b612196aa",
+         "result_field": "lane",
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "tool:2452aafb-322d-5acb-9688-b71b612196aa"
+         ]
+        }
+       ],
+       "rationale": "quiet reading from the observed rows and tool results (generic simulated fixture)",
+       "alternative_explanations": [],
+       "missing_evidence": [],
+       "proposed_action": "NONE",
+       "action_reason": "",
+       "detail": {}
+      },
+      "missing_evidence": []
      }
+    }
+   ],
+   "verifier_results": [
+    {
+     "check_id": "EV-01",
+     "result": "PASS",
+     "reason_code": "well_formed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "EV-02",
+     "result": "PASS",
+     "reason_code": "refs_resolve",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-01",
+     "result": "PASS",
+     "reason_code": "provenance_ok",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-02",
+     "result": "PASS",
+     "reason_code": "in_scope",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MC-01",
+     "result": "PASS",
+     "reason_code": "recomputed",
+     "detail": "recomputed ['insights.token_outlier']",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-01",
+     "result": "PASS",
+     "reason_code": "claims_supported",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-02",
+     "result": "NOT_RUN",
+     "reason_code": "not_attention_label",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-01",
+     "result": "FAIL",
+     "reason_code": "state_mismatch",
+     "detail": "quiet label while Runtime Monitoring reports the telemetry INSUFFICIENT",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-02",
+     "result": "NOT_RUN",
+     "reason_code": "no_corroboration_claimed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-03",
+     "result": "FAIL",
+     "reason_code": "baseline_contradicts_quiet",
+     "detail": "the rules read INDETERMINATE on the same evidence; a quiet reading must explain that, and cannot be published over it",
+     "subject": ""
+    },
+    {
+     "check_id": "RP-01",
+     "result": "WARN",
+     "reason_code": "baseline_differs",
+     "detail": "computational baseline reads INDETERMINATE; diagnostic only",
+     "subject": ""
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "original_proposal"
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "final_action"
+    },
+    {
+     "check_id": "PE-01",
+     "result": "NOT_RUN",
+     "reason_code": "not_intervening",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MU-01",
+     "result": "PASS",
+     "reason_code": "memory_ok",
+     "detail": "",
+     "subject": ""
     }
    ]
   },
@@ -952,7 +2088,7 @@
     "context_memory"
    ],
    "other_llm_calls": 0,
-   "wall_ms": 26.7,
+   "wall_ms": 25.2,
    "error": null,
    "invocations": [
     {
@@ -962,10 +2098,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 888,
+     "input_tokens": 941,
      "output_tokens": 94,
      "tokens_measured": false,
-     "latency_ms": 0.674,
+     "latency_ms": 0.656,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -975,6 +2111,28 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "known": [
+       "0 metric rows supplied"
+      ],
+      "unknown": [
+       "whether the case's sources support a reading"
+      ],
+      "uncertain": [],
+      "hypothesis": "context_memory: nothing specific suspected",
+      "tool_requests": [
+       {
+        "tool": "get_context_snapshots",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       },
+       {
+        "tool": "inspect_context_references",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       }
+      ]
      }
     },
     {
@@ -984,10 +2142,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1104,
+     "input_tokens": 1156,
      "output_tokens": 39,
      "tokens_measured": false,
-     "latency_ms": 2.564,
+     "latency_ms": 2.617,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -997,7 +2155,116 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "hypothesis": "nothing citable",
+      "hypothesis_changed": false,
+      "change_reason": "",
+      "decision": "inconclusive",
+      "tool_requests": [],
+      "finding": null,
+      "missing_evidence": []
      }
+    }
+   ],
+   "verifier_results": [
+    {
+     "check_id": "EV-01",
+     "result": "PASS",
+     "reason_code": "well_formed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "EV-02",
+     "result": "PASS",
+     "reason_code": "refs_resolve",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-01",
+     "result": "PASS",
+     "reason_code": "provenance_ok",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-02",
+     "result": "PASS",
+     "reason_code": "in_scope",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MC-01",
+     "result": "NOT_RUN",
+     "reason_code": "no_recomputable_claim",
+     "detail": "no cited metric has an independent raw recomputation",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-01",
+     "result": "NOT_RUN",
+     "reason_code": "no_claims",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-02",
+     "result": "NOT_RUN",
+     "reason_code": "not_attention_label",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-01",
+     "result": "PASS",
+     "reason_code": "state_consistent",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-02",
+     "result": "NOT_RUN",
+     "reason_code": "no_corroboration_claimed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-03",
+     "result": "NOT_RUN",
+     "reason_code": "not_a_quiet_model_reading",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "RP-01",
+     "result": "WARN",
+     "reason_code": "baseline_differs",
+     "detail": "computational baseline reads CONTEXT_OK; diagnostic only",
+     "subject": ""
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "original_proposal"
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "final_action"
+    },
+    {
+     "check_id": "PE-01",
+     "result": "NOT_RUN",
+     "reason_code": "not_intervening",
+     "detail": "",
+     "subject": ""
     }
    ]
   },
@@ -1028,7 +2295,7 @@
     "context_memory"
    ],
    "other_llm_calls": 0,
-   "wall_ms": 24.5,
+   "wall_ms": 24.6,
    "error": null,
    "invocations": [
     {
@@ -1038,10 +2305,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 889,
+     "input_tokens": 942,
      "output_tokens": 94,
      "tokens_measured": false,
-     "latency_ms": 0.691,
+     "latency_ms": 0.652,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -1051,6 +2318,28 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "known": [
+       "0 metric rows supplied"
+      ],
+      "unknown": [
+       "whether the case's sources support a reading"
+      ],
+      "uncertain": [],
+      "hypothesis": "context_memory: nothing specific suspected",
+      "tool_requests": [
+       {
+        "tool": "get_context_snapshots",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       },
+       {
+        "tool": "inspect_context_references",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       }
+      ]
      }
     },
     {
@@ -1060,10 +2349,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1137,
+     "input_tokens": 1190,
      "output_tokens": 39,
      "tokens_measured": false,
-     "latency_ms": 2.918,
+     "latency_ms": 2.673,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -1073,7 +2362,116 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "hypothesis": "nothing citable",
+      "hypothesis_changed": false,
+      "change_reason": "",
+      "decision": "inconclusive",
+      "tool_requests": [],
+      "finding": null,
+      "missing_evidence": []
      }
+    }
+   ],
+   "verifier_results": [
+    {
+     "check_id": "EV-01",
+     "result": "PASS",
+     "reason_code": "well_formed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "EV-02",
+     "result": "PASS",
+     "reason_code": "refs_resolve",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-01",
+     "result": "PASS",
+     "reason_code": "provenance_ok",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-02",
+     "result": "PASS",
+     "reason_code": "in_scope",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MC-01",
+     "result": "NOT_RUN",
+     "reason_code": "no_recomputable_claim",
+     "detail": "no cited metric has an independent raw recomputation",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-01",
+     "result": "NOT_RUN",
+     "reason_code": "no_claims",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-02",
+     "result": "NOT_RUN",
+     "reason_code": "not_attention_label",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-01",
+     "result": "PASS",
+     "reason_code": "state_consistent",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-02",
+     "result": "NOT_RUN",
+     "reason_code": "no_corroboration_claimed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-03",
+     "result": "NOT_RUN",
+     "reason_code": "not_a_quiet_model_reading",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "RP-01",
+     "result": "WARN",
+     "reason_code": "baseline_differs",
+     "detail": "computational baseline reads CONTEXT_LOSS; diagnostic only",
+     "subject": ""
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "original_proposal"
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "final_action"
+    },
+    {
+     "check_id": "PE-01",
+     "result": "NOT_RUN",
+     "reason_code": "not_intervening",
+     "detail": "",
+     "subject": ""
     }
    ]
   },
@@ -1123,7 +2521,7 @@
     "context_memory"
    ],
    "other_llm_calls": 0,
-   "wall_ms": 23.8,
+   "wall_ms": 24.3,
    "error": null,
    "invocations": [
     {
@@ -1133,10 +2531,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 889,
+     "input_tokens": 941,
      "output_tokens": 94,
      "tokens_measured": false,
-     "latency_ms": 0.657,
+     "latency_ms": 0.671,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -1146,6 +2544,28 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "known": [
+       "0 metric rows supplied"
+      ],
+      "unknown": [
+       "whether the case's sources support a reading"
+      ],
+      "uncertain": [],
+      "hypothesis": "context_memory: nothing specific suspected",
+      "tool_requests": [
+       {
+        "tool": "get_context_snapshots",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       },
+       {
+        "tool": "inspect_context_references",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       }
+      ]
      }
     },
     {
@@ -1155,10 +2575,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1122,
+     "input_tokens": 1175,
      "output_tokens": 54,
      "tokens_measured": false,
-     "latency_ms": 2.679,
+     "latency_ms": 2.617,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -1168,7 +2588,119 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "hypothesis": "no source could be read",
+      "hypothesis_changed": false,
+      "change_reason": "",
+      "decision": "inconclusive",
+      "tool_requests": [],
+      "finding": null,
+      "missing_evidence": [
+       "get_context_snapshots",
+       "inspect_context_references"
+      ]
      }
+    }
+   ],
+   "verifier_results": [
+    {
+     "check_id": "EV-01",
+     "result": "PASS",
+     "reason_code": "well_formed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "EV-02",
+     "result": "PASS",
+     "reason_code": "refs_resolve",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-01",
+     "result": "PASS",
+     "reason_code": "provenance_ok",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-02",
+     "result": "PASS",
+     "reason_code": "in_scope",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MC-01",
+     "result": "NOT_RUN",
+     "reason_code": "no_recomputable_claim",
+     "detail": "no cited metric has an independent raw recomputation",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-01",
+     "result": "NOT_RUN",
+     "reason_code": "no_claims",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-02",
+     "result": "NOT_RUN",
+     "reason_code": "not_attention_label",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-01",
+     "result": "PASS",
+     "reason_code": "state_consistent",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-02",
+     "result": "NOT_RUN",
+     "reason_code": "no_corroboration_claimed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-03",
+     "result": "NOT_RUN",
+     "reason_code": "not_a_quiet_model_reading",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "RP-01",
+     "result": "PASS",
+     "reason_code": "baseline_agrees",
+     "detail": "computational baseline reads INCONCLUSIVE; diagnostic only",
+     "subject": ""
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "original_proposal"
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "final_action"
+    },
+    {
+     "check_id": "PE-01",
+     "result": "NOT_RUN",
+     "reason_code": "not_intervening",
+     "detail": "",
+     "subject": ""
     }
    ]
   },
@@ -1269,7 +2801,7 @@
     "incident_response"
    ],
    "other_llm_calls": 0,
-   "wall_ms": 65.4,
+   "wall_ms": 63.2,
    "error": null,
    "invocations": [
     {
@@ -1279,10 +2811,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1177,
+     "input_tokens": 1229,
      "output_tokens": 94,
      "tokens_measured": false,
-     "latency_ms": 0.717,
+     "latency_ms": 0.691,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -1292,6 +2824,28 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "known": [
+       "3 metric rows supplied"
+      ],
+      "unknown": [
+       "whether the case's sources support a reading"
+      ],
+      "uncertain": [],
+      "hypothesis": "incident_response: nothing specific suspected",
+      "tool_requests": [
+       {
+        "tool": "get_incident_evidence",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       },
+       {
+        "tool": "get_verified_findings",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       }
+      ]
      }
     },
     {
@@ -1301,10 +2855,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1463,
+     "input_tokens": 1515,
      "output_tokens": 322,
      "tokens_measured": false,
-     "latency_ms": 3.045,
+     "latency_ms": 2.7,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -1314,7 +2868,187 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "hypothesis": "incident_response: no deviation in what could be observed",
+      "hypothesis_changed": false,
+      "change_reason": "",
+      "decision": "conclude",
+      "tool_requests": [],
+      "finding": {
+       "label": "NO_INCIDENT",
+       "confidence": 0.6,
+       "claims": [
+        {
+         "statement": "insights.secrets is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.secrets",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.secrets"
+         ]
+        },
+        {
+         "statement": "insights.sensitive_unasked is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.sensitive_unasked",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.sensitive_unasked"
+         ]
+        },
+        {
+         "statement": "insights.blocked is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.blocked",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.blocked"
+         ]
+        },
+        {
+         "statement": "get_incident_evidence.requested = 0",
+         "kind": "tool_observation",
+         "metric_id": null,
+         "asserted_state": null,
+         "asserted_value": 0,
+         "tool_call_id": "fb881d4a-1cb8-5548-bab8-9e56e3c124a7",
+         "result_field": "requested",
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "tool:fb881d4a-1cb8-5548-bab8-9e56e3c124a7"
+         ]
+        }
+       ],
+       "rationale": "quiet reading from the observed rows and tool results (generic simulated fixture)",
+       "alternative_explanations": [],
+       "missing_evidence": [],
+       "proposed_action": "NONE",
+       "action_reason": "",
+       "detail": {}
+      },
+      "missing_evidence": []
      }
+    }
+   ],
+   "verifier_results": [
+    {
+     "check_id": "EV-01",
+     "result": "PASS",
+     "reason_code": "well_formed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "EV-02",
+     "result": "PASS",
+     "reason_code": "refs_resolve",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-01",
+     "result": "PASS",
+     "reason_code": "provenance_ok",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-02",
+     "result": "PASS",
+     "reason_code": "in_scope",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MC-01",
+     "result": "PASS",
+     "reason_code": "recomputed",
+     "detail": "recomputed ['insights.secrets', 'insights.blocked']",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-01",
+     "result": "PASS",
+     "reason_code": "claims_supported",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-02",
+     "result": "NOT_RUN",
+     "reason_code": "not_attention_label",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-01",
+     "result": "PASS",
+     "reason_code": "state_consistent",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-02",
+     "result": "NOT_RUN",
+     "reason_code": "no_corroboration_claimed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-03",
+     "result": "PASS",
+     "reason_code": "no_contradiction",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "RP-01",
+     "result": "PASS",
+     "reason_code": "baseline_agrees",
+     "detail": "computational baseline reads NO_INCIDENT; diagnostic only",
+     "subject": ""
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "original_proposal"
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "final_action"
+    },
+    {
+     "check_id": "PE-01",
+     "result": "NOT_RUN",
+     "reason_code": "not_intervening",
+     "detail": "",
+     "subject": ""
     }
    ]
   },
@@ -1360,7 +3094,7 @@
     "incident_response"
    ],
    "other_llm_calls": 0,
-   "wall_ms": 62.2,
+   "wall_ms": 63.7,
    "error": null,
    "invocations": [
     {
@@ -1370,10 +3104,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1338,
+     "input_tokens": 1390,
      "output_tokens": 94,
      "tokens_measured": false,
-     "latency_ms": 0.7,
+     "latency_ms": 0.755,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -1383,6 +3117,28 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "known": [
+       "3 metric rows supplied"
+      ],
+      "unknown": [
+       "whether the case's sources support a reading"
+      ],
+      "uncertain": [],
+      "hypothesis": "incident_response: nothing specific suspected",
+      "tool_requests": [
+       {
+        "tool": "get_incident_evidence",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       },
+       {
+        "tool": "get_verified_findings",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       }
+      ]
      }
     },
     {
@@ -1392,10 +3148,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1624,
+     "input_tokens": 1677,
      "output_tokens": 62,
      "tokens_measured": false,
-     "latency_ms": 2.517,
+     "latency_ms": 2.657,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -1405,7 +3161,119 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "hypothesis": "attention states present; no scripted interpretation for them",
+      "hypothesis_changed": false,
+      "change_reason": "",
+      "decision": "inconclusive",
+      "tool_requests": [],
+      "finding": null,
+      "missing_evidence": [
+       "insights.secrets",
+       "insights.sensitive_unasked"
+      ]
      }
+    }
+   ],
+   "verifier_results": [
+    {
+     "check_id": "EV-01",
+     "result": "PASS",
+     "reason_code": "well_formed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "EV-02",
+     "result": "PASS",
+     "reason_code": "refs_resolve",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-01",
+     "result": "PASS",
+     "reason_code": "provenance_ok",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-02",
+     "result": "PASS",
+     "reason_code": "in_scope",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MC-01",
+     "result": "NOT_RUN",
+     "reason_code": "no_recomputable_claim",
+     "detail": "no cited metric has an independent raw recomputation",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-01",
+     "result": "NOT_RUN",
+     "reason_code": "no_claims",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-02",
+     "result": "NOT_RUN",
+     "reason_code": "not_attention_label",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-01",
+     "result": "PASS",
+     "reason_code": "state_consistent",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-02",
+     "result": "NOT_RUN",
+     "reason_code": "no_corroboration_claimed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-03",
+     "result": "NOT_RUN",
+     "reason_code": "not_a_quiet_model_reading",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "RP-01",
+     "result": "WARN",
+     "reason_code": "baseline_differs",
+     "detail": "computational baseline reads INCIDENT; diagnostic only",
+     "subject": ""
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "original_proposal"
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "final_action"
+    },
+    {
+     "check_id": "PE-01",
+     "result": "NOT_RUN",
+     "reason_code": "not_intervening",
+     "detail": "",
+     "subject": ""
     }
    ]
   },
@@ -1500,7 +3368,7 @@
     "incident_response"
    ],
    "other_llm_calls": 0,
-   "wall_ms": 78.0,
+   "wall_ms": 64.3,
    "error": null,
    "invocations": [
     {
@@ -1510,10 +3378,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1206,
+     "input_tokens": 1258,
      "output_tokens": 94,
      "tokens_measured": false,
-     "latency_ms": 1.042,
+     "latency_ms": 0.678,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -1523,6 +3391,28 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "known": [
+       "3 metric rows supplied"
+      ],
+      "unknown": [
+       "whether the case's sources support a reading"
+      ],
+      "uncertain": [],
+      "hypothesis": "incident_response: nothing specific suspected",
+      "tool_requests": [
+       {
+        "tool": "get_incident_evidence",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       },
+       {
+        "tool": "get_verified_findings",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       }
+      ]
      }
     },
     {
@@ -1532,10 +3422,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1436,
+     "input_tokens": 1488,
      "output_tokens": 278,
      "tokens_measured": false,
-     "latency_ms": 4.11,
+     "latency_ms": 2.904,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -1545,7 +3435,179 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "hypothesis": "incident_response: no deviation in what could be observed",
+      "hypothesis_changed": false,
+      "change_reason": "",
+      "decision": "conclude",
+      "tool_requests": [],
+      "finding": {
+       "label": "NO_INCIDENT",
+       "confidence": 0.6,
+       "claims": [
+        {
+         "statement": "insights.secrets is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.secrets",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.secrets"
+         ]
+        },
+        {
+         "statement": "insights.sensitive_unasked is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.sensitive_unasked",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.sensitive_unasked"
+         ]
+        },
+        {
+         "statement": "get_incident_evidence.requested = 0",
+         "kind": "tool_observation",
+         "metric_id": null,
+         "asserted_state": null,
+         "asserted_value": 0,
+         "tool_call_id": "b203c3ed-1dd9-562e-bdfb-c1b0314902e9",
+         "result_field": "requested",
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "tool:b203c3ed-1dd9-562e-bdfb-c1b0314902e9"
+         ]
+        }
+       ],
+       "rationale": "quiet reading from the observed rows and tool results (generic simulated fixture)",
+       "alternative_explanations": [],
+       "missing_evidence": [],
+       "proposed_action": "NONE",
+       "action_reason": "",
+       "detail": {}
+      },
+      "missing_evidence": []
      }
+    }
+   ],
+   "verifier_results": [
+    {
+     "check_id": "EV-01",
+     "result": "PASS",
+     "reason_code": "well_formed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "EV-02",
+     "result": "PASS",
+     "reason_code": "refs_resolve",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-01",
+     "result": "PASS",
+     "reason_code": "provenance_ok",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-02",
+     "result": "PASS",
+     "reason_code": "in_scope",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MC-01",
+     "result": "PASS",
+     "reason_code": "recomputed",
+     "detail": "recomputed ['insights.secrets']",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-01",
+     "result": "PASS",
+     "reason_code": "claims_supported",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-02",
+     "result": "NOT_RUN",
+     "reason_code": "not_attention_label",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-01",
+     "result": "FAIL",
+     "reason_code": "state_mismatch",
+     "detail": "quiet label while Runtime Monitoring reports the telemetry INSUFFICIENT",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-02",
+     "result": "NOT_RUN",
+     "reason_code": "no_corroboration_claimed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-03",
+     "result": "FAIL",
+     "reason_code": "baseline_contradicts_quiet",
+     "detail": "the rules read WATCH on the same evidence; a quiet reading must explain that, and cannot be published over it",
+     "subject": ""
+    },
+    {
+     "check_id": "RP-01",
+     "result": "WARN",
+     "reason_code": "baseline_differs",
+     "detail": "computational baseline reads WATCH; diagnostic only",
+     "subject": ""
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "original_proposal"
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "final_action"
+    },
+    {
+     "check_id": "PE-01",
+     "result": "NOT_RUN",
+     "reason_code": "not_intervening",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MU-01",
+     "result": "PASS",
+     "reason_code": "memory_ok",
+     "detail": "",
+     "subject": ""
     }
    ]
   },
@@ -1659,7 +3721,7 @@
     "classification_tagging"
    ],
    "other_llm_calls": 0,
-   "wall_ms": 62.6,
+   "wall_ms": 43.6,
    "error": null,
    "invocations": [
     {
@@ -1669,10 +3731,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 978,
+     "input_tokens": 1030,
      "output_tokens": 95,
      "tokens_measured": false,
-     "latency_ms": 1.001,
+     "latency_ms": 0.731,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -1682,6 +3744,28 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "known": [
+       "4 metric rows supplied"
+      ],
+      "unknown": [
+       "whether the case's sources support a reading"
+      ],
+      "uncertain": [],
+      "hypothesis": "classification_tagging: nothing specific suspected",
+      "tool_requests": [
+       {
+        "tool": "query_taxonomy",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       },
+       {
+        "tool": "compare_validated_examples",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       }
+      ]
      }
     },
     {
@@ -1691,10 +3775,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1251,
+     "input_tokens": 1303,
      "output_tokens": 370,
      "tokens_measured": false,
-     "latency_ms": 4.238,
+     "latency_ms": 2.735,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -1704,7 +3788,202 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "hypothesis": "classification_tagging: no deviation in what could be observed",
+      "hypothesis_changed": false,
+      "change_reason": "",
+      "decision": "conclude",
+      "tool_requests": [],
+      "finding": {
+       "label": "UNCLASSIFIED",
+       "confidence": 0.6,
+       "claims": [
+        {
+         "statement": "insights.secrets is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.secrets",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.secrets"
+         ]
+        },
+        {
+         "statement": "insights.sensitive_unasked is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.sensitive_unasked",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.sensitive_unasked"
+         ]
+        },
+        {
+         "statement": "insights.outside is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.outside",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.outside"
+         ]
+        },
+        {
+         "statement": "insights.blocked is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.blocked",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.blocked"
+         ]
+        },
+        {
+         "statement": "query_taxonomy.version = tax-2026-10",
+         "kind": "tool_observation",
+         "metric_id": null,
+         "asserted_state": null,
+         "asserted_value": "tax-2026-10",
+         "tool_call_id": "c1bf7383-d246-5a3b-bd4d-733861476a07",
+         "result_field": "version",
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "tool:c1bf7383-d246-5a3b-bd4d-733861476a07"
+         ]
+        }
+       ],
+       "rationale": "quiet reading from the observed rows and tool results (generic simulated fixture)",
+       "alternative_explanations": [],
+       "missing_evidence": [],
+       "proposed_action": "NONE",
+       "action_reason": "",
+       "detail": {}
+      },
+      "missing_evidence": []
      }
+    }
+   ],
+   "verifier_results": [
+    {
+     "check_id": "EV-01",
+     "result": "PASS",
+     "reason_code": "well_formed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "EV-02",
+     "result": "PASS",
+     "reason_code": "refs_resolve",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-01",
+     "result": "PASS",
+     "reason_code": "provenance_ok",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-02",
+     "result": "PASS",
+     "reason_code": "in_scope",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MC-01",
+     "result": "PASS",
+     "reason_code": "recomputed",
+     "detail": "recomputed ['insights.secrets', 'insights.outside', 'insights.blocked']",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-01",
+     "result": "PASS",
+     "reason_code": "claims_supported",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-02",
+     "result": "NOT_RUN",
+     "reason_code": "not_attention_label",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-01",
+     "result": "PASS",
+     "reason_code": "state_consistent",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-02",
+     "result": "NOT_RUN",
+     "reason_code": "no_corroboration_claimed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-03",
+     "result": "PASS",
+     "reason_code": "no_contradiction",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "RP-01",
+     "result": "PASS",
+     "reason_code": "baseline_agrees",
+     "detail": "computational baseline reads UNCLASSIFIED; diagnostic only",
+     "subject": ""
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "original_proposal"
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "final_action"
+    },
+    {
+     "check_id": "PE-01",
+     "result": "NOT_RUN",
+     "reason_code": "not_intervening",
+     "detail": "",
+     "subject": ""
     }
    ]
   },
@@ -1746,7 +4025,7 @@
     "classification_tagging"
    ],
    "other_llm_calls": 0,
-   "wall_ms": 56.0,
+   "wall_ms": 40.8,
    "error": null,
    "invocations": [
     {
@@ -1756,10 +4035,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 999,
+     "input_tokens": 1051,
      "output_tokens": 95,
      "tokens_measured": false,
-     "latency_ms": 0.98,
+     "latency_ms": 0.769,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -1769,6 +4048,28 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "known": [
+       "4 metric rows supplied"
+      ],
+      "unknown": [
+       "whether the case's sources support a reading"
+      ],
+      "uncertain": [],
+      "hypothesis": "classification_tagging: nothing specific suspected",
+      "tool_requests": [
+       {
+        "tool": "query_taxonomy",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       },
+       {
+        "tool": "compare_validated_examples",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       }
+      ]
      }
     },
     {
@@ -1778,10 +4079,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1272,
+     "input_tokens": 1324,
      "output_tokens": 62,
      "tokens_measured": false,
-     "latency_ms": 3.947,
+     "latency_ms": 2.707,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -1791,7 +4092,119 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "hypothesis": "attention states present; no scripted interpretation for them",
+      "hypothesis_changed": false,
+      "change_reason": "",
+      "decision": "inconclusive",
+      "tool_requests": [],
+      "finding": null,
+      "missing_evidence": [
+       "insights.secrets",
+       "insights.sensitive_unasked"
+      ]
      }
+    }
+   ],
+   "verifier_results": [
+    {
+     "check_id": "EV-01",
+     "result": "PASS",
+     "reason_code": "well_formed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "EV-02",
+     "result": "PASS",
+     "reason_code": "refs_resolve",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-01",
+     "result": "PASS",
+     "reason_code": "provenance_ok",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-02",
+     "result": "PASS",
+     "reason_code": "in_scope",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MC-01",
+     "result": "NOT_RUN",
+     "reason_code": "no_recomputable_claim",
+     "detail": "no cited metric has an independent raw recomputation",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-01",
+     "result": "NOT_RUN",
+     "reason_code": "no_claims",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-02",
+     "result": "NOT_RUN",
+     "reason_code": "not_attention_label",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-01",
+     "result": "PASS",
+     "reason_code": "state_consistent",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-02",
+     "result": "NOT_RUN",
+     "reason_code": "no_corroboration_claimed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-03",
+     "result": "NOT_RUN",
+     "reason_code": "not_a_quiet_model_reading",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "RP-01",
+     "result": "WARN",
+     "reason_code": "baseline_differs",
+     "detail": "computational baseline reads BOUNDARY; diagnostic only",
+     "subject": ""
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "original_proposal"
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "final_action"
+    },
+    {
+     "check_id": "PE-01",
+     "result": "NOT_RUN",
+     "reason_code": "not_intervening",
+     "detail": "",
+     "subject": ""
     }
    ]
   },
@@ -1838,7 +4251,7 @@
     "classification_tagging"
    ],
    "other_llm_calls": 0,
-   "wall_ms": 51.5,
+   "wall_ms": 39.6,
    "error": null,
    "invocations": [
     {
@@ -1848,10 +4261,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 999,
+     "input_tokens": 1051,
      "output_tokens": 95,
      "tokens_measured": false,
-     "latency_ms": 0.766,
+     "latency_ms": 0.688,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -1861,6 +4274,28 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "known": [
+       "4 metric rows supplied"
+      ],
+      "unknown": [
+       "whether the case's sources support a reading"
+      ],
+      "uncertain": [],
+      "hypothesis": "classification_tagging: nothing specific suspected",
+      "tool_requests": [
+       {
+        "tool": "query_taxonomy",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       },
+       {
+        "tool": "compare_validated_examples",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       }
+      ]
      }
     },
     {
@@ -1870,10 +4305,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1228,
+     "input_tokens": 1280,
      "output_tokens": 62,
      "tokens_measured": false,
-     "latency_ms": 4.099,
+     "latency_ms": 2.557,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -1883,7 +4318,119 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "hypothesis": "attention states present; no scripted interpretation for them",
+      "hypothesis_changed": false,
+      "change_reason": "",
+      "decision": "inconclusive",
+      "tool_requests": [],
+      "finding": null,
+      "missing_evidence": [
+       "insights.secrets",
+       "insights.sensitive_unasked"
+      ]
      }
+    }
+   ],
+   "verifier_results": [
+    {
+     "check_id": "EV-01",
+     "result": "PASS",
+     "reason_code": "well_formed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "EV-02",
+     "result": "PASS",
+     "reason_code": "refs_resolve",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-01",
+     "result": "PASS",
+     "reason_code": "provenance_ok",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-02",
+     "result": "PASS",
+     "reason_code": "in_scope",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MC-01",
+     "result": "NOT_RUN",
+     "reason_code": "no_recomputable_claim",
+     "detail": "no cited metric has an independent raw recomputation",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-01",
+     "result": "NOT_RUN",
+     "reason_code": "no_claims",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-02",
+     "result": "NOT_RUN",
+     "reason_code": "not_attention_label",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-01",
+     "result": "PASS",
+     "reason_code": "state_consistent",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-02",
+     "result": "NOT_RUN",
+     "reason_code": "no_corroboration_claimed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-03",
+     "result": "NOT_RUN",
+     "reason_code": "not_a_quiet_model_reading",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "RP-01",
+     "result": "PASS",
+     "reason_code": "baseline_agrees",
+     "detail": "computational baseline reads INCONCLUSIVE; diagnostic only",
+     "subject": ""
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "original_proposal"
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "final_action"
+    },
+    {
+     "check_id": "PE-01",
+     "result": "NOT_RUN",
+     "reason_code": "not_intervening",
+     "detail": "",
+     "subject": ""
     }
    ]
   },
@@ -2015,7 +4562,7 @@
     "risk_mitigation"
    ],
    "other_llm_calls": 0,
-   "wall_ms": 61.4,
+   "wall_ms": 55.0,
    "error": null,
    "invocations": [
     {
@@ -2025,10 +4572,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1177,
+     "input_tokens": 1229,
      "output_tokens": 95,
      "tokens_measured": false,
-     "latency_ms": 0.729,
+     "latency_ms": 0.688,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -2038,6 +4585,28 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "known": [
+       "5 metric rows supplied"
+      ],
+      "unknown": [
+       "whether the case's sources support a reading"
+      ],
+      "uncertain": [],
+      "hypothesis": "risk_mitigation: nothing specific suspected",
+      "tool_requests": [
+       {
+        "tool": "read_risk_register",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       },
+       {
+        "tool": "evaluate_control_prerequisites",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       }
+      ]
      }
     },
     {
@@ -2047,10 +4616,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1422,
+     "input_tokens": 1474,
      "output_tokens": 417,
      "tokens_measured": false,
-     "latency_ms": 2.726,
+     "latency_ms": 2.703,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -2060,7 +4629,217 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "hypothesis": "risk_mitigation: no deviation in what could be observed",
+      "hypothesis_changed": false,
+      "change_reason": "",
+      "decision": "conclude",
+      "tool_requests": [],
+      "finding": {
+       "label": "LOW",
+       "confidence": 0.6,
+       "claims": [
+        {
+         "statement": "insights.secrets is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.secrets",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.secrets"
+         ]
+        },
+        {
+         "statement": "insights.sensitive_unasked is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.sensitive_unasked",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.sensitive_unasked"
+         ]
+        },
+        {
+         "statement": "insights.outside is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.outside",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.outside"
+         ]
+        },
+        {
+         "statement": "insights.reverted is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.reverted",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.reverted"
+         ]
+        },
+        {
+         "statement": "insights.token_outlier is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.token_outlier",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.token_outlier"
+         ]
+        },
+        {
+         "statement": "read_risk_register.version = risk-2026-09",
+         "kind": "tool_observation",
+         "metric_id": null,
+         "asserted_state": null,
+         "asserted_value": "risk-2026-09",
+         "tool_call_id": "1e09df64-d583-502e-8e46-eddc54bc8be8",
+         "result_field": "version",
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "tool:1e09df64-d583-502e-8e46-eddc54bc8be8"
+         ]
+        }
+       ],
+       "rationale": "quiet reading from the observed rows and tool results (generic simulated fixture)",
+       "alternative_explanations": [],
+       "missing_evidence": [],
+       "proposed_action": "NONE",
+       "action_reason": "",
+       "detail": {}
+      },
+      "missing_evidence": []
      }
+    }
+   ],
+   "verifier_results": [
+    {
+     "check_id": "EV-01",
+     "result": "PASS",
+     "reason_code": "well_formed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "EV-02",
+     "result": "PASS",
+     "reason_code": "refs_resolve",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-01",
+     "result": "PASS",
+     "reason_code": "provenance_ok",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-02",
+     "result": "PASS",
+     "reason_code": "in_scope",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MC-01",
+     "result": "PASS",
+     "reason_code": "recomputed",
+     "detail": "recomputed ['insights.secrets', 'insights.outside', 'insights.token_outlier']",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-01",
+     "result": "PASS",
+     "reason_code": "claims_supported",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-02",
+     "result": "NOT_RUN",
+     "reason_code": "not_attention_label",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-01",
+     "result": "PASS",
+     "reason_code": "state_consistent",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-02",
+     "result": "NOT_RUN",
+     "reason_code": "no_corroboration_claimed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-03",
+     "result": "PASS",
+     "reason_code": "no_contradiction",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "RP-01",
+     "result": "PASS",
+     "reason_code": "baseline_agrees",
+     "detail": "computational baseline reads LOW; diagnostic only",
+     "subject": ""
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "original_proposal"
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "final_action"
+    },
+    {
+     "check_id": "PE-01",
+     "result": "NOT_RUN",
+     "reason_code": "not_intervening",
+     "detail": "",
+     "subject": ""
     }
    ]
   },
@@ -2105,7 +4884,7 @@
     "risk_mitigation"
    ],
    "other_llm_calls": 0,
-   "wall_ms": 57.1,
+   "wall_ms": 53.3,
    "error": null,
    "invocations": [
     {
@@ -2115,10 +4894,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1199,
+     "input_tokens": 1251,
      "output_tokens": 95,
      "tokens_measured": false,
-     "latency_ms": 0.693,
+     "latency_ms": 0.683,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -2128,6 +4907,28 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "known": [
+       "5 metric rows supplied"
+      ],
+      "unknown": [
+       "whether the case's sources support a reading"
+      ],
+      "uncertain": [],
+      "hypothesis": "risk_mitigation: nothing specific suspected",
+      "tool_requests": [
+       {
+        "tool": "read_risk_register",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       },
+       {
+        "tool": "evaluate_control_prerequisites",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       }
+      ]
      }
     },
     {
@@ -2137,10 +4938,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1444,
+     "input_tokens": 1496,
      "output_tokens": 62,
      "tokens_measured": false,
-     "latency_ms": 3.001,
+     "latency_ms": 2.625,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -2150,7 +4951,119 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "hypothesis": "attention states present; no scripted interpretation for them",
+      "hypothesis_changed": false,
+      "change_reason": "",
+      "decision": "inconclusive",
+      "tool_requests": [],
+      "finding": null,
+      "missing_evidence": [
+       "insights.secrets",
+       "insights.sensitive_unasked"
+      ]
      }
+    }
+   ],
+   "verifier_results": [
+    {
+     "check_id": "EV-01",
+     "result": "PASS",
+     "reason_code": "well_formed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "EV-02",
+     "result": "PASS",
+     "reason_code": "refs_resolve",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-01",
+     "result": "PASS",
+     "reason_code": "provenance_ok",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-02",
+     "result": "PASS",
+     "reason_code": "in_scope",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MC-01",
+     "result": "NOT_RUN",
+     "reason_code": "no_recomputable_claim",
+     "detail": "no cited metric has an independent raw recomputation",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-01",
+     "result": "NOT_RUN",
+     "reason_code": "no_claims",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-02",
+     "result": "NOT_RUN",
+     "reason_code": "not_attention_label",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-01",
+     "result": "PASS",
+     "reason_code": "state_consistent",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-02",
+     "result": "NOT_RUN",
+     "reason_code": "no_corroboration_claimed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-03",
+     "result": "NOT_RUN",
+     "reason_code": "not_a_quiet_model_reading",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "RP-01",
+     "result": "WARN",
+     "reason_code": "baseline_differs",
+     "detail": "computational baseline reads EMERGING; diagnostic only",
+     "subject": ""
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "original_proposal"
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "final_action"
+    },
+    {
+     "check_id": "PE-01",
+     "result": "NOT_RUN",
+     "reason_code": "not_intervening",
+     "detail": "",
+     "subject": ""
     }
    ]
   },
@@ -2287,7 +5200,7 @@
     "risk_mitigation"
    ],
    "other_llm_calls": 0,
-   "wall_ms": 54.7,
+   "wall_ms": 53.6,
    "error": null,
    "invocations": [
     {
@@ -2297,10 +5210,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1177,
+     "input_tokens": 1230,
      "output_tokens": 95,
      "tokens_measured": false,
-     "latency_ms": 0.63,
+     "latency_ms": 0.705,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -2310,6 +5223,28 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "known": [
+       "5 metric rows supplied"
+      ],
+      "unknown": [
+       "whether the case's sources support a reading"
+      ],
+      "uncertain": [],
+      "hypothesis": "risk_mitigation: nothing specific suspected",
+      "tool_requests": [
+       {
+        "tool": "read_risk_register",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       },
+       {
+        "tool": "evaluate_control_prerequisites",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       }
+      ]
      }
     },
     {
@@ -2319,10 +5254,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1400,
+     "input_tokens": 1452,
      "output_tokens": 363,
      "tokens_measured": false,
-     "latency_ms": 2.607,
+     "latency_ms": 2.602,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -2332,7 +5267,212 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "hypothesis": "risk_mitigation: no deviation in what could be observed",
+      "hypothesis_changed": false,
+      "change_reason": "",
+      "decision": "conclude",
+      "tool_requests": [],
+      "finding": {
+       "label": "LOW",
+       "confidence": 0.6,
+       "claims": [
+        {
+         "statement": "insights.secrets is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.secrets",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.secrets"
+         ]
+        },
+        {
+         "statement": "insights.sensitive_unasked is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.sensitive_unasked",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.sensitive_unasked"
+         ]
+        },
+        {
+         "statement": "insights.outside is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.outside",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.outside"
+         ]
+        },
+        {
+         "statement": "insights.reverted is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.reverted",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.reverted"
+         ]
+        },
+        {
+         "statement": "insights.token_outlier is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.token_outlier",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.token_outlier"
+         ]
+        }
+       ],
+       "rationale": "quiet reading from the observed rows and tool results (generic simulated fixture)",
+       "alternative_explanations": [],
+       "missing_evidence": [
+        "read_risk_register",
+        "evaluate_control_prerequisites"
+       ],
+       "proposed_action": "NONE",
+       "action_reason": "",
+       "detail": {}
+      },
+      "missing_evidence": []
      }
+    }
+   ],
+   "verifier_results": [
+    {
+     "check_id": "EV-01",
+     "result": "PASS",
+     "reason_code": "well_formed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "EV-02",
+     "result": "PASS",
+     "reason_code": "refs_resolve",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-01",
+     "result": "PASS",
+     "reason_code": "provenance_ok",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-02",
+     "result": "PASS",
+     "reason_code": "in_scope",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MC-01",
+     "result": "PASS",
+     "reason_code": "recomputed",
+     "detail": "recomputed ['insights.secrets', 'insights.outside', 'insights.token_outlier']",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-01",
+     "result": "PASS",
+     "reason_code": "claims_supported",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-02",
+     "result": "NOT_RUN",
+     "reason_code": "not_attention_label",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-01",
+     "result": "FAIL",
+     "reason_code": "state_mismatch",
+     "detail": "required evidence unavailable: risk_register (LOW: impact and thresholds)",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-02",
+     "result": "NOT_RUN",
+     "reason_code": "no_corroboration_claimed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-03",
+     "result": "PASS",
+     "reason_code": "no_contradiction",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "RP-01",
+     "result": "WARN",
+     "reason_code": "baseline_differs",
+     "detail": "computational baseline reads INCONCLUSIVE; diagnostic only",
+     "subject": ""
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "original_proposal"
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "final_action"
+    },
+    {
+     "check_id": "PE-01",
+     "result": "NOT_RUN",
+     "reason_code": "not_intervening",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MU-01",
+     "result": "PASS",
+     "reason_code": "memory_ok",
+     "detail": "",
+     "subject": ""
     }
    ]
   },
@@ -2382,7 +5522,7 @@
     "governance_intelligence"
    ],
    "other_llm_calls": 0,
-   "wall_ms": 47.8,
+   "wall_ms": 42.6,
    "error": null,
    "invocations": [
     {
@@ -2392,10 +5532,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 833,
+     "input_tokens": 886,
      "output_tokens": 95,
      "tokens_measured": false,
-     "latency_ms": 0.941,
+     "latency_ms": 0.689,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -2405,6 +5545,28 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "known": [
+       "0 metric rows supplied"
+      ],
+      "unknown": [
+       "whether the case's sources support a reading"
+      ],
+      "uncertain": [],
+      "hypothesis": "governance_intelligence: nothing specific suspected",
+      "tool_requests": [
+       {
+        "tool": "query_aggregate_report",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       },
+       {
+        "tool": "compare_time_windows",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       }
+      ]
      }
     },
     {
@@ -2414,10 +5576,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1187,
+     "input_tokens": 1239,
      "output_tokens": 185,
      "tokens_measured": false,
-     "latency_ms": 3.027,
+     "latency_ms": 2.621,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -2427,7 +5589,142 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "hypothesis": "governance_intelligence: no deviation in what could be observed",
+      "hypothesis_changed": false,
+      "change_reason": "",
+      "decision": "conclude",
+      "tool_requests": [],
+      "finding": {
+       "label": "NO_PATTERN",
+       "confidence": 0.6,
+       "claims": [
+        {
+         "statement": "query_aggregate_report.window_days = 30",
+         "kind": "tool_observation",
+         "metric_id": null,
+         "asserted_state": null,
+         "asserted_value": 30,
+         "tool_call_id": "daf28c8d-bde5-542c-bd5e-0d13d3b01e13",
+         "result_field": "window_days",
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "tool:daf28c8d-bde5-542c-bd5e-0d13d3b01e13"
+         ]
+        }
+       ],
+       "rationale": "quiet reading from the observed rows and tool results (generic simulated fixture)",
+       "alternative_explanations": [],
+       "missing_evidence": [],
+       "proposed_action": "NONE",
+       "action_reason": "",
+       "detail": {}
+      },
+      "missing_evidence": []
      }
+    }
+   ],
+   "verifier_results": [
+    {
+     "check_id": "EV-01",
+     "result": "PASS",
+     "reason_code": "well_formed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "EV-02",
+     "result": "PASS",
+     "reason_code": "refs_resolve",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-01",
+     "result": "PASS",
+     "reason_code": "provenance_ok",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-02",
+     "result": "PASS",
+     "reason_code": "in_scope",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MC-01",
+     "result": "NOT_RUN",
+     "reason_code": "no_recomputable_claim",
+     "detail": "no cited metric has an independent raw recomputation",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-01",
+     "result": "PASS",
+     "reason_code": "claims_supported",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-02",
+     "result": "NOT_RUN",
+     "reason_code": "not_attention_label",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-01",
+     "result": "PASS",
+     "reason_code": "state_consistent",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-02",
+     "result": "NOT_RUN",
+     "reason_code": "no_corroboration_claimed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-03",
+     "result": "PASS",
+     "reason_code": "no_contradiction",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "RP-01",
+     "result": "PASS",
+     "reason_code": "baseline_agrees",
+     "detail": "computational baseline reads NO_PATTERN; diagnostic only",
+     "subject": ""
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "original_proposal"
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "final_action"
+    },
+    {
+     "check_id": "PE-01",
+     "result": "NOT_RUN",
+     "reason_code": "not_intervening",
+     "detail": "",
+     "subject": ""
     }
    ]
   },
@@ -2480,7 +5777,7 @@
     "governance_intelligence"
    ],
    "other_llm_calls": 0,
-   "wall_ms": 45.6,
+   "wall_ms": 43.8,
    "error": null,
    "invocations": [
     {
@@ -2490,10 +5787,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 833,
+     "input_tokens": 886,
      "output_tokens": 95,
      "tokens_measured": false,
-     "latency_ms": 0.667,
+     "latency_ms": 0.664,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -2503,6 +5800,28 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "known": [
+       "0 metric rows supplied"
+      ],
+      "unknown": [
+       "whether the case's sources support a reading"
+      ],
+      "uncertain": [],
+      "hypothesis": "governance_intelligence: nothing specific suspected",
+      "tool_requests": [
+       {
+        "tool": "query_aggregate_report",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       },
+       {
+        "tool": "compare_time_windows",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       }
+      ]
      }
     },
     {
@@ -2512,10 +5831,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1188,
+     "input_tokens": 1240,
      "output_tokens": 185,
      "tokens_measured": false,
-     "latency_ms": 2.623,
+     "latency_ms": 2.648,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -2525,7 +5844,149 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "hypothesis": "governance_intelligence: no deviation in what could be observed",
+      "hypothesis_changed": false,
+      "change_reason": "",
+      "decision": "conclude",
+      "tool_requests": [],
+      "finding": {
+       "label": "NO_PATTERN",
+       "confidence": 0.6,
+       "claims": [
+        {
+         "statement": "query_aggregate_report.window_days = 30",
+         "kind": "tool_observation",
+         "metric_id": null,
+         "asserted_state": null,
+         "asserted_value": 30,
+         "tool_call_id": "f7410954-559d-5ad2-87f2-d97109e8c10f",
+         "result_field": "window_days",
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "tool:f7410954-559d-5ad2-87f2-d97109e8c10f"
+         ]
+        }
+       ],
+       "rationale": "quiet reading from the observed rows and tool results (generic simulated fixture)",
+       "alternative_explanations": [],
+       "missing_evidence": [],
+       "proposed_action": "NONE",
+       "action_reason": "",
+       "detail": {}
+      },
+      "missing_evidence": []
      }
+    }
+   ],
+   "verifier_results": [
+    {
+     "check_id": "EV-01",
+     "result": "PASS",
+     "reason_code": "well_formed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "EV-02",
+     "result": "PASS",
+     "reason_code": "refs_resolve",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-01",
+     "result": "PASS",
+     "reason_code": "provenance_ok",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-02",
+     "result": "PASS",
+     "reason_code": "in_scope",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MC-01",
+     "result": "NOT_RUN",
+     "reason_code": "no_recomputable_claim",
+     "detail": "no cited metric has an independent raw recomputation",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-01",
+     "result": "PASS",
+     "reason_code": "claims_supported",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-02",
+     "result": "NOT_RUN",
+     "reason_code": "not_attention_label",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-01",
+     "result": "PASS",
+     "reason_code": "state_consistent",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-02",
+     "result": "NOT_RUN",
+     "reason_code": "no_corroboration_claimed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-03",
+     "result": "FAIL",
+     "reason_code": "baseline_contradicts_quiet",
+     "detail": "the rules read RECURRING on the same evidence; a quiet reading must explain that, and cannot be published over it",
+     "subject": ""
+    },
+    {
+     "check_id": "RP-01",
+     "result": "WARN",
+     "reason_code": "baseline_differs",
+     "detail": "computational baseline reads RECURRING; diagnostic only",
+     "subject": ""
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "original_proposal"
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "final_action"
+    },
+    {
+     "check_id": "PE-01",
+     "result": "NOT_RUN",
+     "reason_code": "not_intervening",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MU-01",
+     "result": "PASS",
+     "reason_code": "memory_ok",
+     "detail": "",
+     "subject": ""
     }
    ]
   },
@@ -2577,7 +6038,7 @@
     "governance_intelligence"
    ],
    "other_llm_calls": 0,
-   "wall_ms": 43.3,
+   "wall_ms": 38.6,
    "error": null,
    "invocations": [
     {
@@ -2587,10 +6048,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 833,
+     "input_tokens": 886,
      "output_tokens": 95,
      "tokens_measured": false,
-     "latency_ms": 0.85,
+     "latency_ms": 0.662,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -2600,6 +6061,28 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "known": [
+       "0 metric rows supplied"
+      ],
+      "unknown": [
+       "whether the case's sources support a reading"
+      ],
+      "uncertain": [],
+      "hypothesis": "governance_intelligence: nothing specific suspected",
+      "tool_requests": [
+       {
+        "tool": "query_aggregate_report",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       },
+       {
+        "tool": "compare_time_windows",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       }
+      ]
      }
     },
     {
@@ -2609,10 +6092,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1047,
+     "input_tokens": 1099,
      "output_tokens": 53,
      "tokens_measured": false,
-     "latency_ms": 2.677,
+     "latency_ms": 2.517,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -2622,7 +6105,119 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "hypothesis": "no source could be read",
+      "hypothesis_changed": false,
+      "change_reason": "",
+      "decision": "inconclusive",
+      "tool_requests": [],
+      "finding": null,
+      "missing_evidence": [
+       "query_aggregate_report",
+       "compare_time_windows"
+      ]
      }
+    }
+   ],
+   "verifier_results": [
+    {
+     "check_id": "EV-01",
+     "result": "PASS",
+     "reason_code": "well_formed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "EV-02",
+     "result": "PASS",
+     "reason_code": "refs_resolve",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-01",
+     "result": "PASS",
+     "reason_code": "provenance_ok",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-02",
+     "result": "PASS",
+     "reason_code": "in_scope",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MC-01",
+     "result": "NOT_RUN",
+     "reason_code": "no_recomputable_claim",
+     "detail": "no cited metric has an independent raw recomputation",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-01",
+     "result": "NOT_RUN",
+     "reason_code": "no_claims",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-02",
+     "result": "NOT_RUN",
+     "reason_code": "not_attention_label",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-01",
+     "result": "PASS",
+     "reason_code": "state_consistent",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-02",
+     "result": "NOT_RUN",
+     "reason_code": "no_corroboration_claimed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-03",
+     "result": "NOT_RUN",
+     "reason_code": "not_a_quiet_model_reading",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "RP-01",
+     "result": "PASS",
+     "reason_code": "baseline_agrees",
+     "detail": "computational baseline reads INCONCLUSIVE; diagnostic only",
+     "subject": ""
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "original_proposal"
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "final_action"
+    },
+    {
+     "check_id": "PE-01",
+     "result": "NOT_RUN",
+     "reason_code": "not_intervening",
+     "detail": "",
+     "subject": ""
     }
    ]
   },
@@ -2735,7 +6330,7 @@
     "workload_optimization"
    ],
    "other_llm_calls": 0,
-   "wall_ms": 32.9,
+   "wall_ms": 31.8,
    "error": null,
    "invocations": [
     {
@@ -2745,10 +6340,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 999,
+     "input_tokens": 1051,
      "output_tokens": 95,
      "tokens_measured": false,
-     "latency_ms": 0.673,
+     "latency_ms": 0.737,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -2758,6 +6353,28 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "known": [
+       "4 metric rows supplied"
+      ],
+      "unknown": [
+       "whether the case's sources support a reading"
+      ],
+      "uncertain": [],
+      "hypothesis": "workload_optimization: nothing specific suspected",
+      "tool_requests": [
+       {
+        "tool": "calculate_usage_rates",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       },
+       {
+        "tool": "compare_task_classes",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       }
+      ]
      }
     },
     {
@@ -2767,10 +6384,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1195,
+     "input_tokens": 1248,
      "output_tokens": 381,
      "tokens_measured": false,
-     "latency_ms": 3.18,
+     "latency_ms": 2.685,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -2780,7 +6397,202 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "hypothesis": "workload_optimization: no deviation in what could be observed",
+      "hypothesis_changed": false,
+      "change_reason": "",
+      "decision": "conclude",
+      "tool_requests": [],
+      "finding": {
+       "label": "EFFICIENT",
+       "confidence": 0.6,
+       "claims": [
+        {
+         "statement": "insights.repetition is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.repetition",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.repetition"
+         ]
+        },
+        {
+         "statement": "insights.duration_outlier is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.duration_outlier",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.duration_outlier"
+         ]
+        },
+        {
+         "statement": "insights.token_outlier is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.token_outlier",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.token_outlier"
+         ]
+        },
+        {
+         "statement": "activity.action_rate_ratio is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "activity.action_rate_ratio",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:activity.action_rate_ratio"
+         ]
+        },
+        {
+         "statement": "calculate_usage_rates.tokens = 1000.0",
+         "kind": "tool_observation",
+         "metric_id": null,
+         "asserted_state": null,
+         "asserted_value": 1000.0,
+         "tool_call_id": "f39db395-5aea-5fc5-ae62-56bc0e81fa4d",
+         "result_field": "tokens",
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "tool:f39db395-5aea-5fc5-ae62-56bc0e81fa4d"
+         ]
+        }
+       ],
+       "rationale": "quiet reading from the observed rows and tool results (generic simulated fixture)",
+       "alternative_explanations": [],
+       "missing_evidence": [],
+       "proposed_action": "NONE",
+       "action_reason": "",
+       "detail": {}
+      },
+      "missing_evidence": []
      }
+    }
+   ],
+   "verifier_results": [
+    {
+     "check_id": "EV-01",
+     "result": "PASS",
+     "reason_code": "well_formed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "EV-02",
+     "result": "PASS",
+     "reason_code": "refs_resolve",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-01",
+     "result": "PASS",
+     "reason_code": "provenance_ok",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-02",
+     "result": "PASS",
+     "reason_code": "in_scope",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MC-01",
+     "result": "PASS",
+     "reason_code": "recomputed",
+     "detail": "recomputed ['insights.token_outlier']",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-01",
+     "result": "PASS",
+     "reason_code": "claims_supported",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-02",
+     "result": "NOT_RUN",
+     "reason_code": "not_attention_label",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-01",
+     "result": "PASS",
+     "reason_code": "state_consistent",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-02",
+     "result": "NOT_RUN",
+     "reason_code": "no_corroboration_claimed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-03",
+     "result": "PASS",
+     "reason_code": "no_contradiction",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "RP-01",
+     "result": "PASS",
+     "reason_code": "baseline_agrees",
+     "detail": "computational baseline reads EFFICIENT; diagnostic only",
+     "subject": ""
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "original_proposal"
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "final_action"
+    },
+    {
+     "check_id": "PE-01",
+     "result": "NOT_RUN",
+     "reason_code": "not_intervening",
+     "detail": "",
+     "subject": ""
     }
    ]
   },
@@ -2883,7 +6695,7 @@
     "workload_optimization"
    ],
    "other_llm_calls": 0,
-   "wall_ms": 32.9,
+   "wall_ms": 32.3,
    "error": null,
    "invocations": [
     {
@@ -2893,10 +6705,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1005,
+     "input_tokens": 1057,
      "output_tokens": 95,
      "tokens_measured": false,
-     "latency_ms": 0.985,
+     "latency_ms": 0.687,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -2906,6 +6718,28 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "known": [
+       "4 metric rows supplied"
+      ],
+      "unknown": [
+       "whether the case's sources support a reading"
+      ],
+      "uncertain": [],
+      "hypothesis": "workload_optimization: nothing specific suspected",
+      "tool_requests": [
+       {
+        "tool": "calculate_usage_rates",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       },
+       {
+        "tool": "compare_task_classes",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       }
+      ]
      }
     },
     {
@@ -2915,10 +6749,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1202,
+     "input_tokens": 1254,
      "output_tokens": 330,
      "tokens_measured": false,
-     "latency_ms": 2.586,
+     "latency_ms": 2.781,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -2928,7 +6762,187 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "hypothesis": "workload_optimization: no deviation in what could be observed",
+      "hypothesis_changed": false,
+      "change_reason": "",
+      "decision": "conclude",
+      "tool_requests": [],
+      "finding": {
+       "label": "EFFICIENT",
+       "confidence": 0.6,
+       "claims": [
+        {
+         "statement": "insights.repetition is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.repetition",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.repetition"
+         ]
+        },
+        {
+         "statement": "insights.token_outlier is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.token_outlier",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.token_outlier"
+         ]
+        },
+        {
+         "statement": "activity.action_rate_ratio is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "activity.action_rate_ratio",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:activity.action_rate_ratio"
+         ]
+        },
+        {
+         "statement": "calculate_usage_rates.tokens = 1200.0",
+         "kind": "tool_observation",
+         "metric_id": null,
+         "asserted_state": null,
+         "asserted_value": 1200.0,
+         "tool_call_id": "6f58a4d4-487d-5415-92d6-c7e3eef33c0f",
+         "result_field": "tokens",
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "tool:6f58a4d4-487d-5415-92d6-c7e3eef33c0f"
+         ]
+        }
+       ],
+       "rationale": "quiet reading from the observed rows and tool results (generic simulated fixture)",
+       "alternative_explanations": [],
+       "missing_evidence": [],
+       "proposed_action": "NONE",
+       "action_reason": "",
+       "detail": {}
+      },
+      "missing_evidence": []
      }
+    }
+   ],
+   "verifier_results": [
+    {
+     "check_id": "EV-01",
+     "result": "PASS",
+     "reason_code": "well_formed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "EV-02",
+     "result": "PASS",
+     "reason_code": "refs_resolve",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-01",
+     "result": "PASS",
+     "reason_code": "provenance_ok",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-02",
+     "result": "PASS",
+     "reason_code": "in_scope",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MC-01",
+     "result": "PASS",
+     "reason_code": "recomputed",
+     "detail": "recomputed ['insights.token_outlier']",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-01",
+     "result": "PASS",
+     "reason_code": "claims_supported",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-02",
+     "result": "NOT_RUN",
+     "reason_code": "not_attention_label",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-01",
+     "result": "PASS",
+     "reason_code": "state_consistent",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-02",
+     "result": "NOT_RUN",
+     "reason_code": "no_corroboration_claimed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-03",
+     "result": "PASS",
+     "reason_code": "no_contradiction",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "RP-01",
+     "result": "PASS",
+     "reason_code": "baseline_agrees",
+     "detail": "computational baseline reads EFFICIENT; diagnostic only",
+     "subject": ""
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "original_proposal"
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "final_action"
+    },
+    {
+     "check_id": "PE-01",
+     "result": "NOT_RUN",
+     "reason_code": "not_intervening",
+     "detail": "",
+     "subject": ""
     }
    ]
   },
@@ -3053,7 +7067,7 @@
     "workload_optimization"
    ],
    "other_llm_calls": 0,
-   "wall_ms": 33.0,
+   "wall_ms": 32.0,
    "error": null,
    "invocations": [
     {
@@ -3063,10 +7077,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 999,
+     "input_tokens": 1051,
      "output_tokens": 95,
      "tokens_measured": false,
-     "latency_ms": 0.665,
+     "latency_ms": 0.728,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -3076,6 +7090,28 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "known": [
+       "4 metric rows supplied"
+      ],
+      "unknown": [
+       "whether the case's sources support a reading"
+      ],
+      "uncertain": [],
+      "hypothesis": "workload_optimization: nothing specific suspected",
+      "tool_requests": [
+       {
+        "tool": "calculate_usage_rates",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       },
+       {
+        "tool": "compare_task_classes",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       }
+      ]
      }
     },
     {
@@ -3085,10 +7121,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1214,
+     "input_tokens": 1266,
      "output_tokens": 386,
      "tokens_measured": false,
-     "latency_ms": 3.201,
+     "latency_ms": 2.732,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -3098,7 +7134,211 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "hypothesis": "workload_optimization: no deviation in what could be observed",
+      "hypothesis_changed": false,
+      "change_reason": "",
+      "decision": "conclude",
+      "tool_requests": [],
+      "finding": {
+       "label": "EFFICIENT",
+       "confidence": 0.6,
+       "claims": [
+        {
+         "statement": "insights.repetition is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.repetition",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.repetition"
+         ]
+        },
+        {
+         "statement": "insights.duration_outlier is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.duration_outlier",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.duration_outlier"
+         ]
+        },
+        {
+         "statement": "insights.token_outlier is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "insights.token_outlier",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:insights.token_outlier"
+         ]
+        },
+        {
+         "statement": "activity.action_rate_ratio is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "activity.action_rate_ratio",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:activity.action_rate_ratio"
+         ]
+        },
+        {
+         "statement": "calculate_usage_rates.tokens = 1000.0",
+         "kind": "tool_observation",
+         "metric_id": null,
+         "asserted_state": null,
+         "asserted_value": 1000.0,
+         "tool_call_id": "ea7ea758-7238-5f7e-a9df-e92019ca1226",
+         "result_field": "tokens",
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "tool:ea7ea758-7238-5f7e-a9df-e92019ca1226"
+         ]
+        }
+       ],
+       "rationale": "quiet reading from the observed rows and tool results (generic simulated fixture)",
+       "alternative_explanations": [],
+       "missing_evidence": [
+        "compare_task_classes"
+       ],
+       "proposed_action": "NONE",
+       "action_reason": "",
+       "detail": {}
+      },
+      "missing_evidence": []
      }
+    }
+   ],
+   "verifier_results": [
+    {
+     "check_id": "EV-01",
+     "result": "PASS",
+     "reason_code": "well_formed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "EV-02",
+     "result": "PASS",
+     "reason_code": "refs_resolve",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-01",
+     "result": "PASS",
+     "reason_code": "provenance_ok",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-02",
+     "result": "PASS",
+     "reason_code": "in_scope",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MC-01",
+     "result": "PASS",
+     "reason_code": "recomputed",
+     "detail": "recomputed ['insights.token_outlier']",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-01",
+     "result": "PASS",
+     "reason_code": "claims_supported",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-02",
+     "result": "NOT_RUN",
+     "reason_code": "not_attention_label",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-01",
+     "result": "FAIL",
+     "reason_code": "state_mismatch",
+     "detail": "required evidence unavailable: task_classes (EFFICIENT: like-for-like comparison)",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-02",
+     "result": "NOT_RUN",
+     "reason_code": "no_corroboration_claimed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-03",
+     "result": "PASS",
+     "reason_code": "no_contradiction",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "RP-01",
+     "result": "WARN",
+     "reason_code": "baseline_differs",
+     "detail": "computational baseline reads INCONCLUSIVE; diagnostic only",
+     "subject": ""
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "original_proposal"
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "final_action"
+    },
+    {
+     "check_id": "PE-01",
+     "result": "NOT_RUN",
+     "reason_code": "not_intervening",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MU-01",
+     "result": "PASS",
+     "reason_code": "memory_ok",
+     "detail": "",
+     "subject": ""
     }
    ]
   },
@@ -3149,7 +7389,7 @@
     "knowledge_policy_management"
    ],
    "other_llm_calls": 0,
-   "wall_ms": 47.3,
+   "wall_ms": 46.4,
    "error": null,
    "invocations": [
     {
@@ -3159,10 +7399,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 859,
+     "input_tokens": 911,
      "output_tokens": 97,
      "tokens_measured": false,
-     "latency_ms": 0.674,
+     "latency_ms": 0.639,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -3172,6 +7412,28 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "known": [
+       "0 metric rows supplied"
+      ],
+      "unknown": [
+       "whether the case's sources support a reading"
+      ],
+      "uncertain": [],
+      "hypothesis": "knowledge_policy_management: nothing specific suspected",
+      "tool_requests": [
+       {
+        "tool": "get_policy_versions",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       },
+       {
+        "tool": "compare_policy_documents",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       }
+      ]
      }
     },
     {
@@ -3181,10 +7443,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1044,
+     "input_tokens": 1096,
      "output_tokens": 190,
      "tokens_measured": false,
-     "latency_ms": 3.033,
+     "latency_ms": 2.589,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -3194,7 +7456,142 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "hypothesis": "knowledge_policy_management: no deviation in what could be observed",
+      "hypothesis_changed": false,
+      "change_reason": "",
+      "decision": "conclude",
+      "tool_requests": [],
+      "finding": {
+       "label": "CURRENT",
+       "confidence": 0.6,
+       "claims": [
+        {
+         "statement": "get_policy_versions.in_force = pol-2026-10-01",
+         "kind": "tool_observation",
+         "metric_id": null,
+         "asserted_state": null,
+         "asserted_value": "pol-2026-10-01",
+         "tool_call_id": "d0b2e90f-b43a-5315-b804-63202c48031b",
+         "result_field": "in_force",
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "tool:d0b2e90f-b43a-5315-b804-63202c48031b"
+         ]
+        }
+       ],
+       "rationale": "quiet reading from the observed rows and tool results (generic simulated fixture)",
+       "alternative_explanations": [],
+       "missing_evidence": [],
+       "proposed_action": "NONE",
+       "action_reason": "",
+       "detail": {}
+      },
+      "missing_evidence": []
      }
+    }
+   ],
+   "verifier_results": [
+    {
+     "check_id": "EV-01",
+     "result": "PASS",
+     "reason_code": "well_formed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "EV-02",
+     "result": "PASS",
+     "reason_code": "refs_resolve",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-01",
+     "result": "PASS",
+     "reason_code": "provenance_ok",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-02",
+     "result": "PASS",
+     "reason_code": "in_scope",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MC-01",
+     "result": "NOT_RUN",
+     "reason_code": "no_recomputable_claim",
+     "detail": "no cited metric has an independent raw recomputation",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-01",
+     "result": "PASS",
+     "reason_code": "claims_supported",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-02",
+     "result": "NOT_RUN",
+     "reason_code": "not_attention_label",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-01",
+     "result": "PASS",
+     "reason_code": "state_consistent",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-02",
+     "result": "NOT_RUN",
+     "reason_code": "no_corroboration_claimed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-03",
+     "result": "PASS",
+     "reason_code": "no_contradiction",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "RP-01",
+     "result": "PASS",
+     "reason_code": "baseline_agrees",
+     "detail": "computational baseline reads CURRENT; diagnostic only",
+     "subject": ""
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "original_proposal"
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "final_action"
+    },
+    {
+     "check_id": "PE-01",
+     "result": "NOT_RUN",
+     "reason_code": "not_intervening",
+     "detail": "",
+     "subject": ""
     }
    ]
   },
@@ -3247,7 +7644,7 @@
     "knowledge_policy_management"
    ],
    "other_llm_calls": 0,
-   "wall_ms": 48.6,
+   "wall_ms": 46.6,
    "error": null,
    "invocations": [
     {
@@ -3257,10 +7654,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 859,
+     "input_tokens": 911,
      "output_tokens": 97,
      "tokens_measured": false,
-     "latency_ms": 0.642,
+     "latency_ms": 0.621,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -3270,6 +7667,28 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "known": [
+       "0 metric rows supplied"
+      ],
+      "unknown": [
+       "whether the case's sources support a reading"
+      ],
+      "uncertain": [],
+      "hypothesis": "knowledge_policy_management: nothing specific suspected",
+      "tool_requests": [
+       {
+        "tool": "get_policy_versions",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       },
+       {
+        "tool": "compare_policy_documents",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       }
+      ]
      }
     },
     {
@@ -3279,10 +7698,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1083,
+     "input_tokens": 1135,
      "output_tokens": 190,
      "tokens_measured": false,
-     "latency_ms": 2.825,
+     "latency_ms": 3.309,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -3292,7 +7711,149 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "hypothesis": "knowledge_policy_management: no deviation in what could be observed",
+      "hypothesis_changed": false,
+      "change_reason": "",
+      "decision": "conclude",
+      "tool_requests": [],
+      "finding": {
+       "label": "CURRENT",
+       "confidence": 0.6,
+       "claims": [
+        {
+         "statement": "get_policy_versions.in_force = pol-2026-10-01",
+         "kind": "tool_observation",
+         "metric_id": null,
+         "asserted_state": null,
+         "asserted_value": "pol-2026-10-01",
+         "tool_call_id": "d0b2e90f-b43a-5315-b804-63202c48031b",
+         "result_field": "in_force",
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "tool:d0b2e90f-b43a-5315-b804-63202c48031b"
+         ]
+        }
+       ],
+       "rationale": "quiet reading from the observed rows and tool results (generic simulated fixture)",
+       "alternative_explanations": [],
+       "missing_evidence": [],
+       "proposed_action": "NONE",
+       "action_reason": "",
+       "detail": {}
+      },
+      "missing_evidence": []
      }
+    }
+   ],
+   "verifier_results": [
+    {
+     "check_id": "EV-01",
+     "result": "PASS",
+     "reason_code": "well_formed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "EV-02",
+     "result": "PASS",
+     "reason_code": "refs_resolve",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-01",
+     "result": "PASS",
+     "reason_code": "provenance_ok",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-02",
+     "result": "PASS",
+     "reason_code": "in_scope",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MC-01",
+     "result": "NOT_RUN",
+     "reason_code": "no_recomputable_claim",
+     "detail": "no cited metric has an independent raw recomputation",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-01",
+     "result": "PASS",
+     "reason_code": "claims_supported",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-02",
+     "result": "NOT_RUN",
+     "reason_code": "not_attention_label",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-01",
+     "result": "PASS",
+     "reason_code": "state_consistent",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-02",
+     "result": "NOT_RUN",
+     "reason_code": "no_corroboration_claimed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-03",
+     "result": "FAIL",
+     "reason_code": "baseline_contradicts_quiet",
+     "detail": "the rules read CONFLICT on the same evidence; a quiet reading must explain that, and cannot be published over it",
+     "subject": ""
+    },
+    {
+     "check_id": "RP-01",
+     "result": "WARN",
+     "reason_code": "baseline_differs",
+     "detail": "computational baseline reads CONFLICT; diagnostic only",
+     "subject": ""
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "original_proposal"
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "final_action"
+    },
+    {
+     "check_id": "PE-01",
+     "result": "NOT_RUN",
+     "reason_code": "not_intervening",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MU-01",
+     "result": "PASS",
+     "reason_code": "memory_ok",
+     "detail": "",
+     "subject": ""
     }
    ]
   },
@@ -3345,7 +7906,7 @@
     "knowledge_policy_management"
    ],
    "other_llm_calls": 0,
-   "wall_ms": 48.6,
+   "wall_ms": 45.1,
    "error": null,
    "invocations": [
     {
@@ -3355,10 +7916,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 850,
+     "input_tokens": 902,
      "output_tokens": 97,
      "tokens_measured": false,
-     "latency_ms": 0.932,
+     "latency_ms": 0.654,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -3368,6 +7929,28 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "known": [
+       "0 metric rows supplied"
+      ],
+      "unknown": [
+       "whether the case's sources support a reading"
+      ],
+      "uncertain": [],
+      "hypothesis": "knowledge_policy_management: nothing specific suspected",
+      "tool_requests": [
+       {
+        "tool": "get_policy_versions",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       },
+       {
+        "tool": "compare_policy_documents",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       }
+      ]
      }
     },
     {
@@ -3377,10 +7960,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 1061,
+     "input_tokens": 1113,
      "output_tokens": 53,
      "tokens_measured": false,
-     "latency_ms": 3.457,
+     "latency_ms": 2.539,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -3390,7 +7973,119 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "hypothesis": "no source could be read",
+      "hypothesis_changed": false,
+      "change_reason": "",
+      "decision": "inconclusive",
+      "tool_requests": [],
+      "finding": null,
+      "missing_evidence": [
+       "get_policy_versions",
+       "compare_policy_documents"
+      ]
      }
+    }
+   ],
+   "verifier_results": [
+    {
+     "check_id": "EV-01",
+     "result": "PASS",
+     "reason_code": "well_formed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "EV-02",
+     "result": "PASS",
+     "reason_code": "refs_resolve",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-01",
+     "result": "PASS",
+     "reason_code": "provenance_ok",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-02",
+     "result": "PASS",
+     "reason_code": "in_scope",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MC-01",
+     "result": "NOT_RUN",
+     "reason_code": "no_recomputable_claim",
+     "detail": "no cited metric has an independent raw recomputation",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-01",
+     "result": "NOT_RUN",
+     "reason_code": "no_claims",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-02",
+     "result": "NOT_RUN",
+     "reason_code": "not_attention_label",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-01",
+     "result": "PASS",
+     "reason_code": "state_consistent",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-02",
+     "result": "NOT_RUN",
+     "reason_code": "no_corroboration_claimed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-03",
+     "result": "NOT_RUN",
+     "reason_code": "not_a_quiet_model_reading",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "RP-01",
+     "result": "PASS",
+     "reason_code": "baseline_agrees",
+     "detail": "computational baseline reads INCONCLUSIVE; diagnostic only",
+     "subject": ""
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "original_proposal"
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "final_action"
+    },
+    {
+     "check_id": "PE-01",
+     "result": "NOT_RUN",
+     "reason_code": "not_intervening",
+     "detail": "",
+     "subject": ""
     }
    ]
   },
@@ -3458,7 +8153,7 @@
     "governance_architecture"
    ],
    "other_llm_calls": 0,
-   "wall_ms": 67.6,
+   "wall_ms": 55.4,
    "error": null,
    "invocations": [
     {
@@ -3468,10 +8163,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 863,
+     "input_tokens": 916,
      "output_tokens": 95,
      "tokens_measured": false,
-     "latency_ms": 0.681,
+     "latency_ms": 0.757,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -3481,6 +8176,28 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "known": [
+       "1 metric rows supplied"
+      ],
+      "unknown": [
+       "whether the case's sources support a reading"
+      ],
+      "uncertain": [],
+      "hypothesis": "governance_architecture: nothing specific suspected",
+      "tool_requests": [
+       {
+        "tool": "inspect_cop_catalogue",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       },
+       {
+        "tool": "query_coverage_matrix",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       }
+      ]
      }
     },
     {
@@ -3490,10 +8207,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 2952,
+     "input_tokens": 3005,
      "output_tokens": 245,
      "tokens_measured": false,
-     "latency_ms": 3.089,
+     "latency_ms": 3.097,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -3503,7 +8220,157 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "hypothesis": "governance_architecture: no deviation in what could be observed",
+      "hypothesis_changed": false,
+      "change_reason": "",
+      "decision": "conclude",
+      "tool_requests": [],
+      "finding": {
+       "label": "ADEQUATE",
+       "confidence": 0.6,
+       "claims": [
+        {
+         "statement": "telemetry.unknown_share is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "telemetry.unknown_share",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:telemetry.unknown_share"
+         ]
+        },
+        {
+         "statement": "inspect_cop_catalogue.source = collector/cops/specs.py SPECS",
+         "kind": "tool_observation",
+         "metric_id": null,
+         "asserted_state": null,
+         "asserted_value": "collector/cops/specs.py SPECS",
+         "tool_call_id": "19992976-27e3-5c82-bdfa-80f486456f1b",
+         "result_field": "source",
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "tool:19992976-27e3-5c82-bdfa-80f486456f1b"
+         ]
+        }
+       ],
+       "rationale": "quiet reading from the observed rows and tool results (generic simulated fixture)",
+       "alternative_explanations": [],
+       "missing_evidence": [],
+       "proposed_action": "NONE",
+       "action_reason": "",
+       "detail": {}
+      },
+      "missing_evidence": []
      }
+    }
+   ],
+   "verifier_results": [
+    {
+     "check_id": "EV-01",
+     "result": "PASS",
+     "reason_code": "well_formed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "EV-02",
+     "result": "PASS",
+     "reason_code": "refs_resolve",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-01",
+     "result": "PASS",
+     "reason_code": "provenance_ok",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-02",
+     "result": "PASS",
+     "reason_code": "in_scope",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MC-01",
+     "result": "NOT_RUN",
+     "reason_code": "no_recomputable_claim",
+     "detail": "no cited metric has an independent raw recomputation",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-01",
+     "result": "PASS",
+     "reason_code": "claims_supported",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-02",
+     "result": "NOT_RUN",
+     "reason_code": "not_attention_label",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-01",
+     "result": "PASS",
+     "reason_code": "state_consistent",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-02",
+     "result": "NOT_RUN",
+     "reason_code": "no_corroboration_claimed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-03",
+     "result": "PASS",
+     "reason_code": "no_contradiction",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "RP-01",
+     "result": "PASS",
+     "reason_code": "baseline_agrees",
+     "detail": "computational baseline reads ADEQUATE; diagnostic only",
+     "subject": ""
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "original_proposal"
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "final_action"
+    },
+    {
+     "check_id": "PE-01",
+     "result": "NOT_RUN",
+     "reason_code": "not_intervening",
+     "detail": "",
+     "subject": ""
     }
    ]
   },
@@ -3573,7 +8440,7 @@
     "governance_architecture"
    ],
    "other_llm_calls": 0,
-   "wall_ms": 94.7,
+   "wall_ms": 59.2,
    "error": null,
    "invocations": [
     {
@@ -3583,10 +8450,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 863,
+     "input_tokens": 916,
      "output_tokens": 95,
      "tokens_measured": false,
-     "latency_ms": 0.68,
+     "latency_ms": 0.732,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -3596,6 +8463,28 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "known": [
+       "1 metric rows supplied"
+      ],
+      "unknown": [
+       "whether the case's sources support a reading"
+      ],
+      "uncertain": [],
+      "hypothesis": "governance_architecture: nothing specific suspected",
+      "tool_requests": [
+       {
+        "tool": "inspect_cop_catalogue",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       },
+       {
+        "tool": "query_coverage_matrix",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       }
+      ]
      }
     },
     {
@@ -3605,10 +8494,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 2965,
+     "input_tokens": 3017,
      "output_tokens": 245,
      "tokens_measured": false,
-     "latency_ms": 2.941,
+     "latency_ms": 2.842,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -3618,7 +8507,164 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "hypothesis": "governance_architecture: no deviation in what could be observed",
+      "hypothesis_changed": false,
+      "change_reason": "",
+      "decision": "conclude",
+      "tool_requests": [],
+      "finding": {
+       "label": "ADEQUATE",
+       "confidence": 0.6,
+       "claims": [
+        {
+         "statement": "telemetry.unknown_share is NORMAL",
+         "kind": "metric_state",
+         "metric_id": "telemetry.unknown_share",
+         "asserted_state": "NORMAL",
+         "asserted_value": null,
+         "tool_call_id": null,
+         "result_field": null,
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "metric:telemetry.unknown_share"
+         ]
+        },
+        {
+         "statement": "inspect_cop_catalogue.source = collector/cops/specs.py SPECS",
+         "kind": "tool_observation",
+         "metric_id": null,
+         "asserted_state": null,
+         "asserted_value": "collector/cops/specs.py SPECS",
+         "tool_call_id": "a36dd3b8-3430-5156-936b-1fee26a03504",
+         "result_field": "source",
+         "record_id": null,
+         "upstream_cop": null,
+         "upstream_label": null,
+         "evidence_refs": [
+          "tool:a36dd3b8-3430-5156-936b-1fee26a03504"
+         ]
+        }
+       ],
+       "rationale": "quiet reading from the observed rows and tool results (generic simulated fixture)",
+       "alternative_explanations": [],
+       "missing_evidence": [],
+       "proposed_action": "NONE",
+       "action_reason": "",
+       "detail": {}
+      },
+      "missing_evidence": []
      }
+    }
+   ],
+   "verifier_results": [
+    {
+     "check_id": "EV-01",
+     "result": "PASS",
+     "reason_code": "well_formed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "EV-02",
+     "result": "PASS",
+     "reason_code": "refs_resolve",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-01",
+     "result": "PASS",
+     "reason_code": "provenance_ok",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-02",
+     "result": "PASS",
+     "reason_code": "in_scope",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MC-01",
+     "result": "NOT_RUN",
+     "reason_code": "no_recomputable_claim",
+     "detail": "no cited metric has an independent raw recomputation",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-01",
+     "result": "PASS",
+     "reason_code": "claims_supported",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-02",
+     "result": "NOT_RUN",
+     "reason_code": "not_attention_label",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-01",
+     "result": "PASS",
+     "reason_code": "state_consistent",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-02",
+     "result": "NOT_RUN",
+     "reason_code": "no_corroboration_claimed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-03",
+     "result": "FAIL",
+     "reason_code": "baseline_contradicts_quiet",
+     "detail": "the rules read GAP on the same evidence; a quiet reading must explain that, and cannot be published over it",
+     "subject": ""
+    },
+    {
+     "check_id": "RP-01",
+     "result": "WARN",
+     "reason_code": "baseline_differs",
+     "detail": "computational baseline reads GAP; diagnostic only",
+     "subject": ""
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "original_proposal"
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "final_action"
+    },
+    {
+     "check_id": "PE-01",
+     "result": "NOT_RUN",
+     "reason_code": "not_intervening",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MU-01",
+     "result": "PASS",
+     "reason_code": "memory_ok",
+     "detail": "",
+     "subject": ""
     }
    ]
   },
@@ -3658,7 +8704,7 @@
     "governance_architecture"
    ],
    "other_llm_calls": 0,
-   "wall_ms": 57.7,
+   "wall_ms": 58.1,
    "error": null,
    "invocations": [
     {
@@ -3668,10 +8714,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 868,
+     "input_tokens": 920,
      "output_tokens": 95,
      "tokens_measured": false,
-     "latency_ms": 0.735,
+     "latency_ms": 0.663,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -3681,6 +8727,28 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "known": [
+       "1 metric rows supplied"
+      ],
+      "unknown": [
+       "whether the case's sources support a reading"
+      ],
+      "uncertain": [],
+      "hypothesis": "governance_architecture: nothing specific suspected",
+      "tool_requests": [
+       {
+        "tool": "inspect_cop_catalogue",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       },
+       {
+        "tool": "query_coverage_matrix",
+        "args": {},
+        "purpose": "establish the baseline facts"
+       }
+      ]
      }
     },
     {
@@ -3690,10 +8758,10 @@
      "model": "fixture-model",
      "model_version": "fixture-model+fixture:live-eval-offline",
      "simulated": true,
-     "input_tokens": 2957,
+     "input_tokens": 3009,
      "output_tokens": 56,
      "tokens_measured": false,
-     "latency_ms": 2.69,
+     "latency_ms": 2.693,
      "cost_usd": null,
      "cost_basis": "unpriced",
      "request_id": null,
@@ -3703,7 +8771,118 @@
      "validation": {
       "ok": true,
       "errors": []
+     },
+     "structured_response": {
+      "hypothesis": "attention states present; no scripted interpretation for them",
+      "hypothesis_changed": false,
+      "change_reason": "",
+      "decision": "inconclusive",
+      "tool_requests": [],
+      "finding": null,
+      "missing_evidence": [
+       "telemetry.unknown_share"
+      ]
      }
+    }
+   ],
+   "verifier_results": [
+    {
+     "check_id": "EV-01",
+     "result": "PASS",
+     "reason_code": "well_formed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "EV-02",
+     "result": "PASS",
+     "reason_code": "refs_resolve",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-01",
+     "result": "PASS",
+     "reason_code": "provenance_ok",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "ID-02",
+     "result": "PASS",
+     "reason_code": "in_scope",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "MC-01",
+     "result": "NOT_RUN",
+     "reason_code": "no_recomputable_claim",
+     "detail": "no cited metric has an independent raw recomputation",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-01",
+     "result": "NOT_RUN",
+     "reason_code": "no_claims",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "SC-02",
+     "result": "NOT_RUN",
+     "reason_code": "not_attention_label",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-01",
+     "result": "PASS",
+     "reason_code": "state_consistent",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-02",
+     "result": "NOT_RUN",
+     "reason_code": "no_corroboration_claimed",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "DS-03",
+     "result": "NOT_RUN",
+     "reason_code": "not_a_quiet_model_reading",
+     "detail": "",
+     "subject": ""
+    },
+    {
+     "check_id": "RP-01",
+     "result": "WARN",
+     "reason_code": "baseline_differs",
+     "detail": "computational baseline reads ADEQUATE; diagnostic only",
+     "subject": ""
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "original_proposal"
+    },
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "detail": "",
+     "subject": "final_action"
+    },
+    {
+     "check_id": "PE-01",
+     "result": "NOT_RUN",
+     "reason_code": "not_intervening",
+     "detail": "",
+     "subject": ""
     }
    ]
   }

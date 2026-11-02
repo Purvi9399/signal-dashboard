@@ -62,7 +62,7 @@ CHECKS = {
     "ID-01": ("1", "ID", BLOCKS_FINDING, True, "cited metric rows carry provenance; no INVALID row is cited"),
     "ID-02": ("1", "ID", BLOCKS_FINDING, True, "cited tool calls and memory records belong to this case and tenant"),
     "MC-01": ("1", "MC", BLOCKS_FINDING, True, "cited metric values recomputed from raw observables"),
-    "SC-01": ("1", "SC", BLOCKS_FINDING, True, "each claim matches the data it cites"),
+    "SC-01": ("2", "SC", BLOCKS_FINDING, True, "each claim matches the data it cites"),
     "SC-02": ("1", "SC", BLOCKS_FINDING, True, "an attention label has direct evidential support"),
     "DS-01": ("1", "DS", BLOCKS_FINDING, True, "the label is one the evidence state permits"),
     "DS-02": ("1", "DS", BLOCKS_FINDING, True, "no correlated upstream finding counted as independent"),
@@ -97,7 +97,7 @@ def _match(x, flt):
 def _get_path(obj, path):
     """Resolve a claim's result_field against a tool result.
 
-    Forms: 'a.b', 'list[0].field', 'list[key=value]' (count of matches),
+    Forms: 'a.b', 'list[0].field' or 'list.0.field', 'list[key=value]' (count of matches),
     'a+b' (lists concatenated), 'a+b[key=value]' (count across both lists),
     and two named filters: 'list[unresolvable]', 'list[changed]'.
     """
@@ -111,10 +111,25 @@ def _get_path(obj, path):
             return [x for lst in lists for x in lst]
         return sum(1 for lst in lists for x in lst if _match(x, flt))
     cur = obj
-    for seg in path.split("."):
+    if path.startswith("result.") and "result" not in obj:
+        path = path[len("result."):]                     # the payload shows each tool call's output under "result"
+    segs, i = path.split("."), 0
+    while i < len(segs):
+        seg = segs[i]
+        # a key that itself holds dots (a file path such as /ws/app.py): take the longest key that matches
+        if isinstance(cur, dict) and seg.partition("[")[0] not in cur:
+            for j in range(len(segs), i + 1, -1):
+                joined = ".".join(segs[i:j])
+                if joined.partition("[")[0] in cur:
+                    seg, i = joined, j - 1
+                    break
+        i += 1
         name, _, idx = seg.partition("[")
         idx = idx.rstrip("]")
-        cur = cur.get(name) if isinstance(cur, dict) else None
+        if isinstance(cur, list) and name.isdigit():       # 'list.0.field', the form models tend to write
+            cur = cur[int(name)] if int(name) < len(cur) else None
+        else:
+            cur = cur.get(name) if isinstance(cur, dict) else None
         if cur is None:
             return None
         if not idx:
@@ -125,8 +140,8 @@ def _get_path(obj, path):
             return sum(1 for x in cur if x.get("refs") and x.get("resolvable", 0) < x["refs"])
         if idx == "changed":
             return sum(1 for x in cur if x.get("changed"))
-        i = int(idx)
-        cur = cur[i] if i < len(cur) else None
+        k = int(idx)
+        cur = cur[k] if k < len(cur) else None
         if cur is None:
             return None
     return cur
@@ -307,10 +322,23 @@ def verify_finding(ctx):
                                      "no cited metric has an independent raw recomputation")))
 
     # SC-01 each claim against the data it cites
-    fails, ok = [], 0
+    fails, unchecked, ok = [], [], 0
     for x in claims:
         k = x.get("kind")
         m = x.get("metric_id")
+        if k in (CLAIM_METRIC_VALUE, CLAIM_TOOL_OBSERVATION) and x.get("asserted_value") is None:
+            # no value stated against a cited value that exists: the claim cannot be checked and
+            # supports nothing (an asserted null against a null field is an ordinary match below)
+            if k == CLAIM_METRIC_VALUE:
+                actual, where = (rows_by.get(m) or {}).get("value"), m
+            else:
+                c0 = calls.get(x.get("tool_call_id"))
+                actual = _get_path(c0["result"], x.get("result_field")) if c0 and c0["status"] == "OK" else None
+                where = f"{c0['tool'] if c0 else 'tool call ' + str(x.get('tool_call_id'))}.{x.get('result_field')}"
+            if actual is not None:
+                unchecked.append(f"{where}: no asserted_value (the data holds {actual!r}), so the claim "
+                                 f"cannot be checked")
+                continue
         if k == CLAIM_METRIC_STATE:
             row = rows_by.get(m)
             if row is None or row.get("state") != x.get("asserted_state"):
@@ -361,9 +389,10 @@ def verify_finding(ctx):
                 ok += 1
         elif k == CLAIM_ABSENCE:
             ok += 1 if x.get("evidence_refs") else 0
-    out.append(R("SC-01", FAIL if fails else (PASS if ok else NOT_RUN),
-                 "claim_contradicted" if fails else ("claims_supported" if ok else "no_claims"),
-                 "; ".join(fails[:6])))
+    out.append(R("SC-01", FAIL if fails or unchecked else (PASS if ok else NOT_RUN),
+                 "claim_contradicted" if fails else "claim_unchecked" if unchecked else
+                 ("claims_supported" if ok else "no_claims"),
+                 "; ".join((fails + unchecked)[:6])))
 
     # SC-02 direct support for an attention label
     quiet = spec.interpretations[0] if spec.interpretations else None
