@@ -88,3 +88,15 @@ def test_fleet_matrix_has_eighteen_rows_and_marks_live_as_not_run():
     assert md.count("\n| `") == 18 and "no live run yet" in md
     assert all("live not run" in line for line in md.splitlines() if "| LLM |" in line)
     assert all(r["offline_llm_calls"] == 0 for r in rs if r["classification"] == "deterministic")
+
+
+def test_a_provider_that_refuses_every_call_is_never_counted_as_agreement(monkeypatch):
+    from cops.runtime.llm import ProviderUnavailable, FixtureProvider
+    refuse = lambda: FixtureProvider(lambda *a: ProviderUnavailable("400 credit balance too low"))
+    monkeypatch.setattr(L, "AnthropicProvider", refuse)
+    res = L.run_all(live=True, cap=100.0)
+    ran = [r for r in res if not r.get("skipped")]
+    assert len(ran) == L.STOP_AFTER_FAILED_CASES                       # then it stops calling
+    assert all(r["outcome"] == "provider_failure" for r in ran)       # including the missing-evidence case
+    assert L.totals(res)["agree"] == 0
+    assert any("provider call failed" in p for p in L.verify_records(res, live=True))

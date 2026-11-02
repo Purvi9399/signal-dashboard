@@ -129,7 +129,7 @@ There are three providers:
 
 The live smoke test `tests/test_runtime_llm.py::test_live_provider_smoke` is skipped unless all of these are present. It has not been run.
 
-The opt-in live evaluation (`runtime/live_eval.py`) has 30 fictional cases, a normal, an abnormal and a missing-evidence case for each LLM COP, with accepted labels fixed in `live_eval.EXPECTED` before any run. Each case runs the target COP with its deterministic upstream COPs only. It refuses to start unless `COPS_PRICING` has a price for `COPS_MODEL` and `COPS_LIVE_MAX_TOTAL_USD` is set, and it stops scheduling cases before the total cap can be crossed. After the run it checks every invocation record (`verify_records`): `simulated=False`, provider and model present, and measured tokens and a request id on every successful call. It has not been run against the provider; `--offline` runs the same cases on scripted replies to check the harness.
+The opt-in live evaluation (`runtime/live_eval.py`) has 30 fictional cases, a normal, an abnormal and a missing-evidence case for each LLM COP, with accepted labels fixed in `live_eval.EXPECTED` before any run. Each case runs the target COP with its deterministic upstream COPs only. It refuses to start unless `COPS_PRICING` has a price for `COPS_MODEL` and `COPS_LIVE_MAX_TOTAL_USD` is set, and it stops scheduling cases before the total cap can be crossed. After the run it checks every invocation record (`verify_records`): `simulated=False`, provider and model present, and measured tokens and a request id on every successful call. One live attempt (2026-11-02) got no usable reply: the provider refused all 30 calls for lack of credits, so no live finding exists (`evaluation/live_attempt_2026-11-02.json`). `--offline` runs the same cases on scripted replies to check the harness.
 
 ### Persistence (B1)
 
@@ -260,7 +260,7 @@ The tests ran with Python 3.13.17, langgraph 1.2.18, langgraph-checkpoint-sqlite
 
 ```
 python3 -m pytest -p no:cacheprovider tests/ -q -rs
-243 passed, 1 skipped
+244 passed, 1 skipped
 SKIPPED tests/test_runtime_llm.py: opt-in live smoke test: needs COPS_LLM_LIVE=1, COPS_LLM_DATA_APPROVED=1, COPS_MODEL and credentials
 ```
 
@@ -275,7 +275,7 @@ SKIPPED tests/test_runtime_llm.py: opt-in live smoke test: needs COPS_LLM_LIVE=1
 | `tests/test_runtime_error_paths.py` | 35 | Required evidence (deterministic gate, DS-01 on LLM quiet labels, conditional and optional requirements); confidence ceiling; invalid detail schema; conclude without a finding; assess-stage provider failure; empty evidence request; tool-budget stop; a rule that raises; an enforcement gateway that raises; memory denied or absent; EV-01, ID-01, MC-01, SC-01, DS-01, PE-01, AU-02 and MU-01 failure branches; an intervention blocked by PE-01 |
 | `tests/test_runtime_evaluation.py` | 26 | Every evaluation scenario as a pytest case, plus a check that every LLM record is simulated |
 | `tests/test_runtime_live_path.py` | 28 | The live provider path against a stub client, with no network call: wire schema accepted by structured outputs, round trip of open objects, request shape, invocation record (simulated=False, model, measured tokens, request id, latency), cost with and without a configured price; timeout, 429, 529, 400, 401, connection failure, truncation at max_tokens, refusal and an unexpected exception; a schema-breaking reply; model text claiming approval and an action outside the vocabulary; crash and recovery from the checkpoint without re-asking finished COPs |
-| `tests/test_runtime_live_eval.py` | 17 | The live evaluation harness offline: three cases per LLM COP with expectations fixed in advance, deterministic-only upstreams, all 30 cases simulated and verifiable, outcome classes, refusal without every precondition, the total cap, no model calls by deterministic COPs, the 18-row fleet matrix |
+| `tests/test_runtime_live_eval.py` | 18 | The live evaluation harness offline: three cases per LLM COP with expectations fixed in advance, deterministic-only upstreams, all 30 cases simulated and verifiable, outcome classes, refusal without every precondition, the total cap, no model calls by deterministic COPs, the 18-row fleet matrix |
 
 Not run:
 

@@ -7,9 +7,9 @@ Branch `feat/cops-langgraph-runtime` of `Purvi9399/signal-dashboard`, 2026-11-02
 | Item | Result |
 |---|---|
 | Implementation | All 18 COPs pass every check in `fleet_report.implementation_status`: every node of the shared subgraph, a rule, registered tools, and for the 10 LLM COPs a prompt, a detail schema and tools. The split is 10 LLM and 8 deterministic, unchanged. |
-| Offline tests | **243 passed, 0 failed, 1 skipped** (real pytest). The skipped test is the opt-in live smoke test. |
+| Offline tests | **244 passed, 0 failed, 1 skipped** (real pytest). The skipped test is the opt-in live smoke test. |
 | Evaluation scenarios | **25 of 25 pass**, 121 of 121 expectations. LLM replies in them are scripted, so every LLM record is `simulated=True`. |
-| Real LLM calls completed | **0.** No API key is configured, and the budget has not been approved. The live evaluation has **not** been run, and no live result is claimed. |
+| Real LLM calls completed | **0 successful.** A live attempt on 2026-11-02 sent 30 real requests, and the provider refused all 30 with `400 invalid_request_error: Your credit balance is too low`. No tokens were used and nothing was charged. No live finding exists, and no live result is claimed. The record is in `docs/cops/evaluation/live_attempt_2026-11-02.json`. |
 | Live harness | Built, and dry-checked offline on all 30 cases. Every record was verified as simulated, and no problems were found. |
 
 ## 1. Audit
@@ -70,11 +70,11 @@ They are verified on the local branch. They are not on GitHub until a push.
 
 ```
 python3 -m pytest -p no:cacheprovider tests/ -q -rs
-243 passed, 1 skipped
+244 passed, 1 skipped
 SKIPPED tests/test_runtime_llm.py:169: opt-in live smoke test: needs COPS_LLM_LIVE=1, COPS_LLM_DATA_APPROVED=1, COPS_MODEL and credentials
 ```
 
-That is 47 more than the 196 at `3e53680`. 28 are in `test_runtime_live_path.py`, 17 in `test_runtime_live_eval.py`, and 2 are DS-03 tests in `test_runtime_verifiers.py`.
+That is 48 more than the 196 at `3e53680`. 28 are in `test_runtime_live_path.py`, 18 in `test_runtime_live_eval.py`, and 2 are DS-03 tests in `test_runtime_verifiers.py`.
 
 | Requested area | Tests |
 |---|---|
@@ -132,15 +132,18 @@ How to read it:
 
 ### Real LLM calls
 
-**0 completed.** Getting to a paid run needs three things:
+**0 successful.** On 2026-11-02 the run was started with purvi's choice of model and a $5 total cap. Each of the 30 cases made one real request. The provider rejected every one with `400 invalid_request_error: Your credit balance is too low to access the Anthropic API`, and each request has its request id recorded. Usage was 0 tokens and $0. Every COP's finding was INCONCLUSIVE, and no scripted reply was substituted.
 
-1. `ANTHROPIC_API_KEY` set in a cloud environment for this project. Only sessions started after that see the key.
-2. Your choice of model and total cap.
-3. Running the command in section 6.
+The attempt exposed two harness flaws, both now fixed and tested in `test_a_provider_that_refuses_every_call_is_never_counted_as_agreement`:
+
+- The 10 missing-evidence cases were scored as "agree" because their expected label is INCONCLUSIVE. A case whose calls all failed is now scored `provider_failure`. It never counts as agreement, and `verify_records` reports every failed call.
+- The harness kept calling after the provider had refused every request. It now stops after 2 cases in a row with no usable reply.
+
+To run live, the API organisation behind the key needs credits. The command in section 6 then works unchanged.
 
 ### Ground-truth agreement
 
-- **Live:** not run.
+- **Live:** none measured. The one attempt got no usable provider reply (30 of 30 `provider_failure`).
 - **Offline scenarios** (LLM replies scripted): 25 of 25 scenarios, 121 of 121 expectations.
 - **Offline dry check of the 30 live cases** (scripted generic replies, not a model):
   - 19 agree
@@ -195,8 +198,8 @@ How to read it:
 
 ### Remaining blockers
 
-1. **No API key** in this session's environment, so no live call can be made. It is added in Project settings, under Cloud environment.
-2. **Budget and model** are waiting for your decision.
+1. **No API credits.** The provider rejects every call with "credit balance is too low". The key purvi pasted works, but it is now in the chat history and should be rotated. The replacement belongs in Project settings, under Cloud environment.
+2. **Budget and model** are decided: the chosen model with a $5 total cap.
 3. **Expected outcomes for two cases are judgement calls** and should be reviewed before the run:
    - `classification_tagging:abnormal` expects INTEGRITY, while the rule baseline reads BOUNDARY.
    - `governance_architecture:missing` expects INCONCLUSIVE on thin telemetry, while the baseline reads ADEQUATE.
@@ -212,7 +215,7 @@ All commands run from the repository root unless they start with `cd collector`.
 pip install -r collector/requirements-cops-runtime.txt
 pip install anthropic==2.3.0                         # needed for tests/test_runtime_live_path.py (skipped without it)
 
-python3 -m pytest -p no:cacheprovider tests/ -q -rs  # 243 passed, 1 skipped
+python3 -m pytest -p no:cacheprovider tests/ -q -rs  # 244 passed, 1 skipped
 python3 -m pytest -p no:cacheprovider tests/test_runtime_live_path.py tests/test_runtime_live_eval.py -q
 
 cd collector && python3 -m cops.runtime.evaluation           # 25 scenarios -> docs/cops/evaluation/RESULTS.md, results.json

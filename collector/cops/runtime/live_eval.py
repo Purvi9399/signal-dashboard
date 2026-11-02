@@ -292,7 +292,14 @@ def deterministic_upstream(cop):
 
 # ====================================================================== running
 
-def classify(case, label):
+def provider_failed(invocations):
+    """No call of the investigation got a usable reply from the provider."""
+    return bool(invocations) and all(i["error"] and i["error"] != "malformed_output" for i in invocations)
+
+
+def classify(case, label, invocations=()):
+    if provider_failed(invocations):
+        return "provider_failure"          # never counted as agreement, whatever the label
     if label in case["accept"]:
         return "agree"
     if label == INCONCLUSIVE:
@@ -336,7 +343,7 @@ def run_one(case, provider, budget, store=None):
         "verifier_fail": c.get("verifier_fail", []), "action": c.get("action"),
         "execution_status": c.get("execution_status"), "claims": c.get("claims", []),
         "missing_evidence": c.get("missing_evidence", []),
-        "outcome": classify(case, label) if label else "error",
+        "outcome": classify(case, label, inv) if label else "error",
         "cops_run": cops, "other_llm_calls": other_calls, "wall_ms": wall, "error": err,
         "invocations": [{k: i.get(k) for k in (
             "invocation_id", "purpose", "provider", "model", "model_version", "simulated", "input_tokens",
@@ -358,6 +365,8 @@ def verify_records(results, live):
             problems.append(f"{r['id']}: no model call recorded")
         for i in r["invocations"]:
             if live:
+                if i["error"] and i["error"] != "malformed_output":
+                    problems.append(f"{r['id']} {i['invocation_id']}: provider call failed: {i['error'][:160]}")
                 if i["simulated"] is not False:
                     problems.append(f"{r['id']} {i['invocation_id']}: simulated record in a live run")
                 if i["provider"] != "anthropic" or not i["model"]:
@@ -375,7 +384,7 @@ def totals(results):
     inv = [i for r in ran for i in r["invocations"]]
     out = {k: sum(1 for r in ran if r["outcome"] == k) for k in (
         "agree", "inconclusive", "false_positive", "missed_finding", "unsupported_quiet_label",
-        "disagree", "error")}
+        "disagree", "provider_failure", "error")}
     out.update(cases=len(results), ran=len(ran), skipped=len(results) - len(ran),
                llm_calls=len(inv), llm_errors=sum(1 for i in inv if i["error"]),
                input_tokens=sum(i["input_tokens"] or 0 for i in inv),
@@ -420,11 +429,20 @@ def check_live_config():
     return cap, probs
 
 
+STOP_AFTER_FAILED_CASES = 2
+
+
 def run_all(live, only=None, cap=None, budget=None):
     budget = budget or (LIVE_BUDGET if live else None)
-    results, spent = [], 0.0
+    results, spent, failed_in_a_row = [], 0.0, 0
     for case in CASES:
         if only and not any(case["id"].startswith(o) for o in only):
+            continue
+        if failed_in_a_row >= STOP_AFTER_FAILED_CASES:
+            # the provider is refusing every call (billing, auth, outage): stop rather than repeat it
+            results.append({"id": case["id"], "cop": case["cop"], "kind": case["kind"], "skipped":
+                            f"stopped after {failed_in_a_row} cases in a row with no usable provider reply",
+                            "outcome": "not_run", "invocations": [], "other_llm_calls": 0})
             continue
         if live and cap is not None and cap - spent < budget.max_cost_usd * 1.5:
             results.append({"id": case["id"], "cop": case["cop"], "kind": case["kind"], "skipped":
@@ -434,6 +452,7 @@ def run_all(live, only=None, cap=None, budget=None):
         prov = AnthropicProvider() if live else offline_provider()
         r = run_one(case, prov, budget)
         spent += sum(i["cost_usd"] or 0 for i in r["invocations"])
+        failed_in_a_row = failed_in_a_row + 1 if r["outcome"] == "provider_failure" else 0
         results.append(r)
     return results
 
