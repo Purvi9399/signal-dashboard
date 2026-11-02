@@ -40,7 +40,7 @@ from .persistence import SQLiteStore
 from .profiles import LLM_COPS, DETERMINISTIC_COPS
 
 INCONCLUSIVE = "INCONCLUSIVE"
-QUIET = {k: BY_KEY[k].interpretations[0] for k in LLM_COPS}
+QUIET = {k: BY_KEY[k].interpretations[0] for k in BY_KEY}
 
 # Live calls take longer than scripted ones, and real payloads are larger than the
 # estimates; the per-investigation cost cap is unchanged.
