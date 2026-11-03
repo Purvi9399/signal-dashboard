@@ -409,6 +409,16 @@ def audit_traceability(ctx):
         if out["interpretation"] in ("COMPLETE", "PARTIAL", INCONCLUSIVE):
             out = {**out, "interpretation": "BROKEN_TRACE", "action": "ALERT", "severity": "MEDIUM",
                    "action_reason": "a decision cites evidence the record cannot produce"}
+    # PARTIAL means "reconstructable, with gaps that do not yet break attribution". A disk
+    # change the trace tool confirms no step accounts for is a break in attribution, so it
+    # is a BROKEN_TRACE, not a PARTIAL. UNATTRIBUTABLE stays reserved for CRITICAL.
+    # (Semantic change: listed for agreement in COPS_INCONCLUSIVE_ROOT_CAUSE_REPORT.md.)
+    un = tr.get("unattributed_effects") or []
+    if out["interpretation"] == "PARTIAL" and un:
+        extra.append(tclaim(ctx["tools"], "reconstruct_trace", "unattributed_effects", un,
+                            f"{len(un)} of {tr.get('disk_changes')} disk changes are attributed to no step"))
+        out = {**out, "interpretation": "BROKEN_TRACE", "action": "ALERT", "severity": "MEDIUM",
+               "action_reason": "disk changes no agent action accounts for break attribution"}
     f = _from_legacy(ctx, out, extra)
     f["cop_specific"].update({"trace": tr, "decision_linkage": link.get("decisions", [])})
     return f
@@ -659,6 +669,16 @@ def governance_intelligence(ctx):
              cop_specific={"unreachable": {"CONCENTRATED": "needs repeat_actor_concentration"}})
 
 
+def _state_of(case, metric_id, value):
+    """A value's state on a metric's configured thresholds (metrics_config.json)."""
+    th = case.cfg["thresholds"].get(metric_id, {})
+    up = th.get("direction", "above") == "above"
+    for st in ("critical", "exception", "warning"):
+        if st in th and ((value >= th[st]) if up else (value <= th[st])):
+            return st.upper()
+    return "NORMAL"
+
+
 def workload_optimization(ctx):
     t = ctx["tools"]
     m = {e.metric_id: e for e in ctx["events"]}
@@ -674,6 +694,22 @@ def workload_optimization(ctx):
                                        rep["redundant_read_calls"],
                                        f"{rep['redundant_read_calls']} redundant reads")]
         return F("REDUNDANT", 0.7, "WATCH", "identical work repeated", "", claims, "LOW")
+    # insights.repetition counts a repeat only when the whole argument payload is identical
+    # within one turn, so repeats whose arguments differ in an incidental field read 0 there.
+    # The tool compares by target and checks nothing changed on disk in between. Judged on
+    # insights.repetition's own configured thresholds; no new threshold.
+    unchanged = rep.get("unchanged_repeat_reads", 0) + rep.get("unchanged_repeat_commands", 0)
+    rstate = _state_of(ctx["case"], "insights.repetition", unchanged) if unchanged else "NORMAL"
+    if rstate in ATTENTION_STATES:
+        claims = [tclaim(t, "inspect_repeated_operations", "unchanged_repeat_reads",
+                         rep["unchanged_repeat_reads"], f"{rep['unchanged_repeat_reads']} reads repeated "
+                         f"with nothing written in between"),
+                  tclaim(t, "inspect_repeated_operations", "unchanged_repeat_commands",
+                         rep["unchanged_repeat_commands"], f"{rep['unchanged_repeat_commands']} commands "
+                         f"repeated with nothing written in between")]
+        return F("REDUNDANT", 0.65, "WATCH", "identical work repeated with nothing changed between",
+                 f"{unchanged} unchanged repeats ({rstate} on the insights.repetition thresholds); "
+                 f"insights.repetition itself reads {repm.value if repm else 'nothing'}", claims, "LOW")
     judged = [e for e in ctx["events"] if e.state in ("NORMAL",) + ATTENTION_STATES]
     if not judged:
         return F(INCONCLUSIVE, 0.0, "NONE", "", "no workload measure could be judged",

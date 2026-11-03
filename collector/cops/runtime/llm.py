@@ -110,7 +110,7 @@ class AssessmentOut(Strict):
     missing_evidence: list[str] = Field(default_factory=list)
 
 
-SCHEMAS = {"plan": PlanOut, "assess": AssessmentOut}
+SCHEMAS = {"plan": PlanOut, "assess": AssessmentOut, "reassess": AssessmentOut}
 
 
 # ---------------------------------------------------------------- budgets
@@ -175,8 +175,10 @@ class FixtureProvider:
     name = "fixture"
     simulated = True
 
-    def __init__(self, script, model=FIXTURE_MODEL, label="scripted"):
-        self.script, self.model, self.label = script, model, label
+    def __init__(self, script, model=FIXTURE_MODEL, label="scripted", replay=False):
+        # replay=True: replies recorded from a real run. A replay cannot answer a
+        # call the run never made (a recovery re-assessment), so none is attempted.
+        self.script, self.model, self.label, self.replay = script, model, label, replay
         self.calls = []
 
     def complete(self, cop, purpose, system, payload, schema, timeout_s):

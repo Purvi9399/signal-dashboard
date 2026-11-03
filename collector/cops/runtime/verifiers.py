@@ -76,10 +76,31 @@ CHECKS = {
 }
 
 
-def R(check_id, result, reason, detail="", refs=(), subject=""):
+def R(check_id, result, reason, detail="", refs=(), subject="", failures=()):
     v, cat, eff, ind, _ = CHECKS[check_id]
     return VerifierResult(check_id, v, CATEGORIES[cat], result, eff, reason, detail,
-                          list(refs)[:20], ind, subject).to_dict()
+                          list(refs)[:20], ind, subject, list(failures)).to_dict()
+
+
+# Why a claim failed. Each code says whether the investigation could repair it
+# with evidence that exists (recoverable) or whether the evidence is not there.
+CITATION_MALFORMED = "CITATION_MALFORMED"      # a field the claim kind needs is absent
+VALUE_MISMATCH = "VALUE_MISMATCH"              # the cited data holds a different value
+CITED_SOURCE_UNAVAILABLE = "CITED_SOURCE_UNAVAILABLE"  # the cited tool call failed or holds nothing
+UPSTREAM_UNVERIFIED = "UPSTREAM_UNVERIFIED"    # an unverified upstream finding used as support
+UPSTREAM_MISMATCH = "UPSTREAM_MISMATCH"        # the upstream finding has another label
+PRECEDENT_UNAVAILABLE = "PRECEDENT_UNAVAILABLE"
+RECOVERABLE = {CITATION_MALFORMED: True, VALUE_MISMATCH: True, UPSTREAM_MISMATCH: True,
+               CITED_SOURCE_UNAVAILABLE: False, UPSTREAM_UNVERIFIED: False, PRECEDENT_UNAVAILABLE: False}
+# A non-substantive upstream reading. Citing one with its exact label states that the
+# upstream gives nothing to rely on; it is a disclosure, never support.
+NON_SUBSTANTIVE_LABELS = (INCONCLUSIVE,)
+
+
+def _fail(i, x, field_, asserted, observed, code, msg):
+    return {"claim": i, "statement": (x.get("statement") or "")[:200], "kind": x.get("kind"),
+            "field": field_, "asserted": asserted, "observed": observed, "code": code,
+            "recoverable": RECOVERABLE[code], "message": msg}
 
 
 def describe():
@@ -321,11 +342,27 @@ def verify_finding(ctx):
                  "; ".join(mism) or (f"recomputed {checked}" if checked else
                                      "no cited metric has an independent raw recomputation")))
 
-    # SC-01 each claim against the data it cites
-    fails, unchecked, ok = [], [], 0
-    for x in claims:
+    # SC-01 each claim against the data it cites. Every failure is recorded with the
+    # claim, the cited field, the asserted and the observed value, and a code.
+    fl, ok, disclosures = [], 0, 0
+    for i, x in enumerate(claims, 1):
         k = x.get("kind")
         m = x.get("metric_id")
+        refs = [str(r) for r in x.get("evidence_refs", [])]
+        if k in (CLAIM_METRIC_STATE, CLAIM_METRIC_VALUE) and not m:
+            named = [r for r in refs if r.startswith("metric:")]
+            fl.append(_fail(i, x, None, x.get("asserted_state") if k == CLAIM_METRIC_STATE
+                            else x.get("asserted_value"), None, CITATION_MALFORMED,
+                            f"claim {i} ({k}) names no metric_id" +
+                            (f"; its references name {', '.join(named)} but a reference is not a citation"
+                             if named else "; it cites nothing")))
+            continue
+        if k == CLAIM_TOOL_OBSERVATION and not (x.get("tool_call_id") and x.get("result_field")):
+            fl.append(_fail(i, x, x.get("result_field"), x.get("asserted_value"), None, CITATION_MALFORMED,
+                            f"claim {i} (tool_observation) has no "
+                            + " and no ".join(n for n, v in (("tool_call_id", x.get("tool_call_id")),
+                                                             ("result_field", x.get("result_field"))) if not v)))
+            continue
         if k in (CLAIM_METRIC_VALUE, CLAIM_TOOL_OBSERVATION) and x.get("asserted_value") is None:
             # no value stated against a cited value that exists: the claim cannot be checked and
             # supports nothing (an asserted null against a null field is an ordinary match below)
@@ -336,41 +373,60 @@ def verify_finding(ctx):
                 actual = _get_path(c0["result"], x.get("result_field")) if c0 and c0["status"] == "OK" else None
                 where = f"{c0['tool'] if c0 else 'tool call ' + str(x.get('tool_call_id'))}.{x.get('result_field')}"
             if actual is not None:
-                unchecked.append(f"{where}: no asserted_value (the data holds {actual!r}), so the claim "
-                                 f"cannot be checked")
+                fl.append({**_fail(i, x, where, None, actual, CITATION_MALFORMED,
+                                   f"{where}: no asserted_value (the data holds {actual!r}), so the claim "
+                                   f"cannot be checked"), "unchecked": True})
                 continue
         if k == CLAIM_METRIC_STATE:
             row = rows_by.get(m)
             if row is None or row.get("state") != x.get("asserted_state"):
-                fails.append(f"{m}: asserted {x.get('asserted_state')}, actual "
-                             f"{row.get('state') if row else 'not supplied'}")
+                code = CITATION_MALFORMED if x.get("asserted_state") is None and row else VALUE_MISMATCH
+                fl.append(_fail(i, x, f"metric:{m}.state", x.get("asserted_state"),
+                                row.get("state") if row else None, code,
+                                f"{m}: asserted {x.get('asserted_state')}, actual "
+                                f"{row.get('state') if row else 'not supplied'}"))
             else:
                 ok += 1
         elif k == CLAIM_METRIC_VALUE:
             row = rows_by.get(m)
             if row is None or row.get("value") is None or not _same(x.get("asserted_value"), row["value"]):
-                fails.append(f"{m}: asserted value {x.get('asserted_value')}, actual "
-                             f"{row.get('value') if row else 'not supplied'}")
+                fl.append(_fail(i, x, f"metric:{m}.value", x.get("asserted_value"),
+                                row.get("value") if row else None,
+                                VALUE_MISMATCH if row and row.get("value") is not None else CITED_SOURCE_UNAVAILABLE,
+                                f"{m}: asserted value {x.get('asserted_value')}, actual "
+                                f"{row.get('value') if row else 'not supplied'}"))
             else:
                 ok += 1
         elif k == CLAIM_TOOL_OBSERVATION:
             call = calls.get(x.get("tool_call_id"))
             if call is None or call["status"] != "OK":
-                fails.append(f"tool call {x.get('tool_call_id')} absent or not OK")
+                code = CITATION_MALFORMED if call is None else CITED_SOURCE_UNAVAILABLE
+                fl.append(_fail(i, x, f"tool_call:{x.get('tool_call_id')}", x.get("asserted_value"),
+                                call["status"] if call else None, code,
+                                f"tool call {x.get('tool_call_id')} " +
+                                ("is not a call in this investigation" if call is None else
+                                 f"returned {call['status']}, so it holds no result to cite")))
                 continue
             got = _get_path(call["result"], x.get("result_field"))
             if not _same(x.get("asserted_value"), got):
-                fails.append(f"{call['tool']}.{x.get('result_field')}: asserted "
-                             f"{x.get('asserted_value')!r}, tool returned {got!r}")
+                fl.append(_fail(i, x, f"{call['tool']}.{x.get('result_field')}", x.get("asserted_value"), got,
+                                VALUE_MISMATCH, f"{call['tool']}.{x.get('result_field')}: asserted "
+                                f"{x.get('asserted_value')!r}, tool returned {got!r}"))
             else:
                 ok += 1
         elif k == CLAIM_UPSTREAM:
             u = up.get(x.get("upstream_cop"))
             if not u or u["label"] != x.get("upstream_label"):
-                fails.append(f"upstream {x.get('upstream_cop')}: asserted {x.get('upstream_label')}, "
-                             f"actual {u['label'] if u else 'absent'}")
+                fl.append(_fail(i, x, f"finding:{x.get('upstream_cop')}.label", x.get("upstream_label"),
+                                u["label"] if u else None, UPSTREAM_MISMATCH,
+                                f"upstream {x.get('upstream_cop')}: asserted {x.get('upstream_label')}, "
+                                f"actual {u['label'] if u else 'absent'}"))
+            elif not u.get("verified") and u["label"] in NON_SUBSTANTIVE_LABELS:
+                disclosures += 1      # "the upstream could not decide": accurate, and supports nothing
             elif not u.get("verified"):
-                fails.append(f"upstream {x.get('upstream_cop')} finding is not verified")
+                fl.append(_fail(i, x, f"finding:{x.get('upstream_cop')}.verified", True, False,
+                                UPSTREAM_UNVERIFIED,
+                                f"upstream {x.get('upstream_cop')} finding is not verified"))
             else:
                 ok += 1
         elif k == CLAIM_MEMORY_PRECEDENT:
@@ -381,18 +437,26 @@ def verify_finding(ctx):
                 except PermissionError:
                     rec = None
             if rec is None:
-                fails.append(f"precedent {x.get('record_id')} not retrievable")
+                fl.append(_fail(i, x, f"memory:{x.get('record_id')}", x.get("record_id"), None,
+                                PRECEDENT_UNAVAILABLE, f"precedent {x.get('record_id')} not retrievable"))
             elif rec["validation_status"] != VALIDATED:
-                fails.append(f"precedent {x.get('record_id')} is {rec['validation_status']}: "
-                             f"an unvalidated observation is not established truth")
+                fl.append(_fail(i, x, f"memory:{x.get('record_id')}.validation_status", VALIDATED,
+                                rec["validation_status"], PRECEDENT_UNAVAILABLE,
+                                f"precedent {x.get('record_id')} is {rec['validation_status']}: "
+                                f"an unvalidated observation is not established truth"))
             else:
                 ok += 1
         elif k == CLAIM_ABSENCE:
             ok += 1 if x.get("evidence_refs") else 0
-    out.append(R("SC-01", FAIL if fails or unchecked else (PASS if ok else NOT_RUN),
-                 "claim_contradicted" if fails else "claim_unchecked" if unchecked else
+    fails = [f_["message"] for f_ in fl]
+    malformed = all(f_["code"] == CITATION_MALFORMED for f_ in fl) and fl
+    out.append(R("SC-01", FAIL if fl else (PASS if ok else NOT_RUN),
+                 ("claim_unchecked" if all(f_.get("unchecked") for f_ in fl) else
+                  "claim_malformed" if malformed else "claim_contradicted") if fl else
                  ("claims_supported" if ok else "no_claims"),
-                 "; ".join((fails + unchecked)[:6])))
+                 "; ".join(fails[:6]) + (f" ({disclosures} upstream disclosure claim(s) not counted "
+                                         f"as support)" if disclosures and not fl else ""),
+                 failures=fl))
 
     # SC-02 direct support for an attention label
     quiet = spec.interpretations[0] if spec.interpretations else None

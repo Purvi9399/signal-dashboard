@@ -47,7 +47,8 @@ PAGE = r"""<!doctype html>
 --unt-bg:#2c2e33;--live:#8fb0ff;--live-bg:#1b2747;--sim:#c4adf5;--sim-bg:#2c2440;--det:#bfcad4;--det-bg:#283039;--accent:#fb923c}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
-main{max-width:1180px;margin:0 auto;padding:24px 16px 80px}
+main{max-width:1180px;margin:0 auto;padding:24px 16px 80px;overflow-wrap:anywhere}
+.toolbar label{display:inline-flex;gap:4px;align-items:center;flex-wrap:wrap}select{max-width:100%}
 h1{font-size:28px;margin:0 0 4px}h2{font-size:20px;margin:40px 0 8px}h3{font-size:16px;margin:18px 0 6px}
 p{margin:6px 0}.muted{color:var(--muted)}code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin:12px 0}
@@ -72,7 +73,7 @@ summary:before{content:"▸ ";color:var(--muted)}details[open]>summary:before{co
 .step{border-left:3px solid var(--line);padding:4px 0 4px 12px;margin:10px 0}
 .step h4{margin:0 0 4px;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--accent)}
 .step ul{margin:4px 0;padding-left:18px}.step li{margin:2px 0}
-.kv{display:grid;grid-template-columns:max-content 1fr;gap:2px 12px;font-size:14px}
+.kv{display:grid;grid-template-columns:minmax(0,max-content) minmax(0,1fr);gap:2px 12px;font-size:14px}
 .demo{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}
 .demo a{color:inherit;text-decoration:none}.demo .tile:hover{border-color:var(--accent)}
 .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
@@ -84,6 +85,15 @@ background:var(--panel);color:var(--ink);cursor:pointer}button.on{border-color:v
 .st-AWAITING_APPROVAL{color:var(--sim)}.st-REJECTED_BY_AUTHORITY,.st-APPROVAL_REJECTED{color:var(--inc)}
 .st-PROPOSAL_WITHDRAWN{color:var(--muted)}.st-EXECUTED{color:var(--pass)}.st-FAILED_OR_UNCONFIRMED{color:var(--fail)}
 .chain{display:flex;flex-wrap:wrap;gap:4px;align-items:center;font-size:13px}.chain .arrow{color:var(--muted)}
+.rc{display:inline-block;padding:1px 7px;border-radius:5px;font-size:11.5px;font-weight:600;background:var(--soft);border:1px solid var(--line);margin:1px 2px 1px 0;white-space:nowrap}
+.rc-EXPECTED_INCONCLUSIVE{color:var(--pass)}.rc-MISSING_EVIDENCE,.rc-MISSING_DEPENDENCY{color:var(--inc)}
+.rc-VERIFIER_REJECTED{color:var(--sim)}.rc-MODEL_UNCERTAIN{color:var(--live)}.rc-EVALUATION_MISMATCH{color:var(--fail)}
+.ev{display:inline-block;padding:1px 6px;border-radius:5px;font-size:11px;font-weight:600;border:1px solid currentColor;white-space:nowrap}
+.ev-RETRIEVED_AND_VALIDATED{color:var(--pass)}.ev-AVAILABLE{color:var(--live)}.ev-MISSING_BUT_RETRIEVABLE{color:var(--sim)}
+.ev-MISSING_AND_UNAVAILABLE{color:var(--fail)}.ev-NOT_APPLICABLE{color:var(--muted)}.ev-PRESENT_BUT_UNVERIFIED{color:var(--inc)}
+select{font:inherit;font-size:13px;padding:3px 6px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+.journey{counter-reset:j}.journey .step h4:before{counter-increment:j;content:counter(j) " · "}
+.vx td,.vx th{font-size:13px;padding:5px 6px}
 </style>
 </head>
 <body>
@@ -103,7 +113,8 @@ fictional cases: a <b>normal</b> one, an <b>abnormal</b> one, and one where the 
 <b>missing</b>. Each case's expected outcome was fixed before it ran and never shown to the COP.</p>
 <p class="legend"><b>Where a result comes from:</b>
 <span class="badge src-live">LIVE</span> real model calls, recorded with request ids and measured tokens
-<span class="badge src-replay">REPLAY</span> the recorded real replies fed back in to rebuild the trace (no model call)
+<span class="badge src-replay">REPLAY</span> the recorded real replies fed back in under the current code (tools and verifiers re-run, no model call, no cost; never counted as a new live call)
+<span class="badge src-live">NEW LIVE CALL</span> a fresh model call made after the fixes (none yet)
 <span class="badge src-det">DETERMINISTIC</span> rules only, run for real, no model
 <span class="badge src-sim">SIMULATED</span> scripted replies</p>
 <p class="legend"><b>Verdicts:</b>
@@ -125,6 +136,17 @@ fictional cases: a <b>normal</b> one, an <b>abnormal</b> one, and one where the 
 
 <div class="tiles" id="tiles"></div>
 
+<h2>Why cases are inconclusive</h2>
+<p class="muted">An INCONCLUSIVE is correct when the evidence the COP needs is missing. It is a problem when a definite answer
+was expected. Decision status, root cause and evaluation verdict are kept separate; one case can have several root causes.</p>
+<div class="tiles" id="inctiles"></div>
+<div class="panel" id="rootcauses"></div>
+
+<h2>Before and after the root-cause fixes</h2>
+<p class="muted">The original result is the one recorded before the fixes (test_bench_results_before_fixes.json). The current
+result says where it came from. A replay re-uses the recorded real model replies; it is never presented as a new live call.</p>
+<div class="tbl"><table id="beforeafter"></table></div>
+
 <h2>Demo: three investigations</h2>
 <p class="muted">Real model calls. Click one to open its trace below.</p>
 <div class="demo" id="demo"></div>
@@ -144,7 +166,9 @@ runs use Policy Enforcement on the restricted-access session, in supervised mode
 <div id="lifecycle"></div>
 
 <h2>Every investigation</h2>
-<div class="toolbar" id="filters"></div>
+<p class="muted">Each investigation opens as an evidence journey: input evidence → deterministic baseline → model planning →
+tool calls → model candidate → verifier results → final decision → action lifecycle.</p>
+<div class="toolbar" id="filters"></div><p class="muted" id="fcount"></p>
 <div id="cases"></div>
 
 <h2>Known problems</h2>
@@ -169,6 +193,12 @@ const badge = v => `<span class="badge ${v}">${v}</span>`;
 const srcBadge = s => s === 'live' ? '<span class="badge src-live">LIVE</span>'
   : s === 'deterministic' ? '<span class="badge src-det">DETERMINISTIC</span>'
   : s === 'replay' ? '<span class="badge src-replay">REPLAY</span>' : '<span class="badge src-sim">SIMULATED</span>';
+const RS = {deterministic_rerun: ['src-det', 'DETERMINISTIC RE-RUN'], recorded_reply_replay: ['src-replay', 'REPLAY OF RECORDED REAL REPLY'],
+  live_new_call: ['src-live', 'NEW LIVE CALL'], live_recorded: ['src-live', 'LIVE (as recorded)']};
+const rsBadge = r => { const x = RS[r] || ['src-sim', r || 'unknown']; return `<span class="badge ${x[0]}">${esc(x[1])}</span>`; };
+const rc = xs => (xs || []).map(x => `<span class="rc rc-${x}">${esc(x.replace(/_/g, ' '))}</span>`).join('');
+const evb = st => `<span class="ev ev-${st}">${esc(String(st || '').replace(/_/g, ' '))}</span>`;
+const val = v => v === undefined || v === null ? '<span class="muted">none</span>' : `<span class="mono">${esc(typeof v === 'string' ? v : JSON.stringify(v))}</span>`;
 const S = D.summary, cops = Object.fromEntries(D.cops.map(c => [c.key, c]));
 const money = x => x == null ? 'n/a' : '$' + Number(x).toFixed(4);
 const anchor = id => 'case-' + id.replace(/[^a-z0-9]/gi, '-');
@@ -248,50 +278,92 @@ const dims = d => `<div class="dims">${DIMS.filter(([k]) => k in d).map(([k, n])
   `<span class="dim ${d[k] === true ? 'y' : d[k] === false ? 'n' : 'na'}">${d[k] === true ? '✓' : d[k] === false ? '✗' : '–'} ${n}${d[k] == null ? ' (n/a)' : ''}</span>`).join('')}</div>`;
 const list = (xs, f) => xs && xs.length ? `<ul>${xs.map(x => `<li>${f(x)}</li>`).join('')}</ul>` : '<p class="muted">none</p>';
 
+function verifierTable(t) {
+  const rows = [];
+  for (const v of t.verification.filter(v => v.result === 'FAIL')) {
+    const fs = v.failures && v.failures.length ? v.failures : [null];
+    for (const f of fs) rows.push(f ? `<tr><td><b>${esc(v.check)}</b></td><td>claim ${esc(f.claim)} <span class="muted">${esc(f.kind)}</span><br>${esc(f.statement)}</td>
+      <td class="mono">${esc(f.field ?? '–')}</td><td>${val(f.asserted)}</td><td>${val(f.observed)}</td><td><span class="lab">${esc(f.code)}</span></td>
+      <td>${f.recoverable ? 'yes' : 'no'}</td></tr>`
+      : `<tr><td><b>${esc(v.check)}</b></td><td colspan="4">${esc(v.reason)}: ${esc(v.detail)}</td><td></td><td>${v.check === 'DS-03' ? 'yes' : 'no'}</td></tr>`);
+  }
+  return rows.length ? `<div class="tbl"><table class="vx"><tr><th>Check</th><th>Claim</th><th>Field</th><th>Asserted</th><th>Observed</th><th>Code</th><th>Recoverable</th></tr>${rows.join('')}</table></div>` : '';
+}
+
+function sufficiency(t) {
+  const s = t.sufficiency;
+  if (!s) return '';
+  const items = s.items.filter(x => x.kind !== 'METRIC');
+  return `<p><b>Evidence sufficiency</b> (precheck before any conclusion): quiet label ${s.quiet_label_permitted ? 'permitted' : '<b>not permitted</b>'}</p>
+   ${items.length ? `<div class="tbl"><table class="vx"><tr><th>Item</th><th>Kind</th><th>State</th><th>Backs / note</th></tr>${items.map(x => `<tr>
+     <td class="mono">${esc(x.item)}</td><td>${esc(x.kind)}${x.role ? ' · ' + esc(x.role.replace(/_/g, ' ')) : ''}</td><td>${evb(x.state)}</td>
+     <td>${esc(x.backs || (x.label ? x.label + ' (' + x.status + ')' : ''))}${x.retrieve_with && x.retrieve_with.length ? ` <span class="muted">· via ${esc(x.retrieve_with.join(', '))}</span>` : ''}</td></tr>`).join('')}</table></div>` : ''}
+   ${s.reasons.length ? `<p class="muted">${s.reasons.map(r => esc(r.code + ': ' + r.item + ' — ' + r.detail)).join('<br>')}</p>` : ''}`;
+}
+
 function trace(t) {
   if (!t) return '<p class="muted">No trace recorded.</p>';
   const a = t.authority, d = t.decision, i = t.interpretation;
-  return `
-  <div class="step"><h4>1 · Signals read</h4>${list(t.signals, s => `<span class="mono">${esc(s.metric)}</span> ${esc(s.state)}
-     ${s.value != null ? '= ' + esc(s.value) : ''} <span class="muted">(${esc(s.evidence)})</span>`)}
-   ${t.missing_evidence.length ? `<p><b>Missing evidence:</b></p>${list(t.missing_evidence, m => esc(m.source || (m.metric ? m.metric + ' is ' + m.evidence : JSON.stringify(m))) + (m.reason ? ` <span class="muted">(${esc(m.reason)})</span>` : ''))}` : ''}
-   ${t.missing_dependencies.length ? `<p><b>Missing records:</b> ${esc(t.missing_dependencies.map(m => m.artifact || m.dependency || JSON.stringify(m)).join(', '))}</p>` : ''}
-   ${t.upstream_used.length ? `<p><b>Upstream findings used:</b> ${esc(t.upstream_used.map(u => u.cop + '=' + u.label).join(', '))}</p>` : ''}</div>
-  <div class="step"><h4>2 · Evidence gathered (tool calls)</h4>${list(t.tools, x => `<span class="mono">${esc(x.tool)}</span> by ${esc(x.by)}: ${esc(x.status)}${x.rejection ? ' (' + esc(x.rejection) + ')' : ''}`)}</div>
-  ${t.llm.length ? `<div class="step"><h4>3 · Model investigation</h4>${t.llm.map(c => `<p><b>${esc(c.purpose)}</b>
-     ${c.simulated ? '<span class="badge src-replay">recorded reply</span>' : '<span class="badge src-live">live</span>'}
+  const plan = t.llm.filter(c => c.purpose === 'plan'), assess = t.llm.filter(c => c.purpose !== 'plan');
+  const llmCall = c => `<p><b>${esc(c.purpose)}</b>
+     ${c.simulated ? '<span class="badge src-replay">recorded real reply</span>' : '<span class="badge src-live">live</span>'}
      ${c.decision ? 'decision <span class="lab">' + esc(c.decision) + '</span>' : ''} ${c.candidate_label ? '· proposed <span class="lab">' + esc(c.candidate_label) + '</span>' : ''}</p>
      ${c.hypothesis ? `<p>${esc(c.hypothesis)}</p>` : ''}
      ${c.tool_requests.length ? `<p class="muted">asked for: ${esc(c.tool_requests.map(q => q.tool).join(', '))}</p>` : ''}
-     ${c.error ? `<p style="color:var(--fail)">error: ${esc(c.error)}</p>` : ''}`).join('')}</div>` : ''}
-  <div class="step"><h4>${t.llm.length ? 4 : 3} · Interpretation</h4><div class="kv">
-     <span>rule baseline</span><span class="lab">${esc(i.rule_baseline ?? '–')}</span>
-     <span>rejected candidate</span><span class="lab">${esc(i.rejected_candidate ?? '–')}</span></div>
+     ${c.error ? `<p style="color:var(--fail)">error: ${esc(c.error)}</p>` : ''}`;
+  const rec = t.recovery;
+  return `<div class="journey">
+  <div class="step"><h4>Input evidence</h4>${list(t.signals, s => `<span class="mono">${esc(s.metric)}</span> ${esc(s.state)}
+     ${s.value != null ? '= ' + esc(s.value) : ''} <span class="muted">(${esc(s.evidence)})</span>`)}
+   ${sufficiency(t)}
+   ${t.missing_evidence.length ? `<p><b>Missing evidence:</b></p>${list(t.missing_evidence, m => esc(m.source || (m.metric ? m.metric + ' is ' + m.evidence : JSON.stringify(m))) + (m.reason ? ` <span class="muted">(${esc(m.reason)})</span>` : ''))}` : ''}
+   ${t.missing_dependencies.length ? `<p><b>Missing records:</b> ${esc(t.missing_dependencies.map(m => m.artifact || m.dependency || JSON.stringify(m)).join(', '))}</p>` : ''}
+   ${t.upstream_used.length ? `<p><b>Upstream findings used:</b> ${esc(t.upstream_used.map(u => u.cop + '=' + u.label).join(', '))}</p>` : ''}</div>
+  <div class="step"><h4>Deterministic baseline</h4><p>Rules read <span class="lab">${esc(i.rule_baseline ?? (t.llm.length ? '–' : d.label))}</span>${i.gated_label ? ` · <span class="lab">${esc(i.gated_label)}</span> withheld by the evidence precheck` : ''}
+     ${t.llm.length ? '<span class="muted"> (recorded beside the model; never substituted for it)</span>' : '<span class="muted"> (the decision for a rule-based COP)</span>'}</p>
+     ${list((t.tools || []).filter(x => x.by === 'rules'), x => `<span class="mono">${esc(x.tool)}</span>: ${esc(x.status)}`)}</div>
+  ${t.llm.length ? `<div class="step"><h4>Model planning</h4>${plan.map(llmCall).join('') || '<p class="muted">none</p>'}</div>` : ''}
+  <div class="step"><h4>Tool calls</h4>${list(t.tools, x => `<span class="mono">${esc(x.tool)}</span> by ${esc(x.by)}: ${esc(x.status)}${x.rejection ? ' (' + esc(x.rejection) + ')' : ''}`)}
+   ${(t.tool_results || []).length ? `<details><summary class="muted">tool results (${t.tool_results.length})</summary><div class="body">${t.tool_results.map(x =>
+     `<p><span class="mono">${esc(x.tool)}</span> <span class="muted">${esc((x.tool_call_id || '').slice(0, 8))} · ${esc(x.by)}</span><br><span class="mono">${esc(typeof x.result === 'string' ? x.result : JSON.stringify(x.result))}</span></p>`).join('')}</div></details>` : ''}</div>
+  ${t.llm.length ? `<div class="step"><h4>Model candidate</h4>${assess.map(llmCall).join('') || '<p class="muted">no assessment</p>'}</div>` : ''}
+  <div class="step"><h4>Verifier results</h4><p>${t.verification.map(v =>
+     `<span class="badge ${v.result === 'PASS' ? 'PASS' : v.result === 'FAIL' ? 'FAIL' : 'UNTESTED'}">${esc(v.check)} ${esc(v.result)}</span>`).join(' ')}</p>
+     ${verifierTable(t)}
+     ${rec ? `<p><b>Recovery:</b> ${rec.attempted ? 'one re-assessment ran' + (rec.outcome ? ' → ' + esc(rec.outcome) : '') : 'not attempted'}${rec.recoverable === false ? ' · not recoverable' : rec.recoverable ? ' · recoverable' : ''}${rec.reason ? ' — ' + esc(rec.reason) : ''}</p>` : ''}</div>
+  <div class="step"><h4>Final decision</h4><p><span class="lab">${esc(d.label)}</span> · ${esc(d.status)} · confidence ${esc(d.confidence)} · verified ${esc(d.verified)}
+     ${i.rejected_candidate ? ` · rejected candidate <span class="lab">${esc(i.rejected_candidate)}</span>` : ''}</p>
+     ${(t.reason_codes || []).length ? `<p>reason codes: ${rc(t.reason_codes)}</p>` : ''}
      <p>${esc(i.rationale)}</p><p><b>Claims:</b></p>${list(t.claims, c => `${esc(c.statement)} <span class="muted">[${esc(c.kind)}]</span>
        ${(c.cites || []).concat(c.refs || []).length ? `<br><span class="mono muted">cites ${esc((c.cites || []).concat((c.refs || []).slice(0, 3)).join(' · '))}</span>` : ''}`)}</div>
-  <div class="step"><h4>${t.llm.length ? 5 : 4} · Verification</h4><p>${t.verification.map(v =>
-     `<span class="badge ${v.result === 'PASS' ? 'PASS' : v.result === 'FAIL' ? 'FAIL' : 'UNTESTED'}">${esc(v.check)} ${esc(v.result)}</span>`).join(' ')}</p>
-     ${list(t.verification.filter(v => v.result === 'FAIL'), v => `<b>${esc(v.check)}</b> ${esc(v.reason)}: ${esc(v.detail)}`)}</div>
-  <div class="step"><h4>${t.llm.length ? 6 : 5} · Action lifecycle</h4>${lifecycleBlock(a.lifecycle)}</div>
-  <div class="step"><h4>${t.llm.length ? 7 : 6} · Authority and final decision</h4><div class="kv">
+  <div class="step"><h4>Action lifecycle</h4>${lifecycleBlock(a.lifecycle)}<div class="kv">
      <span>requested action</span><span class="lab">${esc(a.requested)}</span>
+     ${a.original_proposal ? `<span>original proposal</span><span class="lab">${esc(a.original_proposal.action)}</span>` : ''}
      <span>final action</span><span class="lab">${esc(a.final)}</span>
      <span>authorised</span><span>${esc(a.authorised)}</span>
      <span>execution</span><span class="lab">${esc(a.execution_status)}</span>
      ${a.reason ? `<span>authority note</span><span>${esc(a.reason)}</span>` : ''}
-     <span>permitted for this COP</span><span class="lab">${esc(a.permitted.join(', '))}</span>
-     <span>decision</span><span><span class="lab">${esc(d.label)}</span> · ${esc(d.status)} · confidence ${esc(d.confidence)} · verified ${esc(d.verified)}</span></div></div>`;
+     <span>permitted for this COP</span><span class="lab">${esc(a.permitted.join(', '))}</span></div>
+     <p class="muted">Dry-run: nothing was blocked, paused or sent; a dry-run receipt records only what the action would do.</p></div>
+  </div>`;
 }
 
 function caseBlock(c) {
   const u = c.usage;
-  return `<details id="${anchor(c.id)}" data-v="${c.verdict}" data-t="${cops[c.cop].classification}">
-  <summary>${badge(c.verdict)} ${srcBadge(c.source)} <b>${esc(cops[c.cop].name)}</b> · ${esc(c.kind)} · ${esc(c.title)}
+  const g = c.diagnosis || {}, o = c.original;
+  const vf = (c.trace && c.trace.verification || []).some(v => v.result === 'FAIL' && !['AU-01', 'PE-01', 'AU-02', 'EX-01'].includes(v.check));
+  return `<details id="${anchor(c.id)}" data-v="${c.verdict}" data-t="${cops[c.cop].classification}" data-cop="${c.cop}" data-k="${c.kind}"
+   data-inc="${(g.evaluation || {}).inconclusive_class || ''}" data-vf="${vf ? 1 : 0}">
+  <summary>${badge(c.verdict)} ${rsBadge(c.result_source)} <b>${esc(cops[c.cop].name)}</b> · ${esc(c.kind)} · ${esc(c.title)}
    <span class="muted"> → <span class="lab">${esc(c.label ?? 'not run')}</span></span> ${actLine(lcOf(c))}</summary><div class="body">
   <div class="kv"><span>expected (fixed before the run)</span><span><span class="lab">${esc(c.expected.join(' / '))}</span> · ${esc(c.ground_truth)}</span>
    <span>COP said</span><span><span class="lab">${esc(c.label)}</span> · ${esc(c.status)}${c.inconclusive_by ? ' · held back by the ' + esc(c.inconclusive_by === 'verifier' ? 'verifier (the COP proposed a label that failed checks)' : 'COP itself') : ''}</span>
    <span>outcome</span><span>${esc(c.outcome)}</span>
-   ${c.replay ? `<span>replay under current code</span><span><span class="lab">${esc(c.replay.label)}</span> (${c.replay.same_label ? 'same as live' : 'differs from live'})</span>` : ''}
+   <span>root causes</span><span>${rc(g.root_causes) || '<span class="muted">none</span>'}</span>
+   <span>result source</span><span>${rsBadge(c.result_source)}${c.current_model_calls ? ` <span class="muted">${esc(c.current_model_calls.calls)} model calls, answered by ${esc(c.current_model_calls.answered_by)}</span>` : ''}</span>
+   ${c.live_recorded ? `<span>live run (2026-11-02)</span><span><span class="lab">${esc(c.live_recorded.label)}</span> · ${esc(c.live_recorded.status)}</span>` : ''}
+   ${o ? `<span>before the fixes</span><span>${badge(o.verdict)} <span class="lab">${esc(o.label)}</span>${c.changed ? ' <b>(changed)</b>' : ''}</span>` : ''}
+   ${g.note ? `<span>analysis</span><span>${esc(g.note.cause)}<br><b>Fix:</b> ${esc(g.note.fix)}${g.note.remaining ? `<br><b>Still needed:</b> ${esc(g.note.remaining)}` : ''}</span>` : ''}
    ${u ? `<span>model usage</span><span>${u.simulated ? '<span class="badge src-sim">simulated</span>' : '<span class="badge src-live">real</span>'}
      ${u.calls} calls · ${esc(u.provider)} / ${esc(u.model)} · ${u.input_tokens.toLocaleString()} in / ${u.output_tokens.toLocaleString()} out ·
      ${(u.latency_ms / 1000).toFixed(1)} s · ${money(u.cost_usd)}</span>` : `<span>model usage</span><span class="muted">none</span>`}
@@ -300,14 +372,29 @@ function caseBlock(c) {
 }
 document.getElementById('cases').innerHTML = D.cases.map(caseBlock).join('');
 
-const F = [['all', 'All'], ['PASS', 'Passed'], ['FAIL', 'Failed'], ['INCONCLUSIVE', 'Inconclusive'], ['llm', 'LLM COPs'], ['deterministic', 'Deterministic COPs']];
-document.getElementById('filters').innerHTML = F.map(([k, n]) => `<button data-f="${k}" class="${k === 'all' ? 'on' : ''}">${n}</button>`).join('');
-document.getElementById('filters').addEventListener('click', e => {
-  const k = e.target.dataset.f; if (!k) return;
-  document.querySelectorAll('#filters button').forEach(b => b.classList.toggle('on', b.dataset.f === k));
+const FILTERS = [
+  ['cop', 'COP', [['', 'all COPs']].concat(D.cops.map(k => [k.key, k.name]))],
+  ['t', 'type', [['', 'LLM and deterministic'], ['llm', 'LLM'], ['deterministic', 'deterministic']]],
+  ['k', 'case', [['', 'normal, abnormal, missing'], ['normal', 'normal'], ['abnormal', 'abnormal'], ['missing', 'missing evidence']]],
+  ['x', 'show', [['', 'every case'], ['inc-expected', 'expected inconclusive'], ['inc-unexpected', 'unexpected inconclusive'],
+                 ['vf', 'a verifier failed a check'], ['fail', 'actual failure (FAIL)'], ['changed', 'changed by the fixes']]]];
+document.getElementById('filters').innerHTML = FILTERS.map(([k, n, opts]) =>
+  `<label class="muted">${n} <select data-f="${k}">${opts.map(([v, t]) => `<option value="${esc(v)}">${esc(t)}</option>`).join('')}</select></label>`).join(' ');
+function applyFilters() {
+  const f = Object.fromEntries([...document.querySelectorAll('#filters select')].map(x => [x.dataset.f, x.value]));
+  let n = 0;
   document.querySelectorAll('#cases details').forEach(el => {
-    el.style.display = k === 'all' || el.dataset.v === k || el.dataset.t === k ? '' : 'none'; });
-});
+    const c = byId[el.id.replace(/^case-/, '')] || D.cases.find(z => anchor(z.id) === el.id);
+    const x = f.x;
+    const ok = (!f.cop || el.dataset.cop === f.cop) && (!f.t || el.dataset.t === f.t) && (!f.k || el.dataset.k === f.k) &&
+      (!x || (x === 'inc-expected' && el.dataset.inc === 'expected') || (x === 'inc-unexpected' && el.dataset.inc === 'unexpected') ||
+       (x === 'vf' && el.dataset.vf === '1') || (x === 'fail' && el.dataset.v === 'FAIL') || (x === 'changed' && c && c.changed));
+    el.style.display = ok ? '' : 'none'; n += ok ? 1 : 0;
+  });
+  document.getElementById('fcount').textContent = `${n} of ${D.cases.length} investigations shown`;
+}
+document.getElementById('filters').addEventListener('change', applyFilters);
+applyFilters();
 function openCase(id) { const el = document.getElementById(anchor(id)); if (el) { el.open = true; el.style.display = ''; } }
 
 document.getElementById('fleetint').innerHTML = D.fleet.map(f => `<div class="panel">
@@ -331,6 +418,38 @@ document.getElementById('lifecycle').innerHTML = (D.lifecycle_demos || []).map(x
   ${x.trace ? lifecycleBlock(x.trace.authority.lifecycle) : `<p>The case graph is paused at the approval step, holding the request:
     <span class="mono">${esc(JSON.stringify({cop: x.approval_request.cop, action: x.approval_request.action, reason: x.approval_request.reason}))}</span></p>`}
   </div>`).join('');
+
+const IB = S.inconclusive_breakdown || {};
+document.getElementById('inctiles').innerHTML = [
+  [IB.expected, 'expected inconclusive (correct uncertainty handling)'],
+  [IB.expected_held_back_by_cop, 'of those, the COP held back itself'],
+  [IB.expected_forced_by_verifier, 'of those, a verifier had to reject a candidate'],
+  [IB.unexpected, 'unexpected inconclusive (a definite answer was expected)'],
+  [S.FAIL, 'wrong finding (FAIL)']].map(([b, t]) => `<div class="tile"><b>${esc(b ?? 0)}</b><span>${esc(t)}</span></div>`).join('') +
+  Object.entries(IB.unexpected_by_cause || {}).map(([k, v]) => `<div class="tile"><b>${esc(v)}</b><span>unexpected, root cause ${rc([k])}</span></div>`).join('');
+
+const nonpass = D.cases.filter(c => c.verdict !== 'PASS');
+const fleetNP = D.fleet.flatMap(f => Object.entries(f.per_cop || {}).filter(([k, v]) => v.diagnosis).map(([k, v]) => ({fid: f.id, cop: k, v})));
+const rcRow = (name, href, g, extra) => `<tr><td>${href}</td><td class="lab">${esc((g.expected || []).join(' / '))}</td>
+  <td class="lab">${esc(g.candidate ?? '–')}</td><td class="lab">${esc(g.final)}</td><td>${esc((g.responsible_checks || []).join(', ') || '–')}</td>
+  <td>${(g.checks || []).map(x => esc(x.sentence)).join('<br>') || '<span class="muted">no check failed</span>'}</td>
+  <td>${(g.missing || []).slice(0, 3).map(m => esc(String(m.source || m.dependency || m.metric || JSON.stringify(m)).slice(0, 110))).join('<br>') || '<span class="muted">none</span>'}${(g.missing || []).length > 3 ? `<br><span class="muted">+${g.missing.length - 3} more in the trace</span>` : ''}</td>
+  <td>${g.recoverable === true ? 'yes' : g.recoverable === false ? 'no' : '–'}</td>
+  <td>${rc(g.root_causes)}${g.note ? `<br>${esc(g.note.fix)}${g.note.remaining ? `<br><span class="muted">still needed: ${esc(g.note.remaining)}</span>` : ''}` : ''}</td></tr>`;
+document.getElementById('rootcauses').innerHTML = `<p><b>Every case not passing now (${nonpass.length} cases, ${fleetNP.length} fleet COP).</b>
+  The fix column is this branch's analysis, from the recorded trace.</p><div class="tbl"><table class="vx">
+  <tr><th>Case</th><th>Expected</th><th>Candidate</th><th>Final</th><th>Check</th><th>Rejection reason</th><th>Missing or contradictory evidence</th><th>Recoverable</th><th>Root cause and fix</th></tr>
+  ${nonpass.map(c => rcRow(c.id, `<a href="#${anchor(c.id)}" onclick="openCase('${c.id}')" style="color:inherit">${esc(c.id)}</a> ${badge(c.verdict)}`, c.diagnosis || {})).join('')}
+  ${fleetNP.map(x => rcRow(x.fid, `fleet ${esc(x.fid)}: ${esc(cops[x.cop].name)}`, x.v.diagnosis)).join('')}</table></div>`;
+
+const ba = D.cases.filter(c => c.changed || (c.original && c.original.verdict !== 'PASS') || c.verdict !== 'PASS');
+document.getElementById('beforeafter').innerHTML = `<tr><th>Case</th><th>Before the fixes</th><th>Now</th><th>Where the current result comes from</th><th>What changed it</th></tr>` +
+  ba.map(c => `<tr><td><a href="#${anchor(c.id)}" onclick="openCase('${c.id}')" style="color:inherit">${esc(c.id)}</a></td>
+  <td>${c.original ? badge(c.original.verdict) + ' <span class="lab">' + esc(c.original.label) + '</span>' : '–'}</td>
+  <td>${badge(c.verdict)} <span class="lab">${esc(c.label)}</span></td><td>${rsBadge(c.result_source)}</td>
+  <td>${c.changed ? esc(((c.diagnosis || {}).note || {}).fix || '') : '<span class="muted">unchanged: ' + esc(((c.diagnosis || {}).note || {}).remaining || 'no change expected') + '</span>'}</td></tr>`).join('') +
+  D.fleet.map(f => `<tr><td>fleet ${esc(f.id)}</td><td>${f.original ? badge(f.original.verdict) : '–'}</td><td>${badge(f.verdict)}</td>
+  <td><span class="badge src-live">LIVE (as recorded)</span></td><td class="muted">${f.verdict === 'PASS' ? '' : 'recorded before reply recording: cannot be replayed; needs a live re-run'}</td></tr>`).join('');
 
 const fails = D.cases.filter(c => c.verdict !== 'PASS');
 document.getElementById('issues').innerHTML = `<p><b>Not passing (${fails.length}):</b></p>${list(fails, c =>

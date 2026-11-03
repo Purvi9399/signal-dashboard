@@ -4,7 +4,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "collector"))
 
 import pytest
 
-from cops.runtime import evaluation as E, fixtures as FX
+from cops.runtime import evaluation as E
+from cops.runtime import synthetic as S, fixtures as FX
 from cops.runtime.llm import (LLMGateway, LLMBudget, FixtureProvider, UnavailableProvider, AnthropicProvider,
                               ProviderTimeout, ProviderUnavailable)
 from cops.runtime.profiles import LLM_COPS, DETERMINISTIC_COPS, build_profiles, PROMPTS
@@ -19,7 +20,10 @@ RECORD_FIELDS = ("invocation_id", "cop", "case_id", "purpose", "provider", "mode
 
 
 def rt_with(provider, budget=None, case="llm-case"):
-    return E.make_runtime(case, "llm1", ROWS, E.c05_art(), provider=provider, budget=budget)
+    # The taxonomy is supplied so Classification reaches its model call: without it the
+    # evidence precheck stops that COP before any call (tested in test_runtime_error_paths).
+    return E.make_runtime(case, "llm1", ROWS, {**E.c05_art(), "taxonomy": S.taxonomy()},
+                          provider=provider, budget=budget)
 
 
 def one(cop, provider, budget=None):
@@ -58,7 +62,7 @@ def test_wiring_through_the_provider_interface(cop):
     assert [t["tool"] for t in payload["tools_available"]] == list(build_profiles()[cop].tools)
     inv = r["llm_invocations"]
     assert len(inv) == 2 and all(set(RECORD_FIELDS) <= set(i) for i in inv)
-    assert all(i["simulated"] and i["prompt_version"] == f"{cop}/prompt-1" for i in inv)
+    assert all(i["simulated"] and i["prompt_version"] == f"{cop}/prompt-2" for i in inv)
     assert all(i["tools_exposed"] == list(build_profiles()[cop].tools) for i in inv)
     assert all(i["cost_basis"] == "unpriced" and i["cost_usd"] is None for i in inv)   # no price configured
     assert f["status"] == "INCONCLUSIVE" and f["cop_specific"]["stop_reason"] == "model_inconclusive"

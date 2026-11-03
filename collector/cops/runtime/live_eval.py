@@ -367,7 +367,10 @@ def verify_records(results, live):
             continue
         if r["other_llm_calls"]:
             problems.append(f"{r['id']}: {r['other_llm_calls']} model calls by COPs other than the target")
-        if not r["invocations"] and r["outcome"] != "error":
+        if not r["invocations"] and r["outcome"] != "error" \
+                and r.get("stop_reason") != "precheck_required_evidence_unavailable":
+            # (the evidence precheck stops a COP whose every label lacks required evidence
+            # before any call, so that case has no call by design)
             problems.append(f"{r['id']}: no model call recorded")
         for i in r["invocations"]:
             if live:

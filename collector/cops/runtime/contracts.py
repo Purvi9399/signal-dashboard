@@ -158,6 +158,9 @@ class VerifierResult:
     evidence_refs: list = field(default_factory=list)
     independent: bool = True         # False for diagnostics that re-run the same logic
     subject: str = ""                # what was checked, when one check runs on more than one thing
+    # One entry per failed claim or condition: {claim, statement, kind, field, asserted, observed,
+    # code, recoverable}. Lets a reader (and the recovery path) see exactly what failed.
+    failures: list = field(default_factory=list)
 
     def to_dict(self):
         return asdict(self)

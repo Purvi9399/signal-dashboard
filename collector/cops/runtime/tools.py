@@ -183,7 +183,10 @@ def t_analyse_execution_transitions(case, a, ctx):
                 loops.append({"lane": lane, "cycle": f"{p}>{q}", "repeats": n})
         longest = max(runs, key=lambda x: x[1]) if runs else None
         if longest:
-            loops.append({"lane": lane, "longest_run": {"step": longest[0], "length": longest[1]}})
+            # length counts steps in the run; a run of n identical steps has n - 1 self-transitions
+            loops.append({"lane": lane, "longest_run": {"step": longest[0], "length": longest[1],
+                                                        "steps": longest[1],
+                                                        "self_transitions": longest[1] - 1}})
     stalls = [r for r in s.rows if r.get("hung_seconds")]
     return {"transitions": {f"{a_}>{b}": n for (a_, b), n in trans.most_common(12)},
             "patterns": loops,
@@ -454,7 +457,17 @@ def t_inspect_event_metadata(case, a, ctx):
         r for r in (case.session.rows if case.session else [])
         if r.get("secret_detected") or (r.get("sensitivity_tier") or 0) >= 3
         or r.get("outside_workspace") or r.get("policy_rule_matched")]
-    return {"rows": [_safe(r) for r in rows[:10]]}
+    scanned = case.session.rows if case.session else []
+    # rows: the rows asked for, or else the rows carrying an indicator a taxonomy family
+    # is defined by. An empty list after a scan means "examined, no indicator", not
+    # "metadata unavailable": scanned_rows says how many rows were examined.
+    return {"rows": [_safe(r) for r in rows[:10]],
+            "scanned_rows": len(scanned) if not refs else len(rows),
+            "metadata_available": bool(scanned),
+            "selection": "requested refs" if refs else "rows with an indicator field set",
+            "indicator_fields_checked": [] if refs else ["secret_detected", "sensitivity_tier>=3",
+                                                         "outside_workspace", "policy_rule_matched"],
+            "rows_with_indicators": len(rows)}
 
 
 # ---- Risk Mitigation
@@ -588,10 +601,30 @@ def t_inspect_repeated_operations(case, a, ctx):
         return missing("session", "repetition", "the case session")
     reads = Counter(r.get("file_path") for r in s.actions if r.get("tool_name") == "Read" and r.get("file_path"))
     cmds = Counter(str(r.get("command")).strip() for r in s.rows if r.get("command"))
+    # A repeat is "unchanged" when nothing was written to disk between it and the call it
+    # repeats: the same read of the same file, or the same command, on the same workspace.
+    # Compared by target (path, command text), not by the full argument payload.
+    order = sorted(s.rows, key=lambda r: (r.get("occurred_at") or "", r.get("sequence_num") or 0))
+    last_read, last_cmd, changes = {}, {}, 0
+    un_reads = un_cmds = 0
+    for r in order:
+        if r.get("observable_type") in ("file_modify", "file_create", "file_delete", "file_rename") or \
+                r.get("tool_name") in ("Edit", "Write", "MultiEdit"):
+            changes += 1
+        if r.get("tool_name") == "Read" and r.get("file_path"):
+            k = r["file_path"]
+            un_reads += 1 if last_read.get(k) == changes else 0
+            last_read[k] = changes
+        elif r.get("command") and r.get("observable_type") != "command":
+            k = str(r["command"]).strip()
+            un_cmds += 1 if last_cmd.get(k) == changes else 0
+            last_cmd[k] = changes
     return {"repeated_reads": {k: n for k, n in reads.items() if n > 1},
             "repeated_commands": {k: n for k, n in cmds.items() if n > 1},
             "redundant_read_calls": sum(n - 1 for n in reads.values() if n > 1),
-            "redundant_command_calls": sum(n - 1 for n in cmds.values() if n > 1)}
+            "redundant_command_calls": sum(n - 1 for n in cmds.values() if n > 1),
+            "unchanged_repeat_reads": un_reads, "unchanged_repeat_commands": un_cmds,
+            "compared_by": "target (file path or command text), not the full argument payload"}
 
 
 def t_evaluate_previous_changes(case, a, ctx):
@@ -710,6 +743,28 @@ def t_inspect_cop_catalogue(case, a, ctx):
             "source": "collector/cops/specs.py SPECS"}
 
 
+_RULE_COND = None
+
+
+def _rule_conditions():
+    """{cop: metric ids its deterministic rule names}, from the rule source (static)."""
+    global _RULE_COND
+    if _RULE_COND is None:
+        import inspect, re
+        from . import rules as _rules
+        from .. import interpret as _interp
+        pat = r'"((?:insights|telemetry|access|activity|oversight|interaction)\.[a-z_]+)"'
+        _RULE_COND = {}
+        for s in SPECS:
+            fns = [_rules.RULES.get(s.key), getattr(_interp.RuleInterpreter, s.key, None)]
+            src = "".join(inspect.getsource(f) for f in fns if f is not None)
+            ids = set(re.findall(pat, src))
+            # a legacy interpreter that reads its rows generically (_by(events)) names
+            # metrics through m.get("..."), which the pattern above also matches
+            _RULE_COND[s.key] = tuple(m for m in s.metric_keys if m in ids)
+    return _RULE_COND
+
+
 def t_query_coverage_matrix(case, a, ctx):
     import signal_metrics
     readers = defaultdict(list)
@@ -732,10 +787,49 @@ def t_query_coverage_matrix(case, a, ctx):
     rows = case.session.rows if case.session else []
     fields = Counter(k for r in rows for k, v in r.items() if v not in (None, "", [], {}))
     types = Counter(r.get("observable_type") for r in rows)
+    unowned = sorted(k for k in fields if k not in read_fields)
+    unhandled = sorted(t for t in types if t and t not in known_types)
+    # Five separate coverage levels. Each says only what it measures:
+    #   1 observed_in_case      the field or observable type occurs in this case's rows
+    #   2 metric_reader         a metric in signal_metrics reads it
+    #   3 cop_consumer          a COP's spec lists that metric
+    #   4 executable_condition  a deterministic rule of a consuming COP names the metric
+    #                           (static check of the rule source; an LLM COP's reading is
+    #                           not an executable condition)
+    #   5 tested                not observable at run time: reported as unknown
+    cond = _rule_conditions()
+    produced = {e.metric_id: e for e in (case.case_events(all_metrics) if hasattr(case, "case_events") else [])}
+    levels = []
+    for m in all_metrics:
+        ev = produced.get(m)
+        levels.append({"item": m, "kind": "metric",
+                       "observed_in_case": bool(ev and ev.state not in ("UNKNOWN",)),
+                       "state_in_case": ev.state if ev else None,
+                       "metric_reader": True, "cop_consumer": readers.get(m, []),
+                       "executable_condition": sorted(k for k in readers.get(m, []) if m in cond.get(k, ())),
+                       "tested": "unknown"})
+    for f_ in unowned:
+        levels.append({"item": f_, "kind": "field", "observed_in_case": True, "metric_reader": False,
+                       "cop_consumer": [], "executable_condition": [], "tested": "unknown"})
+    for ty in unhandled:
+        levels.append({"item": ty, "kind": "observable_type", "observed_in_case": True, "metric_reader": False,
+                       "cop_consumer": [], "executable_condition": [], "tested": "unknown"})
     return {"metrics_read_by_no_cop": unread,
-            "unowned_fields": sorted(k for k in fields if k not in read_fields),
-            "unhandled_observable_types": sorted(t for t in types if t and t not in known_types),
-            "metric_readers": {m: readers.get(m, []) for m in all_metrics}}
+            "unowned_fields": unowned,
+            "unhandled_observable_types": unhandled,
+            "metric_readers": {m: readers.get(m, []) for m in all_metrics},
+            "coverage_levels": levels,
+            # A case-level gap: something observed in this case with no metric reader or no COP.
+            "case_level_gaps": [x["item"] for x in levels if x["observed_in_case"] and
+                                (not x["metric_reader"] or not x["cop_consumer"])
+                                and (x["kind"] != "metric" or x["state_in_case"] not in (None, "NORMAL",
+                                                                                         "NOT_APPLICABLE"))],
+            # An estate-level gap: a metric the estate computes that no COP consumes, whatever
+            # its value in this case.
+            "estate_level_gaps": unread,
+            "coverage_criteria": "case-level: an observed field or observable type with no metric "
+                                 "reader or no COP, or a metric in an attention state no COP reads; "
+                                 "estate-level: a computed metric no COP consumes"}
 
 
 def t_validate_cop_relationships(case, a, ctx):
@@ -893,7 +987,9 @@ def t_reconstruct_trace(case, a, ctx):
             "lanes": len(subs),
             "lanes_without_parent": sorted(k for k, v in subs.items() if not (v and v[0].get("parent_step_id"))),
             "unattributed_effects": [x.get("observable_id") or x.get("effect_id") for x in s.effects
-                                     if x.get("attributed_to") == "unaccounted"][:10]}
+                                     if x.get("attributed_to") == "unaccounted"][:10],
+            "disk_changes": len(s.effects),
+            "disk_changes_attributed": sum(1 for x in s.effects if x.get("attributed_to") not in (None, "unaccounted"))}
 
 
 def t_check_decision_linkage(case, a, ctx):
@@ -1003,6 +1099,7 @@ class ToolGateway:
         self.allow = {k: frozenset(v) for k, v in allowlists.items()}
         self.memory = memory
         self.log = []
+        self.results = {}          # tool_call_id -> result, for reports (the stored record drops results)
 
     def allowlist(self, cop):
         return sorted(self.allow.get(cop, ()))
@@ -1095,6 +1192,7 @@ class ToolGateway:
         rec["result_summary"] = {"keys": sorted(result)[:20], "bytes": len(json.dumps(result, default=str))}
         rec["latency_ms"] = round((time.perf_counter() - t0) * 1000, 3)
         self.log.append(rec)
+        self.results[rec["tool_call_id"]] = result
         return {**rec, "result": result}
 
     def request(self, cop, tool, args, requested_by, budget, ctx):

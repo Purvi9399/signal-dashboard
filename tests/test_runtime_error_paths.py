@@ -91,6 +91,13 @@ def test_llm_quiet_label_without_required_artifact_is_rejected_by_ds01(cop):
         return FX.conclude("all quiet", QUIET[cop], 0.7, claims, "nothing seen")
     out = run_cop(rt(NORMAL, "ep", {}, provider=scripted(lambda p: FX.plan("x", [], [], []), assess_fn)), cop)
     f = out["finding"]
+    if cop == "classification_tagging":
+        # The taxonomy gates every Classification label, so the evidence precheck stops
+        # before the model is called: no candidate exists for a verifier to reject.
+        assert out["llm_invocations"] == []
+        assert f["status"] == "MISSING_DEPENDENCY" and f["label"] == "INCONCLUSIVE"
+        assert "MISSING_EVIDENCE" in f["reason_codes"] and "artifact:taxonomy" in str(f["missing_evidence"])
+        return
     ds = [v for v in out["verifier_results"] if v["check_id"] == "DS-01"][0]
     assert ds["result"] == "FAIL" and "required evidence unavailable" in ds["detail"]
     assert f["status"] == "REJECTED_BY_VERIFIER" and f["label"] == "INCONCLUSIVE"

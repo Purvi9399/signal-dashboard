@@ -39,6 +39,7 @@ from .graph import run_case
 from .llm import AnthropicProvider, FixtureProvider, UnavailableProvider
 from .persistence import SQLiteStore
 from .profiles import LLM_COPS, DETERMINISTIC_COPS
+from .diagnosis import diagnose
 
 DOCS = os.path.join(os.path.dirname(__file__), "..", "..", "..", "docs", "cops", "evaluation")
 INCONCLUSIVE = "INCONCLUSIVE"
@@ -82,6 +83,7 @@ def trace_of(cop, r, view_c):
                    "rejection": t["rejection_reason"]} for t in r["tool_calls"]],
         "llm": llm,
         "interpretation": {"rule_baseline": (f.get("baseline") or {}).get("label") if f.get("baseline") else None,
+                           "gated_label": f.get("gated_label"),
                            "rejected_candidate": (f.get("rejected_candidate") or {}).get("label"),
                            "rationale": f.get("rationale"), "reason": f.get("reason")},
         "claims": [{"statement": c.get("statement"), "kind": c.get("kind"),
@@ -95,7 +97,14 @@ def trace_of(cop, r, view_c):
                         c.get("record_id") and f"memory:{c['record_id']}") if x]}
                    for c in f.get("claims", [])],
         "verification": [{"check": x["check_id"], "result": x["result"], "reason": x.get("reason_code"),
-                          "detail": str(x.get("detail") or "")[:240]} for x in r["verifier_results"]],
+                          "detail": str(x.get("detail") or "")[:400], "failures": x.get("failures") or [],
+                          "subject": x.get("subject", "")} for x in r["verifier_results"]],
+        "sufficiency": r.get("sufficiency"),
+        "recovery": r.get("recovery"),
+        "reason_codes": f.get("reason_codes", []),
+        "tool_results": [{"tool": t["tool"], "by": t["requested_by"], "status": t["status"],
+                          "tool_call_id": t["tool_call_id"], "result": _short(t.get("result"))}
+                         for t in r.get("_tool_results", [])],
         "authority": {"requested": pa.get("requested_action"), "final": pa.get("action"),
                       "authorised": (pa.get("final_authority") or {}).get("authorised"),
                       "reason": pa.get("authority_reason"), "execution_status": pa.get("execution_status"),
@@ -107,6 +116,12 @@ def trace_of(cop, r, view_c):
     }
 
 
+def _short(v, n=900):
+    """A tool result small enough to show in a report."""
+    s = json.dumps(v, default=str)
+    return v if len(s) <= n else s[:n] + " ..."
+
+
 def dimensions(cop, kind, accept, r, label, outcome, err):
     """Execution, verification and ground truth are judged separately."""
     if err or r is None:
@@ -116,11 +131,12 @@ def dimensions(cop, kind, accept, r, label, outcome, err):
     vr = {x["check_id"]: x["result"] for x in r["verifier_results"]}
     is_llm = cop in LLM_COPS
     d = {}
-    d["execution"] = bool(label) and f["status"] != "ERROR" and (not is_llm or bool(inv)) \
+    prechecked = (f.get("cop_specific") or {}).get("stop_reason") == "precheck_required_evidence_unavailable"
+    d["execution"] = bool(label) and f["status"] != "ERROR" and (not is_llm or bool(inv) or prechecked) \
         and (is_llm or not inv)
     d["evidence_accessed"] = bool(r["tool_calls"] or r["evidence"]["rows"])
     if is_llm:
-        d["llm_investigation"] = bool(inv) and all(i["error"] is None for i in inv)
+        d["llm_investigation"] = None if prechecked else bool(inv) and all(i["error"] is None for i in inv)
     d["claims_valid"] = all(vr.get(k) != "FAIL" for k in CLAIM_CHECKS)
     d["verified"] = bool(f["verified"]) if label != INCONCLUSIVE else None   # n/a for INCONCLUSIVE
     d["ground_truth"] = outcome == "agree"
@@ -175,9 +191,18 @@ def run_investigation(case, provider, budget=None, cops=None, prefix="bench"):
     return out, rt, err, wall
 
 
+def _calls_with_results(rt, cop):
+    """Tool calls with their results, from the tool gateway's log (the stored record drops results)."""
+    res = getattr(rt.tools, "results", {})
+    return [{**c, "result": res.get(c["tool_call_id"])} for c in getattr(rt.tools, "log", [])
+            if c.get("cop") == cop]
+
+
 def record(case, out, rt, err, wall, source):
     cop = case["cop"]
     r = (out.get("results") or {}).get(cop)
+    if r is not None:
+        r = {**r, "_tool_results": _calls_with_results(rt, cop)}
     label = r["finding"]["label"] if r else None
     inv = r["llm_invocations"] if r else []
     outcome = LE.classify(case, label, inv) if label else "error"
@@ -214,7 +239,9 @@ def run_deterministic():
     out = []
     for case in DET_CASES:
         o, rt, err, wall = run_investigation(case, UnavailableProvider())
-        out.append(record(case, o, rt, err, wall, "deterministic"))
+        rec = record(case, o, rt, err, wall, "deterministic")
+        rec["result_source"] = "deterministic_rerun"
+        out.append(rec)
     return out
 
 
@@ -234,42 +261,39 @@ def replay_provider(live_rec):
         if n < len(replies) and replies[n] is not None:
             return replies[n]
         return RuntimeError("replay: no recorded reply for this call")
-    return FixtureProvider(script, label="replay-of-live")
+    return FixtureProvider(script, label="replay-of-live", replay=True)
 
 
 def live_record(case, lr, replay):
-    """The live run's result, with the replay supplying the trace."""
+    """The current result of a live case: its recorded real replies replayed under the
+    current code (tools, verifiers and authority re-executed; no model call). The live
+    run's own label, tokens and cost are kept beside it, unchanged, in live_recorded and
+    usage. A replayed reply is never relabelled as a new live call."""
     inv = lr["invocations"]
     usage = _usage(inv)
-    vr = {x["check_id"]: x["result"] for x in lr.get("verifier_results", [])}
-    label = lr["label"]
-    dims = {"execution": bool(label) and lr.get("error") is None and bool(inv),
-            "evidence_accessed": bool(replay and replay["trace"] and replay["trace"]["tools"]),
-            "llm_investigation": bool(inv) and all(i["error"] is None for i in inv)
-            and all(i["simulated"] is False for i in inv),
-            "claims_valid": all(vr.get(k) != "FAIL" for k in CLAIM_CHECKS),
-            "verified": bool(lr["verified"]) if label != INCONCLUSIVE else None,
-            "ground_truth": lr["outcome"] == "agree"}
-    dims["uncertainty"] = (label in case["accept"] and label != QUIET[case["cop"]]) \
-        if case["kind"] == "missing" else True
-    rt = (replay or {}).get("trace") or {}
-    au = rt.get("authority") or {}
-    dims["authority"] = (lr.get("execution_status") not in EXECUTED
-                         and lr.get("action") in BY_KEY[case["cop"]].permitted_actions
-                         and au.get("authorised", True) is not False)
-    return {"id": case["id"], "cop": case["cop"], "kind": case["kind"], "title": case["title"],
-            "ground_truth": case["ground_truth"], "expected": list(case["accept"]), "source": "live",
-            "label": label, "status": lr["status"], "outcome": lr["outcome"],
-            "inconclusive_by": inconclusive_by(label, lr["status"]),
-            "verdict": verdict(dims, lr["outcome"]), "dimensions": dims, "wall_ms": lr.get("wall_ms"),
-            "error": lr.get("error"), "cops_run": lr.get("cops_run"), "usage": usage,
-            "verifier_fail_live": lr.get("verifier_fail", []),
-            "rejected_candidate": lr.get("rejected_candidate"),
-            "replay": {"label": replay["label"], "outcome": replay["outcome"], "status": replay["status"],
-                       "same_label": replay["label"] == label} if replay else None,
-            "trace": replay["trace"] if replay else None,
-            "trace_source": "replay of the recorded real replies (tools and verifiers re-executed; "
-                            "model not called)" if replay else None}
+    live = {"label": lr["label"], "status": lr["status"], "outcome": lr["outcome"],
+            "verifier_fail": lr.get("verifier_fail", []), "rejected_candidate": lr.get("rejected_candidate"),
+            "wall_ms": lr.get("wall_ms"), "source": "live_results.json (real provider calls, 2026-11-02)"}
+    if replay is None:
+        return {"id": case["id"], "cop": case["cop"], "kind": case["kind"], "title": case["title"],
+                "ground_truth": case["ground_truth"], "expected": list(case["accept"]), "source": "live",
+                "result_source": "live_recorded", "label": lr["label"], "status": lr["status"],
+                "outcome": lr["outcome"], "inconclusive_by": inconclusive_by(lr["label"], lr["status"]),
+                "verdict": verdict({"execution": bool(lr["label"]), "authority": True}, lr["outcome"]),
+                "dimensions": {}, "usage": usage, "live_recorded": live, "trace": None}
+    rec = dict(replay)
+    dims = dict(rec["dimensions"])
+    if dims.get("llm_investigation") is not None:
+        dims["llm_investigation"] = bool(inv) and all(i["error"] is None and i["simulated"] is False for i in inv)
+    rec.update(source="live", result_source="recorded_reply_replay", usage=usage, live_recorded=live,
+               dimensions=dims, verdict=verdict(dims, rec["outcome"]),
+               current_model_calls={"calls": len((replay.get("trace") or {}).get("llm") or []),
+                                    "answered_by": "recorded real replies (no new model call)"},
+               replay={"label": replay["label"], "outcome": replay["outcome"], "status": replay["status"],
+                       "same_label": replay["label"] == lr["label"]},
+               trace_source="replay of the recorded real replies (tools and verifiers re-executed; "
+                            "model not called)")
+    return rec
 
 
 def run_llm(live):
@@ -380,7 +404,7 @@ def replay_fleet(rec):
         r = replies.get(cop) or []
         return r[n] if n < len(r) and r[n] is not None else RuntimeError("replay: no recorded reply")
     case = {"id": f"fleet:{sc['id']}", "build": sc["build"]}
-    o, rt, err, _ = run_investigation(case, FixtureProvider(script, label="replay-of-live"),
+    o, rt, err, _ = run_investigation(case, FixtureProvider(script, label="replay-of-live", replay=True),
                                       LE.LIVE_BUDGET, cops=sc["cops"])
     if err:
         return rec
@@ -469,6 +493,26 @@ def run_lifecycle_demos():
     return out
 
 
+BEFORE_FILE = "test_bench_results_before_fixes.json"
+
+
+def load_before(out_dir=DOCS):
+    """The results as recorded before the root-cause fixes (kept for comparison)."""
+    path = os.path.join(out_dir, BEFORE_FILE)
+    if not os.path.exists(path):
+        return {"cases": {}, "fleet": {}, "file": None}
+    d = json.load(open(path))
+    keep = ("label", "status", "verdict", "outcome", "source", "inconclusive_by")
+    return {"file": BEFORE_FILE, "generated": d.get("generated"),
+            "cases": {c["id"]: {k: c.get(k) for k in keep} | {
+                "rejected_candidate": ((c.get("trace") or {}).get("interpretation") or {}).get("rejected_candidate"),
+                "result_source": "live_recorded" if c.get("source") == "live" else "deterministic_rerun"}
+                for c in d.get("cases", [])},
+            "fleet": {f["id"]: {"verdict": f.get("verdict"),
+                                "labels": {k: v.get("label") for k, v in (f.get("per_cop") or {}).items()}}
+                      for f in d.get("fleet", [])}}
+
+
 def summary(cases, fleet):
     out = {v: sum(1 for c in cases if c["verdict"] == v) for v in ("PASS", "FAIL", "INCONCLUSIVE", "UNTESTED")}
     out["cases"] = len(cases)
@@ -497,7 +541,28 @@ def summary(cases, fleet):
     out["correct_inconclusive_forced_by_verifier"] = sorted(
         c["id"] for c in cases if c["verdict"] == "PASS" and c.get("inconclusive_by") == "verifier")
     out["cops_executing_all_three"] = sum(1 for p in per.values() if p["executed"] == 3)
+    inc = [c for c in cases if c["label"] == INCONCLUSIVE]
+    out["inconclusive_breakdown"] = {
+        "expected": sum(1 for c in inc if INCONCLUSIVE in c["expected"]),
+        "unexpected": sum(1 for c in inc if INCONCLUSIVE not in c["expected"]),
+        "unexpected_by_cause": _count_causes([c for c in inc if INCONCLUSIVE not in c["expected"]]),
+        "expected_held_back_by_cop": sum(1 for c in inc if INCONCLUSIVE in c["expected"]
+                                         and c.get("inconclusive_by") == "cop"),
+        "expected_forced_by_verifier": sum(1 for c in inc if INCONCLUSIVE in c["expected"]
+                                           and c.get("inconclusive_by") == "verifier")}
+    out["result_sources"] = {k: sum(1 for c in cases if c.get("result_source", "deterministic_rerun") == k)
+                             for k in ("deterministic_rerun", "recorded_reply_replay", "live_new_call",
+                                       "live_recorded")}
+    out["changed_since_before"] = sorted(c["id"] for c in cases if c.get("changed"))
     return out
+
+
+def _count_causes(cases):
+    n = {}
+    for c in cases:
+        for k in (c.get("diagnosis") or {}).get("root_causes", []):
+            n[k] = n.get(k, 0) + 1
+    return n
 
 
 def print_trace(rec):
@@ -595,6 +660,21 @@ def main(argv=None):
     if prev:                                   # keep a recorded live fleet run next to the offline one
         # a recorded live run stands for its scenario; the scripted run is only a harness check
         fleet = prev + [f for f in fleet if f["id"] not in {p["id"] for p in prev}]
+    before = load_before(a.out)
+    for c in cases:
+        o = before["cases"].get(c["id"])
+        c["original"] = o
+        c["changed"] = bool(o) and (o["label"] != c["label"] or o["verdict"] != c["verdict"])
+        c["diagnosis"] = diagnose(c)
+    for f in fleet:
+        o = before["fleet"].get(f["id"])
+        f["original"] = o
+        for k, v in (f.get("per_cop") or {}).items():
+            if v.get("expected") and v["label"] not in v["expected"]:
+                v["diagnosis"] = diagnose({"id": f"fleet:{f['id']}", "label": v["label"], "status": v["status"],
+                                           "expected": v["expected"], "trace": v.get("trace"),
+                                           "verdict": "FAIL" if v["label"] != INCONCLUSIVE else "INCONCLUSIVE",
+                                           "outcome": None})
     s = summary(cases, fleet)
     cops = [{"key": k, "name": BY_KEY[k].name, "question": BY_KEY[k].behavioural_question,
              "classification": "llm" if k in LLM_COPS else "deterministic",

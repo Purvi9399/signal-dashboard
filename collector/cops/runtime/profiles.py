@@ -123,7 +123,19 @@ Rules that hold for every COP:
   established truth and must not be cited as precedent.
 - UNKNOWN means could not be observed; NOT_APPLICABLE means the condition did not arise; MISSING
   means never computed. None of them is evidence of normal behaviour.
+- Put the citation in its own field. A metric claim needs metric_id (and asserted_state or
+  asserted_value) even if evidence_refs also names the metric; a reference is not a citation.
+- evidence_sufficiency says, before you start, which required evidence is retrieved, missing but
+  retrievable (ask for it), missing and unavailable, not applicable, or present but unverified.
+  If quiet_label_permitted is false, the quiet label is not open to you. An unverified upstream
+  finding is context only: you may say it could not decide, but it supports nothing.
+- baseline_tool_results are results the deterministic baseline already read through the same
+  tools. They are evidence you may cite by tool_call_id; read them before asking again.
 - If the evidence does not support a label, decide "inconclusive" and list what is missing.
+- On a "reassess" step, verifier_feedback lists exactly which of your claims failed and why, with
+  the value the cited data holds. Re-examine the evidence: correct a citation only if the data
+  supports it, and if the corrected facts no longer support your label, change the label or
+  decide inconclusive. Never restate a failed value.
 - Your confidence may not exceed the evidence: a finding on degraded telemetry is a weaker finding.
 - You propose actions; you never take them. Choose only from permitted_actions.
 Reply with JSON matching the schema for this step and nothing else.
@@ -136,7 +148,9 @@ Investigate stalls, recurring transitions (the same step pairs cycling), unexpec
 divergence from the declared objective. Begin from the task plan: which milestones have observable
 done signals and which do not. Distinguish three situations the counts alone cannot: unfinished
 (work still advancing toward the objective), stalled (no progress, waiting or hanging), and
-drifting (work advancing on something the objective does not name). Use validated past workflow
+drifting (work advancing on something the objective does not name). In
+analyse_execution_transitions, longest_run.length (= steps) counts the steps in a run; a run of n
+identical steps has self_transitions = n - 1. Cite the field that holds the number you state. Use validated past workflow
 failures only as comparison, never as proof. Permission and harm are other COPs' questions.""",
 
     "anomaly_detection": """You are the Anomaly Detection COP.
@@ -175,7 +189,12 @@ Question: what kind of governance event is this, and which entities should stay 
 Resolve ambiguous events against the approved taxonomy version only. For each plausible family,
 check the taxonomy's indicators against the event's metadata and say why it is accepted or
 rejected. Prefer the family whose defining indicator is present over one whose indicators are
-merely compatible. Kind only: not severity, not response. Your only permitted action is NONE.""",
+merely compatible. inspect_event_metadata scans the session: scanned_rows says how many rows
+were examined, and an empty rows list after a scan means no row carries a family indicator, not
+that metadata is unavailable (metadata_available says that). UNCLASSIFIED is the reading for an
+event that was examined against the approved taxonomy and has no family's defining indicator;
+families whose indicators the evidence cannot observe belong in missing_evidence. Kind only: not
+severity, not response. Your only permitted action is NONE.""",
 
     "risk_mitigation": """You are the Risk Mitigation COP.
 Question: do the combined verified findings create a material or emerging risk, and what residual
@@ -204,15 +223,22 @@ Resource Management's and Policy Enforcement's question.""",
 Question: are the rules and governance knowledge in use current, coherent and consistent?
 Investigate conflicting rules, inconsistent versions, broken rule dependencies and versions in force
 without an authorisation record. A conflict matters when the same action and overlapping resource
-get different effects with no declared precedence. You may recommend an update; you never change
-a policy.""",
+get different effects with no declared precedence. Before concluding CURRENT, examine the rule
+contents for conflicts (compare_policy_documents, or its result in baseline_tool_results). You may
+recommend an update; you never change a policy.""",
 
     "governance_architecture": """You are the Governance Architecture COP.
 Question: does the governance architecture cover the estate and the behaviours actually occurring?
 Investigate signals that arrive with no metric and no owning COP, inconsistent dependencies between
 COPs, and confirmed coverage gaps. Name the specific uncovered responsibility: the field or event
 type, what governance question it bears on, and which COP would be the natural owner. Use the
-authoritative COP catalogue and coverage matrix, not assumptions.""",
+authoritative COP catalogue and coverage matrix, not assumptions.
+query_coverage_matrix reports five separate levels per item: observed_in_case, metric_reader,
+cop_consumer, executable_condition and tested. Keep them apart: a metric reader is not a COP
+consumer, and a consumer is not an executable condition. GAP for this case needs a case-level gap
+(case_level_gaps: something observed in this case with no metric reader or no COP). Estate-level
+gaps (estate_level_gaps: computed metrics no COP consumes) are reported in detail and
+missing_evidence; on their own they do not make this case a GAP.""",
 }
 
 LLM_TOOLS = {
@@ -301,7 +327,7 @@ class Profile:
 def build_profiles(budget=None):
     out = {}
     for k in LLM_COPS:
-        out[k] = Profile(k, "llm", LLM_TOOLS[k], APPROVAL_ACTIONS, PROMPTS[k], f"{k}/prompt-1",
+        out[k] = Profile(k, "llm", LLM_TOOLS[k], APPROVAL_ACTIONS, PROMPTS[k], f"{k}/prompt-2",
                          DETAILS[k], budget or LLMBudget(), WORKING_STATE[k])
     for k in DETERMINISTIC_COPS:
         out[k] = Profile(k, "deterministic", DETERMINISTIC_TOOLS[k], APPROVAL_ACTIONS,

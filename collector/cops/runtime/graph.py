@@ -49,12 +49,12 @@ from .contracts import (Finding, ProposedAction, ORIGIN_LLM, ORIGIN_RULES, SUBST
                         CLAIM_METRIC_STATE, CLAIM_METRIC_VALUE, CLAIM_TOOL_OBSERVATION,
                         CLAIM_UPSTREAM, CONTRACT_VERSION, stable_id)
 from .evidence import assess, usable
-from .requirements import assess_requirements, required_unavailable
+from .requirements import assess_requirements, required_unavailable, precheck as evidence_precheck_fn
 from .memory import MemoryAccessDenied, POLICIES, VERIFIED
 from .rules import RULES, DETERMINISTIC_TOOLS, evidence_conf
 from .tools import TOOLS, scan
 from .verifiers import (au01, verify_finding, verify_action, verify_memory_update, blocking,
-                        REGISTRY_VERSION)
+                        REGISTRY_VERSION, RECOVERABLE)
 from .profiles import build_profiles
 from .llm import LLMBudget
 
@@ -156,6 +156,8 @@ class COPState(TypedDict, total=False):
     result: dict
     published: dict
     node_timings: dict
+    sufficiency: dict           # evidence_precheck: per-item state, quiet label permitted, reasons
+    recovery: Optional[dict]    # bounded re-assessment after a recoverable verifier rejection
 
 
 def timed(name):
@@ -200,6 +202,7 @@ def receive_case(state):
             "assessments": [], "hypothesis_trail": [], "pending": [], "authorised": [],
             "new_calls": [], "llm_error": None, "stop_reason": None, "candidate": None,
             "baseline": None, "approval": None, "execution": None, "memory_write": None,
+            "sufficiency": None, "recovery": None,
             "spent": {"llm_calls": 0, "tokens": 0, "cost_usd": 0.0, "started": time.time()},
             "tool_budget": {"tool_calls": 0, "max_tool_calls": b.max_tool_calls}}
 
@@ -287,18 +290,39 @@ def _as_finding(rt, cop, f, origin, extra=None):
     if f.get("gated_action"):
         fd["gated_label"], fd["gated_action"] = f.get("gated_label"), f["gated_action"]
     fd["evidence_requirements"] = assess_requirements(cop, rt.case)
+    fd["reason_codes"] = list(f.get("reason_codes") or [])
     fd.update(extra or {})
     return fd
 
 
-def _gate_required(rt, cop, out):
+def _telemetry_insufficient(cop, upstream):
+    rm = (upstream or {}).get("runtime_monitoring")
+    return (cop != "runtime_monitoring" and rm is not None and rm.get("verified")
+            and rm.get("label") == "INSUFFICIENT")
+
+
+def _gate_required(rt, cop, out, upstream=None):
     """A rule may not reach a label that a required, absent artifact backs.
-    The quiet label becomes INCONCLUSIVE with status MISSING_DEPENDENCY."""
+    The quiet label becomes INCONCLUSIVE with status MISSING_DEPENDENCY.
+
+    The same precheck withholds a quiet label while Runtime Monitoring has
+    verified the telemetry INSUFFICIENT (the condition DS-01 checks afterwards),
+    so the COP says it lacks evidence instead of proposing a reading a
+    verifier must then reject. Status INCONCLUSIVE, reason MISSING_EVIDENCE."""
     spec = BY_KEY[cop]
     quiet = spec.interpretations[0] if spec.interpretations else None
     if out.get("status", SUBSTANTIVE) != SUBSTANTIVE or out["label"] == INCONCLUSIVE_LABEL:
         return out
     gaps = required_unavailable(cop, rt.case, out["label"], quiet)
+    if not gaps and out["label"] == quiet and _telemetry_insufficient(cop, upstream):
+        return {**out, "label": INCONCLUSIVE_LABEL, "status": INCONCLUSIVE, "confidence": 0.0,
+                "action": _fallback_action(spec), "gated_label": out["label"],
+                "gated_action": out.get("action"), "reason_codes": ["MISSING_EVIDENCE"],
+                "missing_evidence": list(out.get("missing_evidence", [])) + [
+                    {"source": "finding:runtime_monitoring", "reason": "telemetry verified INSUFFICIENT; "
+                     "a quiet reading would rest on evidence that was not collected"}],
+                "rationale": f"{out['label']} withheld by the evidence precheck: Runtime Monitoring reads "
+                             f"the telemetry INSUFFICIENT. " + (out.get("rationale") or "")[:200]}
     if not gaps:
         return out
     names = ", ".join(g["artifact"] for g in gaps)
@@ -309,6 +333,7 @@ def _gate_required(rt, cop, out):
                          "how_to_supply": "an authoritative source; see runtime/requirements.py"})
     return {**out, "label": INCONCLUSIVE_LABEL, "status": MISSING_DEPENDENCY, "confidence": 0.0,
             "action": _fallback_action(spec), "missing_dependencies": deps,
+            "reason_codes": ["MISSING_DEPENDENCY"],
             "gated_label": out["label"], "gated_action": out.get("action"),
             "rationale": f"{out['label']} withheld: required evidence unavailable ({names}). "
                          + (out.get("rationale") or "")[:200]}
@@ -334,7 +359,7 @@ def computational_baseline(state):
         out = {"label": INCONCLUSIVE_LABEL, "confidence": 0.0, "action": "NONE",
                "rationale": f"rule error {type(e).__name__}: {e}"[:300], "claims": [],
                "status": FAILED}
-    out = _gate_required(rt, cop, out)
+    out = _gate_required(rt, cop, out, state.get("upstream"))
     if missing and out.get("status", SUBSTANTIVE) == SUBSTANTIVE and out["label"] == INCONCLUSIVE_LABEL:
         out["status"] = MISSING_DEPENDENCY
     out.setdefault("missing_dependencies", [])
@@ -347,6 +372,43 @@ def computational_baseline(state):
         return {"tool_calls": state["tool_calls"] + calls, "finding": f, "baseline": None}
     f["baseline_note"] = "computational baseline; not the decision and not a verifier"
     return {"tool_calls": state["tool_calls"] + calls, "baseline": f}
+
+
+@timed("evidence_precheck")
+def evidence_precheck(state):
+    """Evidence sufficiency before any conclusion (requirements.precheck). For
+    an LLM COP whose required evidence for every label is absent, the model
+    is not called: the finding is INCONCLUSIVE with the missing items named."""
+    rt = _rt(state)
+    cop = state["cop"]
+    suf = evidence_precheck_fn(cop, rt.case, state["picture"], state.get("upstream") or {},
+                               state["tool_calls"])
+    out = {"sufficiency": suf}
+    if state["classification"] == "llm" and suf["blocks_all_labels"]:
+        spec = BY_KEY[cop]
+        why = [r for r in suf["reasons"] if r["gates"] == "all_labels"]
+        f = {"label": INCONCLUSIVE_LABEL, "confidence": 0.0, "status": MISSING_DEPENDENCY,
+             "action": _fallback_action(spec), "reason_codes": ["MISSING_EVIDENCE", "PRECHECK_STOPPED"],
+             "action_reason": "required evidence for every label is unavailable",
+             "rationale": "evidence precheck: " + "; ".join(r["detail"] for r in why)
+                          + ". The model was not called.",
+             "missing_evidence": state["missing_evidence"] + [
+                 {"source": r["item"], "reason": r["detail"]} for r in why],
+             "missing_dependencies": (state.get("baseline") or {}).get("missing_dependencies", []),
+             "cop_specific": {"stop_reason": "precheck_required_evidence_unavailable"}}
+        base = state.get("baseline") or {}
+        extra = {"baseline": {"label": base.get("label"), "confidence": base.get("confidence"),
+                              "status": base.get("status"), "origin": ORIGIN_RULES,
+                              "note": "computational baseline, recorded separately"} if base else None}
+        out.update(finding=_as_finding(rt, cop, f, ORIGIN_LLM, extra),
+                   stop_reason="precheck_required_evidence_unavailable")
+    return out
+
+
+def route_after_precheck(state):
+    if state["classification"] != "llm" or state.get("stop_reason") == "precheck_required_evidence_unavailable":
+        return "independent_verify"
+    return "llm_plan_investigation"
 
 
 # ====================================================================== LLM loop
@@ -395,6 +457,15 @@ def _payload(rt, state, purpose):
                           "status": c["status"], "rejection_reason": c["rejection_reason"],
                           "result": _result_view(c)}
                          for c in state["tool_calls"] if c["requested_by"] == "llm"],
+        # What the deterministic baseline already read through the same permitted tools.
+        # Results only: the baseline's label is withheld so DS-03 stays an independent check.
+        "baseline_tool_results": [{"tool_call_id": c["tool_call_id"], "tool": c["tool"],
+                                   "status": c["status"], "result": _result_view(c)}
+                                  for c in state["tool_calls"] if c["requested_by"] == "rules"],
+        "evidence_sufficiency": {k: (state.get("sufficiency") or {}).get(k)
+                                 for k in ("items", "quiet_label_permitted", "reasons")},
+        **({"verifier_feedback": (state.get("recovery") or {}).get("feedback")}
+           if purpose == "reassess" else {}),
         "hypothesis_trail": state["hypothesis_trail"],
         "budget_remaining": {"llm_calls": b.max_llm_calls - sp["llm_calls"],
                              "tool_calls": b.max_tool_calls - state["tool_budget"]["tool_calls"]},
@@ -488,8 +559,14 @@ def validate_tool_result(state):
 @timed("llm_assess_evidence")
 def llm_assess_evidence(state):
     rt = _rt(state)
-    data, recs, err, spent = _invoke(rt, state, "assess")
+    rec = state.get("recovery") or {}
+    purpose = "reassess" if rec.get("attempted") and not rec.get("reassessed") else "assess"
+    data, recs, err, spent = _invoke(rt, state, purpose)
+    if purpose == "reassess":
+        rec = {**rec, "reassessed": True, "invocations": [r["invocation_id"] for r in recs]}
     out = {"llm_invocations": state["llm_invocations"] + recs, "spent": spent}
+    if purpose == "reassess":
+        out["recovery"] = rec
     if err:
         return {**out, "llm_error": err, "stop_reason": err}
     prev = state["hypothesis_trail"][-1]["hypothesis"] if state["hypothesis_trail"] else None
@@ -559,6 +636,14 @@ def formulate_finding(state):
              "baseline": {"label": base.get("label"), "confidence": base.get("confidence"),
                           "status": base.get("status"), "origin": ORIGIN_RULES,
                           "note": "computational baseline, recorded separately"} if base else None}
+    rec = state.get("recovery") or {}
+    if rec.get("attempted") and (cand is None or detail_err):
+        # The re-assessment produced no candidate: the earlier rejection stands as it was.
+        prior = dict(rec["prior_finding"])
+        prior["recovery_note"] = f"re-assessment produced no candidate ({stop or 'detail_invalid'}); " \
+                                 f"the verifier's rejection stands"
+        return {"finding": prior, "stop_reason": stop or "detail_invalid",
+                "recovery": {**rec, "outcome": "no_candidate", "restored_prior_rejection": True}}
     if cand is None or detail_err:
         why = stop or "detail_invalid"
         f = {"label": INCONCLUSIVE_LABEL, "confidence": 0.0, "status": INCONCLUSIVE,
@@ -599,6 +684,11 @@ def _lineage(f, upstream):
 
 @timed("independent_verify")
 def independent_verify(state):
+    rec = state.get("recovery") or {}
+    if rec.get("restored_prior_rejection"):
+        # nothing new to verify: the first rejection and its results stand unchanged
+        return {"finding": state["finding"], "verifier_results": rec["prior_verifier_results"],
+                "recovery": {**rec, "outcome": "no_candidate"}}
     rt = _rt(state)
     cop = state["cop"]
     spec = BY_KEY[cop]
@@ -639,7 +729,16 @@ def independent_verify(state):
             f["confidence"] = round(ceiling, 3)
     f["qualifications"] = quals
     f["verifier_registry"] = REGISTRY_VERSION
-    return {"finding": f, "verifier_results": results}
+    out = {"finding": f, "verifier_results": results}
+    rec = state.get("recovery")
+    if rec:
+        # second verification, after the re-assessment
+        out["recovery"] = {**rec, "outcome": "verified" if f.get("verified") else
+                           ("rejected_again" if blocked else "not_substantive")}
+    elif blocked and state["classification"] == "llm":
+        d = _recovery_decision(rt, {**state, "verifier_results": results, "finding": f})
+        f["recovery"] = {k: d[k] for k in ("recoverable", "reason", "feedback")} | {"attempted": d["attempt"]}
+    return out
 
 
 @timed("authority_check")
@@ -689,6 +788,67 @@ def authority_check(state):
                              "execution_status": pa["execution_status"]}
     pa["lifecycle"] = action_lifecycle(f, pa, rt.mode)
     return {"proposed_action": pa, "verifier_results": state["verifier_results"] + [original_check] + pre}
+
+
+def _recovery_feedback(results):
+    """Exactly what failed, and whether every blocking failure can be repaired with
+    evidence that exists. Returns (feedback, recoverable, why_not)."""
+    fb, why_not = [], []
+    for r in blocking(results, BLOCKS_FINDING):
+        if r["check_id"] == "SC-01" and r.get("failures"):
+            for f_ in r["failures"]:
+                fb.append({"check": "SC-01", **{k: f_.get(k) for k in ("claim", "statement", "kind", "field",
+                                                                     "asserted", "observed", "code",
+                                                                     "message")}})
+                if not f_.get("recoverable"):
+                    why_not.append(f"SC-01 {f_['code']}: {f_['message']}")
+        elif r["check_id"] == "DS-03":
+            # the rules read a non-quiet label from evidence now in baseline_tool_results
+            fb.append({"check": "DS-03", "code": "BASELINE_CONTRADICTS_QUIET", "message": r["detail"]})
+        else:
+            why_not.append(f"{r['check_id']} {r['reason_code']}: {r['detail']}"[:240])
+            fb.append({"check": r["check_id"], "code": r["reason_code"], "message": r["detail"]})
+    return fb, (bool(fb) and not why_not), why_not
+
+
+@timed("plan_recovery")
+def plan_recovery(state):
+    """One bounded re-assessment after a recoverable rejection. The verifier's
+    exact findings go back to the model with the evidence it cited; the revised
+    candidate is verified again by the same independent checks. Nothing in the
+    rejected candidate is edited, and an unrecoverable failure is not retried."""
+    f = state["finding"]
+    fb, _, _ = _recovery_feedback(state["verifier_results"])
+    return {"recovery": {"attempted": True, "round": 1, "feedback": fb,
+                         "rejected_candidate": f.get("rejected_candidate"),
+                         "prior_finding": f, "prior_verifier_results": state["verifier_results"]},
+            "candidate": None, "stop_reason": None, "llm_error": None, "pending": []}
+
+
+def route_after_verify(state):
+    rt = _rt(state)
+    if state["classification"] != "llm" or state.get("recovery"):
+        return "authority_check"
+    if state["finding"].get("status") != REJECTED:
+        return "authority_check"
+    return "plan_recovery" if _recovery_decision(rt, state)["attempt"] else "authority_check"
+
+
+def _recovery_decision(rt, state):
+    fb, ok, why_not = _recovery_feedback(state["verifier_results"])
+    b = rt.profiles[state["cop"]].budget
+    prov = getattr(rt.llm, "provider", None)
+    if not ok:
+        return {"attempt": False, "recoverable": False, "reason": "; ".join(why_not)[:400], "feedback": fb}
+    if getattr(rt, "recovery_rounds", 1) < 1:
+        return {"attempt": False, "recoverable": True, "reason": "recovery disabled for this run", "feedback": fb}
+    if getattr(prov, "replay", False):
+        return {"attempt": False, "recoverable": True, "feedback": fb,
+                "reason": "replay of recorded replies: there is no recorded reply for a re-assessment, "
+                          "so it needs a live call"}
+    if state["spent"]["llm_calls"] >= b.max_llm_calls:
+        return {"attempt": False, "recoverable": True, "reason": "model-call budget spent", "feedback": fb}
+    return {"attempt": True, "recoverable": True, "reason": "", "feedback": fb}
 
 
 def route_after_authority(state):
@@ -747,6 +907,19 @@ def execute_action(state):
     return {"proposed_action": pa}
 
 
+def _recovery_summary(rec):
+    if not rec:
+        return None
+    rc = rec.get("rejected_candidate") or {}
+    return {"attempted": True, "recoverable": True, "outcome": rec.get("outcome"),
+            "feedback": rec.get("feedback"), "invocations": rec.get("invocations", []),
+            "first_candidate": {"label": rc.get("label"), "proposed_action":
+                                (rc.get("proposed_action") or {}).get("action")},
+            "first_rejection": [{"check_id": r["check_id"], "reason_code": r["reason_code"],
+                                 "detail": r.get("detail")} for r in rec.get("prior_verifier_results", [])
+                                if r["result"] == FAIL and r["effect"] == BLOCKS_FINDING]}
+
+
 @timed("record_decision")
 def record_decision(state):
     rt = _rt(state)
@@ -770,6 +943,8 @@ def record_decision(state):
         "node_timings": state.get("node_timings", {}),
         "total_ms": sum((state.get("node_timings") or {}).values()),
         "llm_spend": {k: v for k, v in sp.items() if k != "started"},
+        "sufficiency": state.get("sufficiency"),
+        "recovery": _recovery_summary(state.get("recovery")) or f.get("recovery"),
         "decided_at": rt.case.computed_at, "error": state.get("llm_error"),
     }
     return {"result": r}
@@ -840,9 +1015,9 @@ def persist_and_publish(state):
 def build_cop_graph(checkpointer=None):
     g = StateGraph(COPState)
     for fn in (receive_case, load_inputs, validate_evidence, retrieve_memory, computational_baseline,
-               llm_plan_investigation, validate_tool_request, execute_authorised_tool,
+               evidence_precheck, llm_plan_investigation, validate_tool_request, execute_authorised_tool,
                validate_tool_result, llm_assess_evidence, formulate_finding, independent_verify,
-               authority_check, await_approval, execute_action, record_decision,
+               plan_recovery, authority_check, await_approval, execute_action, record_decision,
                validate_memory_update, persist_and_publish):
         g.add_node(fn.__name__, fn)
     g.add_edge(START, "receive_case")
@@ -850,9 +1025,8 @@ def build_cop_graph(checkpointer=None):
     g.add_edge("load_inputs", "validate_evidence")
     g.add_edge("validate_evidence", "retrieve_memory")
     g.add_edge("retrieve_memory", "computational_baseline")
-    g.add_conditional_edges("computational_baseline",
-                            lambda s: "llm_plan_investigation" if s["classification"] == "llm"
-                            else "independent_verify",
+    g.add_edge("computational_baseline", "evidence_precheck")
+    g.add_conditional_edges("evidence_precheck", route_after_precheck,
                             ["llm_plan_investigation", "independent_verify"])
     g.add_conditional_edges("llm_plan_investigation", route_after_plan,
                             ["validate_tool_request", "llm_assess_evidence", "formulate_finding"])
@@ -862,7 +1036,8 @@ def build_cop_graph(checkpointer=None):
     g.add_conditional_edges("llm_assess_evidence", route_after_assess,
                             ["validate_tool_request", "formulate_finding"])
     g.add_edge("formulate_finding", "independent_verify")
-    g.add_edge("independent_verify", "authority_check")
+    g.add_conditional_edges("independent_verify", route_after_verify, ["plan_recovery", "authority_check"])
+    g.add_edge("plan_recovery", "llm_assess_evidence")
     g.add_conditional_edges("authority_check", route_after_authority,
                             ["await_approval", "execute_action"])
     g.add_edge("await_approval", "execute_action")
