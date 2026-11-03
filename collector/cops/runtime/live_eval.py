@@ -341,6 +341,10 @@ def run_one(case, provider, budget, store=None):
         "verified": c.get("verified"), "rejected_candidate": c.get("rejected_candidate"),
         "baseline_label": c.get("baseline"), "stop_reason": (c.get("cop_specific") or {}).get("stop_reason"),
         "verifier_fail": c.get("verifier_fail", []), "action": c.get("action"),
+        # the whole proposal, not only the final action: the original request, the
+        # authority decision and the lifecycle are kept for audit
+        "requested_action": c.get("requested_action"), "proposed_action": c.get("proposed_action"),
+        "action_stage": ((c.get("proposed_action") or {}).get("lifecycle") or {}).get("stage"),
         "execution_status": c.get("execution_status"), "claims": c.get("claims", []),
         "missing_evidence": c.get("missing_evidence", []),
         "outcome": classify(case, label, inv) if label else "error",
@@ -467,18 +471,20 @@ def report(results, live, model=None):
     if not live:
         lines += ["Every model reply here is scripted (`FixtureProvider`, generic careful script) and every "
                   "record is `simulated=True`. This run checks the cases and the harness, not any model.", ""]
-    lines += ["| Case | Expected | Label | Status | Verified | Outcome | Calls | Tokens in/out | Latency ms | Cost |",
-              "|---|---|---|---|---|---|---|---|---|---|"]
+    lines += ["| Case | Expected | Label | Status | Verified | Outcome | Action (requested → final) | Action stage | "
+              "Calls | Tokens in/out | Latency ms | Cost |",
+              "|---|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in results:
         if r.get("skipped"):
-            lines.append(f"| `{r['id']}` | | | | | not run: {r['skipped']} | | | | |")
+            lines.append(f"| `{r['id']}` | | | | | not run: {r['skipped']} | | | | | | |")
             continue
         inv = r["invocations"]
         ti, to = sum(i["input_tokens"] or 0 for i in inv), sum(i["output_tokens"] or 0 for i in inv)
         cost = sum(i["cost_usd"] or 0 for i in inv)
         unp = any(i["cost_usd"] is None for i in inv)
         lines.append(f"| `{r['id']}` | {', '.join(r['expected'])} | {r['label']} | {r['status']} | "
-                     f"{r['verified']} | {r['outcome']} | {len(inv)} | {ti}/{to} | "
+                     f"{r['verified']} | {r['outcome']} | {r.get('requested_action') or '?'} → {r.get('action')} | "
+                     f"{r.get('action_stage') or 'not recorded'} | {len(inv)} | {ti}/{to} | "
                      f"{sum(i['latency_ms'] or 0 for i in inv):.0f} | "
                      f"{'unpriced' if unp else f'${cost:.4f}'} |")
     lines += ["", "Totals: " + ", ".join(f"{k} {v}" for k, v in t.items()), ""]

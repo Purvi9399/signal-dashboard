@@ -58,6 +58,8 @@ from .verifiers import (au01, verify_finding, verify_action, verify_memory_updat
 from .profiles import build_profiles
 from .llm import LLMBudget
 
+from .actions import DryRunAdapter, lifecycle as action_lifecycle
+
 MODES = ("dry_run", "supervised")
 SECURITY_CODES = ("unknown_tool", "not_in_allowlist", "out_of_scope")
 QUIET_ACTIONS = ("NONE", "WATCH")
@@ -77,6 +79,7 @@ class MockEnforcementGateway:
     def __init__(self, fail=(), unconfirmed=()):
         self.fail, self.unconfirmed = set(fail), set(unconfirmed)
         self.applied = []
+        self.dry_run_adapter = DryRunAdapter()
 
     def execute(self, cop, case_id, action, target):
         if action in self.fail:
@@ -281,6 +284,8 @@ def _as_finding(rt, cop, f, origin, extra=None):
                  hypothesis_trail=list(f.get("hypothesis_trail", []))).to_dict()
     fd["proposed_action"] = {"action": f.get("action") or _fallback_action(spec),
                              "reason": f.get("action_reason", "")}
+    if f.get("gated_action"):
+        fd["gated_label"], fd["gated_action"] = f.get("gated_label"), f["gated_action"]
     fd["evidence_requirements"] = assess_requirements(cop, rt.case)
     fd.update(extra or {})
     return fd
@@ -304,7 +309,7 @@ def _gate_required(rt, cop, out):
                          "how_to_supply": "an authoritative source; see runtime/requirements.py"})
     return {**out, "label": INCONCLUSIVE_LABEL, "status": MISSING_DEPENDENCY, "confidence": 0.0,
             "action": _fallback_action(spec), "missing_dependencies": deps,
-            "gated_label": out["label"],
+            "gated_label": out["label"], "gated_action": out.get("action"),
             "rationale": f"{out['label']} withheld: required evidence unavailable ({names}). "
                          + (out.get("rationale") or "")[:200]}
 
@@ -682,6 +687,7 @@ def authority_check(state):
                              "checks": [{k: r[k] for k in ("check_id", "result", "reason_code", "subject")}
                                         for r in pre],
                              "execution_status": pa["execution_status"]}
+    pa["lifecycle"] = action_lifecycle(f, pa, rt.mode)
     return {"proposed_action": pa, "verifier_results": state["verifier_results"] + [original_check] + pre}
 
 
@@ -729,8 +735,15 @@ def execute_action(state):
         post = [r.to_dict() if not isinstance(r, dict) else r
                 for r in verify_action(spec, pa, rt.mode, rt.case, state["finding"], approval, execution)]
         post = [r for r in post if r["check_id"] in ("AU-02", "EX-01")]
+        pa["lifecycle"] = action_lifecycle(state["finding"], pa, rt.mode)
         return {"proposed_action": pa, "execution": execution,
                 "verifier_results": state["verifier_results"] + post}
+    if pa["execution_status"] == NOT_EXECUTED_DRY_RUN or (
+            rt.mode == "dry_run" and pa["action"] != "NONE" and pa["execution_status"] != NOT_EXECUTED_BLOCKED):
+        # authorised in dry-run: the adapter records what the action would do; nothing is applied
+        adapter = getattr(rt.enforcement, "dry_run_adapter", None) or DryRunAdapter()
+        pa["dry_run_receipt"] = adapter.record(state["cop"], state["case_id"], pa["action"], pa["target"])
+    pa["lifecycle"] = action_lifecycle(state["finding"], pa, rt.mode)
     return {"proposed_action": pa}
 
 

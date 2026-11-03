@@ -84,13 +84,17 @@ def rows(offline, live):
                "offline_verified": verified, "offline_rejected": rejected, "offline_inconclusive": inconc,
                "offline_scenario_failures": failures,
                "offline_median_ms": _lat([s["c"]["total_ms"] for s in seen]),
-               "offline_llm_calls": sum(s["c"]["llm_calls"] for s in seen)}
+               "offline_llm_calls": sum(s["c"]["llm_calls"] for s in seen),
+               "offline_actions": sorted({f"{s['c'].get('requested_action')}→{s['c']['action']}" for s in seen}),
+               "allowed_actions": list(p.spec.permitted_actions) if hasattr(p, "spec") else
+               list(BY_KEY[cop].permitted_actions)}
         lv = live_by.get(cop, [])
         ran = [r for r in lv if not r.get("skipped")]
         inv = [i for r in ran for i in r["invocations"]]
         row.update({
             "live_cases": len(ran) if cop in LLM_COPS else None,
             "live_findings": {r["id"].split(":")[1]: r["label"] for r in ran},
+            "live_actions": {r["id"].split(":")[1]: r.get("action") for r in ran},
             "live_outcomes": {r["id"].split(":")[1]: r["outcome"] for r in ran},
             "live_verified": sum(1 for r in ran if r["verified"]),
             "live_errors": sum(1 for i in inv if i["error"]),
@@ -111,8 +115,8 @@ def markdown(rs, live):
          "Offline columns come from the 25 evaluation scenarios. Deterministic COPs run their rules for real "
          "and make no model call. LLM COPs run on scripted replies there, so their offline findings are "
          "**simulated**. " + live_note + ".", "",
-         "| COP | Implementation | Type | Test scenarios | Findings | Verification | Failures | Latency | Token usage | Cost |",
-         "|---|---|---|---|---|---|---|---|---|---|"]
+         "| COP | Implementation | Type | Test scenarios | Findings | Verification | Actions (requested→final) | Failures | Latency | Token usage | Cost |",
+         "|---|---|---|---|---|---|---|---|---|---|---|"]
     for r in rs:
         llm = r["classification"] == "llm"
         find = ", ".join(f"{k} x{v}" for k, v in sorted(r["offline_findings"].items()))
@@ -140,8 +144,10 @@ def markdown(rs, live):
         cost = ("$0 (no model call)" if not llm else
                 f"${r['live_cost_usd']:.4f} (configured price x measured tokens)" if r["live_tokens"] else
                 "live not run")
+        acts = ", ".join(r["offline_actions"]) + ("; live: " + ", ".join(
+            f"{k}={v}" for k, v in r["live_actions"].items()) if llm and r.get("live_actions") else "")
         L.append(f"| `{r['cop']}` | {r['implementation']} | {'LLM' if llm else 'deterministic'} | {scen} | "
-                 f"{find} | {ver} | {fails} | {lat} | {tok} | {cost} |")
+                 f"{find} | {ver} | {acts} | {fails} | {lat} | {tok} | {cost} |")
     return "\n".join(L) + "\n"
 
 

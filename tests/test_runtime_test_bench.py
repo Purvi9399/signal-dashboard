@@ -1,6 +1,9 @@
 """The 54-case test bench: case structure, deterministic execution with no
 model call, replay of recorded replies, and the fleet checks."""
 
+import os, sys
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "collector"))
+
 import json, os
 
 import pytest

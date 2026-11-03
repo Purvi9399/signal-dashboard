@@ -79,6 +79,11 @@ summary:before{content:"▸ ";color:var(--muted)}details[open]>summary:before{co
 button{font:inherit;font-size:13px;padding:4px 10px;border-radius:6px;border:1px solid var(--line);
 background:var(--panel);color:var(--ink);cursor:pointer}button.on{border-color:var(--accent);color:var(--accent)}
 .legend span{margin-right:10px}
+.st{display:inline-block;padding:1px 7px;border-radius:5px;font-size:11.5px;font-weight:600;border:1px solid currentColor;white-space:nowrap}
+.st-NO_ACTION_PROPOSED{color:var(--unt)}.st-AUTHORISED_DRY_RUN,.st-AUTHORISED_NO_EFFECT{color:var(--live)}
+.st-AWAITING_APPROVAL{color:var(--sim)}.st-REJECTED_BY_AUTHORITY,.st-APPROVAL_REJECTED{color:var(--inc)}
+.st-PROPOSAL_WITHDRAWN{color:var(--muted)}.st-EXECUTED{color:var(--pass)}.st-FAILED_OR_UNCONFIRMED{color:var(--fail)}
+.chain{display:flex;flex-wrap:wrap;gap:4px;align-items:center;font-size:13px}.chain .arrow{color:var(--muted)}
 </style>
 </head>
 <body>
@@ -106,6 +111,16 @@ fictional cases: a <b>normal</b> one, an <b>abnormal</b> one, and one where the 
 <span class="badge FAIL">FAIL</span> wrong finding, or did not run correctly
 <span class="badge INCONCLUSIVE">INCONCLUSIVE</span> held back where a definite answer was expected
 <span class="badge UNTESTED">UNTESTED</span> not run</p>
+<p class="legend"><b>What happened to the action:</b>
+<span class="st st-NO_ACTION_PROPOSED">NO ACTION PROPOSED</span> the COP proposed NONE
+<span class="st st-AWAITING_APPROVAL">PROPOSED, AWAITING APPROVAL</span> waiting for a human
+<span class="st st-PROPOSAL_WITHDRAWN">PROPOSAL WITHDRAWN</span> the finding failed verification, so its action was withdrawn
+<span class="st st-REJECTED_BY_AUTHORITY">REJECTED BY AUTHORITY</span> not permitted for this COP or mode (a substitute may stand)
+<span class="st st-APPROVAL_REJECTED">APPROVAL REJECTED</span> a reviewer said no
+<span class="st st-AUTHORISED_DRY_RUN">AUTHORISED (DRY-RUN)</span> allowed; a dry-run adapter recorded what it would do, nothing applied
+<span class="st st-EXECUTED">EXECUTED</span> applied by the enforcement gateway (here only the mock one)
+<span class="st st-FAILED_OR_UNCONFIRMED">FAILED OR UNCONFIRMED</span> the gateway failed or the outcome was not observed</p>
+<p class="muted">Not every abnormal finding calls for an intervention: an ALERT for a reviewer, or WATCH, is often the right action. No real blocking, notification or other external effect exists in this runtime.</p>
 </div>
 
 <div class="tiles" id="tiles"></div>
@@ -121,6 +136,12 @@ fictional cases: a <b>normal</b> one, an <b>abnormal</b> one, and one where the 
 <h2>Fleet integration</h2>
 <p class="muted">Several COPs investigating the same event in one case graph. Downstream COPs read upstream findings.</p>
 <div id="fleetint"></div>
+
+<h2>Action lifecycle demonstrations</h2>
+<p class="muted">Dry-run never executes anything, so the later lifecycle states can only be shown in supervised mode. These four
+runs use Policy Enforcement on the restricted-access session, in supervised mode, against the <b>mock</b> enforcement gateway
+(it records the call and applies nothing), with a scripted reviewer decision. They are SIMULATED.</p>
+<div id="lifecycle"></div>
 
 <h2>Every investigation</h2>
 <div class="toolbar" id="filters"></div>
@@ -151,6 +172,31 @@ const srcBadge = s => s === 'live' ? '<span class="badge src-live">LIVE</span>'
 const S = D.summary, cops = Object.fromEntries(D.cops.map(c => [c.key, c]));
 const money = x => x == null ? 'n/a' : '$' + Number(x).toFixed(4);
 const anchor = id => 'case-' + id.replace(/[^a-z0-9]/gi, '-');
+const STAGE_NAME = {NO_ACTION_PROPOSED: 'no action proposed', PROPOSAL_WITHDRAWN: 'proposal withdrawn',
+  REJECTED_BY_AUTHORITY: 'rejected by authority', AWAITING_APPROVAL: 'proposed, awaiting approval',
+  APPROVAL_REJECTED: 'approval rejected', AUTHORISED_DRY_RUN: 'authorised (dry-run)',
+  AUTHORISED_NO_EFFECT: 'authorised (no effect)', EXECUTED: 'executed', FAILED_OR_UNCONFIRMED: 'failed or unconfirmed'};
+const stage = s => s ? `<span class="st st-${s}">${esc(STAGE_NAME[s] || s)}</span>` : '<span class="muted">not recorded</span>';
+const lcOf = c => (((c || {}).trace || {}).authority || {}).lifecycle;
+const actLine = lc => !lc ? '' : lc.stage === 'NO_ACTION_PROPOSED' ? stage(lc.stage) :
+  `<span class="lab">${esc(lc.candidate_action)}${lc.final_action !== lc.candidate_action ? ' → ' + esc(lc.final_action) : ''}</span> ${stage(lc.stage)}` +
+  (lc.substitute ? ` <span class="muted">then</span> ${stage(lc.substitute.stage)}` : '');
+function lifecycleBlock(lc) {
+  if (!lc) return '<p class="muted">No lifecycle recorded.</p>';
+  const r = lc.dry_run_receipt, x = lc.execution_outcome, ap = lc.approval;
+  return `<div class="chain"><span>candidate <span class="lab">${esc(lc.candidate_action)}</span></span><span class="arrow">→</span>
+    <span>after verification <span class="lab">${esc(lc.verified_action)}</span></span><span class="arrow">→</span>
+    <span>after authority <span class="lab">${esc(lc.final_action)}</span></span><span class="arrow">→</span>
+    <span class="lab">${esc(lc.execution_status)}</span><span class="arrow">=</span>${stage(lc.stage)}
+    ${lc.substitute ? `<span class="muted">; substitute <span class="lab">${esc(lc.substitute.action)}</span></span> ${stage(lc.substitute.stage)}` : ''}</div>
+   ${lc.withdrawn_reason ? `<p>Withdrawn: ${esc(lc.withdrawn_reason)}</p>` : ''}
+   ${lc.authority_reason ? `<p>Authority: ${esc(lc.authority_reason)}</p>` : ''}
+   ${lc.checks && lc.checks.length ? `<p class="muted">checks: ${esc(lc.checks.map(c => c.check_id + ' ' + c.result + (c.reason_code ? ' (' + c.reason_code + ')' : '')).join(', '))}</p>` : ''}
+   ${r ? `<p>Dry-run adapter: ${esc(r.would)} <span class="muted">(${esc(r.action)} on ${esc(r.target)}; external effect: ${esc(r.external_effect)})</span></p>` : ''}
+   ${ap ? `<p>Reviewer decision: <span class="lab">${esc(ap.decision)}</span> by ${esc(ap.reviewer)}</p>` : ''}
+   ${x ? `<p>Gateway: ${esc(x.detail)} <span class="muted">(applied ${esc(x.applied)}, outcome confirmed ${esc(x.outcome_confirmed)}, simulated ${esc(x.simulated)})</span></p>` : ''}
+   ${lc.derived_from_recorded_fields ? '<p class="muted">Derived from the authority fields recorded at run time.</p>' : ''}`;
+}
 
 document.getElementById('gen').textContent = `Generated ${D.generated} from test_bench_results.json. ` +
   (D.live_model ? `Live model: ${D.live_model}.` : 'No live run recorded.');
@@ -161,7 +207,9 @@ const tiles = [
   [S.FAIL, 'failed'], [S.INCONCLUSIVE, 'inconclusive'], [S.UNTESTED, 'untested'],
   [S.real_llm_calls + S.fleet_real_llm_calls, 'real model calls (cases + fleet)'],
   [money(S.real_llm_cost_usd + S.fleet_real_cost_usd), 'measured model cost'],
-  [Object.entries(S.fleet).map(([k, v]) => `${k} ${v}`).join(', '), 'fleet scenarios']];
+  [Object.entries(S.fleet).map(([k, v]) => `${k} ${v}`).join(', '), 'fleet scenarios'],
+  [Object.entries(S.action_lifecycle || {}).filter(([k]) => k !== 'NO_ACTION_PROPOSED').reduce((a, [, n]) => a + n, 0) + ' / ' + S.cases,
+   'cases where the COP proposed an action']];
 document.getElementById('tiles').innerHTML = tiles.map(([b, s]) => `<div class="tile"><b>${esc(b)}</b><span>${esc(s)}</span></div>`).join('');
 
 const byId = Object.fromEntries(D.cases.map(c => [c.id, c]));
@@ -176,8 +224,8 @@ document.getElementById('demo').innerHTML = DEMO.map(([id, why]) => {
 const cell = c => !c ? `<td class="cell">${badge('UNTESTED')}</td>` :
   `<td class="cell"><a href="#${anchor(c.id)}" onclick="openCase('${c.id}')" style="color:inherit">${badge(c.verdict)}</a><br>
    <span class="lab">${esc(c.label ?? 'not run')}</span>${c.inconclusive_by === 'verifier' ? ' <span class="muted">(verifier)</span>' : ''}
-   <br><span class="muted">expected ${esc(c.expected.join(' / '))}</span></td>`;
-let rows = `<tr><th>COP</th><th>Type</th><th>Normal</th><th>Abnormal</th><th>Missing evidence</th><th>Model usage (3 cases)</th></tr>`;
+   <br><span class="muted">expected ${esc(c.expected.join(' / '))}</span><br>${actLine(lcOf(c))}</td>`;
+let rows = `<tr><th>COP</th><th>Type and allowed actions</th><th>Normal</th><th>Abnormal</th><th>Missing evidence</th><th>Model usage (3 cases)</th></tr>`;
 for (const k of D.cops) {
   const cs = D.cases.filter(c => c.cop === k.key), get = kind => cs.find(c => c.kind === kind);
   const us = cs.map(c => c.usage).filter(u => u);
@@ -188,7 +236,7 @@ for (const k of D.cops) {
       ${(real.reduce((a, u) => a + u.latency_ms, 0) / 1000).toFixed(1)} s, ${money(real.reduce((a, u) => a + (u.cost_usd || 0), 0))}`
     : '<span class="muted">no real call</span>';
   rows += `<tr><td><b>${esc(k.name)}</b><br><span class="muted">${esc(k.question)}</span></td>
-    <td>${k.classification === 'llm' ? 'LLM' : 'deterministic'}</td>${cell(get('normal'))}${cell(get('abnormal'))}${cell(get('missing'))}
+    <td>${k.classification === 'llm' ? 'LLM' : 'deterministic'}<br><span class="lab muted">${esc(k.permitted_actions.join(', '))}</span></td>${cell(get('normal'))}${cell(get('abnormal'))}${cell(get('missing'))}
     <td>${usage}</td></tr>`;
 }
 document.getElementById('fleet').innerHTML = rows;
@@ -224,7 +272,8 @@ function trace(t) {
   <div class="step"><h4>${t.llm.length ? 5 : 4} · Verification</h4><p>${t.verification.map(v =>
      `<span class="badge ${v.result === 'PASS' ? 'PASS' : v.result === 'FAIL' ? 'FAIL' : 'UNTESTED'}">${esc(v.check)} ${esc(v.result)}</span>`).join(' ')}</p>
      ${list(t.verification.filter(v => v.result === 'FAIL'), v => `<b>${esc(v.check)}</b> ${esc(v.reason)}: ${esc(v.detail)}`)}</div>
-  <div class="step"><h4>${t.llm.length ? 6 : 5} · Authority and final decision</h4><div class="kv">
+  <div class="step"><h4>${t.llm.length ? 6 : 5} · Action lifecycle</h4>${lifecycleBlock(a.lifecycle)}</div>
+  <div class="step"><h4>${t.llm.length ? 7 : 6} · Authority and final decision</h4><div class="kv">
      <span>requested action</span><span class="lab">${esc(a.requested)}</span>
      <span>final action</span><span class="lab">${esc(a.final)}</span>
      <span>authorised</span><span>${esc(a.authorised)}</span>
@@ -238,7 +287,7 @@ function caseBlock(c) {
   const u = c.usage;
   return `<details id="${anchor(c.id)}" data-v="${c.verdict}" data-t="${cops[c.cop].classification}">
   <summary>${badge(c.verdict)} ${srcBadge(c.source)} <b>${esc(cops[c.cop].name)}</b> · ${esc(c.kind)} · ${esc(c.title)}
-   <span class="muted"> → <span class="lab">${esc(c.label ?? 'not run')}</span></span></summary><div class="body">
+   <span class="muted"> → <span class="lab">${esc(c.label ?? 'not run')}</span></span> ${actLine(lcOf(c))}</summary><div class="body">
   <div class="kv"><span>expected (fixed before the run)</span><span><span class="lab">${esc(c.expected.join(' / '))}</span> · ${esc(c.ground_truth)}</span>
    <span>COP said</span><span><span class="lab">${esc(c.label)}</span> · ${esc(c.status)}${c.inconclusive_by ? ' · held back by the ' + esc(c.inconclusive_by === 'verifier' ? 'verifier (the COP proposed a label that failed checks)' : 'COP itself') : ''}</span>
    <span>outcome</span><span>${esc(c.outcome)}</span>
@@ -266,13 +315,21 @@ document.getElementById('fleetint').innerHTML = D.fleet.map(f => `<div class="pa
   <p>${esc(f.event || f.skipped || '')}</p>
   ${f.usage ? `<p class="muted">${f.usage.calls} model calls · ${f.usage.input_tokens.toLocaleString()} in / ${f.usage.output_tokens.toLocaleString()} out ·
     ${(f.usage.latency_ms / 1000).toFixed(1)} s · ${money(f.usage.cost_usd)}</p>` : ''}
-  <div class="tbl"><table><tr><th>COP</th><th>Finding</th><th>Expected</th><th>Verified</th><th>Action (requested → final)</th><th>Execution</th></tr>
+  <div class="tbl"><table><tr><th>COP</th><th>Finding</th><th>Expected</th><th>Verified</th><th>Action (requested → final)</th><th>Execution</th><th>Action lifecycle</th></tr>
   ${Object.entries(f.per_cop || {}).map(([k, v]) => `<tr><td>${esc(cops[k].name)} <span class="muted">${v.classification === 'llm' ? 'LLM' : 'rules'}</span></td>
     <td>${(v.expected || []).includes(v.label) ? badge('PASS') : badge(v.label === 'INCONCLUSIVE' ? 'INCONCLUSIVE' : 'FAIL')} <span class="lab">${esc(v.label)}</span></td>
     <td class="lab">${esc((v.expected || []).join(' / '))}</td><td>${esc(v.verified)}</td>
-    <td class="lab">${esc(v.requested_action)} → ${esc(v.action)}</td><td class="lab">${esc(v.execution_status)}</td></tr>`).join('')}</table></div>
+    <td class="lab">${esc(v.requested_action)} → ${esc(v.action)}</td><td class="lab">${esc(v.execution_status)}</td><td>${stage(((v.trace || {}).authority || {}).lifecycle?.stage)}</td></tr>`).join('')}</table></div>
   <h3>Fleet checks</h3>${list(f.checks, c => `${c.passed ? '✓' : '✗'} ${esc(c.check)}${c.passed ? '' : ': <span class="mono">' + esc(JSON.stringify(c.actual)) + '</span>'}`)}
-  ${Object.entries(f.per_cop || {}).map(([k, v]) => `<details><summary>${esc(cops[k].name)} trace</summary><div class="body">${trace(v.trace)}</div></details>`).join('')}
+  ${Object.entries(f.per_cop || {}).map(([k, v]) => `<details><summary>${esc(cops[k].name)} trace <span class="muted">(${esc(v.trace_source || '')})</span></summary><div class="body">${trace(v.trace)}</div></details>`).join('')}
+  </div>`).join('');
+
+document.getElementById('lifecycle').innerHTML = (D.lifecycle_demos || []).map(x => `<div class="panel">
+  <h3><span class="badge src-sim">SIMULATED</span> ${esc(x.id)}: ${esc(x.title)}</h3>
+  <p>Policy Enforcement read <span class="lab">${esc(x.label)}</span> and proposed <span class="lab">${esc(x.action)}</span>. Result: ${stage(x.stage)}
+  · mock gateway calls recorded: ${x.mock_applied.length}</p>
+  ${x.trace ? lifecycleBlock(x.trace.authority.lifecycle) : `<p>The case graph is paused at the approval step, holding the request:
+    <span class="mono">${esc(JSON.stringify({cop: x.approval_request.cop, action: x.approval_request.action, reason: x.approval_request.reason}))}</span></p>`}
   </div>`).join('');
 
 const fails = D.cases.filter(c => c.verdict !== 'PASS');

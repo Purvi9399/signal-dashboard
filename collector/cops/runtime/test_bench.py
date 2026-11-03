@@ -99,7 +99,9 @@ def trace_of(cop, r, view_c):
         "authority": {"requested": pa.get("requested_action"), "final": pa.get("action"),
                       "authorised": (pa.get("final_authority") or {}).get("authorised"),
                       "reason": pa.get("authority_reason"), "execution_status": pa.get("execution_status"),
-                      "permitted": list(BY_KEY[cop].permitted_actions)},
+                      "permitted": list(BY_KEY[cop].permitted_actions),
+                      "original_proposal": pa.get("original_proposal"),
+                      "lifecycle": pa.get("lifecycle")},
         "decision": {"label": f["label"], "status": f["status"], "confidence": f["confidence"],
                      "verified": f["verified"]},
     }
@@ -367,6 +369,106 @@ def run_fleet(live=False, cap=None):
 
 # ====================================================================== totals and main
 
+def replay_fleet(rec):
+    """Re-run a recorded live fleet scenario on its recorded replies: the trace
+    (including the action lifecycle) under the current code, with no model call.
+    Labels, usage and request ids stay the live run's own."""
+    sc = next(x for x in FLEET if x["id"] == rec["id"])
+    replies = {k: v.get("replies") or [] for k, v in rec["per_cop"].items()}
+
+    def script(cop, purpose, payload, n):
+        r = replies.get(cop) or []
+        return r[n] if n < len(r) and r[n] is not None else RuntimeError("replay: no recorded reply")
+    case = {"id": f"fleet:{sc['id']}", "build": sc["build"]}
+    o, rt, err, _ = run_investigation(case, FixtureProvider(script, label="replay-of-live"),
+                                      LE.LIVE_BUDGET, cops=sc["cops"])
+    if err:
+        return rec
+    per = _per_cop(sc, o["results"])
+    for k, v in rec["per_cop"].items():
+        if k in per and per[k]["label"] == v["label"] and (v["classification"] != "llm" or replies.get(k)):
+            v.update(trace=per[k]["trace"], action=per[k]["action"],
+                     requested_action=per[k]["requested_action"], execution_status=per[k]["execution_status"],
+                     trace_source="replay of the recorded real replies" if v["classification"] == "llm" else
+                     "deterministic re-run")
+        else:
+            v["trace_source"] = ("recorded at run time; this run predates reply recording, so it cannot be "
+                                 "replayed. Lifecycle derived from the recorded authority fields."
+                                 if not replies.get(k) else "recorded at run time (replay label differed)")
+            a = v["trace"]["authority"]
+            if not a.get("lifecycle"):
+                a["lifecycle"] = lifecycle_from_recorded(v, rt.mode)
+    return rec
+
+
+def lifecycle_from_recorded(v, mode):
+    """The lifecycle from fields a run recorded before lifecycles existed. The
+    candidate action is the verified one: a verified finding had nothing withdrawn."""
+    from .actions import lifecycle
+    a = v["trace"]["authority"]
+    finding = {"status": v["status"], "proposed_action": {"action": a["requested"]}}
+    if v["status"] == "REJECTED_BY_VERIFIER":   # the candidate's own action was not recorded then
+        finding["rejected_candidate"] = {"proposed_action": {"action": "not recorded"}}
+    pa = {"requested_action": a["requested"], "action": a["final"], "execution_status": a["execution_status"],
+          "final_authority": {"authorised": a["authorised"]}, "authority_reason": a.get("reason"),
+          "original_verification": {"result": "PASS" if a["requested"] == a["final"] else "FAIL"}}
+    out = lifecycle(finding, pa, mode)
+    out["derived_from_recorded_fields"] = True
+    return out
+
+
+# ---------------------------------------------------------------- action lifecycle demonstrations
+# Dry-run never executes, so EXECUTED and FAILED_OR_UNCONFIRMED can only be shown
+# in supervised mode. These run Policy Enforcement in supervised mode against the
+# MOCK enforcement gateway (simulated: it records, it applies nothing), with a
+# scripted human decision. They show the lifecycle states, not a real effect.
+
+LIFECYCLE_DEMOS = [
+    {"id": "L1", "title": "Proposed BLOCK awaiting a human decision", "answer": None, "unconfirmed": ()},
+    {"id": "L2", "title": "BLOCK approved by a reviewer and applied by the mock gateway",
+     "answer": {"decision": "approve", "reviewer": "security-lead@tenant-a.example"}, "unconfirmed": ()},
+    {"id": "L3", "title": "BLOCK approved, but the mock gateway cannot confirm the outcome",
+     "answer": {"decision": "approve", "reviewer": "security-lead@tenant-a.example"}, "unconfirmed": ("BLOCK",)},
+    {"id": "L4", "title": "BLOCK rejected by the reviewer",
+     "answer": {"decision": "reject", "reviewer": "security-lead@tenant-a.example"}, "unconfirmed": ()},
+]
+
+
+def run_lifecycle_demos():
+    import sqlite3
+    from langgraph.checkpoint.sqlite import SqliteSaver
+    from .evaluation import _estate, c05_art, sensitive_session
+    from .graph import MockEnforcementGateway, resume_case
+    out = []
+    cops = ["runtime_monitoring", "interaction_discovery", "policy_enforcement"]
+    for d in LIFECYCLE_DEMOS:
+        rows = _estate(sensitive_session("lc", 9))
+        gw = MockEnforcementGateway(unconfirmed=d["unconfirmed"])
+        rt = make_runtime(f"lifecycle-{d['id']}", "lc", rows, c05_art(), provider=UnavailableProvider(),
+                          mode="supervised", live=True, enforcement=gw)
+        saver = SqliteSaver(sqlite3.connect(":memory:", check_same_thread=False))
+        o = run_case(rt, cops=cops, checkpointer=saver)
+        interrupted = [i["cop"] for i in o.get("interrupted", [])]
+        if d["answer"] is not None and interrupted:
+            o = resume_case(rt, d["answer"], cops=cops, checkpointer=saver)
+        res = (o.get("results") or {}).get("policy_enforcement")
+        if res is None:      # still waiting: the graph holds the state at the approval interrupt
+            st = saver.get_tuple({"configurable": {"thread_id": rt.case.case_id}})
+            pend = (o.get("interrupted") or [{}])[0]
+            out.append({"id": d["id"], "title": d["title"], "source": "simulated (mock gateway, supervised mode)",
+                        "stage": "AWAITING_APPROVAL", "label": pend.get("finding", {}).get("label"),
+                        "action": pend.get("action"), "approval_request": pend,
+                        "mock_applied": gw.applied, "trace": None})
+            continue
+        pa = res["proposed_action"]
+        out.append({"id": d["id"], "title": d["title"], "source": "simulated (mock gateway, supervised mode)",
+                    "stage": pa["lifecycle"]["stage"], "label": res["finding"]["label"], "action": pa["action"],
+                    "execution_status": pa["execution_status"], "approval": pa.get("approval"),
+                    "execution_outcome": pa.get("execution_outcome"), "mock_applied": gw.applied,
+                    "trace": trace_of("policy_enforcement", res, None)})
+    return out
+
+
 def summary(cases, fleet):
     out = {v: sum(1 for c in cases if c["verdict"] == v) for v in ("PASS", "FAIL", "INCONCLUSIVE", "UNTESTED")}
     out["cases"] = len(cases)
@@ -387,6 +489,11 @@ def summary(cases, fleet):
         p[c["verdict"]] += 1
         p["executed"] += 1 if c["dimensions"].get("execution") else 0
     out["per_cop"] = per
+    stages = {}
+    for c in cases:
+        st = (((c.get("trace") or {}).get("authority") or {}).get("lifecycle") or {}).get("stage")
+        stages[st or "unknown"] = stages.get(st or "unknown", 0) + 1
+    out["action_lifecycle"] = stages
     out["correct_inconclusive_forced_by_verifier"] = sorted(
         c["id"] for c in cases if c["verdict"] == "PASS" and c.get("inconclusive_by") == "verifier")
     out["cops_executing_all_three"] = sum(1 for p in per.values() if p["executed"] == 3)
@@ -480,6 +587,7 @@ def main(argv=None):
     if not a.live_fleet and os.path.exists(fleet_path):
         prev = [f for f in json.load(open(fleet_path)).get("fleet", []) if f.get("source") == "live"]
     fleet = run_fleet(a.live_fleet, cap)
+    prev = [replay_fleet(f) for f in prev or []]
     for f in prev or []:                       # re-check a recorded live run with the current checks
         sc = next(x for x in FLEET if x["id"] == f["id"])
         f["checks"] = fleet_checks(sc, f["per_cop"], f.get("consumption", []))
@@ -495,6 +603,7 @@ def main(argv=None):
     doc = {"generated": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
            "live_model": (live or {}).get("model"), "live_generated_from": "live_results.json" if live else None,
            "summary": s, "cops": cops, "cases": cases, "fleet": fleet,
+           "lifecycle_demos": run_lifecycle_demos(),
            "expected_det": {k: list(v) for k, v in DET_EXPECTED.items()},
            "expected_llm": LE.EXPECTED_JSON()}
     with open(fleet_path, "w") as fh:

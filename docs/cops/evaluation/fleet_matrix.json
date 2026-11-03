@@ -17,8 +17,21 @@
    "offline_scenario_failures": [],
    "offline_median_ms": "1",
    "offline_llm_calls": 0,
+   "offline_actions": [
+    "ALERT\u2192ALERT",
+    "NONE\u2192NONE",
+    "WATCH\u2192WATCH"
+   ],
+   "allowed_actions": [
+    "NONE",
+    "WATCH",
+    "ALERT",
+    "REQUEST_CONTEXT",
+    "PASS_TO_COP"
+   ],
    "live_cases": null,
    "live_findings": {},
+   "live_actions": {},
    "live_outcomes": {},
    "live_verified": 0,
    "live_errors": 0,
@@ -41,13 +54,30 @@
    "offline_rejected": 2,
    "offline_inconclusive": 0,
    "offline_scenario_failures": [],
-   "offline_median_ms": "6",
+   "offline_median_ms": "5",
    "offline_llm_calls": 10,
+   "offline_actions": [
+    "ALERT\u2192ALERT",
+    "NONE\u2192NONE",
+    "WATCH\u2192WATCH"
+   ],
+   "allowed_actions": [
+    "NONE",
+    "WATCH",
+    "ALERT",
+    "INSTRUCT",
+    "PASS_TO_COP"
+   ],
    "live_cases": 3,
    "live_findings": {
     "normal": "NORMAL",
     "abnormal": "INCONCLUSIVE",
     "missing": "INCONCLUSIVE"
+   },
+   "live_actions": {
+    "normal": "NONE",
+    "abnormal": "WATCH",
+    "missing": "WATCH"
    },
    "live_outcomes": {
     "normal": "agree",
@@ -78,13 +108,26 @@
    "offline_rejected": 0,
    "offline_inconclusive": 1,
    "offline_scenario_failures": [],
-   "offline_median_ms": "6",
+   "offline_median_ms": "5",
    "offline_llm_calls": 10,
+   "offline_actions": [
+    "NONE\u2192NONE",
+    "WATCH\u2192WATCH"
+   ],
+   "allowed_actions": [
+    "NONE",
+    "WATCH"
+   ],
    "live_cases": 3,
    "live_findings": {
     "normal": "CONTEXT_OK",
     "abnormal": "CONTEXT_LOSS",
     "missing": "INCONCLUSIVE"
+   },
+   "live_actions": {
+    "normal": "NONE",
+    "abnormal": "WATCH",
+    "missing": "WATCH"
    },
    "live_outcomes": {
     "normal": "agree",
@@ -118,8 +161,17 @@
    "offline_scenario_failures": [],
    "offline_median_ms": "1",
    "offline_llm_calls": 0,
+   "offline_actions": [
+    "NONE\u2192NONE",
+    "WATCH\u2192WATCH"
+   ],
+   "allowed_actions": [
+    "NONE",
+    "WATCH"
+   ],
    "live_cases": null,
    "live_findings": {},
+   "live_actions": {},
    "live_outcomes": {},
    "live_verified": 0,
    "live_errors": 0,
@@ -143,13 +195,31 @@
    "offline_rejected": 3,
    "offline_inconclusive": 1,
    "offline_scenario_failures": [],
-   "offline_median_ms": "6",
+   "offline_median_ms": "7",
    "offline_llm_calls": 31,
+   "offline_actions": [
+    "ALERT\u2192ALERT",
+    "NONE\u2192NONE",
+    "PASS_TO_COP\u2192PASS_TO_COP",
+    "WATCH\u2192WATCH"
+   ],
+   "allowed_actions": [
+    "NONE",
+    "WATCH",
+    "ALERT",
+    "REQUEST_CONTEXT",
+    "PASS_TO_COP"
+   ],
    "live_cases": 3,
    "live_findings": {
     "normal": "NORMAL",
     "abnormal": "ANOMALOUS",
     "missing": "INCONCLUSIVE"
+   },
+   "live_actions": {
+    "normal": "NONE",
+    "abnormal": "ALERT",
+    "missing": "WATCH"
    },
    "live_outcomes": {
     "normal": "agree",
@@ -181,8 +251,18 @@
    "offline_scenario_failures": [],
    "offline_median_ms": "1",
    "offline_llm_calls": 0,
+   "offline_actions": [
+    "NONE\u2192NONE",
+    "PASS_TO_COP\u2192PASS_TO_COP"
+   ],
+   "allowed_actions": [
+    "NONE",
+    "WATCH",
+    "PASS_TO_COP"
+   ],
    "live_cases": null,
    "live_findings": {},
+   "live_actions": {},
    "live_outcomes": {},
    "live_verified": 0,
    "live_errors": 0,
@@ -206,8 +286,18 @@
    "offline_scenario_failures": [],
    "offline_median_ms": "1",
    "offline_llm_calls": 0,
+   "offline_actions": [
+    "NONE\u2192NONE",
+    "WATCH\u2192WATCH"
+   ],
+   "allowed_actions": [
+    "NONE",
+    "WATCH",
+    "ALERT"
+   ],
    "live_cases": null,
    "live_findings": {},
+   "live_actions": {},
    "live_outcomes": {},
    "live_verified": 0,
    "live_errors": 0,
@@ -232,8 +322,23 @@
    "offline_scenario_failures": [],
    "offline_median_ms": "2",
    "offline_llm_calls": 0,
+   "offline_actions": [
+    "BLOCK\u2192ALERT",
+    "BLOCK\u2192BLOCK",
+    "NONE\u2192NONE",
+    "WATCH\u2192WATCH"
+   ],
+   "allowed_actions": [
+    "NONE",
+    "WATCH",
+    "ALERT",
+    "REQUEST_APPROVAL",
+    "BLOCK",
+    "PASS_TO_COP"
+   ],
    "live_cases": null,
    "live_findings": {},
+   "live_actions": {},
    "live_outcomes": {},
    "live_verified": 0,
    "live_errors": 0,
@@ -258,8 +363,18 @@
    "offline_scenario_failures": [],
    "offline_median_ms": "1",
    "offline_llm_calls": 0,
+   "offline_actions": [
+    "ALERT\u2192ALERT",
+    "NONE\u2192NONE"
+   ],
+   "allowed_actions": [
+    "NONE",
+    "WATCH",
+    "ALERT"
+   ],
    "live_cases": null,
    "live_findings": {},
+   "live_actions": {},
    "live_outcomes": {},
    "live_verified": 0,
    "live_errors": 0,
@@ -283,13 +398,34 @@
    "offline_rejected": 1,
    "offline_inconclusive": 0,
    "offline_scenario_failures": [],
-   "offline_median_ms": "7",
+   "offline_median_ms": "6",
    "offline_llm_calls": 25,
+   "offline_actions": [
+    "ESCALATE\u2192ESCALATE",
+    "NONE\u2192NONE",
+    "REQUEST_APPROVAL\u2192REQUEST_APPROVAL",
+    "WATCH\u2192WATCH"
+   ],
+   "allowed_actions": [
+    "NONE",
+    "WATCH",
+    "ALERT",
+    "INSTRUCT",
+    "REQUEST_APPROVAL",
+    "PAUSE",
+    "BLOCK",
+    "ESCALATE"
+   ],
    "live_cases": 3,
    "live_findings": {
     "normal": "NO_INCIDENT",
     "abnormal": "INCIDENT",
     "missing": "INCONCLUSIVE"
+   },
+   "live_actions": {
+    "normal": "NONE",
+    "abnormal": "ALERT",
+    "missing": "WATCH"
    },
    "live_outcomes": {
     "normal": "agree",
@@ -320,13 +456,24 @@
    "offline_rejected": 0,
    "offline_inconclusive": 1,
    "offline_scenario_failures": [],
-   "offline_median_ms": "6",
+   "offline_median_ms": "7",
    "offline_llm_calls": 6,
+   "offline_actions": [
+    "NONE\u2192NONE"
+   ],
+   "allowed_actions": [
+    "NONE"
+   ],
    "live_cases": 3,
    "live_findings": {
     "normal": "INCONCLUSIVE",
     "abnormal": "INTEGRITY",
     "missing": "INCONCLUSIVE"
+   },
+   "live_actions": {
+    "normal": "NONE",
+    "abnormal": "NONE",
+    "missing": "NONE"
    },
    "live_outcomes": {
     "normal": "inconclusive",
@@ -359,8 +506,19 @@
    "offline_scenario_failures": [],
    "offline_median_ms": "1",
    "offline_llm_calls": 0,
+   "offline_actions": [
+    "ALERT\u2192ALERT",
+    "NONE\u2192NONE",
+    "WATCH\u2192WATCH"
+   ],
+   "allowed_actions": [
+    "NONE",
+    "WATCH",
+    "ALERT"
+   ],
    "live_cases": null,
    "live_findings": {},
+   "live_actions": {},
    "live_outcomes": {},
    "live_verified": 0,
    "live_errors": 0,
@@ -382,13 +540,28 @@
    "offline_rejected": 1,
    "offline_inconclusive": 0,
    "offline_scenario_failures": [],
-   "offline_median_ms": "7",
+   "offline_median_ms": "6",
    "offline_llm_calls": 6,
+   "offline_actions": [
+    "WATCH\u2192WATCH"
+   ],
+   "allowed_actions": [
+    "NONE",
+    "WATCH",
+    "INSTRUCT",
+    "ESCALATE",
+    "PASS_TO_COP"
+   ],
    "live_cases": 3,
    "live_findings": {
     "normal": "INCONCLUSIVE",
     "abnormal": "EMERGING",
     "missing": "INCONCLUSIVE"
+   },
+   "live_actions": {
+    "normal": "WATCH",
+    "abnormal": "INSTRUCT",
+    "missing": "WATCH"
    },
    "live_outcomes": {
     "normal": "inconclusive",
@@ -420,11 +593,24 @@
    "offline_scenario_failures": [],
    "offline_median_ms": "11",
    "offline_llm_calls": 6,
+   "offline_actions": [
+    "NONE\u2192NONE",
+    "WATCH\u2192WATCH"
+   ],
+   "allowed_actions": [
+    "NONE",
+    "WATCH"
+   ],
    "live_cases": 3,
    "live_findings": {
     "normal": "INCONCLUSIVE",
     "abnormal": "INCONCLUSIVE",
     "missing": "INCONCLUSIVE"
+   },
+   "live_actions": {
+    "normal": "WATCH",
+    "abnormal": "WATCH",
+    "missing": "WATCH"
    },
    "live_outcomes": {
     "normal": "inconclusive",
@@ -454,13 +640,27 @@
    "offline_rejected": 2,
    "offline_inconclusive": 1,
    "offline_scenario_failures": [],
-   "offline_median_ms": "7",
+   "offline_median_ms": "5",
    "offline_llm_calls": 8,
+   "offline_actions": [
+    "NONE\u2192NONE",
+    "WATCH\u2192WATCH"
+   ],
+   "allowed_actions": [
+    "NONE",
+    "WATCH",
+    "INSTRUCT"
+   ],
    "live_cases": 3,
    "live_findings": {
     "normal": "EFFICIENT",
     "abnormal": "INCONCLUSIVE",
     "missing": "INCONCLUSIVE"
+   },
+   "live_actions": {
+    "normal": "NONE",
+    "abnormal": "WATCH",
+    "missing": "WATCH"
    },
    "live_outcomes": {
     "normal": "agree",
@@ -491,8 +691,17 @@
    "offline_scenario_failures": [],
    "offline_median_ms": "1",
    "offline_llm_calls": 0,
+   "offline_actions": [
+    "NONE\u2192NONE"
+   ],
+   "allowed_actions": [
+    "NONE",
+    "WATCH",
+    "ALERT"
+   ],
    "live_cases": null,
    "live_findings": {},
+   "live_actions": {},
    "live_outcomes": {},
    "live_verified": 0,
    "live_errors": 0,
@@ -516,11 +725,24 @@
    "offline_scenario_failures": [],
    "offline_median_ms": "6",
    "offline_llm_calls": 4,
+   "offline_actions": [
+    "NONE\u2192NONE",
+    "WATCH\u2192WATCH"
+   ],
+   "allowed_actions": [
+    "NONE",
+    "WATCH"
+   ],
    "live_cases": 3,
    "live_findings": {
     "normal": "CURRENT",
     "abnormal": "INCONCLUSIVE",
     "missing": "INCONCLUSIVE"
+   },
+   "live_actions": {
+    "normal": "NONE",
+    "abnormal": "WATCH",
+    "missing": "WATCH"
    },
    "live_outcomes": {
     "normal": "agree",
@@ -552,11 +774,24 @@
    "offline_scenario_failures": [],
    "offline_median_ms": "8",
    "offline_llm_calls": 8,
+   "offline_actions": [
+    "NONE\u2192NONE",
+    "WATCH\u2192WATCH"
+   ],
+   "allowed_actions": [
+    "NONE",
+    "WATCH"
+   ],
    "live_cases": 3,
    "live_findings": {
     "normal": "GAP",
     "abnormal": "INCONCLUSIVE",
     "missing": "INCONCLUSIVE"
+   },
+   "live_actions": {
+    "normal": "WATCH",
+    "abnormal": "WATCH",
+    "missing": "WATCH"
    },
    "live_outcomes": {
     "normal": "false_positive",
