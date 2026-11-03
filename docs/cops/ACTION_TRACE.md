@@ -25,7 +25,7 @@ Both the live evaluation (`live_eval.run_one`) and the bench (`test_bench.run_in
 Yes, in code. The actions are not only declared in configuration:
 
 - **Deterministic COPs.** Each rule in `rules.py` returns its action with its label, through `F(label, confidence, action, ...)`. For example, `policy_enforcement` returns VIOLATION with BLOCK for a denied proposed operation, and `resource_management` returns UNAUTHORIZED with ALERT over quota. Rules that wrap the legacy interpreter take the action from `interpret.py`.
-- **LLM COPs.** The model's structured reply carries `finding.proposed_action`. `llm.FindingOut` validates it against that COP's permitted actions.
+- **LLM COPs.** The model's structured reply carries `finding.proposed_action` (`llm.CandidateFindingOut.proposed_action`, a free string). The schema does not check it against the COP's permitted actions. That check is AU-01 on the original proposal, then `authority.check`, both in `graph.authority_check`. (Corrected 2026-11-03; an earlier version named a non-existent `llm.FindingOut` validator.)
 - **Both kinds.** `graph._as_finding` turns the action into `finding.proposed_action = {action, reason}`.
 - **Authority.** `authority.check(spec, action, mode, live_session)` is the COP-specific authority matrix. It checks `spec.permitted_actions` (from `specs.py`) and the action's tier (`authority.TIER`). INTERVENE-tier actions (BLOCK, PAUSE) are never allowed in dry-run.
 
