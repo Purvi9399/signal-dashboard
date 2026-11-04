@@ -197,7 +197,7 @@ Estimate:
 
 New live results would be labelled `live_new_call`. The 2026-11-02 results stay as `live_recorded` beside them.
 
-## 8. Decisions that need agreement
+## 8. Decisions that needed agreement (items 1–3 decided 2026-11-04, see §11)
 
 1. **Audit Traceability:** should PARTIAL become BROKEN_TRACE when the trace confirms disk changes that no step accounts for? Recommended: yes. Unattributed effects are a break in attribution, and UNATTRIBUTABLE stays CRITICAL-only. If not, revert `rules.audit_traceability`, and the case returns to FAIL.
 2. **Governance Architecture:** should a GAP for one case require a case-level gap? Recommended: yes, with estate-level gaps (computed metrics with no COP consumer) reported as latent findings instead of a case GAP. If GA should judge the estate, the scenario expectation would change, and that is not done here.
@@ -290,7 +290,94 @@ New sections and changes:
 
 The page loads with no JavaScript errors and no horizontal scroll at 390 px.
 
-## 11. Demo summary
+## 11. Decisions applied on 2026-11-04 (no model calls)
+
+**Audit Traceability (approved, with clarification).** Labels now follow meaning, and severity is reported beside the label without choosing it (`rules._audit_meaning`):
+
+| Label | Meaning | Evidence that establishes it (`reconstruct_trace`) |
+|---|---|---|
+| PARTIAL | audit information is incomplete, but the essential chain is reconstructable | steps without a turn id; attribution metrics in an attention state with no broken link |
+| BROKEN_TRACE | an essential causal or provenance link is broken | an effect no step accounts for (actor known), a sub-agent lane with no parent, a decision citing unresolvable evidence, sources disagreeing (EXCEPTION or worse), an upstream COP blocked on an action in the record |
+| UNATTRIBUTABLE | the responsible actor cannot be established | actions or effects with no session or operator (`effects_without_actor`, `actions_without_actor`) |
+
+`reconstruct_trace` now reports `actor` (operator, agent tool and session), `unattributed_effects_actor_known`, `effects_without_actor` and `actions_without_actor`. A baseline that reached UNATTRIBUTABLE or BROKEN_TRACE on metric severity alone, while the actor and every link are on record, now reads PARTIAL and keeps its severity. `audit_traceability:abnormal` reads BROKEN_TRACE: the operator and session are recorded, but no step accounts for the three disk changes.
+
+Tests:
+
+- `test_audit_partial_means_incomplete_but_reconstructable`
+- `test_audit_broken_trace_means_a_causal_link_is_broken_while_the_actor_is_known`
+- `test_audit_unattributable_means_the_responsible_actor_cannot_be_established`
+- `test_audit_severity_does_not_choose_the_label`
+
+*Limitation:* an effect that carries no session id at all is not grouped into any session today, so a per-session COP never sees it. Catching it needs an estate-level check.
+
+**Governance Architecture (option B, two levels).** `query_coverage_matrix` adds `estate_gap_assessment`. For each computed metric no COP consumes, it gives:
+
+- `required_by_spec`
+- `documented_consumers` (from `metric_cop_mappings.json`)
+- `alternative_controls`
+- a classification
+
+Findings:
+
+| Metric | Required by a spec? | Documented intent | Alternative control | Classification |
+|---|---|---|---|---|
+| `insights.no_oversight` | no | governance_intelligence, policy_enforcement, risk_mitigation (`cops_topology.json` only) | Policy Enforcement: each operation the approved policy marks `require_approval` is checked against approvals recorded in the session (`rules.policy_enforcement`, APPROVAL_REQUIRED branch). It does not cover sessions with no policy store, or long sessions of operations the policy does not name. | covered_by_alternative_control |
+| `insights.lockfile` | no | classification_tagging, risk_mitigation (`cops_topology.json` only) | none found in any spec, tool or rule | latent_unspecified |
+
+Neither is a required gap under the specs, which are the agreed source of truth, so **ADEQUATE is justified for `governance_architecture:normal`, and its expectation is unchanged**. Both items are reported as latent observations in `gap_levels.latent_observations`. GAP now needs one of these:
+
+- an active gap; or
+- a latent item that a spec requires and nothing covers.
+
+Tests:
+
+- `test_ga_an_unconsumed_metric_alone_is_not_a_gap_and_is_reported_as_latent`
+- `test_ga_a_required_uncovered_latent_gap_is_a_gap_without_being_triggered`
+- `test_ga_an_active_gap_is_a_gap`
+
+The GA prompt was revised and is now `governance_architecture/prompt-3`. *Open specification question:* should a dependency-manifest change without a lockfile be a required responsibility? If yes, a spec should own it, and GA would report it as a latent required gap until one does.
+
+**SC-01 and support.** I checked the three newly passing cases for independent evidence.
+
+- **risk_mitigation:normal (LOW):** three metric states, five register and control tool observations, and a verified Policy Enforcement ALLOWED.
+- **governance_intelligence:normal (NO_PATTERN):** four aggregate-report observations across the 30-day and 90-day windows.
+- **governance_intelligence:abnormal (RECURRING):** five aggregate-report observations, including 4 VIOLATION decisions in 4 sessions.
+
+The INCONCLUSIVE disclosure supports nothing in each case.
+
+Writing the requested negative test exposed a hole. A *quiet* label (NO_PATTERN, LOW) whose only claim was the inconclusive disclosure passed every check, because SC-02 judged support only for attention labels. SC-02 (now version 2) rejects any definite label whose claims are all unverified or inconclusive upstream findings (`no_independent_support`). Tests:
+
+- `test_an_inconclusive_upstream_finding_alone_cannot_support_a_definite_conclusion`, for NO_PATTERN, RECURRING, LOW and MATERIAL
+- `test_the_three_disclosure_cases_rest_on_independent_evidence`
+
+**Bench after these changes (no calls):** 48 PASS / 1 FAIL / 5 INCONCLUSIVE. That is unchanged, with no regressions. Test suite: `337 passed, 1 skipped`.
+
+## 12. Live re-run preflight
+
+The re-run runner is `collector/cops/runtime/rerun.py`.
+
+- **Scope:** exactly six cases and fleet F2. The six cases are:
+  - workflow_orchestration:abnormal
+  - classification_tagging:normal
+  - workload_optimization:abnormal
+  - knowledge_policy_management:abnormal
+  - governance_architecture:abnormal
+  - governance_architecture:normal
+  - F2's LLM COPs are incident_response and risk_mitigation.
+- **Hard cap:** one ledger for the whole run, checked before *every* provider call, including retries and re-assessments. A call is made only if the spend so far plus that call's worst case stays within the cap. The worst case is the estimated input plus the full `max_output_tokens` at the configured prices; at 8,000 output tokens it is about $0.10. The cap may not exceed $0.75.
+- **Results:** written to `docs/cops/evaluation/rerun_2026-11-04/`. The 2026-11-02 `live_results.json` is never overwritten.
+- **Action effects:** the preflight asserts that the runtime's adapter is `DryRunAdapter`.
+- **Simulated pass:** a pass with scripted replies through the same guard made 19 simulated calls and recorded no problems (`rerun_simulated.json`, labelled simulated).
+- **Preflight result:** every check passes except one. **No provider credential is available in this environment.** No paid call has been made.
+
+Tests:
+
+- `test_rerun_scope_is_exactly_the_approved_six_cases_and_fleet_f2`
+- `test_rerun_cap_guard_refuses_a_call_whose_worst_case_would_cross_the_cap_including_retries`
+- `test_rerun_preflight_refuses_without_settings_and_above_the_approved_cap`
+
+## 13. Demo summary
 
 - Ten cases did not pass, and each now has a traceable cause.
 - Four were wrong for a fixable reason in our own code, and they pass now with no new model call:

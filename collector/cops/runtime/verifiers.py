@@ -63,7 +63,7 @@ CHECKS = {
     "ID-02": ("1", "ID", BLOCKS_FINDING, True, "cited tool calls and memory records belong to this case and tenant"),
     "MC-01": ("1", "MC", BLOCKS_FINDING, True, "cited metric values recomputed from raw observables"),
     "SC-01": ("2", "SC", BLOCKS_FINDING, True, "each claim matches the data it cites"),
-    "SC-02": ("1", "SC", BLOCKS_FINDING, True, "an attention label has direct evidential support"),
+    "SC-02": ("2", "SC", BLOCKS_FINDING, True, "a definite label has independent support; an attention label has direct support"),
     "DS-01": ("1", "DS", BLOCKS_FINDING, True, "the label is one the evidence state permits"),
     "DS-02": ("1", "DS", BLOCKS_FINDING, True, "no correlated upstream finding counted as independent"),
     "DS-03": ("1", "DS", BLOCKS_FINDING, True, "a quiet model reading is not contradicted by the rule baseline"),
@@ -465,7 +465,17 @@ def verify_finding(ctx):
     ups = [up.get(x.get("upstream_cop")) for x in claims if x.get("kind") == CLAIM_UPSTREAM]
     transitive = bool(ups) and all(u and u.get("verified") and u.get("status") == SUBSTANTIVE
                                    and u.get("lineage") for u in ups)
-    if attention and not direct and transitive:
+    # An upstream finding that is unverified or not substantive (for example an exact
+    # INCONCLUSIVE disclosure) supports nothing. A definite conclusion, quiet or
+    # attention, whose claims are all of that kind has no support at all.
+    independent = [x for x in claims if x.get("kind") != CLAIM_UPSTREAM or (
+        (up.get(x.get("upstream_cop")) or {}).get("verified")
+        and (up.get(x.get("upstream_cop")) or {}).get("status") == SUBSTANTIVE)]
+    if f.get("status") == SUBSTANTIVE and f.get("label") != INCONCLUSIVE and claims and not independent:
+        out.append(R("SC-02", FAIL, "no_independent_support",
+                     "every claim is an unverified or inconclusive upstream finding; that supports no "
+                     "definite conclusion"))
+    elif attention and not direct and transitive:
         # Support through verified upstream findings that carry their own lineage
         # is traceable to direct evidence; it stands, qualified.
         out.append(R("SC-02", WARN, "transitive_support",

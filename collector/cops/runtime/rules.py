@@ -395,6 +395,84 @@ def recovery_resilience(ctx):
              f"{len(full)}/{len(out)} restores fully passed", claims, "MEDIUM")
 
 
+def _audit_meaning(ctx, out, tr, linkage_broken=()):
+    """Audit labels by what the evidence means; severity is assessed separately.
+
+    PARTIAL         audit information is incomplete, but the essential chain can
+                    still be reconstructed (for example steps without a turn id).
+    BROKEN_TRACE    an essential causal or provenance link is broken: an effect no
+                    step accounts for, a sub-agent lane with no parent step, a
+                    decision citing evidence the record cannot produce, sources that
+                    disagree about what happened, or an upstream COP that could not
+                    judge an action that is in the record.
+    UNATTRIBUTABLE  the responsible actor cannot be established.
+
+    Severity comes from the attribution metrics' own states and never chooses the
+    label. Applied only when the trace tool returned a result; otherwise the rule
+    baseline stands, and a record whose attribution measures could not be judged
+    stays INCONCLUSIVE."""
+    if not tr or tr.get("missing_dependency") or out["interpretation"] == INCONCLUSIVE:
+        return out, []
+    m = {e.metric_id: e for e in ctx["events"]}
+    states = [m[k].state for k in ("insights.unattributed", "telemetry.turn_linkage",
+                                   "telemetry.lane_linkage", "telemetry.source_agreement") if k in m]
+    # Severity: the worst attribution-metric state, or the baseline's own severity,
+    # whichever is higher. It is reported beside the label and does not choose it.
+    sev = max([SEV.get(x, "NONE") for x in states] + [out.get("severity") or "NONE"], key=RANK.get)
+    claims = []
+
+    no_actor = tr.get("effects_without_actor") or []
+    no_actor_n = len(no_actor) + (tr.get("actions_without_actor") or 0)
+    if no_actor_n:
+        claims.append(tclaim(ctx["tools"], "reconstruct_trace", "effects_without_actor", no_actor,
+                             f"{no_actor_n} actions or effects carry no session or operator, so the "
+                             f"responsible actor cannot be established"))
+        return {**out, "interpretation": "UNATTRIBUTABLE", "action": "ALERT", "severity": sev,
+                "action_reason": "the responsible actor cannot be established"}, claims
+
+    broken = []
+    un = tr.get("unattributed_effects") or []
+    if un:
+        broken.append("effects no step accounts for")
+        claims.append(tclaim(ctx["tools"], "reconstruct_trace", "unattributed_effects", un,
+                             f"{len(un)} of {tr.get('disk_changes')} disk changes are attributed to no "
+                             f"step; the actor ({tr['actor'].get('operator')}, session "
+                             f"{tr['actor'].get('session_id')}) is known, the causal link is not"))
+    orphans = tr.get("lanes_without_parent") or []
+    if orphans:
+        broken.append("sub-agent lanes with no parent step")
+        claims.append(tclaim(ctx["tools"], "reconstruct_trace", "lanes_without_parent", orphans,
+                             f"{len(orphans)} sub-agent lanes have no parent step"))
+    if linkage_broken:
+        broken.append("decisions citing evidence the record cannot produce")
+    sa = m.get("telemetry.source_agreement")
+    if sa is not None and sa.state in ("EXCEPTION", "CRITICAL"):
+        broken.append("sources disagree about what happened")
+        claims.append(mclaim(sa))
+    if any(getattr(v, "decision_status", None) == "BLOCKED_BY_EVIDENCE"
+           for v in _legacy_up(ctx["upstream"]).values()):
+        broken.append("an upstream COP could not judge an action in the record")
+    if broken:
+        return {**out, "interpretation": "BROKEN_TRACE", "action": "ALERT", "severity": sev,
+                "action_reason": "an essential causal or provenance link is broken: " + "; ".join(broken)}, claims
+
+    gaps = []
+    if tr.get("steps_without_turn"):
+        gaps.append(f"{tr['steps_without_turn']} steps have no turn id")
+        claims.append(tclaim(ctx["tools"], "reconstruct_trace", "steps_without_turn",
+                             tr["steps_without_turn"], f"{tr['steps_without_turn']} steps have no turn "
+                             f"id; their order still reconstructs the chain"))
+    soft = [k for k in ("insights.unattributed", "telemetry.turn_linkage", "telemetry.lane_linkage",
+                        "telemetry.source_agreement") if k in m and m[k].state in ATTENTION_STATES]
+    if gaps or soft or out["interpretation"] in ("PARTIAL", "BROKEN_TRACE", "UNATTRIBUTABLE"):
+        # Includes a baseline that reached BROKEN_TRACE or UNATTRIBUTABLE on metric
+        # severity alone while the actor and every causal link are on record.
+        return {**out, "interpretation": "PARTIAL", "action": "WATCH", "severity": sev,
+                "action_reason": "incomplete audit information; the essential chain is still "
+                                 "reconstructable" + (f" ({'; '.join(gaps + soft)})" if gaps or soft else "")}, claims
+    return out, claims
+
+
 def audit_traceability(ctx):
     out = _RI.audit_traceability(ctx["events"], _legacy_up(ctx["upstream"]), {},
                                  evidence_conf(ctx["upstream"]))
@@ -406,19 +484,11 @@ def audit_traceability(ctx):
         extra.append(tclaim(ctx["tools"], "check_decision_linkage", "decisions[unresolvable]",
                             len(broken), f"{len(broken)} upstream decisions cite evidence that does "
                             f"not resolve to a row in this case"))
-        if out["interpretation"] in ("COMPLETE", "PARTIAL", INCONCLUSIVE):
+        if out["interpretation"] == INCONCLUSIVE:
             out = {**out, "interpretation": "BROKEN_TRACE", "action": "ALERT", "severity": "MEDIUM",
                    "action_reason": "a decision cites evidence the record cannot produce"}
-    # PARTIAL means "reconstructable, with gaps that do not yet break attribution". A disk
-    # change the trace tool confirms no step accounts for is a break in attribution, so it
-    # is a BROKEN_TRACE, not a PARTIAL. UNATTRIBUTABLE stays reserved for CRITICAL.
-    # (Semantic change: listed for agreement in COPS_INCONCLUSIVE_ROOT_CAUSE_REPORT.md.)
-    un = tr.get("unattributed_effects") or []
-    if out["interpretation"] == "PARTIAL" and un:
-        extra.append(tclaim(ctx["tools"], "reconstruct_trace", "unattributed_effects", un,
-                            f"{len(un)} of {tr.get('disk_changes')} disk changes are attributed to no step"))
-        out = {**out, "interpretation": "BROKEN_TRACE", "action": "ALERT", "severity": "MEDIUM",
-               "action_reason": "disk changes no agent action accounts for break attribution"}
+    out, more = _audit_meaning(ctx, out, tr, broken)
+    extra += more
     f = _from_legacy(ctx, out, extra)
     f["cop_specific"].update({"trace": tr, "decision_linkage": link.get("decisions", [])})
     return f
@@ -753,28 +823,47 @@ def knowledge_policy_management(ctx):
 
 
 def governance_architecture(ctx):
+    """Two levels: active gaps (something observed in this case that no metric or COP
+    covers) and latent gaps (in the wider architecture). A latent item is a GAP only when
+    it is a required responsibility with no coverage; an unconsumed metric alone is not."""
     t = ctx["tools"]
     cov = result(t, "query_coverage_matrix")
-    m = {e.metric_id: e for e in ctx["events"]}
     uncovered = []
     for f_ in cov.get("unowned_fields", []):
         uncovered.append({"kind": "field", "name": f_, "owner": None})
     for ty in cov.get("unhandled_observable_types", []):
         uncovered.append({"kind": "observable_type", "name": ty, "owner": None})
+    estate = cov.get("estate_gap_assessment", [])
+    latent_required = [x for x in estate if x.get("required_by_spec") and not x.get("alternative_controls")]
+    levels = {"active": [u["name"] for u in uncovered],
+              "latent_required": [x["metric"] for x in latent_required],
+              "latent_observations": [{"metric": x["metric"], "classification": x["classification"],
+                                       "documented_consumers": x["documented_consumers"]}
+                                      for x in estate if x not in latent_required]}
     claims = []
-    if uncovered:
-        claims.append(tclaim(t, "query_coverage_matrix", "unowned_fields+unhandled_observable_types",
-                             [u["name"] for u in uncovered],
-                             "signals in this case no metric reads and no COP owns: " +
-                             ", ".join(u["name"] for u in uncovered)))
+    if uncovered or latent_required:
+        if uncovered:
+            claims.append(tclaim(t, "query_coverage_matrix", "unowned_fields+unhandled_observable_types",
+                                 [u["name"] for u in uncovered],
+                                 "active gap: signals in this case no metric reads and no COP owns: " +
+                                 ", ".join(u["name"] for u in uncovered)))
+        if latent_required:
+            claims.append(tclaim(t, "query_coverage_matrix", "estate_gap_assessment",
+                                 [x["metric"] for x in latent_required],
+                                 "latent gap: required responsibilities no COP covers"))
         gi = verified(ctx["upstream"], "governance_intelligence", "BLIND_SPOT")
         label = "STRUCTURAL_CHANGE_RECOMMENDED" if gi else "GAP"
-        return F(label, 0.8, "WATCH", "a signal arrives that no executable rule or COP covers", "",
-                 claims, "MEDIUM", cop_specific={"uncovered_responsibilities": uncovered,
+        return F(label, 0.8, "WATCH", "a responsibility no executable rule or COP covers", "",
+                 claims, "MEDIUM", cop_specific={"uncovered_responsibilities": uncovered, "gap_levels": levels,
                                                  "estate_metrics_read_by_no_cop": cov.get("metrics_read_by_no_cop", [])})
-    return F("ADEQUATE", 0.6, "NONE", "", "every signal in this case has a metric and a COP",
+    note = ""
+    if levels["latent_observations"]:
+        note = ("; latent, not gaps: " + ", ".join(
+            f"{x['metric']} ({x['classification']})" for x in levels["latent_observations"]))
+    return F("ADEQUATE", 0.6, "NONE", "", "no active gap and no uncovered required responsibility" + note,
              [tclaim(t, "query_coverage_matrix", "unowned_fields", [], "no unowned field")],
-             cop_specific={"estate_metrics_read_by_no_cop": cov.get("metrics_read_by_no_cop", []),
+             cop_specific={"gap_levels": levels,
+                           "estate_metrics_read_by_no_cop": cov.get("metrics_read_by_no_cop", []),
                            "edge_differences": len(result(t, "validate_cop_relationships").get("edge_differences", []))})
 
 

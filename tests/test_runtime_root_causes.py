@@ -84,6 +84,34 @@ def test_sc01_upstream_disclosure_of_an_inconclusive_finding_is_not_a_failure_an
     assert sc["result"] == "NOT_RUN" and sc["failures"] == []        # no failure, and no support counted
 
 
+@pytest.mark.parametrize("cop,cid,upc,label", [
+    ("governance_intelligence", "governance_intelligence:normal", "recovery_resilience", "NO_PATTERN"),
+    ("governance_intelligence", "governance_intelligence:normal", "recovery_resilience", "RECURRING"),
+    ("risk_mitigation", "risk_mitigation:normal", "resource_management", "LOW"),
+    ("risk_mitigation", "risk_mitigation:normal", "resource_management", "MATERIAL"),
+])
+def test_an_inconclusive_upstream_finding_alone_cannot_support_a_definite_conclusion(cop, cid, upc, label):
+    rt = _rt(cid)
+    up = {upc: {"label": "INCONCLUSIVE", "status": "MISSING_DEPENDENCY", "verified": False, "finding_id": "f"}}
+    claim = {"statement": f"{upc} could not decide", "kind": "upstream_finding", "upstream_cop": upc,
+             "upstream_label": "INCONCLUSIVE", "evidence_refs": []}
+    rs = _verify(rt, cop, [claim], label, up)
+    sc2 = next(r for r in rs if r["check_id"] == "SC-02")
+    assert _sc01(rs)["result"] == "NOT_RUN"            # the disclosure itself is truthful
+    assert sc2["result"] == "FAIL" and sc2["reason_code"] == "no_independent_support"
+
+
+def test_the_three_disclosure_cases_rest_on_independent_evidence():
+    bench = json.load(open(os.path.join(DOCS, "test_bench_results.json")))
+    for cid in ("risk_mitigation:normal", "governance_intelligence:normal", "governance_intelligence:abnormal"):
+        c = next(x for x in bench["cases"] if x["id"] == cid)
+        claims = c["trace"]["claims"]
+        disclosures = [x for x in claims if x["kind"] == "upstream_finding" and "INCONCLUSIVE" in str(x.get("asserted_value"))]
+        independent = [x for x in claims if x["kind"] in ("metric_state", "metric_value", "tool_observation")]
+        assert disclosures and len(independent) >= 3, cid
+        assert c["trace"]["decision"]["verified"] is True and c["verdict"] == "PASS"
+
+
 def test_sc01_still_rejects_an_unverified_substantive_upstream_used_as_support():
     rt = _rt("risk_mitigation:normal")
     up = {"policy_enforcement": {"label": "VIOLATION", "status": "SUBSTANTIVE", "verified": False, "finding_id": "f"}}
@@ -221,6 +249,66 @@ def test_audit_trace_with_unattributed_disk_changes_is_broken_not_partial():
         assert o["results"]["audit_traceability"]["finding"]["label"] == want
 
 
+def _at_run(build):
+    from cops.runtime.llm import UnavailableProvider
+    from cops.runtime.live_eval import _b
+    c = {**_case("audit_traceability:abnormal"), "build": lambda sid: _b(build(sid))}
+    o, rt, err, _ = TB.run_investigation(c, UnavailableProvider())
+    return o["results"]["audit_traceability"]["finding"]
+
+
+def _at_session(sid, operator=S.OPS, turnless=0, unaccounted=0):
+    from cops.runtime.evaluation import _estate
+    s = S.Session(sid, 9, operator=operator).start(1000)
+    for i, t in enumerate(S.NORMAL_TOOLS):
+        s.add(observable_type="tool_request", tool_name=t, tool_use_id=f"{sid}-u{i}",
+              tool_arguments={"i": i}, success=True, turn_id=None if i < turnless else f"{sid}-t1")
+    s.full_instrumentation()
+    for i in range(unaccounted):
+        s.add(observable_type="file_modify", collector="fs_watcher", file_path=f"/ws/config/s_{i}.py",
+              content_hash=f"x{i}")
+    return _estate(s.end())
+
+
+def test_audit_partial_means_incomplete_but_reconstructable():
+    f = _at_run(lambda sid: _at_session(sid, turnless=2))
+    assert f["label"] == "PARTIAL"
+    assert any("steps_without_turn" in (c.get("field") or "") or "turn id" in c.get("statement", "")
+               for c in f["claims"])
+
+
+def test_audit_broken_trace_means_a_causal_link_is_broken_while_the_actor_is_known():
+    f = _at_run(lambda sid: _at_session(sid, unaccounted=3))
+    assert f["label"] == "BROKEN_TRACE"
+    tr = f["cop_specific"]["trace"]
+    assert tr["unattributed_effects_actor_known"] == 3 and tr["effects_without_actor"] == []
+    assert tr["actor"]["operator"] == S.OPS
+
+
+def test_audit_unattributable_means_the_responsible_actor_cannot_be_established():
+    f = _at_run(lambda sid: _at_session(sid, operator=None, unaccounted=3))
+    assert f["label"] == "UNATTRIBUTABLE"
+    assert f["cop_specific"]["trace"]["actor"]["operator"] is None
+
+
+def test_audit_severity_does_not_choose_the_label():
+    # Same WARNING-level metric picture, different meaning: the label follows the
+    # actor and link evidence, and severity is reported beside it.
+    broken = _at_run(lambda sid: _at_session(sid, unaccounted=3))
+    unattr = _at_run(lambda sid: _at_session(sid, operator=None, unaccounted=3))
+    assert broken["label"] != unattr["label"] and broken["severity"] == unattr["severity"]
+    # and a severe metric with the actor and every link on record is not UNATTRIBUTABLE
+    from cops.runtime.rules import _audit_meaning
+    import types
+    ctx = {"events": [types.SimpleNamespace(metric_id="telemetry.turn_linkage", state="CRITICAL")],
+           "upstream": {}, "tools": {}}
+    tr = {"steps": 5, "steps_without_turn": 0, "lanes_without_parent": [], "unattributed_effects": [],
+          "effects_without_actor": [], "actions_without_actor": 0, "disk_changes": 1,
+          "actor": {"operator": S.OPS, "session_id": "x"}}
+    out, _ = _audit_meaning(ctx, {"interpretation": "UNATTRIBUTABLE", "severity": "HIGH"}, tr)
+    assert out["interpretation"] == "PARTIAL" and out["severity"] == "HIGH"
+
+
 def test_event_metadata_distinguishes_examined_and_empty_from_unavailable():
     r = TOOLS["inspect_event_metadata"][0](_rt("classification_tagging:normal").case, {}, {})
     assert r["rows"] == [] and r["scanned_rows"] > 0 and r["metadata_available"] is True
@@ -234,6 +322,47 @@ def test_coverage_matrix_separates_the_five_levels_and_case_from_estate_gaps():
     lvl = next(x for x in n["coverage_levels"] if x["item"] == "insights.no_oversight")
     assert lvl["metric_reader"] is True and lvl["cop_consumer"] == [] and lvl["executable_condition"] == []
     assert set(lvl) >= {"observed_in_case", "metric_reader", "cop_consumer", "executable_condition", "tested"}
+
+
+def _ga(cid, assessment=None, monkeypatch=None):
+    from cops.runtime import rules as RU, tools as TL
+    from cops.runtime.llm import UnavailableProvider
+    if assessment is not None:
+        monkeypatch.setattr(TL, "_estate_assessment", lambda unread: assessment)
+    rt = _rt(cid)
+    cov = TOOLS["query_coverage_matrix"][0](rt.case, {}, {})
+    ctx = {"tools": {"query_coverage_matrix": {"result": cov}, "validate_cop_relationships": {"result": {}}},
+           "upstream": {}, "events": []}
+    return RU.governance_architecture(ctx), cov
+
+
+def test_ga_an_unconsumed_metric_alone_is_not_a_gap_and_is_reported_as_latent():
+    f, cov = _ga("governance_architecture:normal")
+    by = {x["metric"]: x for x in cov["estate_gap_assessment"]}
+    assert by["insights.no_oversight"]["classification"] == "covered_by_alternative_control"
+    assert by["insights.no_oversight"]["alternative_controls"][0]["cop"] == "policy_enforcement"
+    assert by["insights.lockfile"]["classification"] == "latent_unspecified"
+    assert by["insights.lockfile"]["alternative_controls"] == []
+    assert f.label == "ADEQUATE" if hasattr(f, "label") else f["label"] == "ADEQUATE"
+    lv = (f.cop_specific if hasattr(f, "cop_specific") else f["cop_specific"])["gap_levels"]
+    assert lv["active"] == [] and lv["latent_required"] == []
+    assert {x["metric"] for x in lv["latent_observations"]} == {"insights.no_oversight", "insights.lockfile"}
+
+
+def test_ga_a_required_uncovered_latent_gap_is_a_gap_without_being_triggered(monkeypatch):
+    req = [{"metric": "insights.lockfile", "required_by_spec": True, "documented_consumers": [],
+            "alternative_controls": [], "classification": "latent_required"}]
+    f, _ = _ga("governance_architecture:normal", req, monkeypatch)
+    lab = f.label if hasattr(f, "label") else f["label"]
+    lv = (f.cop_specific if hasattr(f, "cop_specific") else f["cop_specific"])["gap_levels"]
+    assert lab == "GAP" and lv["active"] == [] and lv["latent_required"] == ["insights.lockfile"]
+
+
+def test_ga_an_active_gap_is_a_gap():
+    f, _ = _ga("governance_architecture:abnormal")
+    lab = f.label if hasattr(f, "label") else f["label"]
+    lv = (f.cop_specific if hasattr(f, "cop_specific") else f["cop_specific"])["gap_levels"]
+    assert lab == "GAP" and "browser_navigation" in lv["active"]
 
 
 def test_payload_carries_baseline_tool_results_but_not_the_baseline_label():
@@ -431,3 +560,50 @@ def test_dashboard_embeds_exactly_the_results_file():
     assert [c["verdict"] for c in shown["cases"]] == [c["verdict"] for c in doc["cases"]]
     for anchor in ("rootcauses", "beforeafter", "inctiles", "filters", "lifecycle", "fleetint"):
         assert f'id="{anchor}"' in page
+
+
+# ====================================================================== targeted live re-run: hard cap
+
+def test_rerun_scope_is_exactly_the_approved_six_cases_and_fleet_f2():
+    from cops.runtime import rerun as RR
+    assert len(RR.CASES) == 6 and RR.FLEET_IDS == ("F2",) and RR.APPROVED_CAP_USD == 0.75
+    assert set(RR.CASES) == {"workflow_orchestration:abnormal", "classification_tagging:normal",
+                             "workload_optimization:abnormal", "knowledge_policy_management:abnormal",
+                             "governance_architecture:abnormal", "governance_architecture:normal"}
+
+
+def test_rerun_cap_guard_refuses_a_call_whose_worst_case_would_cross_the_cap_including_retries():
+    from cops.runtime import rerun as RR
+    from cops.runtime.llm import ProviderUnavailable, ProviderResponse, ProviderTransient
+    g = RR.CapGuard(0.10, {"m": (2.0, 10.0)}, "m", 8000)        # worst case ~= $0.08 a call
+    calls = []
+
+    class Flaky:
+        name, simulated, model = "x", False, "m"
+
+        def complete(self, *a):
+            calls.append(1)
+            if len(calls) == 1:
+                raise ProviderTransient("overloaded")              # a retry still goes through the guard
+            return ProviderResponse(data={}, input_tokens=1000, output_tokens=1000, model_version="m")
+    p = RR.CappedProvider(Flaky(), g)
+    with pytest.raises(ProviderTransient):
+        p.complete("c", "plan", "", {}, {}, 1)
+    p.complete("c", "plan", "", {}, {}, 1)                       # spent stays 0.012 after the retry
+    assert len(calls) == 2 and abs(g.spent - 0.012) < 1e-9
+    g.spent = 0.03                                                # 0.03 + worst case 0.08 > 0.10
+    with pytest.raises(ProviderUnavailable):
+        p.complete("c", "assess", "", {}, {}, 1)
+    assert len(calls) == 2 and g.refused and g.refused[-1]["purpose"] == "assess"
+
+
+def test_rerun_preflight_refuses_without_settings_and_above_the_approved_cap(monkeypatch):
+    from cops.runtime import rerun as RR
+    for k in ("COPS_LLM_LIVE", "COPS_LLM_DATA_APPROVED", "COPS_MODEL", "ANTHROPIC_API_KEY",
+              "COPS_LIVE_MAX_TOTAL_USD", "COPS_PRICING"):
+        monkeypatch.delenv(k, raising=False)
+    probs, info = RR.preflight()
+    assert probs and info["action_adapter"] == "DryRunAdapter"
+    monkeypatch.setenv("COPS_LIVE_MAX_TOTAL_USD", "1.0")
+    probs, _ = RR.preflight()
+    assert any("exceeds the approved" in p for p in probs)

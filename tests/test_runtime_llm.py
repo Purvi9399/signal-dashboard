@@ -8,7 +8,7 @@ from cops.runtime import evaluation as E
 from cops.runtime import synthetic as S, fixtures as FX
 from cops.runtime.llm import (LLMGateway, LLMBudget, FixtureProvider, UnavailableProvider, AnthropicProvider,
                               ProviderTimeout, ProviderUnavailable)
-from cops.runtime.profiles import LLM_COPS, DETERMINISTIC_COPS, build_profiles, PROMPTS
+from cops.runtime.profiles import LLM_COPS, DETERMINISTIC_COPS, build_profiles, PROMPTS, PROMPT_REVISION
 from cops.runtime.graph import run_cop
 from cops.specs import BY_KEY
 
@@ -62,7 +62,7 @@ def test_wiring_through_the_provider_interface(cop):
     assert [t["tool"] for t in payload["tools_available"]] == list(build_profiles()[cop].tools)
     inv = r["llm_invocations"]
     assert len(inv) == 2 and all(set(RECORD_FIELDS) <= set(i) for i in inv)
-    assert all(i["simulated"] and i["prompt_version"] == f"{cop}/prompt-2" for i in inv)
+    assert all(i["simulated"] and i["prompt_version"] == f"{cop}/prompt-{PROMPT_REVISION.get(cop, 2)}" for i in inv)
     assert all(i["tools_exposed"] == list(build_profiles()[cop].tools) for i in inv)
     assert all(i["cost_basis"] == "unpriced" and i["cost_usd"] is None for i in inv)   # no price configured
     assert f["status"] == "INCONCLUSIVE" and f["cop_specific"]["stop_reason"] == "model_inconclusive"

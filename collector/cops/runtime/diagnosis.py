@@ -75,9 +75,12 @@ ENGINEERING_NOTES = {
                  "exception 5), and the rule mapped WARNING to PARTIAL ('gaps that do not yet break "
                  "attribution'). But three disk changes that no step accounts for are a break in "
                  "attribution.",
-        "fix": "When the trace tool confirms unattributed disk changes, PARTIAL becomes BROKEN_TRACE. "
-               "UNATTRIBUTABLE stays reserved for CRITICAL.",
-        "remaining": "Semantic change: needs agreement."},
+        "fix": "Labels now follow meaning, with severity reported separately (decision 2026-11-04): "
+               "PARTIAL = incomplete but reconstructable; BROKEN_TRACE = an essential causal or "
+               "provenance link is broken; UNATTRIBUTABLE = the responsible actor cannot be "
+               "established. Here the operator and session are recorded but no step accounts for "
+               "the three disk changes, so BROKEN_TRACE.",
+        "remaining": "None (approved)."},
     "knowledge_policy_management:abnormal": {
         "cause": "The rules found CONFLICT with compare_policy_documents. The model never called that "
                  "tool and never saw its result (the payload did not include baseline tool results), "
@@ -87,15 +90,16 @@ ENGINEERING_NOTES = {
                "recoverable by one re-assessment.",
         "remaining": "A fresh call is needed; DS-03 is unchanged."},
     "governance_architecture:normal": {
-        "cause": "The model judged estate coverage (two computed metrics, insights.no_oversight and "
-                 "insights.lockfile, have no COP consumer). The scenario and the rule judge case "
-                 "coverage (every field observed in this case has a metric and a COP). Both facts are "
-                 "true; they answer different questions.",
-        "fix": "query_coverage_matrix now reports five levels per item (observed in case, metric "
-               "reader, COP consumer, executable condition, tested) and separates case_level_gaps from "
-               "estate_level_gaps; the prompt says GAP for a case needs a case-level gap.",
-        "remaining": "Which reading GA should use is a decision; the recorded GAP stands until a fresh "
-                     "call."},
+        "cause": "The model judged two computed metrics with no COP consumer (insights.no_oversight, "
+                 "insights.lockfile) to be a GAP. Under the two-level assessment (decision 2026-11-04) "
+                 "neither is a required gap: no_oversight is covered by Policy Enforcement's "
+                 "approval-requirement check, and lockfile is documented in cops_topology.json but "
+                 "assigned by no spec and covered by no control. There is no active gap.",
+        "fix": "query_coverage_matrix adds estate_gap_assessment (required_by_spec, documented "
+               "consumers, alternative controls, classification); the rule and prompt read GAP only "
+               "for an active gap or a required, uncovered latent gap. Expectation unchanged (ADEQUATE).",
+        "remaining": "A fresh call must read the two-level evidence; whether lockfile should become "
+                     "a required responsibility is a specification decision."},
     "governance_architecture:abnormal": {
         "cause": "One claim (telemetry unknown_share is 0.0, NORMAL) had kind metric_state with no "
                  "metric_id, no asserted_state and no reference: it cited nothing. The other claims "

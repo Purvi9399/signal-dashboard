@@ -235,11 +235,20 @@ type, what governance question it bears on, and which COP would be the natural o
 authoritative COP catalogue and coverage matrix, not assumptions.
 query_coverage_matrix reports five separate levels per item: observed_in_case, metric_reader,
 cop_consumer, executable_condition and tested. Keep them apart: a metric reader is not a COP
-consumer, and a consumer is not an executable condition. GAP for this case needs a case-level gap
-(case_level_gaps: something observed in this case with no metric reader or no COP). Estate-level
-gaps (estate_level_gaps: computed metrics no COP consumes) are reported in detail and
-missing_evidence; on their own they do not make this case a GAP.""",
+consumer, and a consumer is not an executable condition. Assess two levels and report both in
+detail: active gaps (case_level_gaps: something observed in this case with no metric reader or no
+COP) and latent gaps in the wider architecture (estate_gap_assessment). A latent gap is real even
+if this session did not trigger it, but an unconsumed metric alone is not a gap: check
+required_by_spec and alternative_controls. GAP needs an active gap, or a latent item that is
+required_by_spec with no alternative control. A latent item that is covered by an alternative
+control, or documented but not required by any spec, is reported as a latent observation and does
+not on its own make the reading GAP.""",
 }
+
+# Prompt revision per COP; bumped whenever that COP's prompt text changes, so a recorded
+# reply always names the prompt it answered. (governance_architecture: two-level coverage,
+# 2026-11-04.)
+PROMPT_REVISION = {"governance_architecture": 3}
 
 LLM_TOOLS = {
     "workflow_orchestration": ("get_task_milestones", "analyse_execution_transitions",
@@ -327,7 +336,7 @@ class Profile:
 def build_profiles(budget=None):
     out = {}
     for k in LLM_COPS:
-        out[k] = Profile(k, "llm", LLM_TOOLS[k], APPROVAL_ACTIONS, PROMPTS[k], f"{k}/prompt-2",
+        out[k] = Profile(k, "llm", LLM_TOOLS[k], APPROVAL_ACTIONS, PROMPTS[k], f"{k}/prompt-{PROMPT_REVISION.get(k, 2)}",
                          DETAILS[k], budget or LLMBudget(), WORKING_STATE[k])
     for k in DETERMINISTIC_COPS:
         out[k] = Profile(k, "deterministic", DETERMINISTIC_TOOLS[k], APPROVAL_ACTIONS,

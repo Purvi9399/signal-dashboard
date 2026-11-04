@@ -21,7 +21,7 @@ Every tool is read-only and computes from CaseData. A tool whose source does
 not exist returns {"missing_dependency": ...} rather than an answer.
 """
 
-import fnmatch, hashlib, json, re, statistics, time
+import fnmatch, hashlib, json, os, re, statistics, time
 from collections import Counter, defaultdict
 
 from ..specs import BY_KEY, SPECS, edge_report, CONSUMES
@@ -765,6 +765,59 @@ def _rule_conditions():
     return _RULE_COND
 
 
+# Alternative controls for a computed metric that no COP spec reads. Each entry names
+# the COP rule that covers the same governance responsibility by another route, with
+# file and symbol, and what it does not cover. Only routes that exist in this
+# repository are listed; an empty list means none was found.
+ALTERNATIVE_CONTROLS = {
+    "insights.no_oversight": [{
+        "cop": "policy_enforcement", "tool": "evaluate_session_operations",
+        "where": "collector/cops/runtime/rules.py policy_enforcement (APPROVAL_REQUIRED branch)",
+        "covers": "every operation the approved policy marks require_approval is checked against "
+                  "approvals recorded in the session; missing approval reads APPROVAL_REQUIRED",
+        "does_not_cover": "sessions with no policy store (Policy Enforcement then withholds ALLOWED), "
+                          "and a long session of operations the policy does not mark as needing approval"}],
+    "insights.lockfile": [],
+}
+
+
+def _documented_consumers():
+    """COP<-metric pairs documented in docs/cops/metric_cop_mappings.json (from
+    cops_topology.json) that no spec implements. Documentation, not specification."""
+    import json as _json
+    path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "docs", "cops", "metric_cop_mappings.json")
+    try:
+        pairs = _json.load(open(path)).get("documented_only_pairs", [])
+    except (OSError, ValueError):
+        return None
+    out = defaultdict(list)
+    for cop, metric in pairs:
+        out[metric].append(cop)
+    return dict(out)
+
+
+def _estate_assessment(unread):
+    """Is an unconsumed metric a governance gap? An unconsumed metric alone is not.
+
+    required        a COP spec (collector/cops/specs.py, the source of truth) assigns the
+                    responsibility. A spec that assigns it also consumes it, so an unread
+                    metric is never spec-required; documentation alone does not make it so.
+    classification  covered_by_alternative_control | latent_unspecified (documented intent,
+                    no spec, no alternative control) | latent_unowned (no documentation,
+                    no spec, no control)"""
+    doc = _documented_consumers()
+    out = []
+    for m in unread:
+        alts = ALTERNATIVE_CONTROLS.get(m, [])
+        documented = (doc or {}).get(m, [])
+        cls = ("covered_by_alternative_control" if alts else
+               "latent_unspecified" if documented else "latent_unowned")
+        out.append({"metric": m, "required_by_spec": False,
+                    "documented_consumers": documented if doc is not None else "unknown",
+                    "alternative_controls": alts, "classification": cls})
+    return out
+
+
 def t_query_coverage_matrix(case, a, ctx):
     import signal_metrics
     readers = defaultdict(list)
@@ -827,6 +880,11 @@ def t_query_coverage_matrix(case, a, ctx):
             # An estate-level gap: a metric the estate computes that no COP consumes, whatever
             # its value in this case.
             "estate_level_gaps": unread,
+            # Two levels (decision 2026-11-04): active gaps affect this case; latent gaps are
+            # in the wider architecture whether or not this session triggered them. A latent
+            # item is a required gap only when a spec requires the responsibility and nothing
+            # covers it.
+            "estate_gap_assessment": _estate_assessment(unread),
             "coverage_criteria": "case-level: an observed field or observable type with no metric "
                                  "reader or no COP, or a metric in an attention state no COP reads; "
                                  "estate-level: a computed metric no COP consumes"}
@@ -989,7 +1047,27 @@ def t_reconstruct_trace(case, a, ctx):
             "unattributed_effects": [x.get("observable_id") or x.get("effect_id") for x in s.effects
                                      if x.get("attributed_to") == "unaccounted"][:10],
             "disk_changes": len(s.effects),
-            "disk_changes_attributed": sum(1 for x in s.effects if x.get("attributed_to") not in (None, "unaccounted"))}
+            "disk_changes_attributed": sum(1 for x in s.effects if x.get("attributed_to") not in (None, "unaccounted")),
+            # Who is responsible, kept apart from which step caused what. An effect no
+            # step accounts for still has a responsible actor when it carries the
+            # session id of a session whose operator and agent are recorded.
+            "actor": {"operator": getattr(s, "operator", None), "agent_tool": getattr(s, "tool", None),
+                      "session_id": getattr(s, "id", None)},
+            "unattributed_effects_actor_known": sum(
+                1 for x in s.effects if x.get("attributed_to") == "unaccounted"
+                and _actor_known(s, x)),
+            "effects_without_actor": [x.get("observable_id") or x.get("effect_id") for x in s.effects
+                                      if not _actor_known(s, x)][:10],
+            "actions_without_actor": (len(acts) if acts and not getattr(s, "operator", None) else 0)}
+
+
+def _actor_known(s, effect):
+    """An effect's responsible actor is established when it belongs to a session whose
+    operator is recorded. Attribution to a step is a separate question."""
+    if effect.get("attributed_to") == "agent":
+        return bool(getattr(s, "operator", None))
+    has_session = effect.get("had_session", bool(effect.get("session_id")))
+    return bool(has_session and getattr(s, "operator", None))
 
 
 def t_check_decision_linkage(case, a, ctx):
