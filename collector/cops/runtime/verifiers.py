@@ -53,6 +53,7 @@ CATEGORIES = {
     "EX": "execution outcome",
     "MU": "memory-update validation",
     "RP": "reproducibility diagnostics",
+    "VS": "graded verification support",
 }
 
 # check id -> (version, category prefix, effect, independent, description)
@@ -73,6 +74,9 @@ CHECKS = {
     "EX-01": ("1", "EX", BLOCKS_ACTION, True, "an executed action's outcome was observed"),
     "MU-01": ("1", "MU", BLOCKS_MEMORY, True, "a memory write is owned, scoped, sourced and clean"),
     "RP-01": ("1", "RP", DIAGNOSTIC, False, "rule re-run or baseline agreement (not independent)"),
+    # Graded layer (runtime/support.py): computed after the checks above, from the evidence itself.
+    "VS-01": ("1", "VS", BLOCKS_FINDING, True, "valid evidence supports the candidate to the COP's minimum "
+                                                "(graded verification support)"),
 }
 
 

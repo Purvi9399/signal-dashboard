@@ -54,13 +54,14 @@ from .requirements import assess_requirements, required_unavailable, precheck as
 from .memory import MemoryAccessDenied, POLICIES, VERIFIED
 from .rules import RULES, DETERMINISTIC_TOOLS, evidence_conf
 from .tools import TOOLS, scan
-from .verifiers import (au01, verify_finding, verify_action, verify_memory_update, blocking,
+from .verifiers import (R, au01, verify_finding, verify_action, verify_memory_update, blocking,
                         REGISTRY_VERSION, RECOVERABLE)
 from .profiles import build_profiles
 from .llm import LLMBudget
 
 from .actions import DryRunAdapter, lifecycle as action_lifecycle
 from . import triage as TRI
+from . import support as SUP
 
 MODES = ("dry_run", "supervised")
 SECURITY_CODES = ("unknown_tool", "not_in_allowlist", "out_of_scope")
@@ -714,6 +715,16 @@ def independent_verify(state):
                               "evidence_ceiling": ceiling, "baseline": state.get("baseline"),
                               "rule_rerun": rerun})
     results = [r if isinstance(r, dict) else r.to_dict() for r in results]
+    # graded layer: how far valid evidence supports the candidate (runtime/support.py)
+    sup = SUP.assess(cop, f, results, state["picture"].get("rows", []), state["tool_calls"], up,
+                     state.get("memory_view") or {},
+                     state.get("baseline") if state["classification"] == "llm" else None, rt.case, ceiling)
+    if f.get("status") != SUBSTANTIVE and not f.get("rejected_candidate"):
+        vs = ("NOT_RUN", "NOT_SUBSTANTIVE", f"finding status {f.get('status')}: {sup['basis']}")
+    else:
+        vs = SUP.verifier_result(sup, bool(blocking(results, BLOCKS_FINDING)))
+    results.append(R("VS-01", *vs))
+    f["verification_support"] = sup
     blocked = blocking(results, BLOCKS_FINDING)
     f["lineage"] = _lineage(f, up)
     quals = [f"{r['check_id']}: {r['reason_code']}" for r in results if r["result"] == "WARN"]
@@ -728,6 +739,7 @@ def independent_verify(state):
                                 "reason": "candidate finding failed verification; action withdrawn"}
     else:
         f["verified"] = f["status"] == SUBSTANTIVE
+        f["provisional"] = sup["decision"] == SUP.PROVISIONAL
         if f["verified"] and f["confidence"] > ceiling:
             quals.append(f"confidence {f['confidence']} capped at evidence ceiling {ceiling}")
             f["confidence"] = round(ceiling, 3)

@@ -103,6 +103,9 @@ select{font:inherit;font-size:13px;padding:3px 6px;border-radius:6px;border:1px 
 .bar .autonomous{background:var(--pass-bg);color:var(--pass)}.bar .assisted{background:var(--live-bg);color:var(--live)}
 .bar .specialist{background:var(--sim-bg);color:var(--sim)}.bar .human{background:var(--fail-bg);color:var(--fail)}
 .score{display:inline-block;min-width:22px;text-align:center;border-radius:5px;font-weight:700;border:1px solid var(--line);background:var(--soft)}
+.vs{display:inline-block;padding:1px 6px;border-radius:4px;font-size:11px;font-weight:600;border:1px solid currentColor}
+.vs-SUPPORTED{color:#1a7f37}.vs-PROVISIONALLY_SUPPORTED{color:#9a6700}.vs-REJECTED{color:#cf222e}.vs-INSUFFICIENT_EVIDENCE{color:#6e7781}
+.dir-supports{color:#1a7f37}.dir-opposes{color:#cf222e}.dir-unknown{color:#6e7781}.dir-neutral{color:#57606a}
 .qbar{display:inline-block;width:70px;height:8px;background:var(--soft);border-radius:4px;position:relative;vertical-align:middle;border:1px solid var(--line)}
 .qbar i{position:absolute;left:0;top:0;bottom:0;background:var(--accent);border-radius:4px}
 .qbar b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);opacity:.55}
@@ -147,6 +150,19 @@ fictional cases: a <b>normal</b> one, an <b>abnormal</b> one, and one where the 
 </div>
 
 <div class="tiles" id="tiles"></div>
+
+<h2>Verification support: how far valid evidence supports each finding</h2>
+<p class="muted">Computed during verification by <span class="mono">cops/runtime/support.py</span> (check VS-01), for every candidate.
+Hard checks (references, provenance, factual correctness) pass or fail. The graded layer then weighs each COP's own evidence
+components. For each component, w is its relevance weight, r its reliability and s its strength:
+<b>V</b> = Σ w·r·s over the components that support the candidate, divided by Σ w;
+<b>against</b> is the same sum over the components that point to the opposite;
+<b>unknown</b> = 1 − V − against. Missing evidence is unknown, never against.
+The thresholds are derived from each COP's component weights and the runtime's existing telemetry levels (0.9 sufficient, 0.6 degraded).
+The model's self-reported confidence is not an input.</p>
+<div class="panel" id="vs-summary"></div>
+<div class="tbl"><table class="vx" id="vs-cases"></table></div>
+<details><summary><b>Every COP's evidence components and derived thresholds</b></summary><div class="body" id="vs-profiles"></div></details>
 
 <h2>Graded verification and triage</h2>
 <p class="muted">Computed by the runtime's <span class="mono">grade_and_route</span> step (cops/runtime/triage.py) for every case below,
@@ -361,6 +377,7 @@ function trace(t) {
      `<span class="badge ${v.result === 'PASS' ? 'PASS' : v.result === 'FAIL' ? 'FAIL' : 'UNTESTED'}">${esc(v.check)} ${esc(v.result)}</span>`).join(' ')}</p>
      ${verifierTable(t)}
      ${rec ? `<p><b>Recovery:</b> ${rec.attempted ? 'one re-assessment ran' + (rec.outcome ? ' → ' + esc(rec.outcome) : '') : 'not attempted'}${rec.recoverable === false ? ' · not recoverable' : rec.recoverable ? ' · recoverable' : ''}${rec.reason ? ' — ' + esc(rec.reason) : ''}</p>` : ''}</div>
+  ${vsStep(t.verification_support)}
   ${triageStep(t.triage, t)}
   <div class="step"><h4>Final decision</h4><p><span class="lab">${esc(d.label)}</span> · ${esc(d.status)} · confidence ${esc(d.confidence)} · verified ${esc(d.verified)}
      ${i.rejected_candidate ? ` · rejected candidate <span class="lab">${esc(i.rejected_candidate)}</span>` : ''}</p>
@@ -490,6 +507,25 @@ function tierB(t) { return t ? `<span class="tier tier-${t}">${esc(t)}</span>` :
 function ocB(o) { return o ? `<b class="oc-${o}">${esc(o)}</b>` : '<span class="muted">–</span>'; }
 function pct(x) { return (100 * x).toFixed(1) + '%'; }
 function qbar(q, th) { return `<span class="qbar"><i style="width:${Math.round(100 * q)}%"></i>${th ? `<b style="left:${Math.round(100 * th)}%"></b>` : ''}</span> <span class="mono">${esc(q)}</span>`; }
+function vsB(d) { return d ? `<span class="vs vs-${d}">${esc(d.replace('_EVIDENCE', '').replace('PROVISIONALLY_', 'PROVISIONALLY '))}</span>` : '<span class="muted">–</span>'; }
+function vsStep(v) {
+  if (!v) return '';
+  const th = v.thresholds, dim = v.dimensions;
+  const rows = v.components.map(c => { const it = c.item;
+    return `<tr><td class="mono">${esc(c.name)}</td><td>${esc(c.relevance)} ${c.weight}${c.relevance_note ? ' <span class="muted">(' + esc(c.relevance_note) + ')</span>' : ''}</td><td>${esc(c.required || '–')}</td>
+      <td><b class="dir-${it.direction}">${esc(it.applicable ? it.direction : 'n/a')}</b></td><td>${it.strength}</td><td>${it.reliability}</td><td class="mono">${c.contribution ?? '–'}</td><td>${esc(it.basis)}</td></tr>`; }).join('');
+  return `<div class="step"><h4>Verification support (VS-01)</h4>
+  <div class="kv"><span>candidate</span><span class="lab">${esc(v.label)} <span class="muted">(${esc(v.label_class || 'no proposition')}; assessed: ${esc(v.assessed)})</span></span>
+   <span>decision</span><span>${vsB(v.decision)} ${esc(v.basis)}</span>
+   <span>V / against / unknown</span><span class="mono">${v.score} / ${v.against} / ${v.unknown}</span>
+   <span>thresholds</span><span class="mono">supported ≥ ${th.supported_min} (and ≥ 2 sources, against ≤ ${th.max_against_supported}) · provisional ≥ ${th.provisional_min} · reject: against ≥ ${th.reject_min}</span>
+   <span>derivation</span><span class="muted">W = ${th.total_weight}, required weight ${th.required_weight}, primary ${th.primary_weight}, smallest corroborating ${th.smallest_corroborating_weight}; ρ 0.9 / 0.6</span>
+   <span>dimensions</span><span>relevance ${dim.relevance ?? '–'} · reliability ${dim.reliability ?? '–'} · completeness ${dim.completeness} · consistency ${dim.consistency ?? '–'} · corroboration ${dim.corroboration} (${esc(v.corroborating_sources.join(', ') || 'none')})</span>
+   <span>hard checks</span><span>${v.hard_checks.map(h => `${esc(h.check)} ${esc(h.result)}`).join(' · ')}</span>
+   <span>graded checks</span><span>${v.graded_checks.map(h => `${esc(h.check)} ${esc(h.result)}`).join(' · ')}</span>
+   ${v.limitations.length ? `<span>limitations</span><span>${esc(v.limitations.join('; '))}</span>` : ''}</div>
+  <div class="tbl"><table class="vx"><tr><th>Component</th><th>Relevance (w)</th><th>Required for</th><th>Direction</th><th>s</th><th>r</th><th>Contribution</th><th>Evidence</th></tr>${rows}</table></div></div>`;
+}
 function triageStep(x, t) {
   if (!x) return '';
   const s = x.evidence_support, c = x.confidence, q = x.perceived_handling_quotient, r = x.routing, a = x.action_selection, th = x.thresholds;
@@ -535,6 +571,22 @@ function triageStep(x, t) {
     Evidence-support scores: ${Object.entries(TS.scores).map(([k, v]) => `<span class="score">${k}</span> ${v}`).join(' · ')}.
     WATCH on an INCONCLUSIVE outcome: ${TS.watch_before_on_inconclusive} before, ${TS.watch_now_on_inconclusive} now. Actions on a PASS now: ${TS.action_on_pass_now.length}.
     Cases whose final action changed: ${TS.action_changed} of ${n}.</p>`;
+  const VS = S.verification_support || {};
+  document.getElementById('vs-summary').innerHTML = `<p><b>Decisions over ${n} cases</b> (the case's own COP):
+    ${Object.entries(VS.decisions || {}).map(([k, v]) => `${vsB(k)} ${v}`).join(' · ')}.
+    VS-01 changed the label of ${VS.vs01_blocked.length} case(s)${VS.vs01_blocked.length ? ': ' + esc(VS.vs01_blocked.join(', ')) : ''}.
+    Provisional findings whose action was capped: ${VS.provisional_capped.length}${VS.provisional_capped.length ? ' (' + esc(VS.provisional_capped.join(', ')) + ')' : ''}.</p>
+    <p class="muted">Bench verdicts with verification support: ${esc(JSON.stringify(VS.verdicts || {}))}; before it: ${esc(JSON.stringify(VS.verdicts_before || {}))}.</p>`;
+  document.getElementById('vs-cases').innerHTML = `<tr><th>Case</th><th>Candidate</th><th>Decision</th><th>V</th><th>Against</th><th>Unknown</th><th>Provisional ≥</th><th>Supported ≥</th><th>Sources</th><th>Basis</th></tr>` +
+    D.cases.map(c => { const v = (c.trace || {}).verification_support; if (!v) return '';
+      return `<tr><td><a href="#${anchor(c.id)}" onclick="openCase('${c.id}')" style="color:inherit">${esc(c.id)}</a></td><td class="lab">${esc(v.label)}</td><td>${vsB(v.decision)}</td>
+      <td>${qbar(v.score, v.thresholds.supported_min)}</td><td class="mono">${v.against}</td><td class="mono">${v.unknown}</td><td class="mono">${v.thresholds.provisional_min}</td><td class="mono">${v.thresholds.supported_min}</td>
+      <td>${v.dimensions.corroboration}</td><td>${esc(v.basis)}</td></tr>`; }).join('');
+  const SP_ = TC.support || {};
+  document.getElementById('vs-profiles').innerHTML = D.cops.map(k => { const p = SP_[k.key]; if (!p) return '';
+    return `<h4>${esc(k.name)} <span class="muted">(quiet label ${esc(p.quiet_label)})</span></h4><div class="tbl"><table class="vx"><tr><th>Component</th><th>Kind</th><th>Relevance</th><th>w</th><th>Required for</th><th>Source</th></tr>
+      ${p.components.map(c => `<tr><td class="mono">${esc(c.name)}</td><td>${esc(c.kind)}</td><td>${esc(c.relevance)}</td><td>${c.weight}</td><td>${esc(c.required || '–')}</td><td>${esc(c.source)}</td></tr>`).join('')}</table></div>
+      <p class="mono">${['quiet', 'attention'].map(cl => { const t = p.thresholds[cl]; return `${cl}: provisional ≥ ${t.provisional_min}, supported ≥ ${t.supported_min}, reject ≥ ${t.reject_min}`; }).join(' · ')}</p>`; }).join('');
   const rows = D.cases.map(c => {
     const x = (c.trace || {}).triage; if (!x) return '';
     const b = c.before_triage || {}, th = x.thresholds;

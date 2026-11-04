@@ -127,7 +127,14 @@ def test_policy_enforcement_paths():
     assert approved["label"] == "ALLOWED"                  # the approval was recorded in the session
     none_ = det("policy_enforcement", rows, "pe1", {})
     assert none_["finding"]["missing_dependencies"][0]["dependency"] == "policy_store"
-    assert "no policy store" in none_["finding"]["rationale"]
+    # Restated 2026-11-04 (graded verification support): with no policy store the rule's
+    # condition-only VIOLATION is no longer accepted. The policy evaluation is a required
+    # component for every Policy Enforcement label, and a missing policy cannot be
+    # replaced, so VS-01 leaves the evidence insufficient and the finding INCONCLUSIVE.
+    assert none_["finding"]["label"] == "INCONCLUSIVE"
+    assert none_["finding"]["rejected_candidate"]["rationale"].endswith("no rule was evaluated")
+    vs = none_["finding"]["verification_support"]
+    assert vs["decision"] == "INSUFFICIENT_EVIDENCE" and vs["required_unknown"] == ["policy_evaluation"]
 
 
 def test_policy_enforcement_never_turns_a_new_route_into_a_violation():

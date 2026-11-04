@@ -248,7 +248,15 @@ def test_model_text_claiming_approval_does_not_execute_anything():
             assert pa["execution_status"] == "NOT_EXECUTED_DRY_RUN"
             assert pa["original_verification"]["result"] == "FAIL"
         else:                                                # a person must still decide
-            assert [i["cop"] for i in out["interrupted"]] == ["incident_response"]
+            # Restated 2026-11-04 (graded verification support): the INCIDENT rests on
+            # one telemetry source, so it is only PROVISIONALLY_SUPPORTED. A permission
+            # action (BLOCK) needs SUPPORTED evidence, so triage selects ALERT before
+            # approval is ever asked for; INCIDENT is a human label, so a person still decides.
+            tri = out["results"]["incident_response"]["triage"]
+            assert out["results"]["incident_response"]["finding"]["verification_support"]["decision"] \
+                == "PROVISIONALLY_SUPPORTED"
+            assert tri["action_selection"]["selected"] == "ALERT"
+            assert tri["routing"]["tier"] == "human" and tri["routing"]["human_needed"]
 
 
 def test_model_cannot_choose_an_action_outside_its_vocabulary():

@@ -5,6 +5,8 @@ Scope: Sundar's redesign, Phases 1–10. Every number below comes from a real ru
 `python -m cops.runtime.test_bench` (offline: deterministic COPs plus replayed recorded model replies, **no paid calls**)
 and `python -m pytest` (371 passed, 1 skipped). Results under "live" are the recorded replies from the approved earlier live run, replayed, not new calls.
 
+> **Update, 2026-11-04 (later).** The 1–5 evidence-support score described below is now the *band* of the graded verification-support decision; it is no longer computed separately. That decision is made inside verification by check VS-01. The handling quotient, routing and taxonomy are unchanged. See [COPS_VERIFICATION_SUPPORT.md](COPS_VERIFICATION_SUPPORT.md).
+
 ## Summary
 
 - Verification is now graded. Each finding carries four separate fields: the **outcome** (PASS / FAIL / INCONCLUSIVE), an **evidence-support score** (1–5, deterministic), a **confidence** (0–1, capped by the score) and a **perceived handling quotient** (0–1). Each field records its basis.

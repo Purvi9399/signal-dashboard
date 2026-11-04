@@ -115,6 +115,7 @@ def trace_of(cop, r, view_c):
         "decision": {"label": f["label"], "status": f["status"], "confidence": f["confidence"],
                      "verified": f["verified"]},
         "triage": r.get("triage"),
+        "verification_support": f.get("verification_support"),
         "receipt": pa.get("dry_run_receipt"),
         "typed_action": pa.get("typed_action"),
     }
@@ -525,6 +526,34 @@ def load_before_triage(out_dir=DOCS):
     return {"file": BEFORE_TRIAGE_FILE, "generated": d.get("generated"), "cases": out}
 
 
+BEFORE_SUPPORT_FILE = "test_bench_results_before_support.json"
+
+
+def support_summary(cases, out_dir=DOCS):
+    """Verification-support decisions per case (the case's own COP), and what VS-01 changed."""
+    dec, blocked, capped = {}, [], []
+    for c in cases:
+        v = (c.get("trace") or {}).get("verification_support") or {}
+        if v:
+            dec[v["decision"]] = dec.get(v["decision"], 0) + 1
+        res = {x["check"]: x for x in (c.get("trace") or {}).get("verification") or []}
+        if (res.get("VS-01") or {}).get("result") == "FAIL":
+            blocked.append(c["id"])
+        sel = ((c.get("trace") or {}).get("triage") or {}).get("action_selection") or {}
+        if "PROVISIONALLY_SUPPORTED" in (sel.get("reason") or ""):
+            capped.append(c["id"])
+    verdicts = {}
+    for c in cases:
+        verdicts[c["verdict"]] = verdicts.get(c["verdict"], 0) + 1
+    before = {}
+    path = os.path.join(out_dir, BEFORE_SUPPORT_FILE)
+    if os.path.exists(path):
+        for c in json.load(open(path))["cases"]:
+            before[c["verdict"]] = before.get(c["verdict"], 0) + 1
+    return {"decisions": dec, "vs01_blocked": blocked, "provisional_capped": capped,
+            "verdicts": verdicts, "verdicts_before": before, "before_file": BEFORE_SUPPORT_FILE}
+
+
 def triage_summary(cases, before):
     """Observed routing, outcomes and action changes. Counted, never adjusted."""
     from .triage import distribution
@@ -559,11 +588,13 @@ def triage_summary(cases, before):
 
 def triage_config():
     """The registries the page shows: thresholds, weights, specialists, taxonomy, typed matrix."""
+    from . import support as SUP
     from . import triage as TR
     from .. import authority as AU
     from ..specs import SPECS
     return {"version": TR.TRIAGE_VERSION, "thresholds": {k: v.to_dict() for k, v in TR.THRESHOLDS.items()},
             "weights": TR.WEIGHTS, "confidence_cap": TR.CONFIDENCE_CAP, "score_meaning": TR.SCORE_MEANING,
+            "support": SUP.static_profiles(), "support_version": SUP.SUPPORT_VERSION,
             "specialists": {k: {kk: (list(vv) if isinstance(vv, tuple) else vv) for kk, vv in v.items()}
                             for k, v in TR.SPECIALISTS.items()},
             "label_actions": {k: {lab: list(x) for lab, x in v.items()} for k, v in TR.LABEL_ACTIONS.items()},
@@ -757,6 +788,7 @@ def main(argv=None):
         c["before_triage"] = bt["cases"].get(c["id"])
     s = summary(cases, fleet)
     s["triage"] = triage_summary(cases, bt)
+    s["verification_support"] = support_summary(cases, a.out)
     cops = [{"key": k, "name": BY_KEY[k].name, "question": BY_KEY[k].behavioural_question,
              "classification": "llm" if k in LLM_COPS else "deterministic",
              "labels": list(BY_KEY[k].interpretations), "permitted_actions": list(BY_KEY[k].permitted_actions)}

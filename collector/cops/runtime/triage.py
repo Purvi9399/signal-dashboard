@@ -210,6 +210,43 @@ def evidence_support(cop, f, results, suff, upstream, evidence_ceiling):
                     provisional=score <= 3)
 
 
+def band_from_verification_support(vs, f):
+    """The 1-5 band of the graded verification-support decision (runtime/support.py).
+    The band is a coarse display of that decision. It is not a second assessment."""
+    d = vs["decision"]
+    if d == "REJECTED":
+        return 1, f"REJECTED: {vs['basis']}"
+    if d == "INSUFFICIENT_EVIDENCE":
+        hard_missing = vs.get("required_unknown") or f.get("status") in (MISSING_DEPENDENCY, FAILED)
+        return (1 if hard_missing else 2), f"INSUFFICIENT_EVIDENCE: {vs['basis']}"
+    if d == "PROVISIONALLY_SUPPORTED":
+        return 3, f"PROVISIONALLY_SUPPORTED: {vs['basis']}"
+    full = vs["dimensions"]["completeness"] >= 1.0 and not vs["against"]
+    return (5 if full else 4), f"SUPPORTED: {vs['basis']}" + ("; every component known, nothing against"
+                                                             if full else "")
+
+
+def _apply_verification_support(support, vs, f):
+    score, rule = band_from_verification_support(vs, f)
+    for c in vs["components"]:
+        it = c["item"]
+        if it["direction"] == "supports":
+            support["supporting"].append({"kind": c["name"], "evidence": [it["basis"][:200]],
+                                          "contribution": c.get("contribution")})
+        elif it["direction"] in ("opposes", "unknown") and it["applicable"]:
+            support["limiting"].append({"kind": "against" if it["direction"] == "opposes" else "unknown",
+                                        "item": c["name"], "detail": it["basis"][:200],
+                                        "material": bool(c["required"]) or it["direction"] == "opposes"})
+    for lim in vs.get("limitations") or []:
+        support["limiting"].append({"kind": "provisional_limitation", "item": lim, "material": True})
+    support.update(score=score, meaning=SCORE_MEANING[score], rule=rule,
+                   provisional=vs["decision"] == "PROVISIONALLY_SUPPORTED",
+                   verification_support={k: vs[k] for k in ("decision", "basis", "score", "against", "unknown",
+                                                            "dimensions", "label")},
+                   derived_from="verification_support")
+    return support
+
+
 def _support(score, rule, reading, supporting, limiting, con, candidate_verification, provisional=False):
     return {"score": score, "meaning": SCORE_MEANING[score], "rule": rule, "reading": reading,
             "candidate_verification": candidate_verification, "provisional": provisional,
@@ -263,7 +300,11 @@ def handling_quotient(cop, f, outcome, support, suff, tool_calls, upstream, evid
     core = [i for i in items if i.get("kind") in ("REQUIRED", "METRIC") and i["state"] != "NOT_APPLICABLE"]
     ok = [i for i in core if i["state"] in OK_STATES]
     comp = {}
-    comp["evidence_strength"] = ((support["score"] - 1) / 4, f"score {support['score']} -> (score-1)/4")
+    # Unchanged formula. The score is now the band of the verification-support decision,
+    # so the quotient reads the evidential classification without becoming it.
+    comp["evidence_strength"] = ((support["score"] - 1) / 4, f"score {support['score']} -> (score-1)/4"
+                                 + (f" (band of {support['verification_support']['decision']})"
+                                    if support.get("verification_support") else ""))
     comp["completeness"] = ((len(ok) / len(core)) if core else 1.0,
                             f"{len(ok)} of {len(core)} required/metric items available")
     lab = f.get("label")
@@ -626,6 +667,23 @@ def _cause(cop, f, suff, upstream, recovery, results):
             return "recovery_exhausted", rec
         if rec.get("recoverable"):
             return "rejected_recoverable", rec
+        vs01 = next((r for r in results if r["check_id"] == "VS-01" and r["result"] == FAIL), None)
+        if vs01:
+            # the candidate passed every hard check; graded support rejected it
+            vs = f.get("verification_support") or {}
+            if vs01["reason_code"] == "CONTRARY_EVIDENCE":
+                return "candidate_disproved", [vs01]
+            unk = vs.get("unknown_items") or []
+            retr = [u for u in unk if u.get("retrievable_with")]
+            if retr:
+                return "missing_retrievable", [{"item": u["component"], "retrieve_with": u["retrievable_with"]}
+                                               for u in retr]
+            if vs.get("required_unknown"):
+                return "missing_authoritative", [{"item": n} for n in vs["required_unknown"]]
+            ups = [u for u in unk if u["component"].startswith("upstream:")]
+            if ups:
+                return "missing_upstream", [{"item": "finding:" + u["component"].split(":", 1)[1]} for u in ups]
+            return "support_weak", [vs01]
         disproved = [r for r in results if r["result"] == FAIL and (
             r["check_id"] == "MC-01" or (r["check_id"] == "SC-01" and any(
                 x.get("code") == "VALUE_MISMATCH" for x in r.get("failures") or [])))]
@@ -650,6 +708,9 @@ def _cause(cop, f, suff, upstream, recovery, results):
 
 
 POLICY_ARTIFACTS = ("policy_store", "entitlements")
+# Action groups that change what the agent may do or undo its work. They need
+# SUPPORTED evidence; a provisionally supported finding may notify or coordinate.
+PROVISIONAL_BARRED_GROUPS = ("permission", "recovery")
 
 
 def _first_permitted(spec, names):
@@ -667,6 +728,9 @@ def classify(cop, f, results, suff, tool_calls, upstream, evidence_ceiling, memo
     th = THRESHOLDS[cop]
     sp = SPECIALISTS[cop]
     support = evidence_support(cop, f, results, suff, upstream, evidence_ceiling)
+    vs = f.get("verification_support")
+    if vs:
+        support = _apply_verification_support({**support, "supporting": [], "limiting": []}, vs, f)
     outcome, outcome_reason = outcome_of(cop, f)
     conf = confidence_basis(f, support, memory_view or {}, llm_assessment)
     proposed = typed((f.get("proposed_action") or {}).get("action") or "NONE")
@@ -705,6 +769,12 @@ def classify(cop, f, results, suff, tool_calls, upstream, evidence_ceiling, memo
                              (f"above the {max_tier} ceiling for {f['label']}" if proposed != "NONE"
                               else "no action on a verified attention reading"))
                           + f"; the label's default {action} is selected")
+        if f.get("provisional") and TAXONOMY[typed(action)].group in PROVISIONAL_BARRED_GROUPS:
+            # a provisional finding may notify and coordinate, not change what the agent may do
+            capped = _first_permitted(spec, ("ALERT", "ESCALATE", "WATCH", "NONE"))
+            sel_reason += f"; but the finding is only PROVISIONALLY_SUPPORTED, and a " \
+                          f"{TAXONOMY[typed(action)].group} action needs SUPPORTED evidence, so {capped} instead"
+            action = capped
         if action == "NONE":
             sel_reason += ". No remedial action: " + ("the tag is the COP's output; remediation belongs "
                                                       "to downstream COPs" if cop == "classification_tagging"
@@ -753,6 +823,10 @@ def classify(cop, f, results, suff, tool_calls, upstream, evidence_ceiling, memo
         elif cause == "missing_upstream":
             action, sel_reason = "REQUEST_COP_SUPPORT", "upstream finding(s) missing or unverified: " + \
                 ", ".join(i["item"] for i in cause_detail)
+        elif cause == "support_weak":
+            action, sel_reason = "NONE", "every hard check passed, but the valid evidence does not reach this " \
+                                         "COP's provisional minimum and nothing more can be retrieved: undecided, " \
+                                         "not disproved. Nothing is done to the agent; a reviewer sees the case"
         elif cause == "rejected_unrecoverable":
             action, sel_reason = "DELEGATE_TO_SPECIALIST", "rejection is not recoverable with existing evidence"
         else:
@@ -812,7 +886,8 @@ def classify(cop, f, results, suff, tool_calls, upstream, evidence_ceiling, memo
             action, tier = "DELEGATE_TO_SPECIALIST", SPECIALIST
             primary += f"; quotient {q} below the {cop} specialist bar {th.specialist}, so delegated instead"
         if action == "NONE":
-            tier = {"cop_error": HUMAN, "investigation_not_run": ASSISTED}.get(cause, AUTONOMOUS)
+            tier = {"cop_error": HUMAN, "investigation_not_run": ASSISTED,
+                    "support_weak": ASSISTED}.get(cause, AUTONOMOUS)
         rules_fired.append("R6 inconclusive cause")
     if repeated and outcome == INCONC and action == "DELEGATE_TO_SPECIALIST":
         tier = SPECIALIST

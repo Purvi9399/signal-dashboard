@@ -118,6 +118,7 @@ def summarise(out, rt, extra=None):
             "action": r["proposed_action"]["action"],
             "typed_action": r["proposed_action"].get("typed_action") or r["proposed_action"]["action"],
             "triage": r.get("triage"),
+            "verification_support": f.get("verification_support"),
             "requested_action": r["proposed_action"].get("requested_action"),
             "execution_status": r["proposed_action"]["execution_status"],
             "verifier": {x["check_id"]: x["result"] for x in r["verifier_results"]},

@@ -42,6 +42,18 @@ What each part of the graph guarantees:
 - **A rejected candidate is kept for audit.** When a `BLOCKS_FINDING` check fails, `independent_verify` sets status `REJECTED_BY_VERIFIER` and label `INCONCLUSIVE`. It keeps the candidate under `rejected_candidate`, withdraws the proposed action and records the reason. When the finding passes, confidence is capped at the evidence ceiling that Runtime Monitoring's verdict implies.
 - **Required evidence gates the quiet label.** `runtime/requirements.py` lists, per COP, the authoritative artifacts its quiet label depends on, as REQUIRED, OPTIONAL or (conditionally) NOT_APPLICABLE. When a REQUIRED artifact is absent, `computational_baseline` turns a rule's quiet label into INCONCLUSIVE with status `MISSING_DEPENDENCY` (the withheld label is kept as `gated_label`), and DS-01 rejects an LLM's quiet label. Every finding carries `evidence_requirements` with each artifact's kind and status.
 - **Authority comes from the existing table, and the original proposal is checked first.** `authority_check` runs AU-01 on the action exactly as the COP proposed it, before anything is substituted, and records it as `original_verification` (`subject: original_proposal`). It then uses the existing `authority.check`: in dry run, intervening actions are recorded as substitutes (BLOCK becomes ALERT), and an action the COP may not take becomes its fallback. The substitute is recorded as `corrected_proposal`, and AU-01 and PE-01 run again on it (`subject: final_action`); the outcome is `final_authority`. PE-01 can block the final action outright (`NOT_EXECUTED_BLOCKED`).
+- **Verification has a hard layer and a graded layer.** The hard checks are:
+  - references (EV-01 and EV-02);
+  - provenance (ID-01 and ID-02);
+  - factual correctness (MC-01 and SC-01);
+  - mandatory policy and authority on actions (PE-01, AU-01 and AU-02).
+
+  Each of these passes or fails. After them, `independent_verify` runs the graded layer (`support.assess`, verifier VS-01). It measures how far valid evidence supports the candidate, using the COP's explicit evidence components:
+  - **V** is the support;
+  - **against** is the evidence for the opposite;
+  - **unknown** is the rest. Missing evidence is never counted as against.
+
+  The decision is SUPPORTED, PROVISIONALLY_SUPPORTED, REJECTED or INSUFFICIENT_EVIDENCE. The thresholds are derived from the COP's component weights and the existing telemetry levels. A finding that is not at least provisionally supported is withheld through the normal rejection path. The full specification is in [COPS_VERIFICATION_SUPPORT.md](COPS_VERIFICATION_SUPPORT.md).
 - **Graded verification and triage come after the verifiers and before authority.** `grade_and_route` (contract `cops-runtime/2`, `triage-1`, `thresholds-1`) calls `triage.classify`. It reads the verifier results and the evidence-sufficiency check, and stores `finding["triage"]` with:
   - the outcome (PASS / FAIL / INCONCLUSIVE);
   - the evidence-support score (1–5) with its supporting and limiting evidence;

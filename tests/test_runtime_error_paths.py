@@ -413,6 +413,34 @@ def test_an_intervention_with_no_policy_basis_is_blocked_before_approval():
     pa = out["proposed_action"]
     assert out["finding"]["verified"], out["finding"].get("rejected_candidate")
     assert pa["original_proposal"]["action"] == "BLOCK" and pa["original_verification"]["result"] == "PASS"
+    # Restated 2026-11-04 (graded verification support): this INCIDENT rests on telemetry
+    # alone, so it is PROVISIONALLY_SUPPORTED, and a permission action is never selected on
+    # provisional evidence. BLOCK becomes ALERT before PE-01 is reached. PE-01's
+    # no_policy_store failure is still asserted directly on the verifier above, and on a
+    # SUPPORTED finding below.
+    assert out["finding"]["verification_support"]["decision"] == "PROVISIONALLY_SUPPORTED"
+    assert out["triage"]["action_selection"]["selected"] == "ALERT"
+    assert pa["action"] == "ALERT" and pa["execution_status"] != "EXECUTED"
+    assert not out.get("interrupted") and r.enforcement.applied == []
+
+
+def test_pe01_still_blocks_a_supported_intervention_with_no_policy_basis(monkeypatch):
+    """Isolates PE-01 from the graded layer: the support decision is forced to
+    SUPPORTED, so BLOCK reaches authority_check, where PE-01 must still stop it."""
+    from cops.runtime import graph as G
+    real = G.SUP.assess
+    monkeypatch.setattr(G.SUP, "assess", lambda *a, **k: {**real(*a, **k), "decision": "SUPPORTED",
+                                                          "basis": "forced for this test"})
+    rows = E._estate(E.sensitive_session("pc", 9))
+
+    def assess_fn(p, n):
+        hot = [r["metric"] for r in p["evidence"] if r["evidence"] == "OBSERVED" and r["state"] != "NORMAL"]
+        return FX.conclude("secret exposed", "INCIDENT", 0.8, [FX.cm(p, m) for m in hot[:2]], "r", "BLOCK")
+    r = E.make_runtime("pc-case", "pc", rows, {}, provider=scripted(lambda p: FX.plan("x", [], [], []), assess_fn),
+                       mode="supervised", live=True)
+    out = run_cop(r, "incident_response")
+    pa = out["proposed_action"]
+    assert out["triage"]["action_selection"]["selected"] == "BLOCK_OPERATION"
     assert pa["execution_status"] == "NOT_EXECUTED_BLOCKED"
     assert "PE-01 no_policy_store" in pa["authority_reason"]
     assert pa["final_authority"]["authorised"] is False
