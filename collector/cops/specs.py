@@ -10,8 +10,8 @@ silently papered over.
 The same metric appears under several COPS on purpose. It is computed
 once; each COP reads it through its own question.
 
-Only three are active. The rest are defined so their inputs can be
-checked, not run.
+Four are active for the original COPRunner (ACTIVE). All eighteen run in
+the LangGraph runtime (cops/runtime), which reads these specs directly.
 """
 
 from .models import COPReadSpec
@@ -210,6 +210,94 @@ SPECS = [
       interpretations=("ADEQUATE", "GAP", "STRUCTURAL_CHANGE_RECOMMENDED"),
       cadence="aggregate"),
 ]
+
+# ---------------------------------------------------------------- edges
+#
+# One authoritative edge list: what each COP *consumes*. A consumer declares
+# the upstream findings its rule reads, so the edge lives where the reading
+# happens. downstream_cops is derived from it below rather than maintained by
+# hand; the hand-written lists that were in the specs are kept in
+# DECLARED_DOWNSTREAM only so the differences can be reported (see
+# edge_report and the Governance Architecture COP).
+#
+# Two hand-written edges formed cycles and could not both hold in one case
+# pass: resource_management <-> workload_optimization and
+# risk_mitigation <-> incident_response. They are resolved as Resource ->
+# Workload and Incident -> Risk ("verified incident outcomes support Risk
+# Mitigation"). Both are spec changes that need agreement before they are
+# ported to project-signal.
+CONSUMES = {
+    "runtime_monitoring":          (),
+    "interaction_discovery":       ("runtime_monitoring",),
+    "agent_lifecycle_management":  ("runtime_monitoring", "interaction_discovery"),
+    "context_memory":              ("runtime_monitoring",),
+    "workflow_orchestration":      ("runtime_monitoring",),
+    "behavior_analytics":          ("runtime_monitoring", "context_memory", "workflow_orchestration"),
+    "anomaly_detection":           ("runtime_monitoring", "behavior_analytics"),
+    "resource_management":         ("runtime_monitoring",),
+    "workload_optimization":       ("runtime_monitoring", "resource_management"),
+    "policy_enforcement":          ("runtime_monitoring", "interaction_discovery",
+                                    "agent_lifecycle_management", "anomaly_detection"),
+    "classification_tagging":      ("anomaly_detection", "agent_lifecycle_management"),
+    "recovery_resilience":         ("behavior_analytics",),
+    "incident_response":           ("runtime_monitoring", "anomaly_detection", "policy_enforcement",
+                                    "interaction_discovery", "workflow_orchestration",
+                                    "recovery_resilience"),
+    "risk_mitigation":             ("anomaly_detection", "interaction_discovery", "policy_enforcement",
+                                    "resource_management", "incident_response"),
+    "audit_traceability":          ("runtime_monitoring", "interaction_discovery", "policy_enforcement"),
+    "governance_intelligence":     ("classification_tagging", "recovery_resilience", "incident_response"),
+    "knowledge_policy_management": ("governance_intelligence", "policy_enforcement"),
+    "governance_architecture":     ("governance_intelligence", "knowledge_policy_management",
+                                    "audit_traceability"),
+}
+
+DECLARED_DOWNSTREAM = {s.key: tuple(s.downstream_cops) for s in SPECS}
+
+
+def _consumers(key):
+    return tuple(k for k, ups in CONSUMES.items() if key in ups)
+
+
+import dataclasses as _dc
+SPECS = [_dc.replace(s, consumes_decisions_from=CONSUMES[s.key], downstream_cops=_consumers(s.key))
+         for s in SPECS]
+
+
+def topological_order(keys=None):
+    """Every COP after the ones it consumes. Raises on a cycle."""
+    keys = list(keys or CONSUMES)
+    want, out, temp = set(keys), [], set()
+
+    def visit(k):
+        if k in out:
+            return
+        if k in temp:
+            raise ValueError(f"cycle through {k}")
+        temp.add(k)
+        for u in CONSUMES[k]:
+            if u in want:
+                visit(u)
+        temp.discard(k)
+        out.append(k)
+
+    for k in [x for x in [s.key for s in SPECS] if x in want]:
+        visit(k)
+    return out
+
+
+def edge_report():
+    """Hand-written hand-offs that the consumption list does not carry, and the reverse."""
+    rows = []
+    for key, declared in DECLARED_DOWNSTREAM.items():
+        derived = set(_consumers(key))
+        for d in declared:
+            if d not in derived:
+                rows.append({"from": key, "to": d, "issue": "declared_not_consumed"})
+        for d in sorted(derived - set(declared)):
+            rows.append({"from": key, "to": d, "issue": "consumed_not_declared"})
+    return rows
+
 
 BY_KEY = {s.key: s for s in SPECS}
 ACTIVE = tuple(s.key for s in SPECS if s.active)

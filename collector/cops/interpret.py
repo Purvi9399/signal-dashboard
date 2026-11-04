@@ -20,7 +20,7 @@ Both return the same dict:
 
 import json, os, urllib.request
 
-from .models import ATTENTION, ACTIONS
+from .models import ATTENTION, ACTIONS, INCONCLUSIVE, RESERVED_INTERPRETATIONS
 
 SEV = {"NORMAL": "NONE", "UNKNOWN": "NONE", "WARNING": "LOW", "EXCEPTION": "MEDIUM", "CRITICAL": "HIGH"}
 RANK = {"NONE": 0, "LOW": 1, "MEDIUM": 2, "HIGH": 3, "CRITICAL": 4}
@@ -409,10 +409,15 @@ def _audit_traceability(self, events, up, ctx, evid):
                   if getattr(v, "decision_status", None) == "BLOCKED_BY_EVIDENCE"]
 
     if not judged and not blocked_up:
-        return _out("UNATTRIBUTABLE", 0.3 * scale, "MEDIUM", "ALERT",
-                    "nothing here can be attributed or reconstructed",
-                    "unknown: " + ", ".join(
+        # Nothing could be judged. That is a gap in the record, not a finding
+        # that the record is unattributable: concluding UNATTRIBUTABLE from
+        # empty rows was the B4 defect.
+        return _out(INCONCLUSIVE, 0.0, "NONE", "WATCH",
+                    "no attribution measure could be judged; the trace cannot be "
+                    "assessed either way",
+                    ("unknown: " + ", ".join(
                         f"{e.metric_id} ({e.features.get('reason')})" for e in present))
+                    if present else "no attribution metric was supplied")
 
     parts = [f"{e.metric_id}={e.value} vs {e.threshold} ({e.state})" for e in hot + soft]
     if blocked_up:
@@ -458,10 +463,17 @@ def _classification_tagging(self, events, up, ctx, evid):
     hot = _hot(present, states=("EXCEPTION", "CRITICAL"))
     scale = min(1.0, evid / 0.9)
 
+    if not judged:
+        # No row that could support any family. UNCLASSIFIED would read as
+        # "looked and found nothing to classify", which is not what happened.
+        return _out(INCONCLUSIVE, 0.0, "NONE", "NONE", "",
+                    "nothing classifiable could be judged" +
+                    ("; unknown: " + ", ".join(f"{e.metric_id} ({e.features.get('reason')})"
+                                              for e in present) if present else
+                     "; no classifiable metric was supplied"))
     if not hot:
-        return _out("UNCLASSIFIED", (0.7 if judged else 0.2) * scale, "NONE", "NONE", "",
-                    f"{len(judged)} classifiable conditions, none above bounds"
-                    if judged else "nothing classifiable could be judged")
+        return _out("UNCLASSIFIED", 0.7 * scale, "NONE", "NONE", "",
+                    f"{len(judged)} classifiable conditions, none above bounds")
 
     ranked = [(fam, m[k]) for k, fam in FAMILY
               if k in m and m[k] in hot]
@@ -545,7 +557,7 @@ class LLMInterpreter:
 
     @staticmethod
     def validate(spec, events, out):
-        if out.get("interpretation") not in spec.interpretations:
+        if out.get("interpretation") not in tuple(spec.interpretations) + RESERVED_INTERPRETATIONS:
             raise ValueError(f"interpretation {out.get('interpretation')!r} not allowed")
         if out.get("action") not in spec.permitted_actions or out["action"] not in ACTIONS:
             raise ValueError(f"action {out.get('action')!r} not permitted")

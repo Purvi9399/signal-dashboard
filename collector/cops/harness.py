@@ -181,6 +181,10 @@ class Registry:
 def reverify(spec, out, events, strict=False):
     """Check the interpretation against what was actually supplied.
 
+    This is a schema and vocabulary check, not an independent verifier: it
+    does not recompute anything and cannot catch a wrong reading that uses
+    allowed labels. The independent checks live in cops/runtime/verifiers.py.
+
     Nothing here trusts the interpreter. An interpretation outside the COP's
     vocabulary, an action it may not take, a confidence out of range, or a
     metric it cited but was never given are all rejected rather than recorded.
@@ -188,7 +192,8 @@ def reverify(spec, out, events, strict=False):
     problems = []
     supplied = {e.metric_id for e in events} if events else set()
 
-    if out.get("interpretation") not in getattr(spec, "interpretations", ()):
+    from .models import RESERVED_INTERPRETATIONS
+    if out.get("interpretation") not in tuple(getattr(spec, "interpretations", ())) + RESERVED_INTERPRETATIONS:
         problems.append(f"interpretation {out.get('interpretation')!r} is not one of "
                         f"{spec.interpretations}")
     if out.get("action") not in getattr(spec, "permitted_actions", ()):
@@ -219,7 +224,8 @@ class COPAgent:
     """
 
     def __init__(self, spec, cfg, interpreter, evidence_service, registry,
-                 finalise, authority_check, gap_registry=None, mode="dry_run"):
+                 finalise, authority_check, gap_registry=None, mode="dry_run",
+                 confirm=None):
         self.spec, self.cfg = spec, cfg
         self.interpreter = interpreter
         self.evidence = evidence_service
@@ -228,6 +234,9 @@ class COPAgent:
         self.authority = authority_check
         self.gaps = gap_registry
         self.mode = mode
+        # confirm(action, session_id) -> bool: observes whether an attempted
+        # action took effect. Without one, an attempt is never called CONFIRMED.
+        self.confirm = confirm
 
     def run(self, session_id, events, upstream=None, context=None):
         st = RunState(run_id=uuid.uuid4().hex[:12], cop=self.spec.key,
@@ -321,7 +330,16 @@ class COPAgent:
                 st.action_status = "ATTEMPTED"
                 if not st.to(Phase.CONFIRM):
                     return self._end(st, out, env)
-                st.action_status = "CONFIRMED"
+                if self.confirm is None:
+                    st.action_status = "ATTEMPTED_UNCONFIRMED"
+                elif self.confirm(out["action"], session_id):
+                    st.action_status = "CONFIRMED"
+                else:
+                    # a failed outcome check is a failed action, not a done one
+                    st.action_status = "FAILED"
+                    st.stop_reason = "action_outcome_unconfirmed"
+                    st.to(Phase.FAILED)
+                    return self._end(st, out, env)
             else:
                 st.action_status = "NOT_ATTEMPTED"
                 st.stop_reason = ("blocking_evidence_established"

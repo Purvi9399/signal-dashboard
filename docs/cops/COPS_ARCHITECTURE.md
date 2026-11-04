@@ -1,5 +1,7 @@
 # COPS architecture: catalogue, mappings, graph and gaps
 
+> **Superseded in part.** This snapshot predates the LangGraph runtime. For the runtime's architecture, verifier registry, memory and evaluation, see [`RUNTIME.md`](RUNTIME.md). The edge discrepancies in section 3 are now resolved by `specs.CONSUMES`, which is the single edge source; `downstream_cops` is derived from it, and `specs.edge_report()` lists the remaining differences against the old hand-written lists.
+
 Generated read-only from `Purvi9399/signal-dashboard` at `f4f131b`. Structure is read from code; rule text names the function it was read from. Anything the code does not define is marked **UNDEFINED**. Machine-readable versions: `cop_catalogue.json`, `metric_cop_mappings.json`, `cop_graph.json`.
 
 Status terms. **Specified**: has a `COPReadSpec` in `collector/cops/specs.py`. **Implemented**: has a `RuleInterpreter` method (`collector/cops/interpret.py`). **Runnable**: in `specs.ORDER` (`COPRunner.__init__` drops anything else). **Active**: `active=True`. **Tested**: a test in `tests/test_cops.py` asserts its output. **Live**: unverified for all 18 (no database read).
