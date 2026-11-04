@@ -777,6 +777,8 @@ ALTERNATIVE_CONTROLS = {
                   "approvals recorded in the session; missing approval reads APPROVAL_REQUIRED",
         "does_not_cover": "sessions with no policy store (Policy Enforcement then withholds ALLOWED), "
                           "and a long session of operations the policy does not mark as needing approval"}],
+    # Kept as a proposed future governance coverage requirement (decision 2026-11-04):
+    # reported as a latent observation, not a required gap, until a spec assigns it.
     "insights.lockfile": [],
 }
 

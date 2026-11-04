@@ -336,7 +336,7 @@ Tests:
 - `test_ga_a_required_uncovered_latent_gap_is_a_gap_without_being_triggered`
 - `test_ga_an_active_gap_is_a_gap`
 
-The GA prompt was revised and is now `governance_architecture/prompt-3`. *Open specification question:* should a dependency-manifest change without a lockfile be a required responsibility? If yes, a spec should own it, and GA would report it as a latent required gap until one does.
+The GA prompt was revised and is now `governance_architecture/prompt-3`. *Decision (purvi, 2026-11-04):* `insights.lockfile` is kept as a **proposed future governance coverage requirement**. It is not an active required gap, and the current ground truth is unchanged. GA keeps reporting it as a latent observation (`latent_unspecified`) until a spec assigns it.
 
 **SC-01 and support.** I checked the three newly passing cases for independent evidence.
 
