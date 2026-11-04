@@ -136,7 +136,11 @@ def test_policy_enforcement_never_turns_a_new_route_into_a_violation():
              "status": "SUBSTANTIVE", "verified": True, "lineage": ["access.first_seen_mcp"], "claims": []}
     out = pub(det("policy_enforcement", E._estate(S.normal_session("pe4", 9)), "pe4",
                   upstream={"interaction_discovery": route}))
-    assert out["label"] == "UNCERTAIN" and out["proposed_action"]["action"] == "WATCH"
+    # UNCERTAIN is an INCONCLUSIVE outcome: graded triage asks for what is missing rather than a reflex
+    # WATCH (2026-11-04). What matters is unchanged: no violation and no intervention.
+    assert out["label"] == "UNCERTAIN" and out["triage"]["outcome"] == "INCONCLUSIVE"
+    assert out["proposed_action"]["typed_action"] in ("REQUEST_CONTEXT", "REQUEST_COP_SUPPORT",
+                                                      "COLLECT_EVIDENCE", "NONE")
 
 
 def test_resource_management_alternate_outcomes():

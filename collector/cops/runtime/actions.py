@@ -34,7 +34,7 @@ from dataclasses import dataclass, field, asdict
 from typing import Optional
 
 from ..authority import (TIER, OBSERVE, RECORD, ALERT, NOTIFY, REQUEST, RECOMMEND, INITIATE,
-                         INTERVENE)
+                         INTERVENE, TAXONOMY, typed, legacy)
 
 NO_ACTION_PROPOSED = "NO_ACTION_PROPOSED"
 PROPOSAL_WITHDRAWN = "PROPOSAL_WITHDRAWN"
@@ -54,7 +54,8 @@ class ActionLifecycle:
     stage: str
     candidate_action: str                 # what the COP's candidate finding proposed
     verified_action: str                  # what reached authority after verification
-    final_action: str                     # what authority let stand (substitute or fallback)
+    final_action: str                     # what authority let stand, legacy name (compatible)
+    final_typed_action: str               # the same action in the typed taxonomy (authority.TAXONOMY)
     execution_status: str
     mode: str
     authorised: bool
@@ -93,11 +94,21 @@ class DryRunAdapter:
     def __init__(self):
         self.log = []
 
-    def record(self, cop, case_id, action, target):
+    def record(self, cop, case_id, action, target, referral=None, human_task=None):
+        t = TAXONOMY.get(typed(action))
         tier = TIER.get(action, "")
-        r = {"adapter": self.name, "cop": cop, "case_id": case_id, "action": action, "tier": tier,
-             "target": target or "session", "would": _WOULD.get(tier, f"would apply {action}"),
+        would = (f"would produce: {t.observable_result}" if t and t.name not in ("NONE",)
+                 else _WOULD.get(tier, f"would apply {action}"))
+        r = {"adapter": self.name, "cop": cop, "case_id": case_id, "action": legacy(action),
+             "typed_action": typed(action), "tier": tier,
+             "target": target or "session", "would": would,
              "external_effect": False, "simulated": True}
+        if referral:
+            r["task"] = {"kind": "referral", "referral_id": referral.get("referral_id"),
+                         "receiver": referral.get("receiver"), "status": referral.get("status"),
+                         "created": "dry-run record only; no specialist runtime was called"}
+        if human_task:
+            r["human_task"] = {**human_task, "created": "dry-run record only; nobody was notified"}
         self.log.append(r)
         return r
 
@@ -119,7 +130,7 @@ def lifecycle(finding, pa, mode):
     cand = candidate_action(finding)
     verified = (finding.get("proposed_action") or {}).get("action") or "NONE"
     requested = pa.get("requested_action") or verified
-    final = pa.get("action") or "NONE"
+    final = pa.get("typed_action") or pa.get("action") or "NONE"
     status = pa.get("execution_status")
     orig = pa.get("original_verification") or {}
     fa = pa.get("final_authority") or {}
@@ -140,19 +151,19 @@ def lifecycle(finding, pa, mode):
             return FAILED_OR_UNCONFIRMED
         if status == "NOT_EXECUTED_BLOCKED":
             return REJECTED_BY_AUTHORITY
-        if action == "NONE":
+        if typed(action) == "NONE":
             return NO_ACTION_PROPOSED
         return AUTHORISED_DRY_RUN if mode == "dry_run" else AUTHORISED_NO_EFFECT
 
     sub = None
     if withdrawn or gated:
         stage = PROPOSAL_WITHDRAWN
-        if final != "NONE":
-            sub = {"action": final, "stage": stage_of(final), "source": "fallback after withdrawal"
+        if typed(final) != "NONE":
+            sub = {"action": final, "stage": stage_of(final), "source": "triage selection after withdrawal"
                    if withdrawn else "fallback: required evidence unavailable"}
     elif rejected:
         stage = REJECTED_BY_AUTHORITY
-        if final != requested and status != "NOT_EXECUTED_BLOCKED":
+        if typed(final) != typed(requested) and status != "NOT_EXECUTED_BLOCKED":
             sub = {"action": final, "stage": stage_of(final), "source": "authority substitute"}
     else:
         stage = stage_of(final)
@@ -162,7 +173,8 @@ def lifecycle(finding, pa, mode):
     elif gated:
         why = f"required evidence unavailable; {finding.get('gated_label')} withheld"
     return ActionLifecycle(
-        stage=stage, candidate_action=cand, verified_action=verified, final_action=final,
+        stage=stage, candidate_action=cand, verified_action=verified, final_action=legacy(final),
+        final_typed_action=typed(final),
         execution_status=status, mode=mode, authorised=authorised and not rejected,
         authority_reason=pa.get("authority_reason") or "", withdrawn_reason=why, substitute=sub,
         dry_run_receipt=pa.get("dry_run_receipt"), execution_outcome=pa.get("execution_outcome"),

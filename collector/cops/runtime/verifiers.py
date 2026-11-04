@@ -29,7 +29,7 @@ claimed; docs/cops/RUNTIME.md lists this as an open item.
 import fnmatch, statistics
 
 from ..models import INCONCLUSIVE
-from ..authority import TIER, HUMAN_APPROVED_ONLY
+from ..authority import TIER, HUMAN_APPROVED_ONLY, permitted, typed
 from .contracts import (VerifierResult, ORIGIN_LLM, PASS, FAIL, WARN, NOT_RUN, BLOCKS_FINDING, BLOCKS_ACTION,
                         BLOCKS_MEMORY, DIAGNOSTIC, FINDING_STATUSES, CLAIM_KINDS, SUBSTANTIVE,
                         CLAIM_METRIC_STATE, CLAIM_METRIC_VALUE, CLAIM_TOOL_OBSERVATION,
@@ -569,7 +569,8 @@ def au01(spec, a, mode, subject):
     proposed it, before authority.check substitutes anything, and on the action
     that goes forward. Only the first can see an unauthorised proposal."""
     tier = TIER.get(a)
-    if a not in spec.permitted_actions or tier is None:
+    ok, basis = permitted(spec, a) if tier is not None else (False, "")
+    if not ok or tier is None:
         return R("AU-01", FAIL, "not_permitted", f"{spec.key} may not {a}", subject=subject)
     if tier in HUMAN_APPROVED_ONLY and mode == "dry_run":
         return R("AU-01", FAIL, "intervene_in_dry_run", f"{a} is recorded, not executed, in dry-run",
@@ -580,11 +581,16 @@ def au01(spec, a, mode, subject):
 def verify_action(spec, action, mode, case, finding, approval=None, execution=None):
     """Action-level checks: PE-01, AU-01, AU-02, EX-01."""
     out = []
-    a = action.get("action", "NONE")
+    # the typed action when there is one: authority is decided on it (authority.permitted)
+    a = action.get("typed_action") or action.get("action", "NONE")
     tier = TIER.get(a)
     out.append(au01(spec, a, mode, "final_action"))
     # PE-01 an intervening or approval action needs a policy basis
-    if tier in HUMAN_APPROVED_ONLY or a == "REQUEST_APPROVAL":
+    if typed(a) == "HOLD_TOOL_CALL" and latest_policy(case) is None:
+        # a fail-closed hold: its basis is that the policy needed to judge the operation is missing
+        out.append(R("PE-01", PASS, "fail_closed_hold", "no approved policy version: the pending operation "
+                     "is held, not judged"))
+    elif tier in HUMAN_APPROVED_ONLY or typed(a) == "REQUEST_APPROVAL":
         ver = latest_policy(case)
         target = (finding.get("cop_specific") or {}).get("proposed") or []
         if ver is None:

@@ -32,6 +32,7 @@ its independent expected outcome and stayed within its authority.
 import argparse, json, os, sys, time, traceback
 
 from ..specs import BY_KEY, topological_order
+from ..authority import permitted as authority_permitted
 from . import live_eval as LE
 from .bench_cases import DET_CASES, DET_EXPECTED, FLEET
 from .evaluation import make_runtime, summarise
@@ -113,6 +114,9 @@ def trace_of(cop, r, view_c):
                       "lifecycle": pa.get("lifecycle")},
         "decision": {"label": f["label"], "status": f["status"], "confidence": f["confidence"],
                      "verified": f["verified"]},
+        "triage": r.get("triage"),
+        "receipt": pa.get("dry_run_receipt"),
+        "typed_action": pa.get("typed_action"),
     }
 
 
@@ -146,7 +150,7 @@ def dimensions(cop, kind, accept, r, label, outcome, err):
         d["uncertainty"] = not (label == QUIET[cop] and f.get("missing_evidence"))
     fa = pa.get("final_authority") or {}
     d["authority"] = (pa.get("execution_status") not in EXECUTED
-                      and pa.get("action") in BY_KEY[cop].permitted_actions
+                      and authority_permitted(BY_KEY[cop], pa.get("typed_action") or pa.get("action"))[0]
                       and fa.get("authorised", True) is not False
                       and not any(t["requested_by"] == "llm" and t["status"] == "executed"
                                   and t["rejection_reason"] for t in r["tool_calls"]))
@@ -341,13 +345,14 @@ def fleet_checks(sc, per, consumption):
     executed = [k for k, v in per.items() if v["execution_status"] in EXECUTED]
     checks.append({"check": "nothing executed: enforcement stays dry-run", "passed": not executed,
                    "actual": {k: v["execution_status"] for k, v in per.items()}})
-    unauth = [k for k, v in per.items() if v["action"] not in BY_KEY[k].permitted_actions
+    unauth = [k for k, v in per.items() if not authority_permitted(BY_KEY[k], v.get("typed_action") or v["action"])[0]
               or v["trace"]["authority"]["authorised"] is False]
     checks.append({"check": "every final action is within the COP's authority", "passed": not unauth,
                    "actual": unauth or "all within authority"})
     # a conflict: one COP intervenes (BLOCK, REQUEST_APPROVAL) on the event while
     # Policy Enforcement, which owns permission, reads it as ALLOWED
-    hard = {k: v["action"] for k, v in per.items() if v["action"] in ("BLOCK", "REQUEST_APPROVAL")}
+    hard = {k: v["action"] for k, v in per.items() if v["action"] in ("BLOCK", "REQUEST_APPROVAL")
+            or (v.get("typed_action") or "") in ("HOLD_TOOL_CALL", "BLOCK_OPERATION", "RESTRICT_CAPABILITY")}
     pe = (per.get("policy_enforcement") or {}).get("label")
     checks.append({"check": "no conflicting enforcement (an intervention on an event Policy Enforcement "
                             "allows)", "passed": not (hard and pe == "ALLOWED"),
@@ -358,6 +363,8 @@ def fleet_checks(sc, per, consumption):
 def _per_cop(sc, res):
     return {k: {"label": v["finding"]["label"], "status": v["finding"]["status"],
                 "verified": v["finding"]["verified"], "action": v["proposed_action"]["action"],
+                "typed_action": v["proposed_action"].get("typed_action"),
+                "tier": ((v.get("triage") or {}).get("routing") or {}).get("tier"),
                 "requested_action": v["proposed_action"].get("requested_action"),
                 "execution_status": v["proposed_action"]["execution_status"],
                 "classification": v["classification"], "usage": _usage(v["llm_invocations"]),
@@ -494,6 +501,76 @@ def run_lifecycle_demos():
 
 
 BEFORE_FILE = "test_bench_results_before_fixes.json"
+BEFORE_TRIAGE_FILE = "test_bench_results_before_triage.json"
+
+
+def load_before_triage(out_dir=DOCS):
+    """The results as recorded just before graded triage (2026-11-04, commit acd767d). Their
+    PASS/FAIL/INCONCLUSIVE outcome is derived with the same pure function the runtime uses
+    (triage.outcome_of), from the label, status and verified flag recorded then."""
+    from .triage import outcome_of
+    path = os.path.join(out_dir, BEFORE_TRIAGE_FILE)
+    if not os.path.exists(path):
+        return {"file": None, "cases": {}}
+    d = json.load(open(path))
+    out = {}
+    for c in d.get("cases", []):
+        t = c.get("trace") or {}
+        dec, a = t.get("decision") or {}, t.get("authority") or {}
+        oc = outcome_of(c["cop"], {"label": dec.get("label"), "status": dec.get("status"),
+                                   "verified": dec.get("verified")})[0] if dec else None
+        out[c["id"]] = {"label": c.get("label"), "verdict": c.get("verdict"), "outcome": oc,
+                        "requested_action": a.get("requested"), "final_action": a.get("final"),
+                        "stage": (a.get("lifecycle") or {}).get("stage")}
+    return {"file": BEFORE_TRIAGE_FILE, "generated": d.get("generated"), "cases": out}
+
+
+def triage_summary(cases, before):
+    """Observed routing, outcomes and action changes. Counted, never adjusted."""
+    from .triage import distribution
+    tr = [c for c in cases if (c.get("trace") or {}).get("triage")]
+    tiers = [c["trace"]["triage"]["routing"]["tier"] for c in tr]
+    out = {"distribution": distribution(tiers)}
+    out["outcomes"] = {o: sum(1 for c in tr if c["trace"]["triage"]["outcome"] == o)
+                       for o in ("PASS", "FAIL", "INCONCLUSIVE")}
+    out["outcomes_before"] = {o: sum(1 for c in cases if (before["cases"].get(c["id"]) or {}).get("outcome") == o)
+                              for o in ("PASS", "FAIL", "INCONCLUSIVE")}
+    out["scores"] = {str(k): sum(1 for c in tr if c["trace"]["triage"]["evidence_support"]["score"] == k)
+                     for k in range(1, 6)}
+    out["by_outcome_and_tier"] = {o: {t: sum(1 for c in tr if c["trace"]["triage"]["outcome"] == o
+                                             and c["trace"]["triage"]["routing"]["tier"] == t)
+                                      for t in ("autonomous", "assisted", "specialist", "human")}
+                                  for o in ("PASS", "FAIL", "INCONCLUSIVE")}
+    out["human_cases"] = [{"id": c["id"], "reason": c["trace"]["triage"]["routing"]["primary_reason"],
+                           "action": c["trace"]["typed_action"]} for c in tr
+                          if c["trace"]["triage"]["routing"]["tier"] == "human"]
+    out["specialist_cases"] = [c["id"] for c in tr if c["trace"]["triage"]["routing"]["tier"] == "specialist"]
+    out["watch_before_on_inconclusive"] = sum(1 for c in cases if (before["cases"].get(c["id"]) or {}).get(
+        "outcome") == "INCONCLUSIVE" and (before["cases"][c["id"]].get("final_action") == "WATCH"))
+    out["watch_now_on_inconclusive"] = sum(1 for c in tr if c["trace"]["triage"]["outcome"] == "INCONCLUSIVE"
+                                           and c["trace"]["typed_action"] == "WATCH")
+    out["action_on_pass_now"] = [c["id"] for c in tr if c["trace"]["triage"]["outcome"] == "PASS"
+                                 and c["trace"]["typed_action"] != "NONE"]
+    out["action_changed"] = sum(1 for c in tr if (before["cases"].get(c["id"]) or {}).get("final_action")
+                                not in (None, c["trace"]["authority"]["final"]))
+    out["before_file"] = before.get("file")
+    return out
+
+
+def triage_config():
+    """The registries the page shows: thresholds, weights, specialists, taxonomy, typed matrix."""
+    from . import triage as TR
+    from .. import authority as AU
+    from ..specs import SPECS
+    return {"version": TR.TRIAGE_VERSION, "thresholds": {k: v.to_dict() for k, v in TR.THRESHOLDS.items()},
+            "weights": TR.WEIGHTS, "confidence_cap": TR.CONFIDENCE_CAP, "score_meaning": TR.SCORE_MEANING,
+            "specialists": {k: {kk: (list(vv) if isinstance(vv, tuple) else vv) for kk, vv in v.items()}
+                            for k, v in TR.SPECIALISTS.items()},
+            "label_actions": {k: {lab: list(x) for lab, x in v.items()} for k, v in TR.LABEL_ACTIONS.items()},
+            "taxonomy": {k: v.to_dict() for k, v in AU.TAXONOMY.items()},
+            "typed_matrix": AU.typed_matrix(SPECS), "planning_targets": TR.PLANNING_TARGETS,
+            "referral_limits": {"max_hops": TR.MAX_HOPS, "timeout_s": TR.REFERRAL_TIMEOUT_S,
+                                "cost_budget_usd": TR.REFERRAL_COST_USD}}
 
 
 def load_before(out_dir=DOCS):
@@ -675,7 +752,11 @@ def main(argv=None):
                                            "expected": v["expected"], "trace": v.get("trace"),
                                            "verdict": "FAIL" if v["label"] != INCONCLUSIVE else "INCONCLUSIVE",
                                            "outcome": None})
+    bt = load_before_triage(a.out)
+    for c in cases:
+        c["before_triage"] = bt["cases"].get(c["id"])
     s = summary(cases, fleet)
+    s["triage"] = triage_summary(cases, bt)
     cops = [{"key": k, "name": BY_KEY[k].name, "question": BY_KEY[k].behavioural_question,
              "classification": "llm" if k in LLM_COPS else "deterministic",
              "labels": list(BY_KEY[k].interpretations), "permitted_actions": list(BY_KEY[k].permitted_actions)}
@@ -684,6 +765,7 @@ def main(argv=None):
            "live_model": (live or {}).get("model"), "live_generated_from": "live_results.json" if live else None,
            "summary": s, "cops": cops, "cases": cases, "fleet": fleet,
            "lifecycle_demos": run_lifecycle_demos(),
+           "triage_config": triage_config(),
            "expected_det": {k: list(v) for k, v in DET_EXPECTED.items()},
            "expected_llm": LE.EXPECTED_JSON()}
     with open(fleet_path, "w") as fh:

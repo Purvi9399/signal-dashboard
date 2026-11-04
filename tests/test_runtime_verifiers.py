@@ -171,9 +171,11 @@ def test_au01_fails_on_an_unauthorised_proposal_inside_the_graph():
     assert pa["original_proposal"]["action"] == "BLOCK"
     assert (orig["check_id"], orig["result"], orig["reason_code"], orig["subject"]) == \
         ("AU-01", "FAIL", "not_permitted", "original_proposal")
-    assert pa["corrected_proposal"]["action"] == "WATCH"
-    assert pa["corrected_proposal"]["source"] == "authority.check substitute"
-    assert pa["action"] == "WATCH" and pa["final_authority"]["action"] == "WATCH"
+    # graded triage (2026-11-04): the finding reads NORMAL, a PASS, so the action rule replaces the
+    # proposal with NONE before authority. The unauthorised original is still recorded as AU-01 FAIL.
+    assert pa["corrected_proposal"]["action"] == "NONE"
+    assert pa["corrected_proposal"]["source"] == "triage action selection"
+    assert pa["action"] == "NONE" and pa["final_authority"]["action"] == "NONE"
     final = [c for c in pa["final_authority"]["checks"] if c["check_id"] == "AU-01"][0]
     assert final["result"] == "PASS" and final["subject"] == "final_action"
     assert pa["execution_status"] == "NOT_EXECUTED_NO_ACTION"     # BLOCK never reached execution
@@ -194,8 +196,11 @@ def test_au01_records_the_dry_run_substitution_as_a_failed_original():
 
 def test_au01_passes_and_records_no_correction_for_a_permitted_proposal():
     pa, vr = run_with_action("ALERT")
-    assert pa["original_verification"]["result"] == "PASS" and pa["corrected_proposal"] is None
-    assert pa["final_authority"]["action"] == "ALERT"
+    # the proposal is permitted (AU-01 PASS on the original); on a PASS reading the action rule
+    # still withdraws it: no remedial action on PASS (graded triage, 2026-11-04)
+    assert pa["original_verification"]["result"] == "PASS"
+    assert pa["corrected_proposal"]["source"] == "triage action selection"
+    assert pa["final_authority"]["action"] == "NONE" and pa["execution_status"] == "NOT_EXECUTED_NO_ACTION"
 
 
 def test_ds03_rejects_a_quiet_model_reading_the_rule_baseline_contradicts():

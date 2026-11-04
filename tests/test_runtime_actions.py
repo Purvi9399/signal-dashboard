@@ -5,6 +5,7 @@ import os, sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "collector"))
 
 from cops.specs import BY_KEY
+from cops.authority import permitted
 from cops.runtime import actions as A
 from cops.runtime import evaluation as E
 from cops.runtime import fixtures as FX
@@ -65,7 +66,9 @@ def test_verifier_rejection_withdraws_the_proposal_and_keeps_the_candidate_actio
     assert f["status"] == "REJECTED_BY_VERIFIER"
     assert lc["stage"] == A.PROPOSAL_WITHDRAWN
     assert lc["candidate_action"] == f["rejected_candidate"]["proposed_action"]["action"]
-    assert lc["substitute"]["source"] == "fallback after withdrawal"
+    # graded triage: the recomputed values disprove the candidate, so no follow-up action replaces it
+    assert lc["substitute"] is None and lc["final_typed_action"] == "NONE"
+    assert r["triage"]["action_selection"]["cause"] == "candidate_disproved"
     assert "failed verification" in lc["withdrawn_reason"]
 
 
@@ -94,7 +97,8 @@ def test_every_case_carries_a_lifecycle_with_a_known_stage():
         r, _ = _det(case["id"])
         lc = r["proposed_action"]["lifecycle"]
         assert lc["stage"] in A.STAGES, case["id"]
-        assert lc["final_action"] in BY_KEY[case["cop"]].permitted_actions, case["id"]
+        # authority is decided on the typed action (authority.permitted); the legacy name is a compat alias
+        assert permitted(BY_KEY[case["cop"]], lc["final_typed_action"])[0], case["id"]
 
 
 def test_live_eval_record_keeps_the_whole_proposal():

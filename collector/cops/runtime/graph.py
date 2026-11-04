@@ -39,7 +39,8 @@ from langgraph.types import interrupt, Command
 from pydantic import ValidationError
 
 from ..specs import BY_KEY, CONSUMES, topological_order
-from ..authority import check as authority_check_fn, TIER, HUMAN_APPROVED_ONLY
+from ..authority import (check as authority_check_fn, check_typed, TIER, HUMAN_APPROVED_ONLY, TAXONOMY,
+                         typed, legacy, needs_approval)
 from ..models import INCONCLUSIVE as INCONCLUSIVE_LABEL
 from .contracts import (Finding, ProposedAction, ORIGIN_LLM, ORIGIN_RULES, SUBSTANTIVE,
                         INCONCLUSIVE, MISSING_DEPENDENCY, REJECTED, FAILED, BLOCKS_FINDING,
@@ -59,6 +60,7 @@ from .profiles import build_profiles
 from .llm import LLMBudget
 
 from .actions import DryRunAdapter, lifecycle as action_lifecycle
+from . import triage as TRI
 
 MODES = ("dry_run", "supervised")
 SECURITY_CODES = ("unknown_tool", "not_in_allowlist", "out_of_scope")
@@ -102,6 +104,7 @@ class Runtime:
     mode: str = "dry_run"
     enforcement: Any = field(default_factory=MockEnforcementGateway)
     live_session: bool = False     # whether intervention could still apply to the session
+    pending_operations: list = field(default_factory=list)  # tool calls awaiting a decision (live only)
     run_id: str = "eval"
 
     def __post_init__(self):
@@ -158,6 +161,7 @@ class COPState(TypedDict, total=False):
     node_timings: dict
     sufficiency: dict           # evidence_precheck: per-item state, quiet label permitted, reasons
     recovery: Optional[dict]    # bounded re-assessment after a recoverable verifier rejection
+    triage: Optional[dict]      # grade_and_route: outcome, support score, confidence, quotient, routing
 
 
 def timed(name):
@@ -202,7 +206,7 @@ def receive_case(state):
             "assessments": [], "hypothesis_trail": [], "pending": [], "authorised": [],
             "new_calls": [], "llm_error": None, "stop_reason": None, "candidate": None,
             "baseline": None, "approval": None, "execution": None, "memory_write": None,
-            "sufficiency": None, "recovery": None,
+            "sufficiency": None, "recovery": None, "triage": None,
             "spent": {"llm_calls": 0, "tokens": 0, "cost_usd": 0.0, "started": time.time()},
             "tool_budget": {"tool_calls": 0, "max_tool_calls": b.max_tool_calls}}
 
@@ -741,6 +745,40 @@ def independent_verify(state):
     return out
 
 
+def _llm_assessment(state):
+    """The model's own candidate, kept apart from the verified score."""
+    if state["classification"] != "llm":
+        return None
+    f = state["finding"]
+    cand = f.get("rejected_candidate") or f
+    if f.get("origin") != ORIGIN_LLM and not f.get("rejected_candidate"):
+        return None
+    return {"label": cand.get("label"), "self_reported_confidence": cand.get("confidence"),
+            "proposed_action": ((cand.get("proposed_action") or f.get("proposed_action") or {}).get("action")),
+            "note": "model candidate as proposed; not the verified score"}
+
+
+@timed("grade_and_route")
+def grade_and_route(state):
+    """Steps 4-9: support score, outcome, confidence, handling quotient, routing
+    tier and action selection (triage.classify). Reads the verifier results;
+    changes no label, status or claim."""
+    rt = _rt(state)
+    cop = state["cop"]
+    f = dict(state["finding"])
+    up = state.get("upstream") or {}
+    # sufficiency again, now that every tool call of the investigation is in
+    suf = evidence_precheck_fn(cop, rt.case, state["picture"], up, state["tool_calls"])
+    rec = TRI.classify(cop, f, state["verifier_results"], suf, state["tool_calls"], up, evidence_conf(up),
+                       state.get("memory_view") or {}, state.get("recovery"), rt.mode, rt.live_session,
+                       rt.pending_operations, rt.profiles[cop].approval_actions, _llm_assessment(state),
+                       state.get("security_events") or [])
+    rec["sufficiency_at_triage"] = {"items": [{k: i.get(k) for k in ("item", "kind", "state")}
+                                              for i in suf["items"]]}
+    f["triage"] = rec
+    return {"finding": f, "triage": rec}
+
+
 @timed("authority_check")
 def authority_check(state):
     rt = _rt(state)
@@ -750,21 +788,30 @@ def authority_check(state):
     f = state["finding"]
     requested = (f.get("proposed_action") or {}).get("action", "NONE")
     reason = (f.get("proposed_action") or {}).get("reason", "")
-    # AU-01 on the proposal exactly as the COP made it, before any substitution.
+    tri = state.get("triage") or f.get("triage") or {}
+    sel = (tri.get("action_selection") or {}).get("selected") or typed(requested)
+    if tri:
+        reason = tri["action_selection"]["reason"]
+    # AU-01 on the proposal exactly as the COP made it, before triage or authority changed anything.
     original_check = au01(spec, requested, rt.mode, "original_proposal")
-    allowed, sub, why = authority_check_fn(spec, requested, rt.mode, rt.live_session)
-    action = requested if allowed else (sub if sub in spec.permitted_actions else _fallback_action(spec))
+    # the action triage selected goes through the same authority rules (check_typed keeps check()'s
+    # substitutions: outside authority -> WATCH/NONE, INTERVENE in dry-run -> ALERT)
+    allowed, sub, why = check_typed(spec, sel, rt.mode, rt.live_session)
+    final_t = sel if allowed else typed(sub)
+    action = legacy(final_t)
     pa = ProposedAction(cop=cop, action=action, reason=reason,
-                        target=rt.case.session_id, authority_tier=TIER.get(action, ""),
+                        target=rt.case.session_id, authority_tier=TIER.get(final_t, ""),
                         authorised=allowed, authority_reason=why).to_dict()
+    pa["typed_action"] = final_t
+    pa["triage_selected"] = sel
     pa["requested_action"] = requested
     pa["original_proposal"] = {"action": requested, "reason": reason,
                                "authority_tier": TIER.get(requested, "")}
     pa["original_verification"] = original_check
-    pa["corrected_proposal"] = None if action == requested else {
-        "action": action, "authority_tier": TIER.get(action, ""),
-        "source": "authority.check substitute" if (not allowed and sub == action) else "fallback action",
-        "reason": why}
+    pa["corrected_proposal"] = None if final_t == typed(requested) else {
+        "action": action, "typed_action": final_t, "authority_tier": TIER.get(final_t, ""),
+        "source": ("authority substitute" if not allowed else "triage action selection"),
+        "reason": why or reason}
     checks = [r.to_dict() if not isinstance(r, dict) else r
               for r in verify_action(spec, pa, rt.mode, rt.case, f)]
     pre = [r for r in checks if r["check_id"] in ("AU-01", "PE-01")]
@@ -772,11 +819,11 @@ def authority_check(state):
         pa["execution_status"] = NOT_EXECUTED_BLOCKED
         pa["authority_reason"] = (why + "; " if why else "") + "; ".join(
             f"{r['check_id']} {r['reason_code']}" for r in blocking(pre, BLOCKS_ACTION))
-    elif action in QUIET_ACTIONS:
+    elif final_t in QUIET_ACTIONS:
         pa["execution_status"] = NOT_EXECUTED_NO_ACTION
     elif rt.mode == "dry_run":
         pa["execution_status"] = NOT_EXECUTED_DRY_RUN
-    elif action in p.approval_actions:
+    elif needs_approval(final_t, p.approval_actions):
         pa["requires_approval"] = True
         pa["execution_status"] = AWAITING_APPROVAL
     else:
@@ -787,7 +834,20 @@ def authority_check(state):
                                         for r in pre],
                              "execution_status": pa["execution_status"]}
     pa["lifecycle"] = action_lifecycle(f, pa, rt.mode)
-    return {"proposed_action": pa, "verifier_results": state["verifier_results"] + [original_check] + pre}
+    out = {"proposed_action": pa, "verifier_results": state["verifier_results"] + [original_check] + pre}
+    if tri:
+        tri = dict(tri)
+        ok = pa["final_authority"]["authorised"]
+        spec_t = TAXONOMY.get(final_t)
+        tri["authority"] = {"selected": sel, "final": final_t, "authorised": ok and allowed,
+                            "substituted": final_t != sel, "reason": pa["authority_reason"],
+                            "original_proposal_check": {k: original_check.get(k) for k in
+                                                        ("check_id", "result", "reason_code")}}
+        tri["routing"] = {**tri["routing"], "automated_action_authorised": bool(
+            ok and allowed and spec_t is not None and spec_t.execution == "auto" and final_t != "NONE"
+            and not pa.get("requires_approval"))}
+        out["triage"] = tri
+    return out
 
 
 def _recovery_feedback(results):
@@ -828,10 +888,10 @@ def plan_recovery(state):
 def route_after_verify(state):
     rt = _rt(state)
     if state["classification"] != "llm" or state.get("recovery"):
-        return "authority_check"
+        return "grade_and_route"
     if state["finding"].get("status") != REJECTED:
-        return "authority_check"
-    return "plan_recovery" if _recovery_decision(rt, state)["attempt"] else "authority_check"
+        return "grade_and_route"
+    return "plan_recovery" if _recovery_decision(rt, state)["attempt"] else "grade_and_route"
 
 
 def _recovery_decision(rt, state):
@@ -860,7 +920,10 @@ def await_approval(state):
     pa = state["proposed_action"]
     f = state["finding"]
     answer = interrupt({"kind": "approval_request", "case_id": state["case_id"], "cop": state["cop"],
-                        "action": pa["action"], "reason": pa["reason"], "target": pa["target"],
+                        "action": pa["action"], "typed_action": pa.get("typed_action"),
+                        "reason": pa["reason"], "target": pa["target"],
+                        "triage": {k: (state.get("triage") or {}).get("routing", {}).get(k)
+                                   for k in ("tier", "primary_reason", "human_needed")},
                         "finding": {"label": f["label"], "status": f["status"],
                                     "confidence": f["confidence"], "verified": f["verified"]},
                         "simulated_execution": True})
@@ -897,14 +960,53 @@ def execute_action(state):
         post = [r for r in post if r["check_id"] in ("AU-02", "EX-01")]
         pa["lifecycle"] = action_lifecycle(state["finding"], pa, rt.mode)
         return {"proposed_action": pa, "execution": execution,
-                "verifier_results": state["verifier_results"] + post}
+                "verifier_results": state["verifier_results"] + post,
+                "triage": _feedback(state.get("triage"), pa)}
+    tri = state.get("triage")
+    ta = pa.get("typed_action") or pa["action"]
     if pa["execution_status"] == NOT_EXECUTED_DRY_RUN or (
-            rt.mode == "dry_run" and pa["action"] != "NONE" and pa["execution_status"] != NOT_EXECUTED_BLOCKED):
+            rt.mode == "dry_run" and ta != "NONE" and pa["execution_status"] != NOT_EXECUTED_BLOCKED):
         # authorised in dry-run: the adapter records what the action would do; nothing is applied
         adapter = getattr(rt.enforcement, "dry_run_adapter", None) or DryRunAdapter()
-        pa["dry_run_receipt"] = adapter.record(state["cop"], state["case_id"], pa["action"], pa["target"])
+        pa["dry_run_receipt"] = adapter.record(state["cop"], state["case_id"], ta, pa["target"],
+                                               referral=(tri or {}).get("referral"),
+                                               human_task=(tri or {}).get("human_task"))
+    elif tri and tri.get("human_task") and rt.mode == "dry_run":
+        # the decision needs a human even though the action itself was substituted: the task is recorded
+        adapter = getattr(rt.enforcement, "dry_run_adapter", None) or DryRunAdapter()
+        pa["dry_run_receipt"] = adapter.record(state["cop"], state["case_id"], "NONE", pa["target"],
+                                               human_task=tri["human_task"])
     pa["lifecycle"] = action_lifecycle(state["finding"], pa, rt.mode)
-    return {"proposed_action": pa}
+    return {"proposed_action": pa, "triage": _feedback(tri, pa)}
+
+
+def _feedback(tri, pa):
+    """Step 12: the outcome of the action, fed back into the triage record. A failed
+    or unconfirmed execution is never treated as done: it becomes a human task."""
+    if not tri:
+        return tri
+    tri = dict(tri)
+    st = pa.get("execution_status")
+    fb = {"execution_status": st, "stage": (pa.get("lifecycle") or {}).get("stage"),
+          "receipt": bool(pa.get("dry_run_receipt")), "verified_by": None, "follow_up": None}
+    t = TAXONOMY.get(pa.get("typed_action") or "")
+    if t:
+        fb["verified_by"] = t.verified_by
+    if st == EXECUTION_FAILED:
+        fb["follow_up"] = "VERIFY_RECOVERY failed or outcome unobserved: escalated to a human"
+        tri["routing"] = {**tri["routing"], "tier": TRI.HUMAN, "human_needed": True,
+                          "automated_action_authorised": False,
+                          "primary_reason": tri["routing"]["primary_reason"] + "; then execution failed or "
+                                                                               "was not confirmed (EX-01)"}
+        tri["human_task"] = {"kind": "execution_failure", "question": f"{pa.get('typed_action')} on "
+                             f"{pa.get('target')} failed or could not be confirmed",
+                             "detail": (pa.get("execution_outcome") or {}).get("detail")}
+    elif st == APPROVAL_REJECTED:
+        fb["follow_up"] = "approval declined: nothing applied; the finding stands"
+    elif st == EXECUTED_MOCK:
+        fb["follow_up"] = "VERIFY_RECOVERY on the next case"
+    tri["feedback"] = fb
+    return tri
 
 
 def _recovery_summary(rec):
@@ -945,6 +1047,7 @@ def record_decision(state):
         "llm_spend": {k: v for k, v in sp.items() if k != "started"},
         "sufficiency": state.get("sufficiency"),
         "recovery": _recovery_summary(state.get("recovery")) or f.get("recovery"),
+        "triage": state.get("triage"),
         "decided_at": rt.case.computed_at, "error": state.get("llm_error"),
     }
     return {"result": r}
@@ -1001,12 +1104,17 @@ def persist_and_publish(state):
          "memory_write": state.get("memory_write"),
          "node_timings": {**state.get("node_timings", {})}}
     r["finding"] = {**r["finding"], "memory_write": state.get("memory_write")}
+    if state.get("triage"):
+        r["finding"]["triage"] = state["triage"]
     if rt.store is not None:
         rt.store.save_result(r)
     pub = {k: state["finding"].get(k) for k in ("finding_id", "cop", "label", "status", "confidence",
                                                  "verified", "lineage", "claims", "rationale",
                                                  "severity", "cop_specific", "upstream_used")}
     pub["proposed_action"] = state["proposed_action"]
+    t = state.get("triage") or {}
+    pub["triage"] = {"outcome": t.get("outcome"), "score": (t.get("evidence_support") or {}).get("score"),
+                     "tier": (t.get("routing") or {}).get("tier")} if t else None
     return {"result": r, "published": pub}
 
 
@@ -1017,7 +1125,7 @@ def build_cop_graph(checkpointer=None):
     for fn in (receive_case, load_inputs, validate_evidence, retrieve_memory, computational_baseline,
                evidence_precheck, llm_plan_investigation, validate_tool_request, execute_authorised_tool,
                validate_tool_result, llm_assess_evidence, formulate_finding, independent_verify,
-               plan_recovery, authority_check, await_approval, execute_action, record_decision,
+               plan_recovery, grade_and_route, authority_check, await_approval, execute_action, record_decision,
                validate_memory_update, persist_and_publish):
         g.add_node(fn.__name__, fn)
     g.add_edge(START, "receive_case")
@@ -1036,7 +1144,8 @@ def build_cop_graph(checkpointer=None):
     g.add_conditional_edges("llm_assess_evidence", route_after_assess,
                             ["validate_tool_request", "formulate_finding"])
     g.add_edge("formulate_finding", "independent_verify")
-    g.add_conditional_edges("independent_verify", route_after_verify, ["plan_recovery", "authority_check"])
+    g.add_conditional_edges("independent_verify", route_after_verify, ["plan_recovery", "grade_and_route"])
+    g.add_edge("grade_and_route", "authority_check")
     g.add_edge("plan_recovery", "llm_assess_evidence")
     g.add_conditional_edges("authority_check", route_after_authority,
                             ["await_approval", "execute_action"])

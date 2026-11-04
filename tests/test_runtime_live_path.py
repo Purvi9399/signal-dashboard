@@ -255,10 +255,16 @@ def test_model_cannot_choose_an_action_outside_its_vocabulary():
     rt = E.make_runtime("self-grant", "lp1", ROWS, E.c05_art(),
                         provider=FixtureProvider(_self_authorising("GRANT_ADMIN")), mode="supervised", live=True)
     out = run_case(rt, cops=IR_CASE)
+    assert rt.enforcement.applied == []
+    if out["interrupted"]:
+        # graded triage selected the label's own action, which needs a person: the case waits for one
+        req = out["interrupted"][0]
+        assert req["cop"] == "incident_response" and req["action"] != "GRANT_ADMIN"
+        return
     pa = out["results"]["incident_response"]["proposed_action"]
     assert pa["original_proposal"]["action"] == "GRANT_ADMIN"
     assert pa["original_verification"]["reason_code"] == "not_permitted"
-    assert pa["action"] != "GRANT_ADMIN" and rt.enforcement.applied == []
+    assert pa["action"] != "GRANT_ADMIN"
 
 
 # ---------------------------------------------------------------- checkpoint recovery

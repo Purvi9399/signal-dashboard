@@ -22,7 +22,7 @@ receive_case → load_inputs → validate_evidence → retrieve_memory → compu
             │                       └─ conclude / inconclusive / error             │
             └─ no requests → llm_assess_evidence                                    │
             → formulate_finding ───────────────────────────────────────────────────┤
-independent_verify → authority_check ─┬─ needs approval (supervised) → await_approval (interrupt)
+independent_verify (→ plan_recovery) → grade_and_route → authority_check ─┬─ needs approval (supervised) → await_approval (interrupt)
                                       └─ otherwise ─────────────────────────────────┐
                                         execute_action → record_decision → validate_memory_update → persist_and_publish
 ```
@@ -42,6 +42,23 @@ What each part of the graph guarantees:
 - **A rejected candidate is kept for audit.** When a `BLOCKS_FINDING` check fails, `independent_verify` sets status `REJECTED_BY_VERIFIER` and label `INCONCLUSIVE`. It keeps the candidate under `rejected_candidate`, withdraws the proposed action and records the reason. When the finding passes, confidence is capped at the evidence ceiling that Runtime Monitoring's verdict implies.
 - **Required evidence gates the quiet label.** `runtime/requirements.py` lists, per COP, the authoritative artifacts its quiet label depends on, as REQUIRED, OPTIONAL or (conditionally) NOT_APPLICABLE. When a REQUIRED artifact is absent, `computational_baseline` turns a rule's quiet label into INCONCLUSIVE with status `MISSING_DEPENDENCY` (the withheld label is kept as `gated_label`), and DS-01 rejects an LLM's quiet label. Every finding carries `evidence_requirements` with each artifact's kind and status.
 - **Authority comes from the existing table, and the original proposal is checked first.** `authority_check` runs AU-01 on the action exactly as the COP proposed it, before anything is substituted, and records it as `original_verification` (`subject: original_proposal`). It then uses the existing `authority.check`: in dry run, intervening actions are recorded as substitutes (BLOCK becomes ALERT), and an action the COP may not take becomes its fallback. The substitute is recorded as `corrected_proposal`, and AU-01 and PE-01 run again on it (`subject: final_action`); the outcome is `final_authority`. PE-01 can block the final action outright (`NOT_EXECUTED_BLOCKED`).
+- **Graded verification and triage come after the verifiers and before authority.** `grade_and_route` (contract `cops-runtime/2`, `triage-1`, `thresholds-1`) calls `triage.classify`. It reads the verifier results and the evidence-sufficiency check, and stores `finding["triage"]` with:
+  - the outcome (PASS / FAIL / INCONCLUSIVE);
+  - the evidence-support score (1–5) with its supporting and limiting evidence;
+  - the capped confidence;
+  - the model's own assessment, kept separately;
+  - `perceived_handling_quotient` with every component and weight;
+  - the COP's thresholds;
+  - the routing tier (autonomous / assisted / specialist / human) with its precedence rules;
+  - the selected typed action and the reason for it;
+  - any referral contract or human task.
+
+  Triage changes no label, status or claim. PASS selects NONE, and a proposed action is suppressed but audited. INCONCLUSIVE selects an action by cause, and there is no automatic WATCH. `authority_check` then authorises the triage-selected action. The full specification is in [COPS_GRADED_VERIFICATION_AND_TRIAGE.md](COPS_GRADED_VERIFICATION_AND_TRIAGE.md).
+- **Typed actions.**
+  - `authority.TAXONOMY` defines 26 typed actions (`ActionSpec`: group, tier, trigger, evidence, reversibility, approval, execution, failure path, observable result, verifier).
+  - Legacy names are unchanged and map through `LEGACY_TO_TYPED` (PASS_TO_COP → REQUEST_COP_SUPPORT, PAUSE → PAUSE_SESSION, BLOCK → BLOCK_OPERATION).
+  - Evidence and coordination actions are universal. The stronger powers are granted explicitly in `GRANTS`.
+  - `check_typed` substitutes exactly as `check` does. Only dry-run receipts are produced.
 - **Approvals fail closed.** `await_approval` calls `interrupt()`. Only `{"decision": "approve", "reviewer": ...}` counts as approval; anything else is treated as a rejection.
 - **Actions only reach a mock.** `execute_action` runs approved actions against `MockEnforcementGateway` alone; this repository has no real enforcement path. If the outcome is not confirmed, `execution_status` becomes `EXECUTION_FAILED` and EX-01 fails.
 - **Memory writes are checked first.** `validate_memory_update` runs MU-01, then writes VERIFIED for a verified attention finding, or UNVALIDATED for a rejected candidate. Quiet and inconclusive findings are not written.

@@ -21,7 +21,7 @@ import hashlib, json, uuid
 from dataclasses import dataclass, field, asdict
 from typing import Optional
 
-CONTRACT_VERSION = "cops-runtime/1"
+CONTRACT_VERSION = "cops-runtime/2"   # /2 adds the triage record (graded verification); /1 fields unchanged
 NS = uuid.UUID("5e1a7c0e-0000-4000-8000-000000000003")
 
 # ---------------------------------------------------------------- evidence semantics
@@ -173,7 +173,7 @@ class VerifierResult:
 @dataclass
 class ProposedAction:
     cop: str
-    action: str
+    action: str                      # legacy-compatible name (authority.LEGACY_TO_TYPED); unchanged contract
     reason: str
     target: Optional[str] = None     # resource or agent the action would apply to
     requires_approval: bool = False
@@ -246,3 +246,85 @@ class LLMInvocation:
 
     def to_dict(self):
         return asdict(self)
+
+
+# ---------------------------------------------------------------- triage (contract /2)
+#
+# grade_and_route (graph.py) attaches one TriageRecord to every finding as
+# finding["triage"] and to the decision record as record["triage"]. Its four
+# decision fields are stored separately and never derived from one another:
+#   outcome           PASS | FAIL | INCONCLUSIVE   (finding validity, governance reading)
+#   evidence_support  1-5 with supporting and limiting evidence (EvidenceSupport)
+#   confidence        0-1 with its basis (ConfidenceBasis)
+#   routing           tier and what happens next (Routing)
+# proposed_action gains typed_action (authority.TAXONOMY) and triage_selected;
+# proposed_action.action keeps the legacy name. Built by triage.classify.
+OUTCOMES = ("PASS", "FAIL", "INCONCLUSIVE")
+ROUTING_TIERS = ("autonomous", "assisted", "specialist", "human")
+CANDIDATE_VERIFICATION = ("VERIFIED", "CONTRADICTED", "UNSUPPORTED", "UNTRUSTED_EVIDENCE", "NO_CANDIDATE")
+
+
+@dataclass
+class EvidenceSupport:
+    score: int                       # 1-5 (triage.SCORE_MEANING)
+    meaning: str
+    rule: str                        # which derivation rule produced the score
+    reading: Optional[str]           # the label the score is about (the rejected candidate's, if rejected)
+    candidate_verification: str      # CANDIDATE_VERIFICATION
+    provisional: bool                # score <= 3 on a verified reading: limitations are explicit
+    supporting: list                 # [{kind, evidence, count}]
+    limiting: list                   # [{kind, item, material, detail?}]
+    contradictions: dict             # {factual: [...], interpretive: [...], status}
+
+
+@dataclass
+class ConfidenceBasis:
+    value: float                     # min(raw, cap_from_score); 0 without a definite verified reading
+    raw: float
+    raw_source: str
+    cap_from_score: float
+    capped: bool
+    calibration: str                 # "uncalibrated: ..." until validated outcomes exist
+    definite_reading: bool
+    note: str
+
+
+@dataclass
+class HandlingQuotient:
+    value: float                     # perceived_handling_quotient, 0-1
+    version: str
+    components: dict                 # {name: {value, weight, contribution, basis}}
+    note: str
+
+
+@dataclass
+class Routing:
+    tier: str                        # ROUTING_TIERS
+    band_from_quotient: str
+    primary_reason: str
+    rules_fired: list                # precedence rules R1-R6 that applied
+    threshold_version: str
+    next_step: str
+    human_needed: bool
+    automated_action_authorised: Optional[bool]   # set by authority_check
+    specialist_triggers: list
+    supporting_metrics: dict
+
+
+@dataclass
+class TriageRecord:
+    version: str
+    cop: str
+    outcome: str
+    outcome_reason: str
+    evidence_support: dict           # EvidenceSupport
+    confidence: dict                 # ConfidenceBasis
+    llm_assessment: Optional[dict]   # the model's own candidate: never the verified score
+    perceived_handling_quotient: dict  # HandlingQuotient
+    thresholds: dict                 # triage.Thresholds for this COP
+    routing: dict                    # Routing
+    action_selection: dict           # {original_proposal, verified_proposal, selected, legacy_alias, reason, cause}
+    referral: Optional[dict] = None  # triage.ReferralContract
+    human_task: Optional[dict] = None
+    authority: Optional[dict] = None   # set by authority_check
+    feedback: Optional[dict] = None    # set by execute_action (step 12)

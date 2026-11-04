@@ -94,6 +94,18 @@ background:var(--panel);color:var(--ink);cursor:pointer}button.on{border-color:v
 select{font:inherit;font-size:13px;padding:3px 6px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
 .journey{counter-reset:j}.journey .step h4:before{counter-increment:j;content:counter(j) " · "}
 .vx td,.vx th{font-size:13px;padding:5px 6px}
+.tier{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.tier-autonomous{color:var(--pass);background:var(--pass-bg)}.tier-assisted{color:var(--live);background:var(--live-bg)}
+.tier-specialist{color:var(--sim);background:var(--sim-bg)}.tier-human{color:var(--fail);background:var(--fail-bg)}
+.oc-PASS{color:var(--pass)}.oc-FAIL{color:var(--fail)}.oc-INCONCLUSIVE{color:var(--inc)}
+.bar{display:flex;height:22px;border-radius:6px;overflow:hidden;border:1px solid var(--line);margin:4px 0 10px}
+.bar div{display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:600;min-width:0;overflow:hidden;white-space:nowrap}
+.bar .autonomous{background:var(--pass-bg);color:var(--pass)}.bar .assisted{background:var(--live-bg);color:var(--live)}
+.bar .specialist{background:var(--sim-bg);color:var(--sim)}.bar .human{background:var(--fail-bg);color:var(--fail)}
+.score{display:inline-block;min-width:22px;text-align:center;border-radius:5px;font-weight:700;border:1px solid var(--line);background:var(--soft)}
+.qbar{display:inline-block;width:70px;height:8px;background:var(--soft);border-radius:4px;position:relative;vertical-align:middle;border:1px solid var(--line)}
+.qbar i{position:absolute;left:0;top:0;bottom:0;background:var(--accent);border-radius:4px}
+.qbar b{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink);opacity:.55}
 </style>
 </head>
 <body>
@@ -135,6 +147,23 @@ fictional cases: a <b>normal</b> one, an <b>abnormal</b> one, and one where the 
 </div>
 
 <div class="tiles" id="tiles"></div>
+
+<h2>Graded verification and triage</h2>
+<p class="muted">Computed by the runtime's <span class="mono">grade_and_route</span> step (cops/runtime/triage.py) for every case below,
+after the independent verifiers and before authority. Four separate fields per finding: the outcome (PASS / FAIL / INCONCLUSIVE), the
+1–5 evidence-support score, confidence with its basis, and the routing tier with the selected action. Nothing here is set by a model:
+a model's own candidate and self-reported confidence are shown separately in each trace.</p>
+<div class="panel" id="tri-dist"></div>
+<div class="panel" id="tri-outcomes"></div>
+<h3>Every case: score, quotient, route and action</h3>
+<p class="muted">Before = the run recorded just before this change (test_bench_results_before_triage.json). The quotient bar shows the COP's
+own autonomous bar as a tick. Click a case for the full reasoning.</p>
+<div class="tbl"><table class="vx" id="tri-cases"></table></div>
+<h3>COP-specific thresholds and specialist pathways</h3>
+<div class="tbl"><table class="vx" id="tri-thresholds"></table></div>
+<details><summary><b>Typed action taxonomy</b> <span class="muted">(every action's semantics, and which COPs may take it)</span></summary>
+<div class="body"><div class="tbl"><table class="vx" id="tri-taxonomy"></table></div></div></details>
+<details><summary><b>Quotient weights and score rules</b></summary><div class="body" id="tri-weights"></div></details>
 
 <h2>Why cases are inconclusive</h2>
 <p class="muted">An INCONCLUSIVE is correct when the evidence the COP needs is missing. It is a problem when a definite answer
@@ -239,7 +268,8 @@ const tiles = [
   [money(S.real_llm_cost_usd + S.fleet_real_cost_usd), 'measured model cost'],
   [Object.entries(S.fleet).map(([k, v]) => `${k} ${v}`).join(', '), 'fleet scenarios'],
   [Object.entries(S.action_lifecycle || {}).filter(([k]) => k !== 'NO_ACTION_PROPOSED').reduce((a, [, n]) => a + n, 0) + ' / ' + S.cases,
-   'cases where the COP proposed an action']];
+   'cases where the COP proposed an action']].concat(S.triage ? [[['autonomous', 'assisted', 'specialist', 'human'].map(t => S.triage.distribution.counts[t]).join(' / '),
+   'routed autonomous / assisted / specialist / human']] : []);
 document.getElementById('tiles').innerHTML = tiles.map(([b, s]) => `<div class="tile"><b>${esc(b)}</b><span>${esc(s)}</span></div>`).join('');
 
 const byId = Object.fromEntries(D.cases.map(c => [c.id, c]));
@@ -331,6 +361,7 @@ function trace(t) {
      `<span class="badge ${v.result === 'PASS' ? 'PASS' : v.result === 'FAIL' ? 'FAIL' : 'UNTESTED'}">${esc(v.check)} ${esc(v.result)}</span>`).join(' ')}</p>
      ${verifierTable(t)}
      ${rec ? `<p><b>Recovery:</b> ${rec.attempted ? 'one re-assessment ran' + (rec.outcome ? ' → ' + esc(rec.outcome) : '') : 'not attempted'}${rec.recoverable === false ? ' · not recoverable' : rec.recoverable ? ' · recoverable' : ''}${rec.reason ? ' — ' + esc(rec.reason) : ''}</p>` : ''}</div>
+  ${triageStep(t.triage, t)}
   <div class="step"><h4>Final decision</h4><p><span class="lab">${esc(d.label)}</span> · ${esc(d.status)} · confidence ${esc(d.confidence)} · verified ${esc(d.verified)}
      ${i.rejected_candidate ? ` · rejected candidate <span class="lab">${esc(i.rejected_candidate)}</span>` : ''}</p>
      ${(t.reason_codes || []).length ? `<p>reason codes: ${rc(t.reason_codes)}</p>` : ''}
@@ -452,6 +483,83 @@ document.getElementById('beforeafter').innerHTML = `<tr><th>Case</th><th>Before 
   <td><span class="badge src-live">LIVE (as recorded)</span></td><td class="muted">${f.verdict === 'PASS' ? '' : 'recorded before reply recording: cannot be replayed; needs a live re-run'}</td></tr>`).join('');
 
 const fails = D.cases.filter(c => c.verdict !== 'PASS');
+// ---------------------------------------------------------------- graded triage
+const TC = D.triage_config || {}, TS = S.triage || {};
+const TIERS = ['autonomous', 'assisted', 'specialist', 'human'];
+function tierB(t) { return t ? `<span class="tier tier-${t}">${esc(t)}</span>` : '<span class="muted">–</span>'; }
+function ocB(o) { return o ? `<b class="oc-${o}">${esc(o)}</b>` : '<span class="muted">–</span>'; }
+function pct(x) { return (100 * x).toFixed(1) + '%'; }
+function qbar(q, th) { return `<span class="qbar"><i style="width:${Math.round(100 * q)}%"></i>${th ? `<b style="left:${Math.round(100 * th)}%"></b>` : ''}</span> <span class="mono">${esc(q)}</span>`; }
+function triageStep(x, t) {
+  if (!x) return '';
+  const s = x.evidence_support, c = x.confidence, q = x.perceived_handling_quotient, r = x.routing, a = x.action_selection, th = x.thresholds;
+  const comp = Object.entries(q.components).map(([k, v]) => `<tr><td class="mono">${esc(k)}</td><td>${esc(v.value)}</td><td>${esc(v.weight)}</td><td>${esc(v.contribution)}</td><td>${esc(v.basis)}</td></tr>`).join('');
+  const ref = x.referral, ht = x.human_task, rc_ = t && t.receipt;
+  return `<div class="step"><h4>Graded verification and triage</h4>
+  <div class="kv"><span>outcome</span><span>${ocB(x.outcome)} <span class="muted">${esc(x.outcome_reason)}</span></span>
+   <span>evidence support</span><span><span class="score">${s.score}</span> ${esc(s.meaning)} <span class="muted">· ${esc(s.rule)}</span>${s.provisional ? ' · <b>provisional</b>' : ''}</span>
+   <span>candidate verification</span><span class="lab">${esc(s.candidate_verification)}${s.reading ? ' (' + esc(s.reading) + ')' : ''}</span>
+   <span>contradictions</span><span>${esc(s.contradictions.status)}${s.contradictions.factual.length ? ': ' + esc(s.contradictions.factual.map(f => f.check + ' ' + f.code).join(', ')) : ''}${s.contradictions.interpretive.length ? ': ' + esc(s.contradictions.interpretive.map(f => f.check + ' ' + f.code).join(', ')) : ''}</span>
+   <span>confidence</span><span><span class="mono">${esc(c.value)}</span> <span class="muted">raw ${esc(c.raw)} (${esc(c.raw_source)}), cap ${esc(c.cap_from_score)} from score; ${esc(c.calibration)}</span></span>
+   ${x.llm_assessment ? `<span>model's own assessment</span><span><span class="lab">${esc(x.llm_assessment.label)}</span> self-reported ${esc(x.llm_assessment.self_reported_confidence)} <span class="muted">(kept apart from the verified score)</span></span>` : ''}
+   <span>handling quotient</span><span>${qbar(q.value, th.autonomous)} <span class="muted">${esc(x.cop)} bands: autonomous ≥ ${th.autonomous}, assisted ≥ ${th.assisted}, specialist ≥ ${th.specialist}, below: human (${esc(th.version)})</span></span>
+   <span>route</span><span>${tierB(r.tier)} ${esc(r.primary_reason)} <span class="muted">· rules ${esc((r.rules_fired || []).join(', '))} · quotient band ${esc(r.band_from_quotient)}</span></span>
+   <span>human needed</span><span>${esc(r.human_needed)} · automated action authorised: ${esc(r.automated_action_authorised)}</span>
+   <span>action</span><span><span class="lab">${esc(a.original_proposal)}</span> proposed → <span class="lab">${esc(a.selected)}</span> selected → <span class="lab">${esc((x.authority || {}).final)}</span> after authority${a.cause ? ' <span class="muted">· cause ' + esc(a.cause) + '</span>' : ''}<br>${esc(a.reason)}${a.suppressed_on_pass ? '<br><b>Suppressed on PASS:</b> ' + esc(a.suppressed_on_pass) : ''}</span>
+   <span>next step</span><span>${esc(r.next_step)}</span>
+   ${ref ? `<span>referral</span><span>${esc(ref.kind)} → <span class="lab">${esc(ref.receiver)}</span> · ${esc(ref.status)}${ref.escalation_reason ? ' (' + esc(ref.escalation_reason) + ')' : ''} <span class="muted">· max ${ref.max_hops} hops, ${ref.timeout_s}s, $${ref.cost_budget_usd}</span></span>` : ''}
+   ${ht ? `<span>human task</span><span>${esc(ht.kind)}: ${esc(ht.question)}</span>` : ''}
+   ${rc_ ? `<span>dry-run receipt</span><span>${esc(rc_.would)} <span class="muted">(${esc(rc_.typed_action)}; external effect ${esc(rc_.external_effect)})</span>${rc_.task ? '<br>task: ' + esc(rc_.task.kind + ' → ' + rc_.task.receiver + ', ' + rc_.task.created) : ''}${rc_.human_task ? '<br>human task: ' + esc(rc_.human_task.created) : ''}</span>` : ''}
+   ${x.feedback ? `<span>outcome feedback</span><span class="lab">${esc(x.feedback.execution_status)}${x.feedback.follow_up ? ' · ' + esc(x.feedback.follow_up) : ''}</span>` : ''}</div>
+  <p><b>Supporting:</b> ${s.supporting.length ? s.supporting.map(e => `${esc(e.kind)}${e.count ? ' (' + e.count + ')' : ''}`).join(', ') : '<span class="muted">none</span>'}
+   · <b>Limiting:</b> ${s.limiting.length ? s.limiting.map(e => `${esc(e.kind)}: ${esc(Array.isArray(e.item) ? e.item.length + ' items' : e.item)}${e.material ? '' : ' <span class="muted">(minor)</span>'}`).join('; ') : '<span class="muted">none</span>'}</p>
+  <details><summary class="muted">quotient components</summary><div class="body"><div class="tbl"><table class="vx"><tr><th>Component</th><th>Value</th><th>Weight</th><th>Contribution</th><th>Basis</th></tr>${comp}</table></div></div></details></div>`;
+}
+(function () {
+  if (!TS.distribution) return;
+  const d = TS.distribution, n = d.n;
+  const bar = (src, lab) => `<p class="muted" style="margin:6px 0 0">${lab}</p><div class="bar">${TIERS.map(t => src[t] > 0 ? `<div class="${t}" style="width:${100 * src[t]}%">${t} ${pct(src[t])}</div>` : '').join('')}</div>`;
+  document.getElementById('tri-dist').innerHTML = `<p><b>Observed routing over ${n} cases</b>, against the 80 / 10 / 7 / 3 planning targets.
+    The targets are goals: nothing is assigned by quota or relabelled to approach them.</p>
+    ${bar(d.observed, 'observed')}${bar(d.planning_targets, 'planning target')}
+    <div class="tiles">${TIERS.map(t => `<div class="tile"><b>${d.counts[t]} <span style="font-size:14px">(${pct(d.observed[t])})</span></b><span>${tierB(t)} target ${pct(d.planning_targets[t])}</span></div>`).join('')}
+    <div class="tile"><b>${d.human_share_below_5pct ? 'yes' : 'no'}</b><span>human share below 5%</span></div></div>
+    <p><b>Human cases (${TS.human_cases.length}):</b> ${TS.human_cases.map(h => `<a href="#${anchor(h.id)}" onclick="openCase('${h.id}')" style="color:inherit">${esc(h.id)}</a> (${esc(h.reason)})`).join('; ') || 'none'}</p>
+    <p><b>Specialist cases (${TS.specialist_cases.length}):</b> ${TS.specialist_cases.map(esc).join(', ') || 'none in this bench: no case met a specialist trigger (repeated failure, exhausted re-assessment, integrity failure, or a quotient in a specialist band). The pathway is exercised by the scenario tests.'}</p>
+    <p class="muted">Why the assisted share is high: one case in three is a <i>missing-evidence</i> case by design, and each now asks for the evidence it lacks
+    (REQUEST_CONTEXT, COLLECT_EVIDENCE or REQUEST_COP_SUPPORT) instead of a reflex WATCH.</p>`;
+  const bt = TS.by_outcome_and_tier, ob = TS.outcomes_before || {};
+  document.getElementById('tri-outcomes').innerHTML = `<p><b>Outcome by tier</b></p><div class="tbl"><table class="vx"><tr><th>Outcome</th><th>Before</th><th>Now</th>${TIERS.map(t => `<th>${t}</th>`).join('')}</tr>
+    ${['PASS', 'FAIL', 'INCONCLUSIVE'].map(o => `<tr><td>${ocB(o)}</td><td>${ob[o] ?? '–'}</td><td>${TS.outcomes[o]}</td>${TIERS.map(t => `<td>${bt[o][t] || ''}</td>`).join('')}</tr>`).join('')}</table></div>
+    <p class="muted">Labels are unchanged by this step, so the outcomes before and after match; what changed is what happens next.
+    Evidence-support scores: ${Object.entries(TS.scores).map(([k, v]) => `<span class="score">${k}</span> ${v}`).join(' · ')}.
+    WATCH on an INCONCLUSIVE outcome: ${TS.watch_before_on_inconclusive} before, ${TS.watch_now_on_inconclusive} now. Actions on a PASS now: ${TS.action_on_pass_now.length}.
+    Cases whose final action changed: ${TS.action_changed} of ${n}.</p>`;
+  const rows = D.cases.map(c => {
+    const x = (c.trace || {}).triage; if (!x) return '';
+    const b = c.before_triage || {}, th = x.thresholds;
+    return `<tr><td><a href="#${anchor(c.id)}" onclick="openCase('${c.id}')" style="color:inherit">${esc(c.id)}</a></td><td>${ocB(x.outcome)}</td>
+     <td><span class="score">${x.evidence_support.score}</span></td><td class="mono">${esc(x.confidence.value)}</td><td>${qbar(x.perceived_handling_quotient.value, th.autonomous)}</td>
+     <td>${tierB(x.routing.tier)}</td><td class="lab">${esc(b.final_action ?? '–')}</td>
+     <td class="lab">${esc(x.action_selection.original_proposal)} → ${esc(x.action_selection.selected)} → ${esc((x.authority || {}).final)}</td>
+     <td>${esc(x.routing.primary_reason)}</td></tr>`;
+  }).join('');
+  document.getElementById('tri-cases').innerHTML = `<tr><th>Case</th><th>Outcome</th><th>Score</th><th>Conf.</th><th>Quotient</th><th>Tier</th><th>Before: final action</th><th>Now: proposed → selected → final</th><th>Why this route</th></tr>${rows}`;
+  const thr = TC.thresholds || {}, sp = TC.specialists || {};
+  document.getElementById('tri-thresholds').innerHTML = `<tr><th>COP</th><th>Autonomous ≥</th><th>Assisted ≥</th><th>Specialist ≥</th><th>Human regardless of quotient</th><th>Why these bands</th><th>Specialist pathway</th></tr>` +
+    D.cops.map(k => { const t = thr[k.key] || {}, p = sp[k.key] || {};
+      return `<tr><td><b>${esc(k.name)}</b></td><td>${t.autonomous}</td><td>${t.assisted}</td><td>${t.specialist}</td><td class="lab">${esc((t.human_labels || []).join(', ') || '–')}</td><td>${esc(t.justification)}</td>
+      <td>${esc(p.responsibility)}<br><span class="muted">→ <span class="lab">${esc(p.receiver)}</span>; support from ${esc((p.support_cops || []).join(', '))}. Decides: ${esc(p.decides)}. Cannot: ${esc(p.cannot)}.</span></td></tr>`; }).join('');
+  const tm = TC.typed_matrix || {};
+  document.getElementById('tri-taxonomy').innerHTML = `<tr><th>Action</th><th>Group</th><th>Authority</th><th>Legacy name</th><th>Trigger</th><th>Min score</th><th>Tier</th><th>Target</th><th>Reversibility</th><th>Approval</th><th>Execution</th><th>On failure</th><th>Verified by</th><th>COPs permitted</th></tr>` +
+    Object.values(TC.taxonomy || {}).map(a => `<tr><td class="lab"><b>${esc(a.name)}</b></td><td>${esc(a.group)}</td><td>${esc(a.authority_tier)}</td><td class="lab">${esc(a.legacy_alias)}</td>
+      <td>${esc(a.trigger)}</td><td>${a.min_score || '–'}</td><td>${tierB(a.routing_tier)}</td><td>${esc(a.target)}</td><td>${esc(a.reversibility)}</td><td>${esc(a.approval)}</td><td>${esc(a.execution)}</td>
+      <td>${esc(a.on_failure)}</td><td>${esc(a.verified_by)}</td><td>${Object.values(tm).filter(m => a.name in m).length} / 18</td></tr>`).join('');
+  document.getElementById('tri-weights').innerHTML = `<p><b>perceived_handling_quotient</b> = Σ weight × component (each 0–1, computed from checks already run):</p>
+    <div class="tbl"><table class="vx"><tr><th>Component</th><th>Weight</th></tr>${Object.entries(TC.weights || {}).map(([k, v]) => `<tr><td class="mono">${esc(k)}</td><td>${v}</td></tr>`).join('')}</table></div>
+    <p><b>Evidence-support score:</b></p><ul>${Object.entries(TC.score_meaning || {}).map(([k, v]) => `<li><span class="score">${k}</span> ${esc(v)} · confidence cap ${TC.confidence_cap[k]}</li>`).join('')}</ul>
+    <p class="muted">Referral limits: ${esc(JSON.stringify(TC.referral_limits))}</p>`;
+})();
 document.getElementById('issues').innerHTML = `<p><b>Not passing (${fails.length}):</b></p>${list(fails, c =>
   `${badge(c.verdict)} <a href="#${anchor(c.id)}" onclick="openCase('${c.id}')" style="color:inherit">${esc(c.id)}</a>: said <span class="lab">${esc(c.label)}</span>, expected
    <span class="lab">${esc(c.expected.join(' / '))}</span>${c.rejected_candidate ? `; the model proposed <span class="lab">${esc(c.rejected_candidate)}</span>, which a verifier rejected` : ''}`)}
