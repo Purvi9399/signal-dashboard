@@ -85,7 +85,7 @@
  "trace": [
   {
    "seq": 1,
-   "at": "2026-11-11T10:35:58.034+00:00",
+   "at": "2026-11-11T10:40:11.036+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "session_start",
@@ -93,7 +93,7 @@
   },
   {
    "seq": 2,
-   "at": "2026-11-11T10:35:58.034+00:00",
+   "at": "2026-11-11T10:40:11.036+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "user_prompt",
@@ -101,7 +101,7 @@
   },
   {
    "seq": 3,
-   "at": "2026-11-11T10:35:58.034+00:00",
+   "at": "2026-11-11T10:40:11.036+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "model_usage",
@@ -109,7 +109,7 @@
   },
   {
    "seq": 4,
-   "at": "2026-11-11T10:35:58.034+00:00",
+   "at": "2026-11-11T10:40:11.036+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -117,7 +117,7 @@
   },
   {
    "seq": 5,
-   "at": "2026-11-11T10:35:58.034+00:00",
+   "at": "2026-11-11T10:40:11.036+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -125,7 +125,7 @@
   },
   {
    "seq": 6,
-   "at": "2026-11-11T10:35:58.034+00:00",
+   "at": "2026-11-11T10:40:11.036+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -138,7 +138,7 @@
   },
   {
    "seq": 7,
-   "at": "2026-11-11T10:35:58.034+00:00",
+   "at": "2026-11-11T10:40:11.036+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -151,7 +151,7 @@
   },
   {
    "seq": 8,
-   "at": "2026-11-11T10:35:58.034+00:00",
+   "at": "2026-11-11T10:40:11.036+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -164,7 +164,7 @@
   },
   {
    "seq": 9,
-   "at": "2026-11-11T10:35:58.034+00:00",
+   "at": "2026-11-11T10:40:11.036+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -177,7 +177,7 @@
   },
   {
    "seq": 10,
-   "at": "2026-11-11T10:35:58.034+00:00",
+   "at": "2026-11-11T10:40:11.036+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -190,14 +190,14 @@
   },
   {
    "seq": 11,
-   "at": "2026-11-11T10:35:58.034+00:00",
+   "at": "2026-11-11T10:40:11.036+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "session_end"
   },
   {
    "seq": 12,
-   "at": "2026-11-11T10:35:58.034+00:00",
+   "at": "2026-11-11T10:40:11.036+00:00",
    "stage": "telemetry_ingested",
    "collectors": [
     "otel"
@@ -209,7 +209,7 @@
   },
   {
    "seq": 13,
-   "at": "2026-11-11T10:35:58.099+00:00",
+   "at": "2026-11-11T10:40:11.139+00:00",
    "stage": "initial_finding",
    "cop": "anomaly_detection",
    "run_key": "root:anomaly_detection:d686b2a9-08f6:r0",
@@ -221,7 +221,7 @@
   },
   {
    "seq": 14,
-   "at": "2026-11-11T10:35:58.099+00:00",
+   "at": "2026-11-11T10:40:11.139+00:00",
    "stage": "vs01_initial",
    "decision": "SUPPORTED",
    "support": 0.6909,
@@ -266,7 +266,7 @@
   },
   {
    "seq": 15,
-   "at": "2026-11-11T10:35:58.099+00:00",
+   "at": "2026-11-11T10:40:11.139+00:00",
    "stage": "handling_quotient_initial",
    "quotient": 0.895,
    "tier": "autonomous",
@@ -275,11 +275,11 @@
   },
   {
    "seq": 16,
-   "at": "2026-11-11T10:35:58.100+00:00",
+   "at": "2026-11-11T10:40:11.140+00:00",
    "stage": "request_for_support",
    "investigation_event": {
     "seq": 3,
-    "at": "2026-11-11T10:35:58.100+00:00",
+    "at": "2026-11-11T10:40:11.140+00:00",
     "kind": "referral_requested",
     "cop": "anomaly_detection",
     "referral_id": "f019f95f-b56c-53b5-b2c3-b22940f7ef8b",
@@ -291,11 +291,11 @@
   },
   {
    "seq": 17,
-   "at": "2026-11-11T10:35:58.100+00:00",
+   "at": "2026-11-11T10:40:11.140+00:00",
    "stage": "request_for_support",
    "investigation_event": {
     "seq": 4,
-    "at": "2026-11-11T10:35:58.100+00:00",
+    "at": "2026-11-11T10:40:11.140+00:00",
     "kind": "referral_requested",
     "cop": "anomaly_detection",
     "referral_id": "7b2896ba-3582-556c-9c62-46518c7d3b25",
@@ -307,11 +307,11 @@
   },
   {
    "seq": 18,
-   "at": "2026-11-11T10:35:58.100+00:00",
+   "at": "2026-11-11T10:40:11.141+00:00",
    "stage": "receiver_investigating",
    "investigation_event": {
     "seq": 5,
-    "at": "2026-11-11T10:35:58.100+00:00",
+    "at": "2026-11-11T10:40:11.141+00:00",
     "kind": "referral_dispatched",
     "cop": "anomaly_detection",
     "referral_id": "f019f95f-b56c-53b5-b2c3-b22940f7ef8b",
@@ -322,11 +322,11 @@
   },
   {
    "seq": 19,
-   "at": "2026-11-11T10:35:58.123+00:00",
+   "at": "2026-11-11T10:40:11.180+00:00",
    "stage": "receiver_answered",
    "investigation_event": {
     "seq": 9,
-    "at": "2026-11-11T10:35:58.123+00:00",
+    "at": "2026-11-11T10:40:11.180+00:00",
     "kind": "referral_answered",
     "cop": "runtime_monitoring",
     "referral_id": "f019f95f-b56c-53b5-b2c3-b22940f7ef8b",
@@ -335,7 +335,7 @@
     "verified": true,
     "admissible": true,
     "delivered_as": "evidence",
-    "elapsed_s": 0.022,
+    "elapsed_s": 0.039,
     "cost_usd": 0.0,
     "checks": {
      "RS-01": "PASS",
@@ -348,7 +348,7 @@
   },
   {
    "seq": 20,
-   "at": "2026-11-11T10:35:58.123+00:00",
+   "at": "2026-11-11T10:40:11.180+00:00",
    "stage": "referral_response",
    "referral_id": "f019f95f-b56c-53b5-b2c3-b22940f7ef8b",
    "receiver": "runtime_monitoring",
@@ -356,7 +356,7 @@
    "admissible": true,
    "delivered_as": "evidence",
    "label": "INSUFFICIENT",
-   "elapsed_s": 0.022,
+   "elapsed_s": 0.039,
    "checks": {
     "RS-01": "PASS",
     "RS-02": "PASS",
@@ -384,11 +384,11 @@
   },
   {
    "seq": 21,
-   "at": "2026-11-11T10:35:58.123+00:00",
+   "at": "2026-11-11T10:40:11.180+00:00",
    "stage": "receiver_investigating",
    "investigation_event": {
     "seq": 10,
-    "at": "2026-11-11T10:35:58.123+00:00",
+    "at": "2026-11-11T10:40:11.180+00:00",
     "kind": "referral_dispatched",
     "cop": "anomaly_detection",
     "referral_id": "7b2896ba-3582-556c-9c62-46518c7d3b25",
@@ -399,11 +399,11 @@
   },
   {
    "seq": 22,
-   "at": "2026-11-11T10:35:58.146+00:00",
+   "at": "2026-11-11T10:40:11.214+00:00",
    "stage": "request_for_support",
    "investigation_event": {
     "seq": 13,
-    "at": "2026-11-11T10:35:58.146+00:00",
+    "at": "2026-11-11T10:40:11.214+00:00",
     "kind": "referral_requested",
     "cop": "behavior_analytics",
     "referral_id": "4b32c3ab-e150-5692-857f-a07954635b03",
@@ -415,11 +415,11 @@
   },
   {
    "seq": 23,
-   "at": "2026-11-11T10:35:58.146+00:00",
+   "at": "2026-11-11T10:40:11.214+00:00",
    "stage": "referral_not_opened",
    "investigation_event": {
     "seq": 14,
-    "at": "2026-11-11T10:35:58.146+00:00",
+    "at": "2026-11-11T10:40:11.214+00:00",
     "kind": "referral_not_opened",
     "cop": "behavior_analytics",
     "receiver": "context_memory",
@@ -428,11 +428,11 @@
   },
   {
    "seq": 24,
-   "at": "2026-11-11T10:35:58.146+00:00",
+   "at": "2026-11-11T10:40:11.214+00:00",
    "stage": "receiver_investigating",
    "investigation_event": {
     "seq": 15,
-    "at": "2026-11-11T10:35:58.146+00:00",
+    "at": "2026-11-11T10:40:11.214+00:00",
     "kind": "referral_dispatched",
     "cop": "behavior_analytics",
     "referral_id": "4b32c3ab-e150-5692-857f-a07954635b03",
@@ -443,11 +443,11 @@
   },
   {
    "seq": 25,
-   "at": "2026-11-11T10:35:58.178+00:00",
+   "at": "2026-11-11T10:40:11.268+00:00",
    "stage": "receiver_answered",
    "investigation_event": {
     "seq": 19,
-    "at": "2026-11-11T10:35:58.178+00:00",
+    "at": "2026-11-11T10:40:11.268+00:00",
     "kind": "referral_answered",
     "cop": "workflow_orchestration",
     "referral_id": "4b32c3ab-e150-5692-857f-a07954635b03",
@@ -456,7 +456,7 @@
     "verified": true,
     "admissible": true,
     "delivered_as": "evidence",
-    "elapsed_s": 0.032,
+    "elapsed_s": 0.053,
     "cost_usd": 0.0,
     "checks": {
      "RS-01": "PASS",
@@ -469,11 +469,11 @@
   },
   {
    "seq": 26,
-   "at": "2026-11-11T10:35:58.179+00:00",
+   "at": "2026-11-11T10:40:11.268+00:00",
    "stage": "reassessment_started",
    "investigation_event": {
     "seq": 20,
-    "at": "2026-11-11T10:35:58.179+00:00",
+    "at": "2026-11-11T10:40:11.268+00:00",
     "kind": "reassessment_started",
     "cop": "behavior_analytics",
     "round": 1,
@@ -488,11 +488,11 @@
   },
   {
    "seq": 27,
-   "at": "2026-11-11T10:35:58.201+00:00",
+   "at": "2026-11-11T10:40:11.305+00:00",
    "stage": "receiver_answered",
    "investigation_event": {
     "seq": 23,
-    "at": "2026-11-11T10:35:58.201+00:00",
+    "at": "2026-11-11T10:40:11.305+00:00",
     "kind": "referral_answered",
     "cop": "behavior_analytics",
     "referral_id": "7b2896ba-3582-556c-9c62-46518c7d3b25",
@@ -501,7 +501,7 @@
     "verified": true,
     "admissible": true,
     "delivered_as": "evidence",
-    "elapsed_s": 0.078,
+    "elapsed_s": 0.125,
     "cost_usd": 0.0,
     "checks": {
      "RS-01": "PASS",
@@ -514,7 +514,7 @@
   },
   {
    "seq": 28,
-   "at": "2026-11-11T10:35:58.201+00:00",
+   "at": "2026-11-11T10:40:11.305+00:00",
    "stage": "referral_response",
    "referral_id": "7b2896ba-3582-556c-9c62-46518c7d3b25",
    "receiver": "behavior_analytics",
@@ -522,7 +522,7 @@
    "admissible": true,
    "delivered_as": "evidence",
    "label": "POOR_RECOVERY",
-   "elapsed_s": 0.078,
+   "elapsed_s": 0.125,
    "checks": {
     "RS-01": "PASS",
     "RS-02": "PASS",
@@ -555,11 +555,11 @@
   },
   {
    "seq": 29,
-   "at": "2026-11-11T10:35:58.202+00:00",
+   "at": "2026-11-11T10:40:11.306+00:00",
    "stage": "reassessment_started",
    "investigation_event": {
     "seq": 24,
-    "at": "2026-11-11T10:35:58.202+00:00",
+    "at": "2026-11-11T10:40:11.306+00:00",
     "kind": "reassessment_started",
     "cop": "anomaly_detection",
     "round": 1,
@@ -578,7 +578,7 @@
   },
   {
    "seq": 30,
-   "at": "2026-11-11T10:35:58.236+00:00",
+   "at": "2026-11-11T10:40:11.364+00:00",
    "stage": "revised_evidence_score",
    "round": 1,
    "decision": "SUPPORTED",
@@ -618,7 +618,7 @@
   },
   {
    "seq": 31,
-   "at": "2026-11-11T10:35:58.237+00:00",
+   "at": "2026-11-11T10:40:11.366+00:00",
    "stage": "investigation_final",
    "tier": "autonomous",
    "routing_reason": "quotient 0.887 in the autonomous band of anomaly_detection (autonomous >= 0.8, assisted >= 0.6, specialist >= 0.35)",
@@ -629,7 +629,7 @@
   },
   {
    "seq": 32,
-   "at": "2026-11-11T10:35:58.377+00:00",
+   "at": "2026-11-11T10:40:11.492+00:00",
    "stage": "final_action",
    "typed_action": "ALERT",
    "triage_selected": "ALERT",
@@ -641,7 +641,7 @@
   },
   {
    "seq": 33,
-   "at": "2026-11-11T10:35:58.377+00:00",
+   "at": "2026-11-11T10:40:11.492+00:00",
    "stage": "authority_check",
    "authorised": true,
    "checks": [
@@ -663,7 +663,7 @@
   },
   {
    "seq": 34,
-   "at": "2026-11-11T10:35:58.379+00:00",
+   "at": "2026-11-11T10:40:11.494+00:00",
    "stage": "action_execution",
    "execution_status": "EXECUTED_SANDBOX",
    "gateway_action_id": "532942f8-fe97-5fd3-b63d-e4625c2474f4",
@@ -679,10 +679,10 @@
   },
   {
    "seq": 35,
-   "at": "2026-11-11T10:35:58.380+00:00",
+   "at": "2026-11-11T10:40:11.495+00:00",
    "stage": "outcome_confirmation",
    "gateway_state": "VERIFIED",
-   "observed": "endpoint returned 200 for ack 0ee0a9f5-c945-4b72-a76c-5d64c4d06172",
+   "observed": "endpoint returned 200 for ack df53fde9-1cac-45a8-9447-241131f784d0",
    "alerts_at_endpoint": [
     "532942f8-fe97-5fd3-b63d-e4625c2474f4"
    ],
@@ -690,7 +690,7 @@
   },
   {
    "seq": 36,
-   "at": "2026-11-11T10:35:58.385+00:00",
+   "at": "2026-11-11T10:40:11.500+00:00",
    "stage": "feedback_persisted",
    "execution_entry": {
     "feedback_id": "deb7e2a0-2060-55b5-b12d-0eaa59b8812b",
@@ -712,7 +712,7 @@
   },
   {
    "seq": 37,
-   "at": "2026-11-11T10:35:58.387+00:00",
+   "at": "2026-11-11T10:40:11.502+00:00",
    "stage": "restart_check",
    "ledger": [
     [

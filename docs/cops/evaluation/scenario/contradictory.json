@@ -67,7 +67,13 @@
      "REFUTED"
     ]
    ],
-   "gateway_history": [],
+   "gateway_history": [
+    "PROPOSED",
+    "AUTHORISED",
+    "DELIVERED",
+    "APPLIED",
+    "VERIFIED"
+   ],
    "memory_validation_status": "UNVALIDATED",
    "scoring_history": []
   },
@@ -77,7 +83,7 @@
  "trace": [
   {
    "seq": 1,
-   "at": "2026-11-11T10:35:58.864+00:00",
+   "at": "2026-11-11T10:40:11.977+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "session_start",
@@ -85,7 +91,7 @@
   },
   {
    "seq": 2,
-   "at": "2026-11-11T10:35:58.864+00:00",
+   "at": "2026-11-11T10:40:11.977+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "user_prompt",
@@ -93,7 +99,7 @@
   },
   {
    "seq": 3,
-   "at": "2026-11-11T10:35:58.864+00:00",
+   "at": "2026-11-11T10:40:11.977+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "model_usage",
@@ -101,7 +107,7 @@
   },
   {
    "seq": 4,
-   "at": "2026-11-11T10:35:58.864+00:00",
+   "at": "2026-11-11T10:40:11.977+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -109,7 +115,7 @@
   },
   {
    "seq": 5,
-   "at": "2026-11-11T10:35:58.864+00:00",
+   "at": "2026-11-11T10:40:11.977+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -117,7 +123,7 @@
   },
   {
    "seq": 6,
-   "at": "2026-11-11T10:35:58.864+00:00",
+   "at": "2026-11-11T10:40:11.977+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -130,7 +136,7 @@
   },
   {
    "seq": 7,
-   "at": "2026-11-11T10:35:58.864+00:00",
+   "at": "2026-11-11T10:40:11.977+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -143,7 +149,7 @@
   },
   {
    "seq": 8,
-   "at": "2026-11-11T10:35:58.864+00:00",
+   "at": "2026-11-11T10:40:11.977+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -156,7 +162,7 @@
   },
   {
    "seq": 9,
-   "at": "2026-11-11T10:35:58.864+00:00",
+   "at": "2026-11-11T10:40:11.977+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -169,7 +175,7 @@
   },
   {
    "seq": 10,
-   "at": "2026-11-11T10:35:58.864+00:00",
+   "at": "2026-11-11T10:40:11.977+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -182,14 +188,14 @@
   },
   {
    "seq": 11,
-   "at": "2026-11-11T10:35:58.864+00:00",
+   "at": "2026-11-11T10:40:11.977+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "session_end"
   },
   {
    "seq": 12,
-   "at": "2026-11-11T10:35:58.864+00:00",
+   "at": "2026-11-11T10:40:11.977+00:00",
    "stage": "telemetry_ingested",
    "collectors": [
     "otel"
@@ -207,7 +213,7 @@
   },
   {
    "seq": 13,
-   "at": "2026-11-11T10:35:58.910+00:00",
+   "at": "2026-11-11T10:40:12.032+00:00",
    "stage": "initial_finding",
    "cop": "anomaly_detection",
    "run_key": "root:anomaly_detection:766672a5-d80f:r0",
@@ -219,7 +225,7 @@
   },
   {
    "seq": 14,
-   "at": "2026-11-11T10:35:58.910+00:00",
+   "at": "2026-11-11T10:40:12.032+00:00",
    "stage": "vs01_initial",
    "decision": "PROVISIONALLY_SUPPORTED",
    "support": 0.4389,
@@ -264,7 +270,7 @@
   },
   {
    "seq": 15,
-   "at": "2026-11-11T10:35:58.910+00:00",
+   "at": "2026-11-11T10:40:12.032+00:00",
    "stage": "handling_quotient_initial",
    "quotient": 0.807,
    "tier": "autonomous",
@@ -273,11 +279,11 @@
   },
   {
    "seq": 16,
-   "at": "2026-11-11T10:35:58.910+00:00",
+   "at": "2026-11-11T10:40:12.032+00:00",
    "stage": "request_for_support",
    "investigation_event": {
     "seq": 3,
-    "at": "2026-11-11T10:35:58.910+00:00",
+    "at": "2026-11-11T10:40:12.032+00:00",
     "kind": "referral_requested",
     "cop": "anomaly_detection",
     "referral_id": "96f55590-272c-5a9d-b558-fbeb4e1641a9",
@@ -289,11 +295,11 @@
   },
   {
    "seq": 17,
-   "at": "2026-11-11T10:35:58.910+00:00",
+   "at": "2026-11-11T10:40:12.032+00:00",
    "stage": "request_for_support",
    "investigation_event": {
     "seq": 4,
-    "at": "2026-11-11T10:35:58.910+00:00",
+    "at": "2026-11-11T10:40:12.032+00:00",
     "kind": "referral_requested",
     "cop": "anomaly_detection",
     "referral_id": "e92e4177-d737-5f10-8203-b6d49ea5652b",
@@ -305,11 +311,11 @@
   },
   {
    "seq": 18,
-   "at": "2026-11-11T10:35:58.911+00:00",
+   "at": "2026-11-11T10:40:12.032+00:00",
    "stage": "receiver_investigating",
    "investigation_event": {
     "seq": 5,
-    "at": "2026-11-11T10:35:58.911+00:00",
+    "at": "2026-11-11T10:40:12.032+00:00",
     "kind": "referral_dispatched",
     "cop": "anomaly_detection",
     "referral_id": "96f55590-272c-5a9d-b558-fbeb4e1641a9",
@@ -320,11 +326,11 @@
   },
   {
    "seq": 19,
-   "at": "2026-11-11T10:35:58.934+00:00",
+   "at": "2026-11-11T10:40:12.057+00:00",
    "stage": "receiver_answered",
    "investigation_event": {
     "seq": 9,
-    "at": "2026-11-11T10:35:58.934+00:00",
+    "at": "2026-11-11T10:40:12.057+00:00",
     "kind": "referral_answered",
     "cop": "runtime_monitoring",
     "referral_id": "96f55590-272c-5a9d-b558-fbeb4e1641a9",
@@ -333,7 +339,7 @@
     "verified": true,
     "admissible": true,
     "delivered_as": "evidence",
-    "elapsed_s": 0.023,
+    "elapsed_s": 0.025,
     "cost_usd": 0.0,
     "checks": {
      "RS-01": "PASS",
@@ -346,7 +352,7 @@
   },
   {
    "seq": 20,
-   "at": "2026-11-11T10:35:58.934+00:00",
+   "at": "2026-11-11T10:40:12.057+00:00",
    "stage": "referral_response",
    "referral_id": "96f55590-272c-5a9d-b558-fbeb4e1641a9",
    "receiver": "runtime_monitoring",
@@ -354,7 +360,7 @@
    "admissible": true,
    "delivered_as": "evidence",
    "label": "INSUFFICIENT",
-   "elapsed_s": 0.023,
+   "elapsed_s": 0.025,
    "checks": {
     "RS-01": "PASS",
     "RS-02": "PASS",
@@ -382,11 +388,11 @@
   },
   {
    "seq": 21,
-   "at": "2026-11-11T10:35:58.934+00:00",
+   "at": "2026-11-11T10:40:12.057+00:00",
    "stage": "receiver_investigating",
    "investigation_event": {
     "seq": 10,
-    "at": "2026-11-11T10:35:58.934+00:00",
+    "at": "2026-11-11T10:40:12.057+00:00",
     "kind": "referral_dispatched",
     "cop": "anomaly_detection",
     "referral_id": "e92e4177-d737-5f10-8203-b6d49ea5652b",
@@ -397,11 +403,11 @@
   },
   {
    "seq": 22,
-   "at": "2026-11-11T10:35:58.956+00:00",
+   "at": "2026-11-11T10:40:12.079+00:00",
    "stage": "request_for_support",
    "investigation_event": {
     "seq": 13,
-    "at": "2026-11-11T10:35:58.956+00:00",
+    "at": "2026-11-11T10:40:12.079+00:00",
     "kind": "referral_requested",
     "cop": "behavior_analytics",
     "referral_id": "327d97c3-8463-5c66-a39a-fd5e20376fb0",
@@ -413,11 +419,11 @@
   },
   {
    "seq": 23,
-   "at": "2026-11-11T10:35:58.956+00:00",
+   "at": "2026-11-11T10:40:12.080+00:00",
    "stage": "request_for_support",
    "investigation_event": {
     "seq": 14,
-    "at": "2026-11-11T10:35:58.956+00:00",
+    "at": "2026-11-11T10:40:12.080+00:00",
     "kind": "referral_requested",
     "cop": "behavior_analytics",
     "referral_id": "c310d4a7-d64a-547e-9139-cb96f2492a03",
@@ -429,11 +435,11 @@
   },
   {
    "seq": 24,
-   "at": "2026-11-11T10:35:58.956+00:00",
+   "at": "2026-11-11T10:40:12.080+00:00",
    "stage": "referral_not_opened",
    "investigation_event": {
     "seq": 15,
-    "at": "2026-11-11T10:35:58.956+00:00",
+    "at": "2026-11-11T10:40:12.080+00:00",
     "kind": "referral_not_opened",
     "cop": "behavior_analytics",
     "receiver": "context_memory",
@@ -442,11 +448,11 @@
   },
   {
    "seq": 25,
-   "at": "2026-11-11T10:35:58.957+00:00",
+   "at": "2026-11-11T10:40:12.080+00:00",
    "stage": "referral_answer_reused",
    "investigation_event": {
     "seq": 16,
-    "at": "2026-11-11T10:35:58.957+00:00",
+    "at": "2026-11-11T10:40:12.080+00:00",
     "kind": "referral_answer_reused",
     "cop": "behavior_analytics",
     "referral_id": "327d97c3-8463-5c66-a39a-fd5e20376fb0",
@@ -456,11 +462,11 @@
   },
   {
    "seq": 26,
-   "at": "2026-11-11T10:35:58.957+00:00",
+   "at": "2026-11-11T10:40:12.080+00:00",
    "stage": "receiver_investigating",
    "investigation_event": {
     "seq": 17,
-    "at": "2026-11-11T10:35:58.957+00:00",
+    "at": "2026-11-11T10:40:12.080+00:00",
     "kind": "referral_dispatched",
     "cop": "behavior_analytics",
     "referral_id": "c310d4a7-d64a-547e-9139-cb96f2492a03",
@@ -471,11 +477,11 @@
   },
   {
    "seq": 27,
-   "at": "2026-11-11T10:35:58.986+00:00",
+   "at": "2026-11-11T10:40:12.114+00:00",
    "stage": "request_for_support",
    "investigation_event": {
     "seq": 20,
-    "at": "2026-11-11T10:35:58.986+00:00",
+    "at": "2026-11-11T10:40:12.114+00:00",
     "kind": "referral_requested",
     "cop": "workflow_orchestration",
     "referral_id": "0603e7d8-571a-5a76-b0b3-f074480f4a12",
@@ -487,11 +493,11 @@
   },
   {
    "seq": 28,
-   "at": "2026-11-11T10:35:58.987+00:00",
+   "at": "2026-11-11T10:40:12.114+00:00",
    "stage": "referral_answer_reused",
    "investigation_event": {
     "seq": 21,
-    "at": "2026-11-11T10:35:58.987+00:00",
+    "at": "2026-11-11T10:40:12.114+00:00",
     "kind": "referral_answer_reused",
     "cop": "workflow_orchestration",
     "referral_id": "0603e7d8-571a-5a76-b0b3-f074480f4a12",
@@ -501,11 +507,11 @@
   },
   {
    "seq": 29,
-   "at": "2026-11-11T10:35:58.987+00:00",
+   "at": "2026-11-11T10:40:12.115+00:00",
    "stage": "reassessment_started",
    "investigation_event": {
     "seq": 22,
-    "at": "2026-11-11T10:35:58.987+00:00",
+    "at": "2026-11-11T10:40:12.115+00:00",
     "kind": "reassessment_started",
     "cop": "workflow_orchestration",
     "round": 1,
@@ -520,11 +526,11 @@
   },
   {
    "seq": 30,
-   "at": "2026-11-11T10:35:59.018+00:00",
+   "at": "2026-11-11T10:40:12.147+00:00",
    "stage": "receiver_answered",
    "investigation_event": {
     "seq": 25,
-    "at": "2026-11-11T10:35:59.018+00:00",
+    "at": "2026-11-11T10:40:12.147+00:00",
     "kind": "referral_answered",
     "cop": "workflow_orchestration",
     "referral_id": "c310d4a7-d64a-547e-9139-cb96f2492a03",
@@ -533,7 +539,7 @@
     "verified": false,
     "admissible": false,
     "delivered_as": "context_only",
-    "elapsed_s": 0.061,
+    "elapsed_s": 0.067,
     "cost_usd": 0.0,
     "checks": {
      "RS-01": "PASS",
@@ -546,11 +552,11 @@
   },
   {
    "seq": 31,
-   "at": "2026-11-11T10:35:59.018+00:00",
+   "at": "2026-11-11T10:40:12.147+00:00",
    "stage": "reassessment_started",
    "investigation_event": {
     "seq": 26,
-    "at": "2026-11-11T10:35:59.018+00:00",
+    "at": "2026-11-11T10:40:12.147+00:00",
     "kind": "reassessment_started",
     "cop": "behavior_analytics",
     "round": 1,
@@ -569,11 +575,11 @@
   },
   {
    "seq": 32,
-   "at": "2026-11-11T10:35:59.040+00:00",
+   "at": "2026-11-11T10:40:12.169+00:00",
    "stage": "receiver_answered",
    "investigation_event": {
     "seq": 29,
-    "at": "2026-11-11T10:35:59.040+00:00",
+    "at": "2026-11-11T10:40:12.169+00:00",
     "kind": "referral_answered",
     "cop": "behavior_analytics",
     "referral_id": "e92e4177-d737-5f10-8203-b6d49ea5652b",
@@ -582,7 +588,7 @@
     "verified": false,
     "admissible": false,
     "delivered_as": "context_only",
-    "elapsed_s": 0.106,
+    "elapsed_s": 0.112,
     "cost_usd": 0.0,
     "checks": {
      "RS-01": "PASS",
@@ -595,7 +601,7 @@
   },
   {
    "seq": 33,
-   "at": "2026-11-11T10:35:59.040+00:00",
+   "at": "2026-11-11T10:40:12.169+00:00",
    "stage": "referral_response",
    "referral_id": "e92e4177-d737-5f10-8203-b6d49ea5652b",
    "receiver": "behavior_analytics",
@@ -603,7 +609,7 @@
    "admissible": false,
    "delivered_as": "context_only",
    "label": "INCONCLUSIVE",
-   "elapsed_s": 0.106,
+   "elapsed_s": 0.112,
    "checks": {
     "RS-01": "PASS",
     "RS-02": "FAIL",
@@ -640,11 +646,11 @@
   },
   {
    "seq": 34,
-   "at": "2026-11-11T10:35:59.041+00:00",
+   "at": "2026-11-11T10:40:12.170+00:00",
    "stage": "reassessment_started",
    "investigation_event": {
     "seq": 30,
-    "at": "2026-11-11T10:35:59.041+00:00",
+    "at": "2026-11-11T10:40:12.170+00:00",
     "kind": "reassessment_started",
     "cop": "anomaly_detection",
     "round": 1,
@@ -663,7 +669,7 @@
   },
   {
    "seq": 35,
-   "at": "2026-11-11T10:35:59.075+00:00",
+   "at": "2026-11-11T10:40:12.201+00:00",
    "stage": "revised_evidence_score",
    "round": 1,
    "decision": "INSUFFICIENT_EVIDENCE",
@@ -703,7 +709,7 @@
   },
   {
    "seq": 36,
-   "at": "2026-11-11T10:35:59.076+00:00",
+   "at": "2026-11-11T10:40:12.202+00:00",
    "stage": "investigation_final",
    "tier": "assisted",
    "routing_reason": "additional evidence did not resolve the uncertainty (NORMAL PROVISIONALLY_SUPPORTED -> INCONCLUSIVE INSUFFICIENT_EVIDENCE); a reviewer sees the case before REQUEST_COP_SUPPORT is relied on. INCONCLUSIVE (telemetry_insufficient): telemetry verified INSUFFICIENT by Runtime Monitoring",
@@ -717,7 +723,7 @@
   },
   {
    "seq": 37,
-   "at": "2026-11-11T10:35:59.122+00:00",
+   "at": "2026-11-11T10:40:12.253+00:00",
    "stage": "final_action",
    "typed_action": "REQUEST_COP_SUPPORT",
    "triage_selected": "REQUEST_COP_SUPPORT",
@@ -729,7 +735,7 @@
   },
   {
    "seq": 38,
-   "at": "2026-11-11T10:35:59.122+00:00",
+   "at": "2026-11-11T10:40:12.253+00:00",
    "stage": "authority_check",
    "authorised": true,
    "checks": [
@@ -751,7 +757,7 @@
   },
   {
    "seq": 39,
-   "at": "2026-11-11T10:35:59.124+00:00",
+   "at": "2026-11-11T10:40:12.255+00:00",
    "stage": "action_execution",
    "execution_status": "NOT_EXECUTED_NO_ACTION",
    "gateway_action_id": null,
@@ -761,7 +767,7 @@
   },
   {
    "seq": 40,
-   "at": "2026-11-11T10:35:59.131+00:00",
+   "at": "2026-11-11T10:40:12.264+00:00",
    "stage": "review_task_opened",
    "gateway_action_id": "00596b93-0562-5b81-9252-453dabe72c5d",
    "kind": "unresolved_uncertainty",
@@ -776,7 +782,7 @@
   },
   {
    "seq": 41,
-   "at": "2026-11-11T10:35:59.131+00:00",
+   "at": "2026-11-11T10:40:12.265+00:00",
    "stage": "outcome_confirmation",
    "gateway_state": "VERIFIED",
    "observed": "approval row reads PENDING on a fresh connection",
@@ -785,7 +791,7 @@
   },
   {
    "seq": 42,
-   "at": "2026-11-11T10:35:59.133+00:00",
+   "at": "2026-11-11T10:40:12.267+00:00",
    "stage": "feedback_persisted",
    "execution_entry": {
     "feedback_id": "a6e2d51d-3ee9-5a69-a01b-85b306bf21b7",
@@ -809,7 +815,7 @@
   },
   {
    "seq": 43,
-   "at": "2026-11-11T10:35:59.134+00:00",
+   "at": "2026-11-11T10:40:12.269+00:00",
    "stage": "restart_check",
    "ledger": [
     [
@@ -821,7 +827,13 @@
      "REFUTED"
     ]
    ],
-   "gateway_history": [],
+   "gateway_history": [
+    "PROPOSED",
+    "AUTHORISED",
+    "DELIVERED",
+    "APPLIED",
+    "VERIFIED"
+   ],
    "memory_validation_status": "UNVALIDATED",
    "scoring_history": []
   }

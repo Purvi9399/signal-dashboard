@@ -89,7 +89,7 @@
  "trace": [
   {
    "seq": 1,
-   "at": "2026-11-11T10:35:59.873+00:00",
+   "at": "2026-11-11T10:40:12.987+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "session_start",
@@ -97,7 +97,7 @@
   },
   {
    "seq": 2,
-   "at": "2026-11-11T10:35:59.873+00:00",
+   "at": "2026-11-11T10:40:12.987+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "user_prompt",
@@ -105,7 +105,7 @@
   },
   {
    "seq": 3,
-   "at": "2026-11-11T10:35:59.873+00:00",
+   "at": "2026-11-11T10:40:12.987+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "model_usage",
@@ -113,7 +113,7 @@
   },
   {
    "seq": 4,
-   "at": "2026-11-11T10:35:59.873+00:00",
+   "at": "2026-11-11T10:40:12.987+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -121,7 +121,7 @@
   },
   {
    "seq": 5,
-   "at": "2026-11-11T10:35:59.873+00:00",
+   "at": "2026-11-11T10:40:12.987+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -129,7 +129,7 @@
   },
   {
    "seq": 6,
-   "at": "2026-11-11T10:35:59.873+00:00",
+   "at": "2026-11-11T10:40:12.987+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -142,7 +142,7 @@
   },
   {
    "seq": 7,
-   "at": "2026-11-11T10:35:59.873+00:00",
+   "at": "2026-11-11T10:40:12.987+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -155,7 +155,7 @@
   },
   {
    "seq": 8,
-   "at": "2026-11-11T10:35:59.873+00:00",
+   "at": "2026-11-11T10:40:12.987+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -168,7 +168,7 @@
   },
   {
    "seq": 9,
-   "at": "2026-11-11T10:35:59.873+00:00",
+   "at": "2026-11-11T10:40:12.987+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -181,7 +181,7 @@
   },
   {
    "seq": 10,
-   "at": "2026-11-11T10:35:59.873+00:00",
+   "at": "2026-11-11T10:40:12.987+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -194,14 +194,14 @@
   },
   {
    "seq": 11,
-   "at": "2026-11-11T10:35:59.873+00:00",
+   "at": "2026-11-11T10:40:12.987+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "session_end"
   },
   {
    "seq": 12,
-   "at": "2026-11-11T10:35:59.873+00:00",
+   "at": "2026-11-11T10:40:12.988+00:00",
    "stage": "telemetry_ingested",
    "collectors": [
     "otel"
@@ -213,7 +213,7 @@
   },
   {
    "seq": 13,
-   "at": "2026-11-11T10:35:59.929+00:00",
+   "at": "2026-11-11T10:40:13.065+00:00",
    "stage": "initial_finding",
    "cop": "anomaly_detection",
    "run_key": "root:anomaly_detection:dfed4c22-efc8:r0",
@@ -225,7 +225,7 @@
   },
   {
    "seq": 14,
-   "at": "2026-11-11T10:35:59.929+00:00",
+   "at": "2026-11-11T10:40:13.065+00:00",
    "stage": "vs01_initial",
    "decision": "SUPPORTED",
    "support": 0.6909,
@@ -270,7 +270,7 @@
   },
   {
    "seq": 15,
-   "at": "2026-11-11T10:35:59.929+00:00",
+   "at": "2026-11-11T10:40:13.065+00:00",
    "stage": "handling_quotient_initial",
    "quotient": 0.895,
    "tier": "autonomous",
@@ -279,11 +279,11 @@
   },
   {
    "seq": 16,
-   "at": "2026-11-11T10:35:59.929+00:00",
+   "at": "2026-11-11T10:40:13.066+00:00",
    "stage": "request_for_support",
    "investigation_event": {
     "seq": 3,
-    "at": "2026-11-11T10:35:59.929+00:00",
+    "at": "2026-11-11T10:40:13.066+00:00",
     "kind": "referral_requested",
     "cop": "anomaly_detection",
     "referral_id": "c3e0b49d-043e-54b7-bb83-002b3cb03618",
@@ -295,11 +295,11 @@
   },
   {
    "seq": 17,
-   "at": "2026-11-11T10:35:59.929+00:00",
+   "at": "2026-11-11T10:40:13.066+00:00",
    "stage": "request_for_support",
    "investigation_event": {
     "seq": 4,
-    "at": "2026-11-11T10:35:59.929+00:00",
+    "at": "2026-11-11T10:40:13.066+00:00",
     "kind": "referral_requested",
     "cop": "anomaly_detection",
     "referral_id": "4a01eef8-394b-595b-bd13-a09bbb6100d3",
@@ -311,11 +311,11 @@
   },
   {
    "seq": 18,
-   "at": "2026-11-11T10:35:59.929+00:00",
+   "at": "2026-11-11T10:40:13.067+00:00",
    "stage": "receiver_investigating",
    "investigation_event": {
     "seq": 5,
-    "at": "2026-11-11T10:35:59.929+00:00",
+    "at": "2026-11-11T10:40:13.067+00:00",
     "kind": "referral_dispatched",
     "cop": "anomaly_detection",
     "referral_id": "c3e0b49d-043e-54b7-bb83-002b3cb03618",
@@ -326,11 +326,11 @@
   },
   {
    "seq": 19,
-   "at": "2026-11-11T10:35:59.953+00:00",
+   "at": "2026-11-11T10:40:13.105+00:00",
    "stage": "receiver_answered",
    "investigation_event": {
     "seq": 9,
-    "at": "2026-11-11T10:35:59.953+00:00",
+    "at": "2026-11-11T10:40:13.105+00:00",
     "kind": "referral_answered",
     "cop": "runtime_monitoring",
     "referral_id": "c3e0b49d-043e-54b7-bb83-002b3cb03618",
@@ -352,7 +352,7 @@
   },
   {
    "seq": 20,
-   "at": "2026-11-11T10:35:59.953+00:00",
+   "at": "2026-11-11T10:40:13.105+00:00",
    "stage": "referral_response",
    "referral_id": "c3e0b49d-043e-54b7-bb83-002b3cb03618",
    "receiver": "runtime_monitoring",
@@ -388,11 +388,11 @@
   },
   {
    "seq": 21,
-   "at": "2026-11-11T10:35:59.953+00:00",
+   "at": "2026-11-11T10:40:13.105+00:00",
    "stage": "receiver_investigating",
    "investigation_event": {
     "seq": 10,
-    "at": "2026-11-11T10:35:59.953+00:00",
+    "at": "2026-11-11T10:40:13.105+00:00",
     "kind": "referral_dispatched",
     "cop": "anomaly_detection",
     "referral_id": "4a01eef8-394b-595b-bd13-a09bbb6100d3",
@@ -403,11 +403,11 @@
   },
   {
    "seq": 22,
-   "at": "2026-11-11T10:35:59.977+00:00",
+   "at": "2026-11-11T10:40:13.149+00:00",
    "stage": "request_for_support",
    "investigation_event": {
     "seq": 13,
-    "at": "2026-11-11T10:35:59.977+00:00",
+    "at": "2026-11-11T10:40:13.149+00:00",
     "kind": "referral_requested",
     "cop": "behavior_analytics",
     "referral_id": "f07eb10d-947c-51cb-8907-54c6b3957d5c",
@@ -419,11 +419,11 @@
   },
   {
    "seq": 23,
-   "at": "2026-11-11T10:35:59.977+00:00",
+   "at": "2026-11-11T10:40:13.149+00:00",
    "stage": "request_for_support",
    "investigation_event": {
     "seq": 14,
-    "at": "2026-11-11T10:35:59.977+00:00",
+    "at": "2026-11-11T10:40:13.149+00:00",
     "kind": "referral_requested",
     "cop": "behavior_analytics",
     "referral_id": "0af8a479-cbe0-5dc2-9e42-8e78d6b5cb52",
@@ -435,11 +435,11 @@
   },
   {
    "seq": 24,
-   "at": "2026-11-11T10:35:59.977+00:00",
+   "at": "2026-11-11T10:40:13.149+00:00",
    "stage": "referral_not_opened",
    "investigation_event": {
     "seq": 15,
-    "at": "2026-11-11T10:35:59.977+00:00",
+    "at": "2026-11-11T10:40:13.149+00:00",
     "kind": "referral_not_opened",
     "cop": "behavior_analytics",
     "receiver": "context_memory",
@@ -448,11 +448,11 @@
   },
   {
    "seq": 25,
-   "at": "2026-11-11T10:35:59.977+00:00",
+   "at": "2026-11-11T10:40:13.149+00:00",
    "stage": "referral_failure_reused",
    "investigation_event": {
     "seq": 16,
-    "at": "2026-11-11T10:35:59.977+00:00",
+    "at": "2026-11-11T10:40:13.149+00:00",
     "kind": "referral_failure_reused",
     "cop": "behavior_analytics",
     "referral_id": "f07eb10d-947c-51cb-8907-54c6b3957d5c",
@@ -463,11 +463,11 @@
   },
   {
    "seq": 26,
-   "at": "2026-11-11T10:35:59.977+00:00",
+   "at": "2026-11-11T10:40:13.150+00:00",
    "stage": "receiver_investigating",
    "investigation_event": {
     "seq": 17,
-    "at": "2026-11-11T10:35:59.977+00:00",
+    "at": "2026-11-11T10:40:13.150+00:00",
     "kind": "referral_dispatched",
     "cop": "behavior_analytics",
     "referral_id": "0af8a479-cbe0-5dc2-9e42-8e78d6b5cb52",
@@ -478,11 +478,11 @@
   },
   {
    "seq": 27,
-   "at": "2026-11-11T10:36:00.009+00:00",
+   "at": "2026-11-11T10:40:13.204+00:00",
    "stage": "request_for_support",
    "investigation_event": {
     "seq": 20,
-    "at": "2026-11-11T10:36:00.009+00:00",
+    "at": "2026-11-11T10:40:13.204+00:00",
     "kind": "referral_requested",
     "cop": "workflow_orchestration",
     "referral_id": "f9790984-ee76-5009-a5db-60a8db2dd5de",
@@ -494,11 +494,11 @@
   },
   {
    "seq": 28,
-   "at": "2026-11-11T10:36:00.009+00:00",
+   "at": "2026-11-11T10:40:13.205+00:00",
    "stage": "referral_failure_reused",
    "investigation_event": {
     "seq": 21,
-    "at": "2026-11-11T10:36:00.009+00:00",
+    "at": "2026-11-11T10:40:13.205+00:00",
     "kind": "referral_failure_reused",
     "cop": "workflow_orchestration",
     "referral_id": "f9790984-ee76-5009-a5db-60a8db2dd5de",
@@ -509,11 +509,11 @@
   },
   {
    "seq": 29,
-   "at": "2026-11-11T10:36:00.010+00:00",
+   "at": "2026-11-11T10:40:13.206+00:00",
    "stage": "receiver_answered",
    "investigation_event": {
     "seq": 23,
-    "at": "2026-11-11T10:36:00.010+00:00",
+    "at": "2026-11-11T10:40:13.206+00:00",
     "kind": "referral_answered",
     "cop": "workflow_orchestration",
     "referral_id": "0af8a479-cbe0-5dc2-9e42-8e78d6b5cb52",
@@ -535,11 +535,11 @@
   },
   {
    "seq": 30,
-   "at": "2026-11-11T10:36:00.011+00:00",
+   "at": "2026-11-11T10:40:13.206+00:00",
    "stage": "reassessment_started",
    "investigation_event": {
     "seq": 24,
-    "at": "2026-11-11T10:36:00.011+00:00",
+    "at": "2026-11-11T10:40:13.206+00:00",
     "kind": "reassessment_started",
     "cop": "behavior_analytics",
     "round": 1,
@@ -554,11 +554,11 @@
   },
   {
    "seq": 31,
-   "at": "2026-11-11T10:36:00.034+00:00",
+   "at": "2026-11-11T10:40:13.246+00:00",
    "stage": "receiver_answered",
    "investigation_event": {
     "seq": 27,
-    "at": "2026-11-11T10:36:00.034+00:00",
+    "at": "2026-11-11T10:40:13.246+00:00",
     "kind": "referral_answered",
     "cop": "behavior_analytics",
     "referral_id": "4a01eef8-394b-595b-bd13-a09bbb6100d3",
@@ -580,7 +580,7 @@
   },
   {
    "seq": 32,
-   "at": "2026-11-11T10:36:00.034+00:00",
+   "at": "2026-11-11T10:40:13.246+00:00",
    "stage": "referral_response",
    "referral_id": "4a01eef8-394b-595b-bd13-a09bbb6100d3",
    "receiver": "behavior_analytics",
@@ -625,11 +625,11 @@
   },
   {
    "seq": 33,
-   "at": "2026-11-11T10:36:00.035+00:00",
+   "at": "2026-11-11T10:40:13.247+00:00",
    "stage": "reassessment_started",
    "investigation_event": {
     "seq": 28,
-    "at": "2026-11-11T10:36:00.035+00:00",
+    "at": "2026-11-11T10:40:13.247+00:00",
     "kind": "reassessment_started",
     "cop": "anomaly_detection",
     "round": 1,
@@ -644,7 +644,7 @@
   },
   {
    "seq": 34,
-   "at": "2026-11-11T10:36:00.072+00:00",
+   "at": "2026-11-11T10:40:13.303+00:00",
    "stage": "revised_evidence_score",
    "round": 1,
    "decision": "SUPPORTED",
@@ -676,7 +676,7 @@
   },
   {
    "seq": 35,
-   "at": "2026-11-11T10:36:00.073+00:00",
+   "at": "2026-11-11T10:40:13.303+00:00",
    "stage": "investigation_final",
    "tier": "human",
    "routing_reason": "referral limit hit (runtime_monitoring TIMED_OUT: INSUFFICIENT (SUBSTANTIVE); not_delivered); quotient 0.906 in the autonomous band of anomaly_detection (autonomous >= 0.8, assisted >= 0.6, specialist >= 0.35)",
@@ -693,7 +693,7 @@
   },
   {
    "seq": 36,
-   "at": "2026-11-11T10:36:00.123+00:00",
+   "at": "2026-11-11T10:40:13.356+00:00",
    "stage": "final_action",
    "typed_action": "ALERT",
    "triage_selected": "ALERT",
@@ -705,7 +705,7 @@
   },
   {
    "seq": 37,
-   "at": "2026-11-11T10:36:00.123+00:00",
+   "at": "2026-11-11T10:40:13.356+00:00",
    "stage": "authority_check",
    "authorised": true,
    "checks": [
@@ -727,7 +727,7 @@
   },
   {
    "seq": 38,
-   "at": "2026-11-11T10:36:00.125+00:00",
+   "at": "2026-11-11T10:40:13.358+00:00",
    "stage": "approval_requested",
    "approval_id": "f2e7f43b-b971-58c3-9d33-73519cc297fc",
    "typed_action": "ALERT",
@@ -737,7 +737,7 @@
   },
   {
    "seq": 39,
-   "at": "2026-11-11T10:36:00.126+00:00",
+   "at": "2026-11-11T10:40:13.359+00:00",
    "stage": "approval_decided",
    "approval_id": "f2e7f43b-b971-58c3-9d33-73519cc297fc",
    "decision": "approve",
@@ -746,7 +746,7 @@
   },
   {
    "seq": 40,
-   "at": "2026-11-11T10:36:00.199+00:00",
+   "at": "2026-11-11T10:40:13.445+00:00",
    "stage": "action_execution",
    "execution_status": "EXECUTED_SANDBOX",
    "gateway_action_id": "2acf2ff9-72ee-5fb1-a442-13adaa5505f2",
@@ -764,10 +764,10 @@
   },
   {
    "seq": 41,
-   "at": "2026-11-11T10:36:00.199+00:00",
+   "at": "2026-11-11T10:40:13.446+00:00",
    "stage": "outcome_confirmation",
    "gateway_state": "VERIFIED",
-   "observed": "endpoint returned 200 for ack 8429d186-40ab-4a56-828c-2d93784b5f05",
+   "observed": "endpoint returned 200 for ack 83876438-774a-40cc-9ec0-f966dd96452e",
    "alerts_at_endpoint": [
     "2acf2ff9-72ee-5fb1-a442-13adaa5505f2"
    ],
@@ -775,7 +775,7 @@
   },
   {
    "seq": 42,
-   "at": "2026-11-11T10:36:00.203+00:00",
+   "at": "2026-11-11T10:40:13.451+00:00",
    "stage": "feedback_persisted",
    "execution_entry": {
     "feedback_id": "429006c1-5782-5f01-9b35-615a00baecfa",
@@ -797,7 +797,7 @@
   },
   {
    "seq": 43,
-   "at": "2026-11-11T10:36:00.205+00:00",
+   "at": "2026-11-11T10:40:13.453+00:00",
    "stage": "restart_check",
    "ledger": [
     [

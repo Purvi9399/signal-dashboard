@@ -4,6 +4,7 @@ import Overview from "./pages/Overview";
 import Sessions from "./pages/Sessions";
 import Insights from "./pages/Insights";
 import SessionObservability from "./pages/SessionObservability";
+import CopInvestigations from "./pages/CopInvestigations";
 
 const URL = import.meta.env.VITE_SUPABASE_URL;
 const KEY = import.meta.env.VITE_SUPABASE_KEY;
@@ -25,6 +26,7 @@ const NAV = [
   ["sessions", "Session analysis", "A detailed view of every session"],
   ["insights", "Insights", "Trends and analysis across the estate"],
   ["sessionobs", "Session observability", "The same activity at three levels"],
+  ["cops", "COP investigations", "Sandbox scenario: handoffs, support, actions"],
 ];
 
 export default function App() {
@@ -91,7 +93,9 @@ export default function App() {
       </aside>
 
       <main className="flex-1 min-w-0 p-6">
-        {status !== "ready" ? (
+        {page === "cops" ? (
+          <CopInvestigations />
+        ) : status !== "ready" ? (
           <p className="text-sm" style={{ color: C.body }}>{status}</p>
         ) : (
           <>

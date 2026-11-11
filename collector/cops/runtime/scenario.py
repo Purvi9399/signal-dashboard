@@ -348,7 +348,7 @@ def _run(variant, workdir, reviewer, tr, paths, case_id, ep):
     g2 = G.SandboxGateway(G.GatewayStore(paths["gateway"]))
     mem = [r for r in s2.select("cop_memory_records") if r["record_id"] == rec_id] if rec_id else []
     after = {"ledger": sorted((e["kind"], e["outcome"]) for e in l2.for_case(case_id)),
-             "gateway_history": g2.history(gateway_action_id) if gateway_action_id else [],
+             "gateway_history": g2.history(gateway_action_id or review_task) if (gateway_action_id or review_task) else [],
              "memory_validation_status": mem[0]["validation_status"] if mem else None,
              "scoring_history": [h["feedback_id"] for h in l2.scoring_history(COP)]}
     tr.add("restart_check", **after)
