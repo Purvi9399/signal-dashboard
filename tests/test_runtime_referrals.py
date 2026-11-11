@@ -82,7 +82,8 @@ def test_anomaly_detection_refers_runtime_monitoring_which_runs_through_langgrap
 def test_referral_request_is_typed_and_complete():
     rt = runtime("rf-2", coding_session(collectors=("otel",)))
     out = RF.run_investigation(rt, "anomaly_detection")
-    req_events = [e for e in out["events"] if e["kind"] == "referral_requested"]
+    req_events = [e for e in out["events"] if e["kind"] == "referral_requested"
+                  and e["cop"] == "anomaly_detection"]
     assert {e["receiver"] for e in req_events} == {"runtime_monitoring", "behavior_analytics"}
     # rebuild one request exactly as the graph built it and check every field
     a = out["investigation"]["runs"][0]
@@ -252,3 +253,13 @@ def test_answers_that_add_no_admissible_evidence_leave_the_case_unresolved_not_u
     assert inv["resolution"]["status"] == RF.UNRESOLVED
     assert inv["final"]["verification_support"] == inv["runs"][0]["verification_support"]
     assert len(inv["runs"]) == 1
+
+
+def test_a_receiver_can_refer_onward_once_within_the_depth_limit():
+    out = RF.run_investigation(runtime("rf-nest", coding_session(collectors=("otel",))), "anomaly_detection")
+    req = [(e["cop"], e["receiver"], e["depth"]) for e in out["events"] if e["kind"] == "referral_requested"]
+    assert ("behavior_analytics", "workflow_orchestration", 2) in req      # BA asks WO on AD's behalf
+    assert all(d <= RF.MAX_DEPTH for _, _, d in req)
+    # runtime_monitoring answered once and was not re-run for the nested investigation
+    rm_runs = [e for e in out["events"] if e["kind"] == "referral_dispatched" and e["receiver"] == "runtime_monitoring"]
+    assert len(rm_runs) == 1

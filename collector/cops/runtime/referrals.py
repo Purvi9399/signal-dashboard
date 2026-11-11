@@ -203,13 +203,15 @@ def snapshot(out, run_key, rt):
 
 # ====================================================================== needs
 
-def needs(cop, out, upstream, asked):
-    """Typed needs for other COPs' findings. Returns (needs, not_referred)."""
+def needs(cop, out, upstream, asked, on_behalf=False):
+    """Typed needs for other COPs' findings. Returns (needs, not_referred).
+    on_behalf: this COP is answering a referral, so it resolves what its own answer
+    leaves unknown even when its own action would only record."""
     f = out["finding"]
     vs = f.get("verification_support") or {}
     snap_action = ((f.get("triage") or {}).get("action_selection") or {}).get("selected") or "NONE"
     acts = snap_action not in QUIET_ACTIONS
-    if vs.get("decision") == SUP.SUPPORTED and not acts:
+    if vs.get("decision") == SUP.SUPPORTED and not acts and not on_behalf:
         return [], [{"item": "*", "reason": "SUPPORTED and the action only records: nothing to check"}]
     want = {}
     for c in vs.get("components") or []:
@@ -322,6 +324,7 @@ class Tree:
         self.spent, self.runs, self.answers, self.events = 0.0, 0, {}, []
         self.run_hook = run_hook            # tests: fn(cop, run_key) called before a run (fault injection)
         self.root_id = None
+        self.states = {}                    # run_key -> the COP run's full final state (for the action phase)
 
     def remaining(self):
         return round(self.cost_limit - self.spent, 6)
@@ -349,6 +352,7 @@ class Tree:
         out = run_cop(rt, cop, upstream=upstream, thread_id=f"{rt.case.case_id}:{cop}:{run_key}")
         cost = float((out["result"].get("llm_spend") or {}).get("cost_usd") or 0.0)
         self.spent = round(self.spent + cost, 6)
+        self.states[run_key] = out
         return out
 
 
@@ -459,7 +463,7 @@ def n_plan(state):
     tr = _tree(state)
     cop = state["cop"]
     out = state["last_out"]
-    nd, skipped = needs(cop, out, state.get("upstream") or {}, set(state["asked"]))
+    nd, skipped = needs(cop, out, state.get("upstream") or {}, set(state["asked"]), on_behalf=state["depth"] > 0)
     snap = state["runs"][-1]
     pending = []
     if state["round"] >= tr.max_rounds:
@@ -491,8 +495,6 @@ def dispatch_one(tr, req):
     rcv = req["receiver"]
     if rcv in req["chain"][:-1]:
         return _refuse(tr, req, REFUSED_CYCLE, f"cycle: {' -> '.join(req['chain'])}")
-    if req["depth"] > tr.max_depth:
-        return _refuse(tr, req, REFUSED_DEPTH, f"depth {req['depth']} over {tr.max_depth}")
     if rcv not in req["permitted_scope"]["receivers"]:
         return _refuse(tr, req, REFUSED_SCOPE, f"{req['initiator']} may not consume {rcv}")
     if rcv in tr.answers:
@@ -502,6 +504,9 @@ def dispatch_one(tr, req):
         return {**prev, "referral_id": req["referral_id"], "status": REUSED,
                 "detail": f"verified answer already returned in this investigation ({prev['referral_id']})",
                 "cost_usd": 0.0, "elapsed_s": 0.0, "attempts": 0}
+    if req["depth"] > tr.max_depth:
+        # checked after reuse: handing over an answer already verified in this tree is not a hop
+        return _refuse(tr, req, REFUSED_DEPTH, f"depth {req['depth']} over {tr.max_depth}")
     if tr.remaining() <= 0:
         return _refuse(tr, req, REFUSED_BUDGET, f"cost limit ${tr.cost_limit} spent")
     if tr.runs >= tr.max_runs:
@@ -639,7 +644,8 @@ def route_after_evaluate(state):
     tr = _tree(state)
     if state["round"] >= tr.max_rounds:
         return "finalise"
-    nd, _ = needs(state["cop"], state["last_out"], state.get("upstream") or {}, set(state["asked"]))
+    nd, _ = needs(state["cop"], state["last_out"], state.get("upstream") or {}, set(state["asked"]),
+                  on_behalf=state["depth"] > 0)
     return "plan_referrals" if nd else "finalise"
 
 
@@ -695,8 +701,9 @@ def n_finalise(state):
         why = f"referral limit hit ({'; '.join(res['limit_hit'])[:200]}); " + (why or "")
         human_task = {"kind": "referral_limit", "question": f"{cop}: {res['reason']}"[:300],
                       "limits": res["limit_hit"]}
-    elif res["status"] in (UNRESOLVED, UNCHANGED) and res["still_uncertain"] and \
-            last["selected_action"] not in QUIET_ACTIONS:
+    elif state["responses"] and res["still_uncertain"]:
+        # referrals were made and the reading is still provisional, insufficient or inconclusive:
+        # nothing further is retried; a reviewer sees the case
         tier = TRI.HUMAN if tier == TRI.HUMAN else TRI.ASSISTED
         why = f"additional evidence did not resolve the uncertainty ({res['reason'][:160]}); " \
               f"a reviewer sees the case before {last['selected_action']} is relied on. " + (why or "")
