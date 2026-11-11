@@ -121,6 +121,9 @@ def test_authority_is_checked_on_the_final_evidence_in_every_variant(runs):
         assert a["authorised"] is True and {c["check_id"] for c in a["checks"]} >= {"AU-01", "PE-01"}, v
         fa = first(r, "final_action")
         assert fa["exec_decision_id"] != first(r, "initial_finding")["decision_id"], v
+        # the act-phase run decides on the revised evidence: same support score as the last reassessment
+        rev = [e for e in r["trace"] if e["stage"] == "revised_evidence_score"][-1]
+        assert fa["support"] == rev["support"], v
 
 
 def test_saved_traces_are_these_runs(runs):

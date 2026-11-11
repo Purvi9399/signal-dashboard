@@ -143,8 +143,8 @@ class Trace:
     def __init__(self, variant):
         self.variant, self.events = variant, []
 
-    def add(self, stage, **detail):
-        self.events.append({"seq": len(self.events) + 1, "at": _iso(), "stage": stage, **detail})
+    def add(self, stage, at=None, **detail):
+        self.events.append({"seq": len(self.events) + 1, "at": at or _iso(), "stage": stage, **detail})
 
 
 def _vs(snap):
@@ -209,31 +209,53 @@ def _run(variant, workdir, reviewer, tr, paths, case_id, ep):
     res = RF.run_investigation(rt, COP, **limits)
     inv = res["investigation"]
     first, last = inv["runs"][0], inv["runs"][-1]
-    tr.add("initial_finding", cop=COP, run_key=first["run_key"], decision_id=first["decision_id"],
-           label=first["label"], status=first["status"], verified=first["verified"],
-           simulated_model_replies=True)
-    tr.add("vs01_initial", **_vs(first), components=[{k: c[k] for k in ("name", "direction", "contribution")}
-                                                     for c in first["verification_support"]["components"]])
-    tr.add("handling_quotient_initial", quotient=first["quotient"], tier=first["tier"],
-           selected_action=first["selected_action"], routing_reason=first["routing_reason"])
-    for e in res["events"]:
-        if e["kind"].startswith("referral") or e["kind"].startswith("reassessment"):
-            stage = {"referral_requested": "request_for_support", "referral_dispatched": "receiver_investigating",
-                     "referral_answered": "receiver_answered"}.get(e["kind"], e["kind"])
-            tr.add(stage, investigation_event=e)
-    for r in inv["responses"]:
-        tr.add("referral_response", receiver=r["receiver"], status=r["status"], admissible=r["admissible"],
-               delivered_as=r["delivered_as"], label=(r["finding"] or {}).get("label"),
-               checks={c["check_id"]: c["result"] for c in r["checks"]},
-               receiver_decision_id=(r.get("receiver_trace") or {}).get("decision_id"),
-               graph_nodes=(r.get("receiver_trace") or {}).get("graph_nodes"))
-    tr.add("revised_evidence_score", **_vs(last), quotient=last["quotient"], tier=last["tier"],
-           selected_action=last["selected_action"], resolution=inv["resolution"]["status"],
-           resolution_reason=inv["resolution"]["reason"],
-           component_changes=inv["resolution"]["component_changes"])
     final = inv["final"]
-    tr.add("investigation_final", tier=final["tier"], routing_reason=final["routing_reason"],
-           human_task=final["human_task"], selected_action=final["selected_action"])
+    by_ref = {r["referral_id"]: r for r in inv["responses"]}
+    root_key = first["run_key"]
+    revised_seen = False
+
+    def revised(at, snap, rnd):
+        tr.add("revised_evidence_score", at=at, round=rnd, **_vs(snap), quotient=snap["quotient"],
+               tier=snap["tier"], selected_action=snap["selected_action"], label=snap["label"],
+               resolution=inv["resolution"]["status"], resolution_reason=inv["resolution"]["reason"],
+               component_changes=inv["resolution"]["component_changes"])
+
+    # the investigation's own event log, in order and with its own timestamps
+    for e in res["events"]:
+        k = e["kind"]
+        if k == "assessment_completed" and e.get("run_key") == root_key:
+            tr.add("initial_finding", at=e["at"], cop=COP, run_key=first["run_key"],
+                   decision_id=first["decision_id"], label=first["label"], status=first["status"],
+                   verified=first["verified"], simulated_model_replies=True)
+            tr.add("vs01_initial", at=e["at"], **_vs(first),
+                   components=[{k2: c[k2] for k2 in ("name", "direction", "contribution", "basis")}
+                               for c in first["verification_support"]["components"]])
+            tr.add("handling_quotient_initial", at=e["at"], quotient=first["quotient"], tier=first["tier"],
+                   selected_action=first["selected_action"], routing_reason=first["routing_reason"])
+        elif k.startswith("referral") or k.startswith("reassessment_started"):
+            stage = {"referral_requested": "request_for_support", "referral_dispatched": "receiver_investigating",
+                     "referral_answered": "receiver_answered"}.get(k, k)
+            tr.add(stage, at=e["at"], investigation_event=e)
+            r = by_ref.get(e.get("referral_id"))
+            if r and k in ("referral_answered", "referral_refused", "referral_answer_reused",
+                           "referral_failure_reused", "referral_failed"):
+                tr.add("referral_response", at=e["at"], referral_id=r["referral_id"], receiver=r["receiver"],
+                       status=r["status"], admissible=r["admissible"], delivered_as=r["delivered_as"],
+                       label=(r["finding"] or {}).get("label"), elapsed_s=r["elapsed_s"],
+                       checks={c["check_id"]: c["result"] for c in r["checks"]},
+                       receiver_decision_id=(r.get("receiver_trace") or {}).get("decision_id"),
+                       graph_nodes=(r.get("receiver_trace") or {}).get("graph_nodes"),
+                       onward=(r.get("receiver_trace") or {}).get("onward"))
+        elif k == "reassessment_completed" and e["cop"] == COP and e.get("run_key", "").startswith("root:"):
+            snap = next(x for x in inv["runs"] if x["run_key"] == e["run_key"])
+            revised(e["at"], snap, e["round"])
+            revised_seen = True
+        elif k == "investigation_finalised" and e["cop"] == COP and e.get("depth") == 0:
+            if not revised_seen:
+                revised(e["at"], last, 0)          # nothing admissible came back: no reassessment ran
+            tr.add("investigation_final", at=e["at"], tier=final["tier"], routing_reason=final["routing_reason"],
+                   human_task=final["human_task"], selected_action=final["selected_action"],
+                   resolution=inv["resolution"]["status"], reassessed=revised_seen)
 
     # 9-12. act phase: the same COP on the final evidence, supervised, through the sandbox gateway
     rx = copy.copy(rt)

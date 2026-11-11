@@ -85,7 +85,7 @@
  "trace": [
   {
    "seq": 1,
-   "at": "2026-11-11T10:34:07.490+00:00",
+   "at": "2026-11-11T10:35:58.034+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "session_start",
@@ -93,7 +93,7 @@
   },
   {
    "seq": 2,
-   "at": "2026-11-11T10:34:07.490+00:00",
+   "at": "2026-11-11T10:35:58.034+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "user_prompt",
@@ -101,7 +101,7 @@
   },
   {
    "seq": 3,
-   "at": "2026-11-11T10:34:07.490+00:00",
+   "at": "2026-11-11T10:35:58.034+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "model_usage",
@@ -109,7 +109,7 @@
   },
   {
    "seq": 4,
-   "at": "2026-11-11T10:34:07.490+00:00",
+   "at": "2026-11-11T10:35:58.034+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -117,7 +117,7 @@
   },
   {
    "seq": 5,
-   "at": "2026-11-11T10:34:07.490+00:00",
+   "at": "2026-11-11T10:35:58.034+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -125,7 +125,7 @@
   },
   {
    "seq": 6,
-   "at": "2026-11-11T10:34:07.490+00:00",
+   "at": "2026-11-11T10:35:58.034+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -138,7 +138,7 @@
   },
   {
    "seq": 7,
-   "at": "2026-11-11T10:34:07.490+00:00",
+   "at": "2026-11-11T10:35:58.034+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -151,7 +151,7 @@
   },
   {
    "seq": 8,
-   "at": "2026-11-11T10:34:07.490+00:00",
+   "at": "2026-11-11T10:35:58.034+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -164,7 +164,7 @@
   },
   {
    "seq": 9,
-   "at": "2026-11-11T10:34:07.490+00:00",
+   "at": "2026-11-11T10:35:58.034+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -177,7 +177,7 @@
   },
   {
    "seq": 10,
-   "at": "2026-11-11T10:34:07.490+00:00",
+   "at": "2026-11-11T10:35:58.034+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -190,14 +190,14 @@
   },
   {
    "seq": 11,
-   "at": "2026-11-11T10:34:07.490+00:00",
+   "at": "2026-11-11T10:35:58.034+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "session_end"
   },
   {
    "seq": 12,
-   "at": "2026-11-11T10:34:07.490+00:00",
+   "at": "2026-11-11T10:35:58.034+00:00",
    "stage": "telemetry_ingested",
    "collectors": [
     "otel"
@@ -209,7 +209,7 @@
   },
   {
    "seq": 13,
-   "at": "2026-11-11T10:34:07.713+00:00",
+   "at": "2026-11-11T10:35:58.099+00:00",
    "stage": "initial_finding",
    "cop": "anomaly_detection",
    "run_key": "root:anomaly_detection:d686b2a9-08f6:r0",
@@ -221,7 +221,7 @@
   },
   {
    "seq": 14,
-   "at": "2026-11-11T10:34:07.713+00:00",
+   "at": "2026-11-11T10:35:58.099+00:00",
    "stage": "vs01_initial",
    "decision": "SUPPORTED",
    "support": 0.6909,
@@ -235,33 +235,38 @@
     {
      "name": "deviation_metrics",
      "direction": "supports",
-     "contribution": 0.3273
+     "contribution": 0.3273,
+     "basis": "attention state observed (claimed severity NONE): insights.token_outlier=CRITICAL (40.0), path.transition_novelty=EXCEPTION (0.667), insights.retry=EXCEPTION (4), insights.repetition=EXCEPTION (4)"
     },
     {
      "name": "versioned_baseline",
      "direction": "supports",
-     "contribution": 0.1818
+     "contribution": 0.1818,
+     "basis": "outside every value in the versioned baseline: insights.token_outlier=40.0 vs [1.0, 1.0] over 7 sessions"
     },
     {
      "name": "upstream:behavior_analytics",
      "direction": "unknown",
-     "contribution": 0.0
+     "contribution": 0.0,
+     "basis": "behavior_analytics finding absent"
     },
     {
      "name": "rule_baseline",
      "direction": "supports",
-     "contribution": 0.1818
+     "contribution": 0.1818,
+     "basis": "rule baseline reads ANOMALOUS too"
     },
     {
      "name": "validated_memory",
      "direction": "unknown",
-     "contribution": 0.0
+     "contribution": 0.0,
+     "basis": "no validated precedent"
     }
    ]
   },
   {
    "seq": 15,
-   "at": "2026-11-11T10:34:07.713+00:00",
+   "at": "2026-11-11T10:35:58.099+00:00",
    "stage": "handling_quotient_initial",
    "quotient": 0.895,
    "tier": "autonomous",
@@ -270,11 +275,11 @@
   },
   {
    "seq": 16,
-   "at": "2026-11-11T10:34:07.713+00:00",
+   "at": "2026-11-11T10:35:58.100+00:00",
    "stage": "request_for_support",
    "investigation_event": {
     "seq": 3,
-    "at": "2026-11-11T10:34:07.565+00:00",
+    "at": "2026-11-11T10:35:58.100+00:00",
     "kind": "referral_requested",
     "cop": "anomaly_detection",
     "referral_id": "f019f95f-b56c-53b5-b2c3-b22940f7ef8b",
@@ -286,11 +291,11 @@
   },
   {
    "seq": 17,
-   "at": "2026-11-11T10:34:07.713+00:00",
+   "at": "2026-11-11T10:35:58.100+00:00",
    "stage": "request_for_support",
    "investigation_event": {
     "seq": 4,
-    "at": "2026-11-11T10:34:07.565+00:00",
+    "at": "2026-11-11T10:35:58.100+00:00",
     "kind": "referral_requested",
     "cop": "anomaly_detection",
     "referral_id": "7b2896ba-3582-556c-9c62-46518c7d3b25",
@@ -302,11 +307,11 @@
   },
   {
    "seq": 18,
-   "at": "2026-11-11T10:34:07.713+00:00",
+   "at": "2026-11-11T10:35:58.100+00:00",
    "stage": "receiver_investigating",
    "investigation_event": {
     "seq": 5,
-    "at": "2026-11-11T10:34:07.565+00:00",
+    "at": "2026-11-11T10:35:58.100+00:00",
     "kind": "referral_dispatched",
     "cop": "anomaly_detection",
     "referral_id": "f019f95f-b56c-53b5-b2c3-b22940f7ef8b",
@@ -317,11 +322,11 @@
   },
   {
    "seq": 19,
-   "at": "2026-11-11T10:34:07.713+00:00",
+   "at": "2026-11-11T10:35:58.123+00:00",
    "stage": "receiver_answered",
    "investigation_event": {
     "seq": 9,
-    "at": "2026-11-11T10:34:07.588+00:00",
+    "at": "2026-11-11T10:35:58.123+00:00",
     "kind": "referral_answered",
     "cop": "runtime_monitoring",
     "referral_id": "f019f95f-b56c-53b5-b2c3-b22940f7ef8b",
@@ -330,7 +335,7 @@
     "verified": true,
     "admissible": true,
     "delivered_as": "evidence",
-    "elapsed_s": 0.023,
+    "elapsed_s": 0.022,
     "cost_usd": 0.0,
     "checks": {
      "RS-01": "PASS",
@@ -343,246 +348,15 @@
   },
   {
    "seq": 20,
-   "at": "2026-11-11T10:34:07.713+00:00",
-   "stage": "receiver_investigating",
-   "investigation_event": {
-    "seq": 10,
-    "at": "2026-11-11T10:34:07.588+00:00",
-    "kind": "referral_dispatched",
-    "cop": "anomaly_detection",
-    "referral_id": "7b2896ba-3582-556c-9c62-46518c7d3b25",
-    "receiver": "behavior_analytics",
-    "depth": 1,
-    "budget_usd": 0.1
-   }
-  },
-  {
-   "seq": 21,
-   "at": "2026-11-11T10:34:07.713+00:00",
-   "stage": "request_for_support",
-   "investigation_event": {
-    "seq": 13,
-    "at": "2026-11-11T10:34:07.614+00:00",
-    "kind": "referral_requested",
-    "cop": "behavior_analytics",
-    "referral_id": "4b32c3ab-e150-5692-857f-a07954635b03",
-    "receiver": "workflow_orchestration",
-    "reason": "upstream:workflow_orchestration unknown",
-    "round": 1,
-    "depth": 2
-   }
-  },
-  {
-   "seq": 22,
-   "at": "2026-11-11T10:34:07.713+00:00",
-   "stage": "referral_not_opened",
-   "investigation_event": {
-    "seq": 14,
-    "at": "2026-11-11T10:34:07.614+00:00",
-    "kind": "referral_not_opened",
-    "cop": "behavior_analytics",
-    "receiver": "context_memory",
-    "reason": "context_memory is outside the referral scope enabled for milestone 1"
-   }
-  },
-  {
-   "seq": 23,
-   "at": "2026-11-11T10:34:07.713+00:00",
-   "stage": "receiver_investigating",
-   "investigation_event": {
-    "seq": 15,
-    "at": "2026-11-11T10:34:07.615+00:00",
-    "kind": "referral_dispatched",
-    "cop": "behavior_analytics",
-    "referral_id": "4b32c3ab-e150-5692-857f-a07954635b03",
-    "receiver": "workflow_orchestration",
-    "depth": 2,
-    "budget_usd": 0.1
-   }
-  },
-  {
-   "seq": 24,
-   "at": "2026-11-11T10:34:07.713+00:00",
-   "stage": "receiver_answered",
-   "investigation_event": {
-    "seq": 19,
-    "at": "2026-11-11T10:34:07.650+00:00",
-    "kind": "referral_answered",
-    "cop": "workflow_orchestration",
-    "referral_id": "4b32c3ab-e150-5692-857f-a07954635b03",
-    "status": "ANSWERED_VERIFIED",
-    "label": "STALLED",
-    "verified": true,
-    "admissible": true,
-    "delivered_as": "evidence",
-    "elapsed_s": 0.035,
-    "cost_usd": 0.0,
-    "checks": {
-     "RS-01": "PASS",
-     "RS-02": "PASS",
-     "RS-03": "PASS",
-     "RS-04": "PASS",
-     "RS-05": "PASS"
-    }
-   }
-  },
-  {
-   "seq": 25,
-   "at": "2026-11-11T10:34:07.713+00:00",
-   "stage": "reassessment_started",
-   "investigation_event": {
-    "seq": 20,
-    "at": "2026-11-11T10:34:07.650+00:00",
-    "kind": "reassessment_started",
-    "cop": "behavior_analytics",
-    "round": 1,
-    "run_key": "ref:behavior_analytics:d686b2a9-08f6/789bfa1d-2175:r1",
-    "new_inputs": {
-     "workflow_orchestration": {
-      "label": "STALLED",
-      "verified": true
-     }
-    }
-   }
-  },
-  {
-   "seq": 26,
-   "at": "2026-11-11T10:34:07.713+00:00",
-   "stage": "reassessment_completed",
-   "investigation_event": {
-    "seq": 21,
-    "at": "2026-11-11T10:34:07.673+00:00",
-    "kind": "reassessment_completed",
-    "cop": "behavior_analytics",
-    "round": 1,
-    "run_key": "ref:behavior_analytics:d686b2a9-08f6/789bfa1d-2175:r1",
-    "label": "POOR_RECOVERY",
-    "status": "SUBSTANTIVE",
-    "vs": "SUPPORTED",
-    "support": {
-     "initial": 0.3059,
-     "revised": 0.3765
-    },
-    "against": {
-     "initial": 0,
-     "revised": 0
-    },
-    "unknown": {
-     "initial": 0.6941,
-     "revised": 0.6235
-    },
-    "quotient": {
-     "initial": 0.845,
-     "revised": 0.848
-    },
-    "tier": {
-     "initial": "autonomous",
-     "revised": "autonomous"
-    },
-    "action": {
-     "initial": "WATCH",
-     "revised": "WATCH"
-    }
-   }
-  },
-  {
-   "seq": 27,
-   "at": "2026-11-11T10:34:07.713+00:00",
-   "stage": "receiver_answered",
-   "investigation_event": {
-    "seq": 23,
-    "at": "2026-11-11T10:34:07.674+00:00",
-    "kind": "referral_answered",
-    "cop": "behavior_analytics",
-    "referral_id": "7b2896ba-3582-556c-9c62-46518c7d3b25",
-    "status": "ANSWERED_VERIFIED",
-    "label": "POOR_RECOVERY",
-    "verified": true,
-    "admissible": true,
-    "delivered_as": "evidence",
-    "elapsed_s": 0.086,
-    "cost_usd": 0.0,
-    "checks": {
-     "RS-01": "PASS",
-     "RS-02": "PASS",
-     "RS-03": "PASS",
-     "RS-04": "PASS",
-     "RS-05": "PASS"
-    }
-   }
-  },
-  {
-   "seq": 28,
-   "at": "2026-11-11T10:34:07.713+00:00",
-   "stage": "reassessment_started",
-   "investigation_event": {
-    "seq": 24,
-    "at": "2026-11-11T10:34:07.675+00:00",
-    "kind": "reassessment_started",
-    "cop": "anomaly_detection",
-    "round": 1,
-    "run_key": "root:anomaly_detection:d686b2a9-08f6:r1",
-    "new_inputs": {
-     "runtime_monitoring": {
-      "label": "INSUFFICIENT",
-      "verified": true
-     },
-     "behavior_analytics": {
-      "label": "POOR_RECOVERY",
-      "verified": true
-     }
-    }
-   }
-  },
-  {
-   "seq": 29,
-   "at": "2026-11-11T10:34:07.713+00:00",
-   "stage": "reassessment_completed",
-   "investigation_event": {
-    "seq": 25,
-    "at": "2026-11-11T10:34:07.712+00:00",
-    "kind": "reassessment_completed",
-    "cop": "anomaly_detection",
-    "round": 1,
-    "run_key": "root:anomaly_detection:d686b2a9-08f6:r1",
-    "label": "ANOMALOUS",
-    "status": "SUBSTANTIVE",
-    "vs": "SUPPORTED",
-    "support": {
-     "initial": 0.6909,
-     "revised": 0.4727
-    },
-    "against": {
-     "initial": 0,
-     "revised": 0
-    },
-    "unknown": {
-     "initial": 0.3091,
-     "revised": 0.5273
-    },
-    "quotient": {
-     "initial": 0.895,
-     "revised": 0.887
-    },
-    "tier": {
-     "initial": "autonomous",
-     "revised": "autonomous"
-    },
-    "action": {
-     "initial": "ALERT",
-     "revised": "ALERT"
-    }
-   }
-  },
-  {
-   "seq": 30,
-   "at": "2026-11-11T10:34:07.713+00:00",
+   "at": "2026-11-11T10:35:58.123+00:00",
    "stage": "referral_response",
+   "referral_id": "f019f95f-b56c-53b5-b2c3-b22940f7ef8b",
    "receiver": "runtime_monitoring",
    "status": "ANSWERED_VERIFIED",
    "admissible": true,
    "delivered_as": "evidence",
    "label": "INSUFFICIENT",
+   "elapsed_s": 0.022,
    "checks": {
     "RS-01": "PASS",
     "RS-02": "PASS",
@@ -605,17 +379,150 @@
     "record_decision",
     "validate_memory_update",
     "persist_and_publish"
-   ]
+   ],
+   "onward": []
   },
   {
-   "seq": 31,
-   "at": "2026-11-11T10:34:07.713+00:00",
+   "seq": 21,
+   "at": "2026-11-11T10:35:58.123+00:00",
+   "stage": "receiver_investigating",
+   "investigation_event": {
+    "seq": 10,
+    "at": "2026-11-11T10:35:58.123+00:00",
+    "kind": "referral_dispatched",
+    "cop": "anomaly_detection",
+    "referral_id": "7b2896ba-3582-556c-9c62-46518c7d3b25",
+    "receiver": "behavior_analytics",
+    "depth": 1,
+    "budget_usd": 0.1
+   }
+  },
+  {
+   "seq": 22,
+   "at": "2026-11-11T10:35:58.146+00:00",
+   "stage": "request_for_support",
+   "investigation_event": {
+    "seq": 13,
+    "at": "2026-11-11T10:35:58.146+00:00",
+    "kind": "referral_requested",
+    "cop": "behavior_analytics",
+    "referral_id": "4b32c3ab-e150-5692-857f-a07954635b03",
+    "receiver": "workflow_orchestration",
+    "reason": "upstream:workflow_orchestration unknown",
+    "round": 1,
+    "depth": 2
+   }
+  },
+  {
+   "seq": 23,
+   "at": "2026-11-11T10:35:58.146+00:00",
+   "stage": "referral_not_opened",
+   "investigation_event": {
+    "seq": 14,
+    "at": "2026-11-11T10:35:58.146+00:00",
+    "kind": "referral_not_opened",
+    "cop": "behavior_analytics",
+    "receiver": "context_memory",
+    "reason": "context_memory is outside the referral scope enabled for milestone 1"
+   }
+  },
+  {
+   "seq": 24,
+   "at": "2026-11-11T10:35:58.146+00:00",
+   "stage": "receiver_investigating",
+   "investigation_event": {
+    "seq": 15,
+    "at": "2026-11-11T10:35:58.146+00:00",
+    "kind": "referral_dispatched",
+    "cop": "behavior_analytics",
+    "referral_id": "4b32c3ab-e150-5692-857f-a07954635b03",
+    "receiver": "workflow_orchestration",
+    "depth": 2,
+    "budget_usd": 0.1
+   }
+  },
+  {
+   "seq": 25,
+   "at": "2026-11-11T10:35:58.178+00:00",
+   "stage": "receiver_answered",
+   "investigation_event": {
+    "seq": 19,
+    "at": "2026-11-11T10:35:58.178+00:00",
+    "kind": "referral_answered",
+    "cop": "workflow_orchestration",
+    "referral_id": "4b32c3ab-e150-5692-857f-a07954635b03",
+    "status": "ANSWERED_VERIFIED",
+    "label": "STALLED",
+    "verified": true,
+    "admissible": true,
+    "delivered_as": "evidence",
+    "elapsed_s": 0.032,
+    "cost_usd": 0.0,
+    "checks": {
+     "RS-01": "PASS",
+     "RS-02": "PASS",
+     "RS-03": "PASS",
+     "RS-04": "PASS",
+     "RS-05": "PASS"
+    }
+   }
+  },
+  {
+   "seq": 26,
+   "at": "2026-11-11T10:35:58.179+00:00",
+   "stage": "reassessment_started",
+   "investigation_event": {
+    "seq": 20,
+    "at": "2026-11-11T10:35:58.179+00:00",
+    "kind": "reassessment_started",
+    "cop": "behavior_analytics",
+    "round": 1,
+    "run_key": "ref:behavior_analytics:d686b2a9-08f6/789bfa1d-2175:r1",
+    "new_inputs": {
+     "workflow_orchestration": {
+      "label": "STALLED",
+      "verified": true
+     }
+    }
+   }
+  },
+  {
+   "seq": 27,
+   "at": "2026-11-11T10:35:58.201+00:00",
+   "stage": "receiver_answered",
+   "investigation_event": {
+    "seq": 23,
+    "at": "2026-11-11T10:35:58.201+00:00",
+    "kind": "referral_answered",
+    "cop": "behavior_analytics",
+    "referral_id": "7b2896ba-3582-556c-9c62-46518c7d3b25",
+    "status": "ANSWERED_VERIFIED",
+    "label": "POOR_RECOVERY",
+    "verified": true,
+    "admissible": true,
+    "delivered_as": "evidence",
+    "elapsed_s": 0.078,
+    "cost_usd": 0.0,
+    "checks": {
+     "RS-01": "PASS",
+     "RS-02": "PASS",
+     "RS-03": "PASS",
+     "RS-04": "PASS",
+     "RS-05": "PASS"
+    }
+   }
+  },
+  {
+   "seq": 28,
+   "at": "2026-11-11T10:35:58.201+00:00",
    "stage": "referral_response",
+   "referral_id": "7b2896ba-3582-556c-9c62-46518c7d3b25",
    "receiver": "behavior_analytics",
    "status": "ANSWERED_VERIFIED",
    "admissible": true,
    "delivered_as": "evidence",
    "label": "POOR_RECOVERY",
+   "elapsed_s": 0.078,
    "checks": {
     "RS-01": "PASS",
     "RS-02": "PASS",
@@ -638,12 +545,42 @@
     "record_decision",
     "validate_memory_update",
     "persist_and_publish"
+   ],
+   "onward": [
+    {
+     "receiver": "workflow_orchestration",
+     "status": "ANSWERED_VERIFIED"
+    }
    ]
   },
   {
-   "seq": 32,
-   "at": "2026-11-11T10:34:07.713+00:00",
+   "seq": 29,
+   "at": "2026-11-11T10:35:58.202+00:00",
+   "stage": "reassessment_started",
+   "investigation_event": {
+    "seq": 24,
+    "at": "2026-11-11T10:35:58.202+00:00",
+    "kind": "reassessment_started",
+    "cop": "anomaly_detection",
+    "round": 1,
+    "run_key": "root:anomaly_detection:d686b2a9-08f6:r1",
+    "new_inputs": {
+     "runtime_monitoring": {
+      "label": "INSUFFICIENT",
+      "verified": true
+     },
+     "behavior_analytics": {
+      "label": "POOR_RECOVERY",
+      "verified": true
+     }
+    }
+   }
+  },
+  {
+   "seq": 30,
+   "at": "2026-11-11T10:35:58.236+00:00",
    "stage": "revised_evidence_score",
+   "round": 1,
    "decision": "SUPPORTED",
    "support": 0.4727,
    "against": 0,
@@ -653,6 +590,7 @@
    "quotient": 0.887,
    "tier": "autonomous",
    "selected_action": "ALERT",
+   "label": "ANOMALOUS",
    "resolution": "CONFIRMED",
    "resolution_reason": "ANOMALOUS SUPPORTED stands; unknown 0.3091 -> 0.5273; telemetry reliability now observed, not assumed",
    "component_changes": [
@@ -679,17 +617,19 @@
    ]
   },
   {
-   "seq": 33,
-   "at": "2026-11-11T10:34:07.713+00:00",
+   "seq": 31,
+   "at": "2026-11-11T10:35:58.237+00:00",
    "stage": "investigation_final",
    "tier": "autonomous",
    "routing_reason": "quotient 0.887 in the autonomous band of anomaly_detection (autonomous >= 0.8, assisted >= 0.6, specialist >= 0.35)",
    "human_task": null,
-   "selected_action": "ALERT"
+   "selected_action": "ALERT",
+   "resolution": "CONFIRMED",
+   "reassessed": true
   },
   {
-   "seq": 34,
-   "at": "2026-11-11T10:34:07.832+00:00",
+   "seq": 32,
+   "at": "2026-11-11T10:35:58.377+00:00",
    "stage": "final_action",
    "typed_action": "ALERT",
    "triage_selected": "ALERT",
@@ -700,8 +640,8 @@
    "support": 0.4727
   },
   {
-   "seq": 35,
-   "at": "2026-11-11T10:34:07.832+00:00",
+   "seq": 33,
+   "at": "2026-11-11T10:35:58.377+00:00",
    "stage": "authority_check",
    "authorised": true,
    "checks": [
@@ -722,8 +662,8 @@
    "execution_status": "NOT_EXECUTED_NO_ACTION"
   },
   {
-   "seq": 36,
-   "at": "2026-11-11T10:34:07.834+00:00",
+   "seq": 34,
+   "at": "2026-11-11T10:35:58.379+00:00",
    "stage": "action_execution",
    "execution_status": "EXECUTED_SANDBOX",
    "gateway_action_id": "532942f8-fe97-5fd3-b63d-e4625c2474f4",
@@ -738,19 +678,19 @@
    "detail": "sandbox gateway: ALERT -> VERIFIED"
   },
   {
-   "seq": 37,
-   "at": "2026-11-11T10:34:07.835+00:00",
+   "seq": 35,
+   "at": "2026-11-11T10:35:58.380+00:00",
    "stage": "outcome_confirmation",
    "gateway_state": "VERIFIED",
-   "observed": "endpoint returned 200 for ack 25760589-b57a-4b77-b344-751ed6efa5c2",
+   "observed": "endpoint returned 200 for ack 0ee0a9f5-c945-4b72-a76c-5d64c4d06172",
    "alerts_at_endpoint": [
     "532942f8-fe97-5fd3-b63d-e4625c2474f4"
    ],
    "review_task_state": null
   },
   {
-   "seq": 38,
-   "at": "2026-11-11T10:34:07.840+00:00",
+   "seq": 36,
+   "at": "2026-11-11T10:35:58.385+00:00",
    "stage": "feedback_persisted",
    "execution_entry": {
     "feedback_id": "deb7e2a0-2060-55b5-b12d-0eaa59b8812b",
@@ -771,8 +711,8 @@
    "memory_record_id": "59c7af4a-64cf-55f0-b7fe-db454bd89813"
   },
   {
-   "seq": 39,
-   "at": "2026-11-11T10:34:07.842+00:00",
+   "seq": 37,
+   "at": "2026-11-11T10:35:58.387+00:00",
    "stage": "restart_check",
    "ledger": [
     [
