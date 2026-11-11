@@ -46,7 +46,7 @@ from .contracts import (Finding, ProposedAction, ORIGIN_LLM, ORIGIN_RULES, SUBST
                         INCONCLUSIVE, MISSING_DEPENDENCY, REJECTED, FAILED, BLOCKS_FINDING,
                         BLOCKS_ACTION, FAIL, NOT_EXECUTED_DRY_RUN, NOT_EXECUTED_NO_ACTION,
                         NOT_EXECUTED_BLOCKED, AWAITING_APPROVAL, APPROVAL_REJECTED,
-                        EXECUTED_MOCK, EXECUTION_FAILED, UNVALIDATED,
+                        EXECUTED_MOCK, EXECUTED_SANDBOX, EXECUTION_FAILED, UNVALIDATED,
                         CLAIM_METRIC_STATE, CLAIM_METRIC_VALUE, CLAIM_TOOL_OBSERVATION,
                         CLAIM_UPSTREAM, CONTRACT_VERSION, stable_id)
 from .evidence import assess, usable
@@ -929,9 +929,17 @@ def route_after_authority(state):
 
 @timed("await_approval")
 def await_approval(state):
+    rt = _rt(state)
     pa = state["proposed_action"]
     f = state["finding"]
+    # a gateway that keeps approval records creates (once) the persistent pending request;
+    # this node runs again on resume, so the hook must be idempotent
+    hook = getattr(rt.enforcement, "on_approval_requested", None)
+    approval_id = hook({"case_id": state["case_id"], "cop": state["cop"], "finding_id": f.get("finding_id"),
+                        "action": pa["action"], "typed_action": pa.get("typed_action"), "target": pa["target"],
+                        "reason": pa["reason"], "pending_operations": list(rt.pending_operations)}) if hook else None
     answer = interrupt({"kind": "approval_request", "case_id": state["case_id"], "cop": state["cop"],
+                        "approval_id": approval_id,
                         "action": pa["action"], "typed_action": pa.get("typed_action"),
                         "reason": pa["reason"], "target": pa["target"],
                         "triage": {k: (state.get("triage") or {}).get("routing", {}).get(k)
@@ -966,7 +974,8 @@ def execute_action(state):
                 execution = {"applied": False, "outcome_confirmed": False, "simulated": True,
                              "detail": f"{type(e).__name__}: {e}"[:200]}
             pa["execution_outcome"] = execution
-            pa["execution_status"] = EXECUTED_MOCK if execution["outcome_confirmed"] else EXECUTION_FAILED
+            done = EXECUTED_SANDBOX if execution.get("sandbox") else EXECUTED_MOCK
+            pa["execution_status"] = done if execution["outcome_confirmed"] else EXECUTION_FAILED
         post = [r.to_dict() if not isinstance(r, dict) else r
                 for r in verify_action(spec, pa, rt.mode, rt.case, state["finding"], approval, execution)]
         post = [r for r in post if r["check_id"] in ("AU-02", "EX-01")]
@@ -976,6 +985,23 @@ def execute_action(state):
                 "triage": _feedback(state.get("triage"), pa)}
     tri = state.get("triage")
     ta = pa.get("typed_action") or pa["action"]
+    gw = rt.enforcement if hasattr(rt.enforcement, "submit") else None
+    if gw and rt.mode != "dry_run" and ta == "ALERT" and pa["execution_status"] == NOT_EXECUTED_NO_ACTION:
+        # outside dry-run a delivering gateway carries an authorised alert out and verifies it
+        rec = gw.submit(state["cop"], state["case_id"], state["finding"], pa, rt.mode, rt.live_session)
+        rec = gw.carry_out(rec["action_id"], state["finding"], pa)
+        ok = rec["state"] == "VERIFIED"
+        execution = {"applied": rec["state"] in ("APPLIED", "VERIFIED"), "outcome_confirmed": ok,
+                     "simulated": True, "sandbox": True, "gateway_action_id": rec["action_id"],
+                     "detail": f"sandbox gateway: ALERT -> {rec['state']}"}
+        pa["execution_outcome"] = execution
+        pa["execution_status"] = EXECUTED_SANDBOX if ok else EXECUTION_FAILED
+        post = [r.to_dict() if not isinstance(r, dict) else r
+                for r in verify_action(spec, pa, rt.mode, rt.case, state["finding"], None, execution)]
+        pa["lifecycle"] = action_lifecycle(state["finding"], pa, rt.mode)
+        return {"proposed_action": pa, "execution": execution,
+                "verifier_results": state["verifier_results"] + [r for r in post if r["check_id"] == "EX-01"],
+                "triage": _feedback(tri, pa)}
     if pa["execution_status"] == NOT_EXECUTED_DRY_RUN or (
             rt.mode == "dry_run" and ta != "NONE" and pa["execution_status"] != NOT_EXECUTED_BLOCKED):
         # authorised in dry-run: the adapter records what the action would do; nothing is applied
@@ -1015,7 +1041,7 @@ def _feedback(tri, pa):
                              "detail": (pa.get("execution_outcome") or {}).get("detail")}
     elif st == APPROVAL_REJECTED:
         fb["follow_up"] = "approval declined: nothing applied; the finding stands"
-    elif st == EXECUTED_MOCK:
+    elif st in (EXECUTED_MOCK, EXECUTED_SANDBOX):
         fb["follow_up"] = "VERIFY_RECOVERY on the next case"
     tri["feedback"] = fb
     return tri
@@ -1257,6 +1283,16 @@ def run_cop(rt, cop, upstream=None, checkpointer=None, thread_id=None):
     g = build_cop_graph(checkpointer)
     cfg = {"configurable": {"thread_id": thread_id or f"{rt.case.case_id}:{cop}"}, "recursion_limit": 100}
     out = g.invoke({"case_id": rt.case.case_id, "cop": cop, "upstream": upstream or {}}, cfg)
+    if out.get("__interrupt__"):
+        return {"interrupted": [i.value for i in out["__interrupt__"]], **out}
+    return out
+
+
+def resume_cop(rt, decision, checkpointer, thread_id):
+    """Resume one COP run that stopped at await_approval (run_cop with a checkpointer)."""
+    register(rt)
+    g = build_cop_graph(checkpointer)
+    out = g.invoke(Command(resume=decision), {"configurable": {"thread_id": thread_id}, "recursion_limit": 100})
     if out.get("__interrupt__"):
         return {"interrupted": [i.value for i in out["__interrupt__"]], **out}
     return out

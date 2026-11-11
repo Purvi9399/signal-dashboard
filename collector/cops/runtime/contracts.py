@@ -60,6 +60,7 @@ NOT_EXECUTED_BLOCKED = "NOT_EXECUTED_BLOCKED"
 AWAITING_APPROVAL = "AWAITING_APPROVAL"
 APPROVAL_REJECTED = "APPROVAL_REJECTED"
 EXECUTED_MOCK = "EXECUTED_MOCK"        # ran against the mock enforcement gateway only
+EXECUTED_SANDBOX = "EXECUTED_SANDBOX"  # carried out by the local sandbox gateway and verified there
 EXECUTION_FAILED = "EXECUTION_FAILED"  # attempted and the outcome check failed
 
 # ---------------------------------------------------------------- claim kinds

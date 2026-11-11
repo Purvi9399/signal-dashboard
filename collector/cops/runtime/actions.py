@@ -145,7 +145,7 @@ def lifecycle(finding, pa, mode):
             return AWAITING_APPROVAL
         if status == "APPROVAL_REJECTED":
             return APPROVAL_REJECTED
-        if status == "EXECUTED_MOCK":
+        if status in ("EXECUTED_MOCK", "EXECUTED_SANDBOX"):
             return EXECUTED
         if status == "EXECUTION_FAILED":
             return FAILED_OR_UNCONFIRMED
