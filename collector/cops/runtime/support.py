@@ -746,8 +746,23 @@ def assess(cop, finding, results, rows, tool_calls, upstream, memory_view, basel
         "required_unknown": req_unknown, "unknown_items": unknown_items,
         "components": comps,
         "telemetry_reliability": telemetry_reliability,
+        "assumptions": _assumptions(cop, upstream or {}, telemetry_reliability),
         "note": "computed from evidence only; the model's self-reported confidence is not an input",
     }
+
+
+def _assumptions(cop, upstream, telemetry_reliability):
+    """Inputs the score used without evidence for them. Recorded, never scored: a
+    referral (runtime/referrals.py) may replace an assumption with a verified reading."""
+    out = []
+    rm = upstream.get("runtime_monitoring")
+    if cop != "runtime_monitoring" and "runtime_monitoring" in CONSUMES[cop] and not (
+            rm and rm.get("verified") and rm.get("status") == SUBSTANTIVE):
+        out.append({"item": "telemetry_reliability", "value": telemetry_reliability,
+                    "owner": "runtime_monitoring",
+                    "basis": "no verified Runtime Monitoring finding: the default evidence ceiling "
+                             f"{telemetry_reliability} is assumed, not observed"})
+    return out
 
 
 def verifier_result(sup, binary_blocked):

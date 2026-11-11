@@ -114,10 +114,14 @@ def inconclusive(hypothesis, missing, reason=""):
 class Script:
     """{cop: [step(payload) -> reply]}. Unscripted COPs use `default`."""
 
-    def __init__(self, steps=None, default=None, label="scripted"):
+    def __init__(self, steps=None, default=None, label="scripted", cycle=False):
+        # cycle=True: a COP that is run again in the same case (a reassessment after a
+        # referral) starts its steps again; each step still reads only the payload it is sent
         self.steps = dict(steps or {})
         self.default = default
         self.label = label
+        self.cycle = cycle
+        self._start = {}
 
     def __call__(self, cop, purpose, payload, n):
         seq = self.steps.get(cop)
@@ -125,6 +129,10 @@ class Script:
             if self.default is None:
                 return inconclusive("no script for this COP", ["scripted reply"])
             seq = self.default(cop)
+        if self.cycle:
+            if purpose == "plan":                  # every investigation run opens with a plan call
+                self._start[cop] = n
+            n -= self._start.get(cop, 0)
         if n >= len(seq):
             return inconclusive("script exhausted", ["scripted reply"])
         step = seq[n]
