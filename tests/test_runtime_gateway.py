@@ -115,6 +115,8 @@ def test_approval_request_persists_and_survives_a_restart(sandbox):
     gw2 = G.SandboxGateway(again, alert_url=sandbox["ep"].url)
     with pytest.raises(PermissionError):
         gw2.decide(intr["approval_id"], "approve", "cop:anomaly_detection")   # a COP cannot approve
+    with pytest.raises(PermissionError):
+        gw2.decide(intr["approval_id"], "approve", "anomaly_detection")       # nor by its bare name
     gw2.decide(intr["approval_id"], "approve", "reviewer@tenant-a.example", "checked the spike")
     rt.enforcement = gw2
     res = resume_cop(rt, {"decision": "approve", "reviewer": "reviewer@tenant-a.example"}, saver, "t-appr")

@@ -39,6 +39,7 @@ from urllib.parse import urlparse
 from ..authority import check_typed, typed, needs_approval, TAXONOMY
 from ..specs import BY_KEY
 from .contracts import stable_id
+from .memory import independent_reviewer      # one rule for approvals, holds and feedback
 
 GATEWAY_VERSION = "sandbox-gateway-1"
 PROPOSED, AUTHORISED, REFUSED = "PROPOSED", "AUTHORISED", "REFUSED"
@@ -49,7 +50,6 @@ STATES = (PROPOSED, AUTHORISED, REFUSED, AWAITING_APPROVAL, APPROVAL_DENIED, DEL
           VERIFIED, RELEASED, CANCELLED, FAILED)
 ADAPTED = ("ALERT", "REQUEST_APPROVAL", "HOLD_TOOL_CALL")
 HUMAN_REVIEW = "HUMAN_REVIEW"             # runtime escalation to a person, not a COP action
-NOT_A_REVIEWER_PREFIXES = ("cop:", "gateway", "system", "auto")
 LOOPBACK = ("127.0.0.1", "localhost", "::1")
 DEFAULT_APPROVAL_TTL_S = 3600
 
@@ -396,7 +396,7 @@ class SandboxGateway:
             raise KeyError(approval_id)
         if ap["status"] != "PENDING":
             return ap
-        if not reviewer or str(reviewer).lower().startswith(NOT_A_REVIEWER_PREFIXES):
+        if not independent_reviewer(reviewer):
             raise PermissionError("an approval needs a named human reviewer, not a COP or the system")
         now = self.clock()
         if ap["expires_at"] and now.isoformat(timespec="milliseconds") > ap["expires_at"]:
@@ -505,7 +505,7 @@ class SandboxGateway:
 
     def end_hold(self, action_id, outcome, reviewer, note=""):
         """release -> the call runs; deny -> the call is cancelled and never runs."""
-        if not reviewer or str(reviewer).lower().startswith(NOT_A_REVIEWER_PREFIXES):
+        if not independent_reviewer(reviewer):
             raise PermissionError("ending a hold needs a named human reviewer")
         a = self._action(action_id)
         h = self.store.get("gateway_holds", "hold_id", self.hold_id(action_id))
