@@ -1,0 +1,775 @@
+{
+ "summary": {
+  "variant": "missing_evidence",
+  "case_id": "scn-missing_evidence",
+  "version": "coding-agent-scenario-1",
+  "simulated": {
+   "coding_agent": "synthetic event generator",
+   "model_replies": "scripted (FixtureProvider)",
+   "action_targets": "local sandbox (loopback endpoint, SQLite, mock runner)",
+   "reviewer": "named test identity answering in code"
+  },
+  "initial": {
+   "label": "INCONCLUSIVE",
+   "decision": "INSUFFICIENT_EVIDENCE",
+   "support": 0,
+   "against": 0,
+   "unknown": 1.0,
+   "telemetry_reliability": 0.9,
+   "assumptions": [
+    "telemetry_reliability"
+   ],
+   "quotient": 0.488,
+   "tier": "assisted",
+   "action": "REQUEST_COP_SUPPORT"
+  },
+  "revised": {
+   "label": "INCONCLUSIVE",
+   "decision": "INSUFFICIENT_EVIDENCE",
+   "support": 0,
+   "against": 0,
+   "unknown": 1.0,
+   "telemetry_reliability": 0.3,
+   "assumptions": [],
+   "quotient": 0.481,
+   "tier": "assisted",
+   "action": "REQUEST_COP_SUPPORT"
+  },
+  "resolution": "UNRESOLVED",
+  "final_tier": "assisted",
+  "referrals": [
+   [
+    "runtime_monitoring",
+    "ANSWERED_VERIFIED"
+   ],
+   [
+    "behavior_analytics",
+    "ANSWERED_VERIFIED"
+   ]
+  ],
+  "final_action": "REQUEST_COP_SUPPORT",
+  "execution_status": "NOT_EXECUTED_NO_ACTION",
+  "gateway_state": "VERIFIED",
+  "review_task": true,
+  "review": {
+   "outcome": "CONFIRMED",
+   "eligible_for_scoring": false,
+   "applied_to_memory": false
+  },
+  "after_restart": {
+   "ledger": [
+    [
+     "execution_outcome",
+     "VERIFIED"
+    ],
+    [
+     "review",
+     "CONFIRMED"
+    ]
+   ],
+   "gateway_history": [],
+   "memory_validation_status": null,
+   "scoring_history": []
+  },
+  "spent_usd": 0.0,
+  "cop_runs": 7
+ },
+ "trace": [
+  {
+   "seq": 1,
+   "at": "2026-11-11T10:34:08.830+00:00",
+   "stage": "agent_event",
+   "source": "synthetic coding agent",
+   "event": "session_start",
+   "session_id": "ca1"
+  },
+  {
+   "seq": 2,
+   "at": "2026-11-11T10:34:08.830+00:00",
+   "stage": "agent_event",
+   "source": "synthetic coding agent",
+   "event": "user_prompt",
+   "objective": "make tests/test_api.py pass"
+  },
+  {
+   "seq": 3,
+   "at": "2026-11-11T10:34:08.830+00:00",
+   "stage": "agent_event",
+   "source": "synthetic coding agent",
+   "event": "model_usage",
+   "total_tokens": 40000
+  },
+  {
+   "seq": 4,
+   "at": "2026-11-11T10:34:08.830+00:00",
+   "stage": "agent_event",
+   "source": "synthetic coding agent",
+   "event": "tool_call",
+   "tool": "Read"
+  },
+  {
+   "seq": 5,
+   "at": "2026-11-11T10:34:08.830+00:00",
+   "stage": "agent_event",
+   "source": "synthetic coding agent",
+   "event": "tool_call",
+   "tool": "Edit"
+  },
+  {
+   "seq": 6,
+   "at": "2026-11-11T10:34:08.830+00:00",
+   "stage": "agent_event",
+   "source": "synthetic coding agent",
+   "event": "tool_call",
+   "tool": "Bash",
+   "command": "pytest tests/test_api.py",
+   "tool_use_id": "ca1-b0",
+   "exit_code": 1,
+   "success": false,
+   "duration_ms": 900
+  },
+  {
+   "seq": 7,
+   "at": "2026-11-11T10:34:08.830+00:00",
+   "stage": "agent_event",
+   "source": "synthetic coding agent",
+   "event": "tool_call",
+   "tool": "Bash",
+   "command": "pytest tests/test_api.py",
+   "tool_use_id": "ca1-b1",
+   "exit_code": 1,
+   "success": false,
+   "duration_ms": 900
+  },
+  {
+   "seq": 8,
+   "at": "2026-11-11T10:34:08.830+00:00",
+   "stage": "agent_event",
+   "source": "synthetic coding agent",
+   "event": "tool_call",
+   "tool": "Bash",
+   "command": "pytest tests/test_api.py",
+   "tool_use_id": "ca1-b2",
+   "exit_code": 1,
+   "success": false,
+   "duration_ms": 900
+  },
+  {
+   "seq": 9,
+   "at": "2026-11-11T10:34:08.830+00:00",
+   "stage": "agent_event",
+   "source": "synthetic coding agent",
+   "event": "tool_call",
+   "tool": "Bash",
+   "command": "pytest tests/test_api.py",
+   "tool_use_id": "ca1-b3",
+   "exit_code": 1,
+   "success": false,
+   "duration_ms": 900
+  },
+  {
+   "seq": 10,
+   "at": "2026-11-11T10:34:08.830+00:00",
+   "stage": "agent_event",
+   "source": "synthetic coding agent",
+   "event": "tool_call",
+   "tool": "Bash",
+   "command": "pytest tests/test_api.py",
+   "tool_use_id": "ca1-b4",
+   "exit_code": 1,
+   "success": false,
+   "duration_ms": 900
+  },
+  {
+   "seq": 11,
+   "at": "2026-11-11T10:34:08.830+00:00",
+   "stage": "agent_event",
+   "source": "synthetic coding agent",
+   "event": "session_end"
+  },
+  {
+   "seq": 12,
+   "at": "2026-11-11T10:34:08.830+00:00",
+   "stage": "telemetry_ingested",
+   "collectors": [
+    "otel"
+   ],
+   "rows_for_session": 10,
+   "baseline_sessions": 0,
+   "tokens_reported": 40000,
+   "tool_calls_dropped_by_collector": []
+  },
+  {
+   "seq": 13,
+   "at": "2026-11-11T10:34:09.082+00:00",
+   "stage": "initial_finding",
+   "cop": "anomaly_detection",
+   "run_key": "root:anomaly_detection:4b87c036-72fa:r0",
+   "decision_id": "2574c902-d4ee-5246-ac73-7e7e27b1107d",
+   "label": "INCONCLUSIVE",
+   "status": "INCONCLUSIVE",
+   "verified": false,
+   "simulated_model_replies": true
+  },
+  {
+   "seq": 14,
+   "at": "2026-11-11T10:34:09.082+00:00",
+   "stage": "vs01_initial",
+   "decision": "INSUFFICIENT_EVIDENCE",
+   "support": 0,
+   "against": 0,
+   "unknown": 1.0,
+   "telemetry_reliability": 0.9,
+   "assumptions": [
+    "telemetry_reliability"
+   ],
+   "components": [
+    {
+     "name": "deviation_metrics",
+     "direction": "unknown",
+     "contribution": 0.0
+    },
+    {
+     "name": "versioned_baseline",
+     "direction": "unknown",
+     "contribution": 0.0
+    },
+    {
+     "name": "upstream:behavior_analytics",
+     "direction": "unknown",
+     "contribution": 0.0
+    },
+    {
+     "name": "rule_baseline",
+     "direction": "unknown",
+     "contribution": 0.0
+    },
+    {
+     "name": "validated_memory",
+     "direction": "unknown",
+     "contribution": 0.0
+    }
+   ]
+  },
+  {
+   "seq": 15,
+   "at": "2026-11-11T10:34:09.082+00:00",
+   "stage": "handling_quotient_initial",
+   "quotient": 0.488,
+   "tier": "assisted",
+   "selected_action": "REQUEST_COP_SUPPORT",
+   "routing_reason": "INCONCLUSIVE (missing_telemetry): required metrics missing: Runtime Monitoring owns telemetry completeness"
+  },
+  {
+   "seq": 16,
+   "at": "2026-11-11T10:34:09.082+00:00",
+   "stage": "request_for_support",
+   "investigation_event": {
+    "seq": 3,
+    "at": "2026-11-11T10:34:08.883+00:00",
+    "kind": "referral_requested",
+    "cop": "anomaly_detection",
+    "referral_id": "fe30bdec-9c30-50d9-b4e2-cdf9ee45214e",
+    "receiver": "runtime_monitoring",
+    "reason": "telemetry_reliability assumed",
+    "round": 1,
+    "depth": 1
+   }
+  },
+  {
+   "seq": 17,
+   "at": "2026-11-11T10:34:09.082+00:00",
+   "stage": "request_for_support",
+   "investigation_event": {
+    "seq": 4,
+    "at": "2026-11-11T10:34:08.883+00:00",
+    "kind": "referral_requested",
+    "cop": "anomaly_detection",
+    "referral_id": "9c03d6ea-24bd-5a0d-8266-04bb33637106",
+    "receiver": "behavior_analytics",
+    "reason": "upstream:behavior_analytics unknown",
+    "round": 1,
+    "depth": 1
+   }
+  },
+  {
+   "seq": 18,
+   "at": "2026-11-11T10:34:09.082+00:00",
+   "stage": "receiver_investigating",
+   "investigation_event": {
+    "seq": 5,
+    "at": "2026-11-11T10:34:08.884+00:00",
+    "kind": "referral_dispatched",
+    "cop": "anomaly_detection",
+    "referral_id": "fe30bdec-9c30-50d9-b4e2-cdf9ee45214e",
+    "receiver": "runtime_monitoring",
+    "depth": 1,
+    "budget_usd": 0.1
+   }
+  },
+  {
+   "seq": 19,
+   "at": "2026-11-11T10:34:09.082+00:00",
+   "stage": "receiver_answered",
+   "investigation_event": {
+    "seq": 9,
+    "at": "2026-11-11T10:34:08.927+00:00",
+    "kind": "referral_answered",
+    "cop": "runtime_monitoring",
+    "referral_id": "fe30bdec-9c30-50d9-b4e2-cdf9ee45214e",
+    "status": "ANSWERED_VERIFIED",
+    "label": "INSUFFICIENT",
+    "verified": true,
+    "admissible": true,
+    "delivered_as": "evidence",
+    "elapsed_s": 0.043,
+    "cost_usd": 0.0,
+    "checks": {
+     "RS-01": "PASS",
+     "RS-02": "PASS",
+     "RS-03": "PASS",
+     "RS-04": "PASS",
+     "RS-05": "PASS"
+    }
+   }
+  },
+  {
+   "seq": 20,
+   "at": "2026-11-11T10:34:09.082+00:00",
+   "stage": "receiver_investigating",
+   "investigation_event": {
+    "seq": 10,
+    "at": "2026-11-11T10:34:08.927+00:00",
+    "kind": "referral_dispatched",
+    "cop": "anomaly_detection",
+    "referral_id": "9c03d6ea-24bd-5a0d-8266-04bb33637106",
+    "receiver": "behavior_analytics",
+    "depth": 1,
+    "budget_usd": 0.1
+   }
+  },
+  {
+   "seq": 21,
+   "at": "2026-11-11T10:34:09.082+00:00",
+   "stage": "request_for_support",
+   "investigation_event": {
+    "seq": 13,
+    "at": "2026-11-11T10:34:08.964+00:00",
+    "kind": "referral_requested",
+    "cop": "behavior_analytics",
+    "referral_id": "22b834e3-eabd-580f-aad1-2d5b658c5b7f",
+    "receiver": "workflow_orchestration",
+    "reason": "upstream:workflow_orchestration unknown",
+    "round": 1,
+    "depth": 2
+   }
+  },
+  {
+   "seq": 22,
+   "at": "2026-11-11T10:34:09.082+00:00",
+   "stage": "referral_not_opened",
+   "investigation_event": {
+    "seq": 14,
+    "at": "2026-11-11T10:34:08.964+00:00",
+    "kind": "referral_not_opened",
+    "cop": "behavior_analytics",
+    "receiver": "context_memory",
+    "reason": "context_memory is outside the referral scope enabled for milestone 1"
+   }
+  },
+  {
+   "seq": 23,
+   "at": "2026-11-11T10:34:09.082+00:00",
+   "stage": "receiver_investigating",
+   "investigation_event": {
+    "seq": 15,
+    "at": "2026-11-11T10:34:08.965+00:00",
+    "kind": "referral_dispatched",
+    "cop": "behavior_analytics",
+    "referral_id": "22b834e3-eabd-580f-aad1-2d5b658c5b7f",
+    "receiver": "workflow_orchestration",
+    "depth": 2,
+    "budget_usd": 0.1
+   }
+  },
+  {
+   "seq": 24,
+   "at": "2026-11-11T10:34:09.082+00:00",
+   "stage": "receiver_answered",
+   "investigation_event": {
+    "seq": 19,
+    "at": "2026-11-11T10:34:09.014+00:00",
+    "kind": "referral_answered",
+    "cop": "workflow_orchestration",
+    "referral_id": "22b834e3-eabd-580f-aad1-2d5b658c5b7f",
+    "status": "ANSWERED_VERIFIED",
+    "label": "STALLED",
+    "verified": true,
+    "admissible": true,
+    "delivered_as": "evidence",
+    "elapsed_s": 0.049,
+    "cost_usd": 0.0,
+    "checks": {
+     "RS-01": "PASS",
+     "RS-02": "PASS",
+     "RS-03": "PASS",
+     "RS-04": "PASS",
+     "RS-05": "PASS"
+    }
+   }
+  },
+  {
+   "seq": 25,
+   "at": "2026-11-11T10:34:09.082+00:00",
+   "stage": "reassessment_started",
+   "investigation_event": {
+    "seq": 20,
+    "at": "2026-11-11T10:34:09.014+00:00",
+    "kind": "reassessment_started",
+    "cop": "behavior_analytics",
+    "round": 1,
+    "run_key": "ref:behavior_analytics:4b87c036-72fa/46f04379-5f32:r1",
+    "new_inputs": {
+     "workflow_orchestration": {
+      "label": "STALLED",
+      "verified": true
+     }
+    }
+   }
+  },
+  {
+   "seq": 26,
+   "at": "2026-11-11T10:34:09.082+00:00",
+   "stage": "reassessment_completed",
+   "investigation_event": {
+    "seq": 21,
+    "at": "2026-11-11T10:34:09.044+00:00",
+    "kind": "reassessment_completed",
+    "cop": "behavior_analytics",
+    "round": 1,
+    "run_key": "ref:behavior_analytics:4b87c036-72fa/46f04379-5f32:r1",
+    "label": "POOR_RECOVERY",
+    "status": "SUBSTANTIVE",
+    "vs": "SUPPORTED",
+    "support": {
+     "initial": 0.3059,
+     "revised": 0.3765
+    },
+    "against": {
+     "initial": 0,
+     "revised": 0
+    },
+    "unknown": {
+     "initial": 0.6941,
+     "revised": 0.6235
+    },
+    "quotient": {
+     "initial": 0.845,
+     "revised": 0.848
+    },
+    "tier": {
+     "initial": "autonomous",
+     "revised": "autonomous"
+    },
+    "action": {
+     "initial": "WATCH",
+     "revised": "WATCH"
+    }
+   }
+  },
+  {
+   "seq": 27,
+   "at": "2026-11-11T10:34:09.082+00:00",
+   "stage": "receiver_answered",
+   "investigation_event": {
+    "seq": 23,
+    "at": "2026-11-11T10:34:09.046+00:00",
+    "kind": "referral_answered",
+    "cop": "behavior_analytics",
+    "referral_id": "9c03d6ea-24bd-5a0d-8266-04bb33637106",
+    "status": "ANSWERED_VERIFIED",
+    "label": "POOR_RECOVERY",
+    "verified": true,
+    "admissible": true,
+    "delivered_as": "evidence",
+    "elapsed_s": 0.119,
+    "cost_usd": 0.0,
+    "checks": {
+     "RS-01": "PASS",
+     "RS-02": "PASS",
+     "RS-03": "PASS",
+     "RS-04": "PASS",
+     "RS-05": "PASS"
+    }
+   }
+  },
+  {
+   "seq": 28,
+   "at": "2026-11-11T10:34:09.082+00:00",
+   "stage": "reassessment_started",
+   "investigation_event": {
+    "seq": 24,
+    "at": "2026-11-11T10:34:09.047+00:00",
+    "kind": "reassessment_started",
+    "cop": "anomaly_detection",
+    "round": 1,
+    "run_key": "root:anomaly_detection:4b87c036-72fa:r1",
+    "new_inputs": {
+     "runtime_monitoring": {
+      "label": "INSUFFICIENT",
+      "verified": true
+     },
+     "behavior_analytics": {
+      "label": "POOR_RECOVERY",
+      "verified": true
+     }
+    }
+   }
+  },
+  {
+   "seq": 29,
+   "at": "2026-11-11T10:34:09.082+00:00",
+   "stage": "reassessment_completed",
+   "investigation_event": {
+    "seq": 25,
+    "at": "2026-11-11T10:34:09.080+00:00",
+    "kind": "reassessment_completed",
+    "cop": "anomaly_detection",
+    "round": 1,
+    "run_key": "root:anomaly_detection:4b87c036-72fa:r1",
+    "label": "INCONCLUSIVE",
+    "status": "INCONCLUSIVE",
+    "vs": "INSUFFICIENT_EVIDENCE",
+    "support": {
+     "initial": 0,
+     "revised": 0
+    },
+    "against": {
+     "initial": 0,
+     "revised": 0
+    },
+    "unknown": {
+     "initial": 1.0,
+     "revised": 1.0
+    },
+    "quotient": {
+     "initial": 0.488,
+     "revised": 0.481
+    },
+    "tier": {
+     "initial": "assisted",
+     "revised": "assisted"
+    },
+    "action": {
+     "initial": "REQUEST_COP_SUPPORT",
+     "revised": "REQUEST_COP_SUPPORT"
+    }
+   }
+  },
+  {
+   "seq": 30,
+   "at": "2026-11-11T10:34:09.082+00:00",
+   "stage": "referral_response",
+   "receiver": "runtime_monitoring",
+   "status": "ANSWERED_VERIFIED",
+   "admissible": true,
+   "delivered_as": "evidence",
+   "label": "INSUFFICIENT",
+   "checks": {
+    "RS-01": "PASS",
+    "RS-02": "PASS",
+    "RS-03": "PASS",
+    "RS-04": "PASS",
+    "RS-05": "PASS"
+   },
+   "receiver_decision_id": "452794af-9866-561b-b1a0-2981a6fd8170",
+   "graph_nodes": [
+    "receive_case",
+    "load_inputs",
+    "validate_evidence",
+    "retrieve_memory",
+    "computational_baseline",
+    "evidence_precheck",
+    "independent_verify",
+    "grade_and_route",
+    "authority_check",
+    "execute_action",
+    "record_decision",
+    "validate_memory_update",
+    "persist_and_publish"
+   ]
+  },
+  {
+   "seq": 31,
+   "at": "2026-11-11T10:34:09.082+00:00",
+   "stage": "referral_response",
+   "receiver": "behavior_analytics",
+   "status": "ANSWERED_VERIFIED",
+   "admissible": true,
+   "delivered_as": "evidence",
+   "label": "POOR_RECOVERY",
+   "checks": {
+    "RS-01": "PASS",
+    "RS-02": "PASS",
+    "RS-03": "PASS",
+    "RS-04": "PASS",
+    "RS-05": "PASS"
+   },
+   "receiver_decision_id": "1c386248-27c9-522d-971b-09733f762ce8",
+   "graph_nodes": [
+    "receive_case",
+    "load_inputs",
+    "validate_evidence",
+    "retrieve_memory",
+    "computational_baseline",
+    "evidence_precheck",
+    "independent_verify",
+    "grade_and_route",
+    "authority_check",
+    "execute_action",
+    "record_decision",
+    "validate_memory_update",
+    "persist_and_publish"
+   ]
+  },
+  {
+   "seq": 32,
+   "at": "2026-11-11T10:34:09.082+00:00",
+   "stage": "revised_evidence_score",
+   "decision": "INSUFFICIENT_EVIDENCE",
+   "support": 0,
+   "against": 0,
+   "unknown": 1.0,
+   "telemetry_reliability": 0.3,
+   "assumptions": [],
+   "quotient": 0.481,
+   "tier": "assisted",
+   "selected_action": "REQUEST_COP_SUPPORT",
+   "resolution": "UNRESOLVED",
+   "resolution_reason": "answers were admitted (runtime_monitoring, behavior_analytics) but the reading is still INCONCLUSIVE INSUFFICIENT_EVIDENCE; unknown 1.0 -> 1.0",
+   "component_changes": []
+  },
+  {
+   "seq": 33,
+   "at": "2026-11-11T10:34:09.082+00:00",
+   "stage": "investigation_final",
+   "tier": "assisted",
+   "routing_reason": "additional evidence did not resolve the uncertainty (answers were admitted (runtime_monitoring, behavior_analytics) but the reading is still INCONCLUSIVE INSUFFICIENT_EVIDENCE; unknown 1.0 -> 1.0); a reviewer sees the case before REQUEST_COP_SUPPORT is relied on. INCONCLUSIVE (telemetry_insufficient): telemetry verified INSUFFICIENT by Runtime Monitoring",
+   "human_task": {
+    "kind": "unresolved_uncertainty",
+    "question": "anomaly_detection: answers were admitted (runtime_monitoring, behavior_analytics) but the reading is still INCONCLUSIVE INSUFFICIENT_EVIDENCE; unknown 1.0 -> 1.0"
+   },
+   "selected_action": "REQUEST_COP_SUPPORT"
+  },
+  {
+   "seq": 34,
+   "at": "2026-11-11T10:34:09.128+00:00",
+   "stage": "final_action",
+   "typed_action": "REQUEST_COP_SUPPORT",
+   "triage_selected": "REQUEST_COP_SUPPORT",
+   "requires_approval": false,
+   "approval_because": null,
+   "exec_decision_id": "814b4360-abd3-5a93-b7c0-ef15f4416f10",
+   "verification_support": "INSUFFICIENT_EVIDENCE",
+   "support": 0
+  },
+  {
+   "seq": 35,
+   "at": "2026-11-11T10:34:09.128+00:00",
+   "stage": "authority_check",
+   "authorised": true,
+   "checks": [
+    {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted",
+     "subject": "final_action"
+    },
+    {
+     "check_id": "PE-01",
+     "result": "NOT_RUN",
+     "reason_code": "not_intervening",
+     "subject": ""
+    }
+   ],
+   "authority_reason": "",
+   "execution_status": "NOT_EXECUTED_NO_ACTION"
+  },
+  {
+   "seq": 36,
+   "at": "2026-11-11T10:34:09.130+00:00",
+   "stage": "action_execution",
+   "execution_status": "NOT_EXECUTED_NO_ACTION",
+   "gateway_action_id": null,
+   "gateway_history": [],
+   "endpoint_received": 0,
+   "detail": null
+  },
+  {
+   "seq": 37,
+   "at": "2026-11-11T10:34:09.140+00:00",
+   "stage": "review_task_opened",
+   "gateway_action_id": "22612a0f-f2b5-5df4-b528-62ecbe201843",
+   "kind": "unresolved_uncertainty",
+   "question": "anomaly_detection: answers were admitted (runtime_monitoring, behavior_analytics) but the reading is still INCONCLUSIVE INSUFFICIENT_EVIDENCE; unknown 1.0 -> 1.0",
+   "gateway_history": [
+    "PROPOSED",
+    "AUTHORISED",
+    "DELIVERED",
+    "APPLIED",
+    "VERIFIED"
+   ]
+  },
+  {
+   "seq": 38,
+   "at": "2026-11-11T10:34:09.141+00:00",
+   "stage": "outcome_confirmation",
+   "gateway_state": "VERIFIED",
+   "observed": "approval row reads PENDING on a fresh connection",
+   "alerts_at_endpoint": [],
+   "review_task_state": "VERIFIED"
+  },
+  {
+   "seq": 39,
+   "at": "2026-11-11T10:34:09.144+00:00",
+   "stage": "feedback_persisted",
+   "execution_entry": {
+    "feedback_id": "39964c4c-3720-554c-9b25-3def5525f0b1",
+    "outcome": "VERIFIED",
+    "eligible_for_precedent": false,
+    "inserted": true
+   },
+   "review_entry": {
+    "feedback_id": "196b4227-8baf-5fb4-8b16-de6896d831d6",
+    "outcome": "CONFIRMED",
+    "source": "reviewer@tenant-a.example",
+    "independent": true,
+    "eligible_for_precedent": false,
+    "eligible_for_scoring": false,
+    "applied_to_memory": false
+   },
+   "ineligible_because": [
+    "the finding did not verify: there is nothing independent to confirm"
+   ],
+   "memory_record_id": null
+  },
+  {
+   "seq": 40,
+   "at": "2026-11-11T10:34:09.145+00:00",
+   "stage": "restart_check",
+   "ledger": [
+    [
+     "execution_outcome",
+     "VERIFIED"
+    ],
+    [
+     "review",
+     "CONFIRMED"
+    ]
+   ],
+   "gateway_history": [],
+   "memory_validation_status": null,
+   "scoring_history": []
+  }
+ ]
+}

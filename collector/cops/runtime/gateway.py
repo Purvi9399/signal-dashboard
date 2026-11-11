@@ -48,6 +48,7 @@ RELEASED, CANCELLED = "RELEASED", "CANCELLED"
 STATES = (PROPOSED, AUTHORISED, REFUSED, AWAITING_APPROVAL, APPROVAL_DENIED, DELIVERED, APPLIED,
           VERIFIED, RELEASED, CANCELLED, FAILED)
 ADAPTED = ("ALERT", "REQUEST_APPROVAL", "HOLD_TOOL_CALL")
+HUMAN_REVIEW = "HUMAN_REVIEW"             # runtime escalation to a person, not a COP action
 NOT_A_REVIEWER_PREFIXES = ("cop:", "gateway", "system", "auto")
 LOOPBACK = ("127.0.0.1", "localhost", "::1")
 DEFAULT_APPROVAL_TTL_S = 3600
@@ -439,6 +440,36 @@ class SandboxGateway:
             return self.apply_hold(action_id, tool_call_id or (a.get("detail") or {}).get("tool_call_id"))
         return self._move(a, FAILED, reason=f"no sandbox adapter for {t}")
 
+    # ---------------------------------------------------------- HUMAN_REVIEW (escalation)
+    def open_review_task(self, case_id, cop, finding, human_task):
+        """The runtime's escalation when a finding stays uncertain or a limit was hit: a
+        persistent task for a named reviewer. It is not a COP action and changes nothing in
+        the session, so no COP authority is needed or used; it is verified like an approval
+        request (the row is read back on a fresh connection)."""
+        aid = self.action_id(case_id, cop, finding.get("finding_id"), HUMAN_REVIEW, human_task.get("kind", ""))
+        a = self._action(aid)
+        if a and a["state"] != PROPOSED:
+            return a
+        a = {"action_id": aid, "case_id": case_id, "cop": cop, "finding_id": finding.get("finding_id"),
+             "typed_action": HUMAN_REVIEW, "target": human_task.get("kind", ""), "state": PROPOSED,
+             "history": [], "detail": {}, "created_at": _now_iso(self.clock), "updated_at": None}
+        a = self._move(a, PROPOSED, source="runtime escalation", task_kind=human_task.get("kind"),
+                       finding_label=finding.get("label"), verified=bool(finding.get("verified")))
+        a = self._move(a, AUTHORISED, reason="a request to a person changes nothing in the session; "
+                                             "no COP authority is used")
+        apid = self.approval_id(aid)
+        if not self.store.get("gateway_approvals", "approval_id", apid):
+            now = self.clock()
+            self.store.put("gateway_approvals", {
+                "approval_id": apid, "action_id": aid, "case_id": case_id, "cop": cop,
+                "typed_action": HUMAN_REVIEW, "question": str(human_task.get("question", ""))[:500],
+                "status": "PENDING", "requested_at": now.isoformat(timespec="milliseconds"),
+                "expires_at": (now + timedelta(seconds=self.approval_ttl_s)).isoformat(timespec="milliseconds"),
+                "decided_at": None, "reviewer": None, "note": None})
+        a = self._move(a, DELIVERED, approval_id=apid)
+        a = self._move(a, APPLIED, approval_status="PENDING")
+        return self.verify(aid)
+
     # ---------------------------------------------------------- HOLD_TOOL_CALL
     def hold_id(self, action_id):
         return stable_id(action_id, "hold")
@@ -502,7 +533,7 @@ class SandboxGateway:
                 why = f"endpoint returned {code} for ack {d['ack_id']}"
             except Exception as e:
                 why = f"read-back failed: {e}"
-        elif t == "REQUEST_APPROVAL" or a["state"] == AWAITING_APPROVAL:
+        elif t in ("REQUEST_APPROVAL", HUMAN_REVIEW) or a["state"] == AWAITING_APPROVAL:
             con = sqlite3.connect(self.store.path)                      # a fresh connection, not the cache
             row = con.execute("SELECT status FROM gateway_approvals WHERE approval_id = ?",
                               (d.get("approval_id"),)).fetchone()

@@ -322,6 +322,7 @@ class Tree:
         self.cost_limit, self.timeout_s, self.max_depth = cost_limit, timeout_s, max_depth
         self.max_rounds, self.max_runs, self.max_retries = max_rounds, max_runs, max_retries
         self.spent, self.runs, self.answers, self.events = 0.0, 0, {}, []
+        self.failed = {}                    # receiver -> {status, referral_id}: timed out or failed in this tree
         self.run_hook = run_hook            # tests: fn(cop, run_key) called before a run (fault injection)
         self.root_id = None
         self.states = {}                    # run_key -> the COP run's full final state (for the action phase)
@@ -504,6 +505,14 @@ def dispatch_one(tr, req):
         return {**prev, "referral_id": req["referral_id"], "status": REUSED,
                 "detail": f"verified answer already returned in this investigation ({prev['referral_id']})",
                 "cost_usd": 0.0, "elapsed_s": 0.0, "attempts": 0}
+    if rcv in tr.failed:
+        # a receiver that timed out or failed in this tree is not run again for another initiator
+        prev = tr.failed[rcv]
+        tr.log("referral_failure_reused", req["initiator"], referral_id=req["referral_id"], receiver=rcv,
+               status=prev["status"], from_referral=prev["referral_id"])
+        return ReferralResponse(req["referral_id"], rcv, prev["status"], attempts=0,
+                                detail=f"not run again: {prev['status']} earlier in this investigation "
+                                       f"({prev['referral_id']})", answered_at=_iso()).to_dict()
     if req["depth"] > tr.max_depth:
         # checked after reuse: handing over an answer already verified in this tree is not a hop
         return _refuse(tr, req, REFUSED_DEPTH, f"depth {req['depth']} over {tr.max_depth}")
@@ -540,6 +549,7 @@ def dispatch_one(tr, req):
         r = ReferralResponse(req["referral_id"], rcv, FAILED, attempts=attempts, elapsed_s=round(elapsed, 3),
                              cost_usd=cost, detail=f"receiver did not complete: {err}", answered_at=_iso())
         tr.log("referral_failed", rcv, referral_id=req["referral_id"], detail=r.detail)
+        tr.failed[rcv] = {"status": FAILED, "referral_id": req["referral_id"]}
         return r.to_dict()
     out = sub["last_out"]
     checks, admissible, delivered_as = verify_response(
@@ -558,6 +568,7 @@ def dispatch_one(tr, req):
         status = UNVERIFIED
     if status in (TIMED_OUT, FAILED):
         admissible, delivered_as = False, "not_delivered"
+        tr.failed[rcv] = {"status": status, "referral_id": req["referral_id"]}
     res = out["result"]
     r = ReferralResponse(
         req["referral_id"], rcv, status, admissible=admissible, delivered_as=delivered_as,
@@ -663,6 +674,10 @@ def resolution(runs, responses, not_referred):
     elif (a["label"], va["decision"]) != (b["label"], vb["decision"]):
         st = REVISED
         why = (f"{a['label']} {va['decision']} -> {b['label']} {vb['decision']}")
+    elif b["outcome"] == "INCONCLUSIVE" or vb["decision"] == SUP.INSUFFICIENT:
+        st = UNRESOLVED
+        why = (f"answers were admitted ({', '.join(r['receiver'] for r in admitted)}) but the reading is still "
+               f"{b['label']} {vb['decision']}; unknown {va['unknown']} -> {vb['unknown']}")
     elif (vb["unknown"] or 0) < (va["unknown"] or 0) - 1e-9 or len(vb["assumptions"]) < len(va["assumptions"]):
         st = CONFIRMED
         why = (f"{b['label']} {vb['decision']} stands; unknown {va['unknown']} -> {vb['unknown']}"
@@ -769,7 +784,8 @@ def run_investigation(rt, cop, upstream=None, **limits):
             "limits": {"max_depth": tree.max_depth, "max_rounds": tree.max_rounds, "max_runs": tree.max_runs,
                        "max_retries": tree.max_retries, "cost_limit_usd": tree.cost_limit,
                        "timeout_s": tree.timeout_s},
-            "last_out": out["last_out"]}
+            "last_out": out["last_out"], "upstream": out.get("upstream") or {},
+            "states": tree.states}
 
 
 def _public(out):
