@@ -19,6 +19,7 @@ _TOOL_ALIASES = {
     "claude_code": "claude-code",
     "claudecode": "claude-code",
     "custom": "custom",
+    "harbor": "harbor",
     "unknown": "unknown",
 }
 

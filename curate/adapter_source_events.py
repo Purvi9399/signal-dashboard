@@ -21,6 +21,7 @@ from typing import Any, Dict, Iterator, List, Mapping, Optional, Sequence, Tuple
 from curate.extract_cli_wrapper import extract_cli_wrapper
 from curate.extract_codex_copilot import extract_codex_hook, extract_copilot_hook
 from curate.extract_fs_watcher import extract_fs_watcher
+from curate.extract_harbor import extract_harbor
 from curate.extract_mcp_stdio import (
     extract_cursor_network_proxy,
     extract_mcp_stdio_wire,
@@ -38,6 +39,7 @@ _MCP = "mcp_proxy"
 _FS = "fs_watcher"
 _OTEL = "otel"
 _CLI = "cli_wrapper"
+_WEBHOOK = "webhook"
 
 
 def _as_mapping(value: Any) -> Mapping[str, Any]:
@@ -310,6 +312,8 @@ def _fields_for_collector(
         return _fields_for_fs(tool, raw, when)
     if collector == _CLI:
         return extract_cli_wrapper(raw, when, tool=tool)
+    if collector == _WEBHOOK:
+        return extract_harbor(raw, when)
     return None
 
 
