@@ -95,6 +95,16 @@ class MemoryAccessDenied(PermissionError):
     pass
 
 
+# Who may validate. A COP, the action gateway or the runtime itself is not independent of
+# the finding it would validate; a named person or an outcome observed by a later case is.
+NOT_INDEPENDENT_PREFIXES = ("cop:", "gateway", "system", "auto", "runtime")
+
+
+def independent_reviewer(reviewer):
+    r = str(reviewer or "").strip().lower()
+    return bool(r) and not r.startswith(NOT_INDEPENDENT_PREFIXES) and r not in POLICIES
+
+
 def _now():
     return datetime.now(timezone.utc)
 
@@ -143,6 +153,21 @@ class MemoryGateway:
                            record_type=record_type, payload=payload, provenance=provenance,
                            validation_status=status, created_at=now.isoformat(),
                            expires_at=(now + timedelta(days=days)).isoformat())
+        prior = [r for r in self.store.select("cop_memory_records", "record_id = ?", (rec.record_id,))]
+        if prior:
+            # The same finding written again (a re-run of the case, or a reassessment that
+            # reached the same reading). The record id is deterministic, so a plain upsert
+            # would replace it and wipe reviewer feedback. Keep the stored record: its
+            # status, created_at and feedback stand; only the re-observation is noted.
+            old = prior[0]
+            prov = dict(old["provenance"] or {})
+            seen = list(prov.get("re_observed") or [])
+            seen.append({"at": now.isoformat(), "case_id": case_id, "status_offered": status})
+            prov["re_observed"] = seen[-20:]
+            self.store.upsert("cop_memory_records", [{**old, "provenance": prov}])
+            self._log(cop, case_id, tenant_id, "write", record_type, rec.record_id, "KEPT",
+                      f"existing record kept as {old['validation_status']}; re-run does not overwrite")
+            return {**old, "provenance": prov}
         self.store.upsert("cop_memory_records", [rec.to_dict()])
         self._log(cop, case_id, tenant_id, "write", record_type, rec.record_id, "OK", status)
         return rec.to_dict()
@@ -154,6 +179,11 @@ class MemoryGateway:
             raise ValueError("feedback outcome is VALIDATED or REJECTED")
         if not reviewer:
             raise ValueError("feedback needs a named reviewer or outcome source")
+        if not independent_reviewer(reviewer):
+            # a COP, the gateway or the runtime cannot validate its own work
+            self._log("feedback", None, tenant_id, "feedback", None, record_id, "DENIED",
+                      f"reviewer {reviewer!r} is not independent")
+            raise MemoryAccessDenied(f"feedback from {reviewer!r} is not independent validation")
         rows = [r for r in self.store.select("cop_memory_records")
                 if r["record_id"] == record_id]
         if not rows:
