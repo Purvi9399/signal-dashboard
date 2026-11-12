@@ -1,0 +1,116 @@
+{
+ "version": "harbor-cops-validation-1",
+ "tenant": "harbor-experiment",
+ "operator_assigned": "dev-a",
+ "estate": {
+  "trials": 6,
+  "rejected": [],
+  "rows": 66,
+  "reingest_inserted": 0,
+  "reingest_duplicates": 66
+ },
+ "simulation": {
+  "agent": "scripted, model-free (signal-scripted-debug 1.0.0)",
+  "model_calls": 0,
+  "llm_provider": "UnavailableProvider",
+  "gateway": "SandboxGateway (loopback, local SQLite)"
+ },
+ "cases": {
+  "h01": {
+   "trial": "h01-normal-debugging__QGttQMp",
+   "session_id": "96591682-071a-4379-8736-85e972b54f24",
+   "labels": [
+    [
+     "runtime_monitoring",
+     "INSUFFICIENT",
+     "PROVISIONALLY_SUPPORTED",
+     "autonomous",
+     "ALERT",
+     "EXECUTED_SANDBOX"
+    ],
+    [
+     "behavior_analytics",
+     "INCONCLUSIVE",
+     "INSUFFICIENT_EVIDENCE",
+     "assisted",
+     "REQUEST_COP_SUPPORT",
+     "NOT_EXECUTED_NO_ACTION"
+    ],
+    [
+     "anomaly_detection",
+     "INCONCLUSIVE",
+     "INSUFFICIENT_EVIDENCE",
+     "assisted",
+     "NONE",
+     "NOT_EXECUTED_NO_ACTION"
+    ]
+   ],
+   "agreement": [
+    [
+     "runtime_monitoring",
+     true
+    ],
+    [
+     "behavior_analytics",
+     false
+    ],
+    [
+     "anomaly_detection",
+     true
+    ],
+    [
+     "workflow_orchestration",
+     true
+    ]
+   ]
+  },
+  "h02": {
+   "trial": "h02-repeated-failure-debugging__CetPFFv",
+   "session_id": "435e556f-9e94-47dc-be2d-e094b6d85d03",
+   "labels": [
+    [
+     "runtime_monitoring",
+     "INSUFFICIENT",
+     "PROVISIONALLY_SUPPORTED",
+     "autonomous",
+     "ALERT",
+     "EXECUTED_SANDBOX"
+    ],
+    [
+     "behavior_analytics",
+     "POOR_RECOVERY",
+     "SUPPORTED",
+     "autonomous",
+     "WATCH",
+     "NOT_EXECUTED_NO_ACTION"
+    ],
+    [
+     "anomaly_detection",
+     "INCONCLUSIVE",
+     "INSUFFICIENT_EVIDENCE",
+     "assisted",
+     "NONE",
+     "NOT_EXECUTED_NO_ACTION"
+    ]
+   ],
+   "agreement": [
+    [
+     "runtime_monitoring",
+     true
+    ],
+    [
+     "behavior_analytics",
+     false
+    ],
+    [
+     "anomaly_detection",
+     true
+    ],
+    [
+     "workflow_orchestration",
+     true
+    ]
+   ]
+  }
+ }
+}

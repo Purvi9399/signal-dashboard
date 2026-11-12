@@ -1,0 +1,14 @@
+{
+    "task": {
+        "path": "tasks/h01-normal-debugging"
+    },
+    "trial_name": "h01-normal-debugging__QGttQMp",
+    "trials_dir": "jobs/h01-scripted-1",
+    "agent": {
+        "name": "scripted_debug_agent:ScriptedDebugAgent",
+        "kwargs": {
+            "playbook": "h01"
+        }
+    },
+    "job_id": "43272cf8-2db5-47e1-806b-cc0cbe44802e"
+}

@@ -1,0 +1,128 @@
+{
+    "id": "4d3af547-d95a-4f5c-9ec0-a784b77f5bed",
+    "task_name": "signal/h01-normal-debugging",
+    "trial_name": "h01-normal-debugging__QGttQMp",
+    "trial_uri": "file:///home/claude/signal-dashboard/experiments/harbor/jobs/h01-scripted-1/h01-normal-debugging__QGttQMp",
+    "task_id": {
+        "path": "tasks/h01-normal-debugging"
+    },
+    "source": null,
+    "task_checksum": "3d405aa0a9daacb3f007cea2ca79d01a5a2f9ccedf9c6cc3c95001df1522f82e",
+    "config": {
+        "task": {
+            "path": "tasks/h01-normal-debugging",
+            "git_url": null,
+            "git_commit_id": null,
+            "name": null,
+            "ref": null,
+            "overwrite": false,
+            "download_dir": null,
+            "source": null
+        },
+        "trial_name": "h01-normal-debugging__QGttQMp",
+        "trials_dir": "jobs/h01-scripted-1",
+        "install_only": false,
+        "timeout_multiplier": 1.0,
+        "agent_timeout_multiplier": null,
+        "verifier_timeout_multiplier": null,
+        "agent_setup_timeout_multiplier": null,
+        "environment_build_timeout_multiplier": null,
+        "agent": {
+            "name": "scripted_debug_agent:ScriptedDebugAgent",
+            "import_path": null,
+            "model_name": null,
+            "base_url": null,
+            "model_api_key_name": null,
+            "model_api_format": null,
+            "skip_model_parsing": false,
+            "n_concurrent": null,
+            "concurrency_group": null,
+            "skills": [],
+            "override_timeout_sec": null,
+            "override_setup_timeout_sec": null,
+            "max_timeout_sec": null,
+            "resume_trajectory": false,
+            "load_trajectory": null,
+            "extra_allowed_hosts": [],
+            "kwargs": {
+                "playbook": "h01"
+            },
+            "mcp_servers": []
+        },
+        "user_agent": null,
+        "environment": {
+            "type": "docker",
+            "import_path": null,
+            "force_build": false,
+            "delete": true,
+            "stream": false,
+            "cpu_enforcement_policy": "auto",
+            "memory_enforcement_policy": "auto",
+            "override_cpus": null,
+            "override_memory_mb": null,
+            "override_storage_mb": null,
+            "override_gpus": null,
+            "override_tpu": null,
+            "mounts": null,
+            "extra_docker_compose": [],
+            "kwargs": {},
+            "extra_allowed_hosts": []
+        },
+        "verifier": {
+            "override_timeout_sec": null,
+            "max_timeout_sec": null,
+            "disable": false
+        },
+        "artifacts": [],
+        "extra_instruction_paths": [],
+        "extra_instructions": [],
+        "job_id": "43272cf8-2db5-47e1-806b-cc0cbe44802e",
+        "source_trial": null
+    },
+    "agent_info": {
+        "name": "signal-scripted-debug",
+        "version": "1.0.0",
+        "model_info": null
+    },
+    "agent_result": {
+        "n_input_tokens": null,
+        "n_cache_tokens": null,
+        "n_output_tokens": null,
+        "cost_usd": null,
+        "model_usage": null,
+        "rollout_details": null,
+        "metadata": {
+            "scripted": true,
+            "playbook": "h01",
+            "commands": 6,
+            "failed_commands": 1,
+            "run_id": "96591682-071a-4379-8736-85e972b54f24"
+        }
+    },
+    "verifier_result": {
+        "rewards": {
+            "reward": 1.0
+        }
+    },
+    "verifier_environment_mode": "shared",
+    "exception_info": null,
+    "started_at": "2026-11-12T03:09:00.378326Z",
+    "finished_at": "2026-11-12T03:09:20.814735Z",
+    "environment_setup": {
+        "started_at": "2026-11-12T03:09:00.417908Z",
+        "finished_at": "2026-11-12T03:09:06.929549Z"
+    },
+    "agent_setup": {
+        "started_at": "2026-11-12T03:09:06.929610Z",
+        "finished_at": "2026-11-12T03:09:06.929685Z"
+    },
+    "agent_execution": {
+        "started_at": "2026-11-12T03:09:06.929788Z",
+        "finished_at": "2026-11-12T03:09:08.483943Z"
+    },
+    "verifier": {
+        "started_at": "2026-11-12T03:09:08.865701Z",
+        "finished_at": "2026-11-12T03:09:09.991037Z"
+    },
+    "step_results": null
+}

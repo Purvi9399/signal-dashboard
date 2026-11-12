@@ -1,0 +1,14 @@
+{
+    "task": {
+        "path": "tasks/h02-repeated-failure-debugging"
+    },
+    "trial_name": "h02-repeated-failure-debugging__CetPFFv",
+    "trials_dir": "jobs/h02-scripted",
+    "agent": {
+        "name": "scripted_debug_agent:ScriptedDebugAgent",
+        "kwargs": {
+            "playbook": "h02"
+        }
+    },
+    "job_id": "82372db4-24cb-4cd3-bd1c-5143530ec98c"
+}

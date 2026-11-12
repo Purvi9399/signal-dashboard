@@ -1,0 +1,15 @@
+# One H01 trial with the scripted, model-free agent. Limits (1 CPU, 1024 MB, no network,
+# agent 300 s, verifier 120 s) come from tasks/h01-normal-debugging/task.toml.
+# Run from experiments/harbor:  PYTHONPATH=agents harbor run -c configs/h01-scripted.yaml -o jobs -y
+job_name: h01-scripted-cfg
+n_concurrent_trials: 1
+n_attempts: 1
+environment:
+  type: docker
+  delete: true
+agents:
+  - name: scripted_debug_agent:ScriptedDebugAgent
+    kwargs:
+      playbook: h01
+tasks:
+  - path: tasks/h01-normal-debugging

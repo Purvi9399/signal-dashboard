@@ -1,0 +1,19 @@
+{
+  "playbook": "h02",
+  "task": "signal/h02-repeated-failure-debugging",
+  "note": "Scripted debugging sequence with one unproductive attempt and one unchanged re-run. No model chooses these steps; they are fixed in advance.",
+  "steps": [
+    {"say": "Look at the project layout.", "command": "ls -R /app | grep -v __pycache__"},
+    {"say": "Run the test suite to see what fails.", "command": "cd /app && python -m pytest -q -p no:cacheprovider /app/tests"},
+    {"say": "Read the statement parser.", "command": "cat -n /app/ledgerkit/statement.py"},
+    {"say": "Decimal rejects '1,250.00'. Try treating the comma as a decimal point.", "command": "sed -i 's/return Decimal(text)/return Decimal(text.replace(\",\", \".\"))/' /app/ledgerkit/statement.py && grep -n 'Decimal(' /app/ledgerkit/statement.py", "edit": "/app/ledgerkit/statement.py", "intent": "unproductive attempt"},
+    {"say": "Run the tests again.", "command": "cd /app && python -m pytest -q -p no:cacheprovider /app/tests"},
+    {"say": "Same failure. Run once more to rule out flakiness.", "command": "cd /app && python -m pytest -q -p no:cacheprovider /app/tests", "intent": "unchanged re-run"},
+    {"say": "The comma is a thousands separator: remove it instead.", "command": "sed -i 's/return Decimal(text.replace(\",\", \".\"))/return Decimal(text.replace(\",\", \"\"))/' /app/ledgerkit/statement.py && grep -n 'Decimal(' /app/ledgerkit/statement.py", "edit": "/app/ledgerkit/statement.py"},
+    {"say": "Run the tests again.", "command": "cd /app && python -m pytest -q -p no:cacheprovider /app/tests"},
+    {"say": "Debits in parentheses lose their sign: negate them.", "command": "python - <<'PY'\nimport re\np='/app/ledgerkit/statement.py'\ns=open(p).read()\ns=s.replace('    return Decimal(text.replace(\",\", \"\"))', '    value = Decimal(text.replace(\",\", \"\"))\\n    return -value if negative else value')\nopen(p,'w').write(s)\nPY\ngrep -n 'value' /app/ledgerkit/statement.py", "edit": "/app/ledgerkit/statement.py"},
+    {"say": "Run the tests again.", "command": "cd /app && python -m pytest -q -p no:cacheprovider /app/tests"},
+    {"say": "Dates are day first; the parser builds month/day.", "command": "sed -i -e 's/first, second, year = /day, month, year = /' -e 's/return date(year, first, second)/return date(year, month, day)/' /app/ledgerkit/statement.py && grep -n 'date(' /app/ledgerkit/statement.py", "edit": "/app/ledgerkit/statement.py"},
+    {"say": "Run the tests again.", "command": "cd /app && python -m pytest -q -p no:cacheprovider /app/tests"}
+  ]
+}

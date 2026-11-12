@@ -1,0 +1,13 @@
+{
+  "playbook": "h01",
+  "task": "signal/h01-normal-debugging",
+  "note": "Scripted debugging sequence. No model chooses these steps; they are fixed in advance.",
+  "steps": [
+    {"say": "Look at the project layout.", "command": "ls -R /app | grep -v __pycache__"},
+    {"say": "Run the test suite to see what fails.", "command": "cd /app && python -m pytest -q -p no:cacheprovider /app/tests"},
+    {"say": "Read the pricing module.", "command": "cat -n /app/stockroom/pricing.py"},
+    {"say": "The tier test fails at exactly the minimum quantity; check the comparison.", "command": "grep -n 'quantity' /app/stockroom/pricing.py"},
+    {"say": "A tier applies from its minimum: change > to >=.", "command": "sed -i 's/if quantity > minimum:/if quantity >= minimum:/' /app/stockroom/pricing.py && grep -n 'minimum:' /app/stockroom/pricing.py", "edit": "/app/stockroom/pricing.py"},
+    {"say": "Run the tests again.", "command": "cd /app && python -m pytest -q -p no:cacheprovider /app/tests"}
+  ]
+}

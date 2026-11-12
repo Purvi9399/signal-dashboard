@@ -1,0 +1,763 @@
+{
+ "trials": [
+  {
+   "trial_dir": "h01-nop-buggy/h01-normal-debugging__FKqKVir",
+   "trial_id": "8380b48d-0dae-4259-889b-a78a9b3a7e82",
+   "trial_name": "h01-normal-debugging__FKqKVir",
+   "job_id": "a9761d29-c3c6-45c9-a18d-6bb8963afc89",
+   "task_name": "signal/h01-normal-debugging",
+   "session_id": "harbor-trial:8380b48d-0dae-4259-889b-a78a9b3a7e82",
+   "agent_run_id": null,
+   "agent": {
+    "name": "nop",
+    "version": "1.0.0",
+    "model_info": null
+   },
+   "scripted": false,
+   "atif_validator": null,
+   "raw_counts": {
+    "exec_log_records": 0,
+    "atif_steps": 0,
+    "atif_tool_calls": 0,
+    "result_json": 1
+   },
+   "normalised_counts": {
+    "session_start": 0,
+    "user_prompt": 0,
+    "tool_request": 0,
+    "session_end": 0
+   },
+   "failed_commands": 0,
+   "missing": {
+    "tokens": "not reported: result.json agent_result token fields are null",
+    "model": "the agent named no model",
+    "per_command_events": "unobservable: this agent wrote no per-command log (agent/ holds [])",
+    "trajectory": "the agent wrote no ATIF trajectory; none was constructed",
+    "turn_id": "unobservable",
+    "operator": "assigned by the experiment; Harbor has no user identity",
+    "file_modify": "no file collector inside the Harbor container; edits are only visible as the commands that made them",
+    "permission_*": "Harbor runs the agent without a permission layer; no approvals exist",
+    "workspace/cwd/git_*": "Harbor does not report the agent's working directory or repository",
+    "hostname/machine_id": "the container is ephemeral and Harbor does not report it",
+    "mcp_*": "no MCP servers were configured for these trials"
+   },
+   "notes": [
+    "agent did not run: RuntimeError"
+   ],
+   "outcome": {
+    "reward": null,
+    "exception": {
+     "type": "RuntimeError",
+     "message": "Docker compose command failed for environment h01-normal-debugging. Command: docker compose --project-name h01-normal-debugging__fkqkvir__env --project-directory /home/claude/signal-dashboard/experime"
+    },
+    "verifier": null
+   },
+   "ingest": {
+    "inserted": 0,
+    "duplicates": 0
+   }
+  },
+  {
+   "trial_dir": "h01-nop-buggy2/h01-normal-debugging__W9j5Eis",
+   "trial_id": "8bbdce11-425b-47c8-acd1-9298a57a049a",
+   "trial_name": "h01-normal-debugging__W9j5Eis",
+   "job_id": "d4c96f8d-5e00-4241-804b-439917755d56",
+   "task_name": "signal/h01-normal-debugging",
+   "session_id": "harbor-trial:8bbdce11-425b-47c8-acd1-9298a57a049a",
+   "agent_run_id": null,
+   "agent": {
+    "name": "nop",
+    "version": "1.0.0",
+    "model_info": null
+   },
+   "scripted": false,
+   "atif_validator": null,
+   "raw_counts": {
+    "exec_log_records": 0,
+    "atif_steps": 0,
+    "atif_tool_calls": 0,
+    "result_json": 1
+   },
+   "normalised_counts": {
+    "session_start": 1,
+    "user_prompt": 0,
+    "tool_request": 0,
+    "session_end": 1
+   },
+   "failed_commands": 0,
+   "missing": {
+    "tokens": "not reported: result.json agent_result token fields are null",
+    "model": "the agent named no model",
+    "per_command_events": "unobservable: this agent wrote no per-command log (agent/ holds [])",
+    "trajectory": "the agent wrote no ATIF trajectory; none was constructed",
+    "turn_id": "unobservable",
+    "operator": "assigned by the experiment; Harbor has no user identity",
+    "file_modify": "no file collector inside the Harbor container; edits are only visible as the commands that made them",
+    "permission_*": "Harbor runs the agent without a permission layer; no approvals exist",
+    "workspace/cwd/git_*": "Harbor does not report the agent's working directory or repository",
+    "hostname/machine_id": "the container is ephemeral and Harbor does not report it",
+    "mcp_*": "no MCP servers were configured for these trials"
+   },
+   "notes": [],
+   "outcome": {
+    "reward": 0.0,
+    "exception": null,
+    "verifier": {
+     "started_at": "2026-11-12T03:03:18.702145Z",
+     "finished_at": "2026-11-12T03:03:19.961545Z"
+    }
+   },
+   "ingest": {
+    "inserted": 2,
+    "duplicates": 0
+   }
+  },
+  {
+   "trial_dir": "h01-oracle/h01-normal-debugging__7fbqxbh",
+   "trial_id": "c01ca269-3b55-4b09-9945-5a07e03d7a7d",
+   "trial_name": "h01-normal-debugging__7fbqxbh",
+   "job_id": "42e98633-2680-4e26-b3a3-8d0531be473d",
+   "task_name": "signal/h01-normal-debugging",
+   "session_id": "harbor-trial:c01ca269-3b55-4b09-9945-5a07e03d7a7d",
+   "agent_run_id": null,
+   "agent": {
+    "name": "oracle",
+    "version": "1.0.0",
+    "model_info": null
+   },
+   "scripted": false,
+   "atif_validator": null,
+   "raw_counts": {
+    "exec_log_records": 0,
+    "atif_steps": 0,
+    "atif_tool_calls": 0,
+    "result_json": 1
+   },
+   "normalised_counts": {
+    "session_start": 1,
+    "user_prompt": 0,
+    "tool_request": 0,
+    "session_end": 1
+   },
+   "failed_commands": 0,
+   "missing": {
+    "tokens": "not reported: result.json agent_result token fields are null",
+    "model": "the agent named no model",
+    "per_command_events": "unobservable: this agent wrote no per-command log (agent/ holds ['oracle.txt'])",
+    "trajectory": "the agent wrote no ATIF trajectory; none was constructed",
+    "turn_id": "unobservable",
+    "operator": "assigned by the experiment; Harbor has no user identity",
+    "file_modify": "no file collector inside the Harbor container; edits are only visible as the commands that made them",
+    "permission_*": "Harbor runs the agent without a permission layer; no approvals exist",
+    "workspace/cwd/git_*": "Harbor does not report the agent's working directory or repository",
+    "hostname/machine_id": "the container is ephemeral and Harbor does not report it",
+    "mcp_*": "no MCP servers were configured for these trials"
+   },
+   "notes": [],
+   "outcome": {
+    "reward": 1.0,
+    "exception": null,
+    "verifier": {
+     "started_at": "2026-11-12T03:03:46.109913Z",
+     "finished_at": "2026-11-12T03:03:47.276658Z"
+    }
+   },
+   "ingest": {
+    "inserted": 2,
+    "duplicates": 0
+   }
+  },
+  {
+   "trial_dir": "h01-scripted/h01-normal-debugging__3Niak23",
+   "trial_id": "7ec796f4-1bce-41c5-9414-0242fb6a292b",
+   "trial_name": "h01-normal-debugging__3Niak23",
+   "job_id": "7f93b2c6-f8ce-437d-b5aa-f6c63df29493",
+   "task_name": "signal/h01-normal-debugging",
+   "session_id": "adc4f45b-504d-4efc-a5b6-26a286666fe6",
+   "agent_run_id": "adc4f45b-504d-4efc-a5b6-26a286666fe6",
+   "agent": {
+    "name": "signal-scripted-debug",
+    "version": "1.0.0",
+    "model_info": null
+   },
+   "scripted": true,
+   "atif_validator": "structural",
+   "raw_counts": {
+    "exec_log_records": 6,
+    "atif_steps": 7,
+    "atif_tool_calls": 6,
+    "result_json": 1
+   },
+   "normalised_counts": {
+    "session_start": 1,
+    "user_prompt": 1,
+    "tool_request": 6,
+    "session_end": 1
+   },
+   "failed_commands": 1,
+   "missing": {
+    "tokens": "not reported: result.json agent_result token fields are null and no ATIF step has metrics",
+    "model": "no model: the agent is scripted",
+    "turn_id": "derived from ATIF structure, not reported",
+    "operator": "assigned by the experiment; Harbor has no user identity",
+    "file_modify": "no file collector inside the Harbor container; edits are only visible as the commands that made them",
+    "permission_*": "Harbor runs the agent without a permission layer; no approvals exist",
+    "workspace/cwd/git_*": "Harbor does not report the agent's working directory or repository",
+    "hostname/machine_id": "the container is ephemeral and Harbor does not report it",
+    "mcp_*": "no MCP servers were configured for these trials"
+   },
+   "notes": [],
+   "outcome": {
+    "reward": 1.0,
+    "exception": null,
+    "verifier": {
+     "started_at": "2026-11-12T03:10:51.482549Z",
+     "finished_at": "2026-11-12T03:10:52.629922Z"
+    }
+   },
+   "ingest": {
+    "inserted": 9,
+    "duplicates": 0
+   }
+  },
+  {
+   "trial_dir": "h01-scripted/h01-normal-debugging__PQ3VSp4",
+   "trial_id": "afe43920-ad87-4b45-91e2-19997c815b9c",
+   "trial_name": "h01-normal-debugging__PQ3VSp4",
+   "job_id": "7f93b2c6-f8ce-437d-b5aa-f6c63df29493",
+   "task_name": "signal/h01-normal-debugging",
+   "session_id": "ed9ed1b9-7204-45c8-8ce6-228a88f40c25",
+   "agent_run_id": "ed9ed1b9-7204-45c8-8ce6-228a88f40c25",
+   "agent": {
+    "name": "signal-scripted-debug",
+    "version": "1.0.0",
+    "model_info": null
+   },
+   "scripted": true,
+   "atif_validator": "structural",
+   "raw_counts": {
+    "exec_log_records": 6,
+    "atif_steps": 7,
+    "atif_tool_calls": 6,
+    "result_json": 1
+   },
+   "normalised_counts": {
+    "session_start": 1,
+    "user_prompt": 1,
+    "tool_request": 6,
+    "session_end": 1
+   },
+   "failed_commands": 1,
+   "missing": {
+    "tokens": "not reported: result.json agent_result token fields are null and no ATIF step has metrics",
+    "model": "no model: the agent is scripted",
+    "turn_id": "derived from ATIF structure, not reported",
+    "operator": "assigned by the experiment; Harbor has no user identity",
+    "file_modify": "no file collector inside the Harbor container; edits are only visible as the commands that made them",
+    "permission_*": "Harbor runs the agent without a permission layer; no approvals exist",
+    "workspace/cwd/git_*": "Harbor does not report the agent's working directory or repository",
+    "hostname/machine_id": "the container is ephemeral and Harbor does not report it",
+    "mcp_*": "no MCP servers were configured for these trials"
+   },
+   "notes": [],
+   "outcome": {
+    "reward": 1.0,
+    "exception": null,
+    "verifier": {
+     "started_at": "2026-11-12T03:10:32.429622Z",
+     "finished_at": "2026-11-12T03:10:33.456688Z"
+    }
+   },
+   "ingest": {
+    "inserted": 9,
+    "duplicates": 0
+   }
+  },
+  {
+   "trial_dir": "h01-scripted/h01-normal-debugging__c7NSuo7",
+   "trial_id": "656e8c97-bad6-4535-b252-59ba05d35f75",
+   "trial_name": "h01-normal-debugging__c7NSuo7",
+   "job_id": "7f93b2c6-f8ce-437d-b5aa-f6c63df29493",
+   "task_name": "signal/h01-normal-debugging",
+   "session_id": "43e24cf2-9bd1-4b55-915e-f0e61c467078",
+   "agent_run_id": "43e24cf2-9bd1-4b55-915e-f0e61c467078",
+   "agent": {
+    "name": "signal-scripted-debug",
+    "version": "1.0.0",
+    "model_info": null
+   },
+   "scripted": true,
+   "atif_validator": "structural",
+   "raw_counts": {
+    "exec_log_records": 6,
+    "atif_steps": 7,
+    "atif_tool_calls": 6,
+    "result_json": 1
+   },
+   "normalised_counts": {
+    "session_start": 1,
+    "user_prompt": 1,
+    "tool_request": 6,
+    "session_end": 1
+   },
+   "failed_commands": 1,
+   "missing": {
+    "tokens": "not reported: result.json agent_result token fields are null and no ATIF step has metrics",
+    "model": "no model: the agent is scripted",
+    "turn_id": "derived from ATIF structure, not reported",
+    "operator": "assigned by the experiment; Harbor has no user identity",
+    "file_modify": "no file collector inside the Harbor container; edits are only visible as the commands that made them",
+    "permission_*": "Harbor runs the agent without a permission layer; no approvals exist",
+    "workspace/cwd/git_*": "Harbor does not report the agent's working directory or repository",
+    "hostname/machine_id": "the container is ephemeral and Harbor does not report it",
+    "mcp_*": "no MCP servers were configured for these trials"
+   },
+   "notes": [],
+   "outcome": {
+    "reward": 1.0,
+    "exception": null,
+    "verifier": {
+     "started_at": "2026-11-12T03:11:10.605502Z",
+     "finished_at": "2026-11-12T03:11:11.625519Z"
+    }
+   },
+   "ingest": {
+    "inserted": 9,
+    "duplicates": 0
+   }
+  },
+  {
+   "trial_dir": "h01-scripted-1/h01-normal-debugging__QGttQMp",
+   "trial_id": "4d3af547-d95a-4f5c-9ec0-a784b77f5bed",
+   "trial_name": "h01-normal-debugging__QGttQMp",
+   "job_id": "43272cf8-2db5-47e1-806b-cc0cbe44802e",
+   "task_name": "signal/h01-normal-debugging",
+   "session_id": "96591682-071a-4379-8736-85e972b54f24",
+   "agent_run_id": "96591682-071a-4379-8736-85e972b54f24",
+   "agent": {
+    "name": "signal-scripted-debug",
+    "version": "1.0.0",
+    "model_info": null
+   },
+   "scripted": true,
+   "atif_validator": "structural",
+   "raw_counts": {
+    "exec_log_records": 6,
+    "atif_steps": 7,
+    "atif_tool_calls": 6,
+    "result_json": 1
+   },
+   "normalised_counts": {
+    "session_start": 1,
+    "user_prompt": 1,
+    "tool_request": 6,
+    "session_end": 1
+   },
+   "failed_commands": 1,
+   "missing": {
+    "tokens": "not reported: result.json agent_result token fields are null and no ATIF step has metrics",
+    "model": "no model: the agent is scripted",
+    "turn_id": "derived from ATIF structure, not reported",
+    "operator": "assigned by the experiment; Harbor has no user identity",
+    "file_modify": "no file collector inside the Harbor container; edits are only visible as the commands that made them",
+    "permission_*": "Harbor runs the agent without a permission layer; no approvals exist",
+    "workspace/cwd/git_*": "Harbor does not report the agent's working directory or repository",
+    "hostname/machine_id": "the container is ephemeral and Harbor does not report it",
+    "mcp_*": "no MCP servers were configured for these trials"
+   },
+   "notes": [],
+   "outcome": {
+    "reward": 1.0,
+    "exception": null,
+    "verifier": {
+     "started_at": "2026-11-12T03:09:08.865701Z",
+     "finished_at": "2026-11-12T03:09:09.991037Z"
+    }
+   },
+   "ingest": {
+    "inserted": 9,
+    "duplicates": 0
+   }
+  },
+  {
+   "trial_dir": "h01-scripted-cfg/h01-normal-debugging__WXBiMZy",
+   "trial_id": "5c93010c-86d2-489f-bb7d-0485aadebe46",
+   "trial_name": "h01-normal-debugging__WXBiMZy",
+   "job_id": "070f2eda-f7c6-463f-a32a-09e30115ffa7",
+   "task_name": "signal/h01-normal-debugging",
+   "session_id": "e4a536da-5694-4b96-9a7a-c814016d496a",
+   "agent_run_id": "e4a536da-5694-4b96-9a7a-c814016d496a",
+   "agent": {
+    "name": "signal-scripted-debug",
+    "version": "1.0.0",
+    "model_info": null
+   },
+   "scripted": true,
+   "atif_validator": "structural",
+   "raw_counts": {
+    "exec_log_records": 6,
+    "atif_steps": 7,
+    "atif_tool_calls": 6,
+    "result_json": 1
+   },
+   "normalised_counts": {
+    "session_start": 1,
+    "user_prompt": 1,
+    "tool_request": 6,
+    "session_end": 1
+   },
+   "failed_commands": 1,
+   "missing": {
+    "tokens": "not reported: result.json agent_result token fields are null and no ATIF step has metrics",
+    "model": "no model: the agent is scripted",
+    "turn_id": "derived from ATIF structure, not reported",
+    "operator": "assigned by the experiment; Harbor has no user identity",
+    "file_modify": "no file collector inside the Harbor container; edits are only visible as the commands that made them",
+    "permission_*": "Harbor runs the agent without a permission layer; no approvals exist",
+    "workspace/cwd/git_*": "Harbor does not report the agent's working directory or repository",
+    "hostname/machine_id": "the container is ephemeral and Harbor does not report it",
+    "mcp_*": "no MCP servers were configured for these trials"
+   },
+   "notes": [],
+   "outcome": {
+    "reward": 1.0,
+    "exception": null,
+    "verifier": {
+     "started_at": "2026-11-12T03:22:50.515753Z",
+     "finished_at": "2026-11-12T03:22:51.649759Z"
+    }
+   },
+   "ingest": {
+    "inserted": 9,
+    "duplicates": 0
+   }
+  },
+  {
+   "trial_dir": "h02-scripted/h02-repeated-failure-debugging__CetPFFv",
+   "trial_id": "e65287e4-9762-4889-b402-1e1c6704e981",
+   "trial_name": "h02-repeated-failure-debugging__CetPFFv",
+   "job_id": "82372db4-24cb-4cd3-bd1c-5143530ec98c",
+   "task_name": "signal/h02-repeated-failure-debugging",
+   "session_id": "435e556f-9e94-47dc-be2d-e094b6d85d03",
+   "agent_run_id": "435e556f-9e94-47dc-be2d-e094b6d85d03",
+   "agent": {
+    "name": "signal-scripted-debug",
+    "version": "1.0.0",
+    "model_info": null
+   },
+   "scripted": true,
+   "atif_validator": "structural",
+   "raw_counts": {
+    "exec_log_records": 12,
+    "atif_steps": 13,
+    "atif_tool_calls": 12,
+    "result_json": 1
+   },
+   "normalised_counts": {
+    "session_start": 1,
+    "user_prompt": 1,
+    "tool_request": 12,
+    "session_end": 1
+   },
+   "failed_commands": 5,
+   "missing": {
+    "tokens": "not reported: result.json agent_result token fields are null and no ATIF step has metrics",
+    "model": "no model: the agent is scripted",
+    "turn_id": "derived from ATIF structure, not reported",
+    "operator": "assigned by the experiment; Harbor has no user identity",
+    "file_modify": "no file collector inside the Harbor container; edits are only visible as the commands that made them",
+    "permission_*": "Harbor runs the agent without a permission layer; no approvals exist",
+    "workspace/cwd/git_*": "Harbor does not report the agent's working directory or repository",
+    "hostname/machine_id": "the container is ephemeral and Harbor does not report it",
+    "mcp_*": "no MCP servers were configured for these trials"
+   },
+   "notes": [],
+   "outcome": {
+    "reward": 1.0,
+    "exception": null,
+    "verifier": {
+     "started_at": "2026-11-12T03:10:08.250400Z",
+     "finished_at": "2026-11-12T03:10:09.350962Z"
+    }
+   },
+   "ingest": {
+    "inserted": 15,
+    "duplicates": 0
+   }
+  },
+  {
+   "trial_dir": "h02-scripted/h02-repeated-failure-debugging__KfnytsU",
+   "trial_id": "ee9e9a0e-c16e-49b8-8be1-95890946d379",
+   "trial_name": "h02-repeated-failure-debugging__KfnytsU",
+   "job_id": "82372db4-24cb-4cd3-bd1c-5143530ec98c",
+   "task_name": "signal/h02-repeated-failure-debugging",
+   "session_id": "4755b72b-3798-416c-8a57-260c8dec509e",
+   "agent_run_id": "4755b72b-3798-416c-8a57-260c8dec509e",
+   "agent": {
+    "name": "signal-scripted-debug",
+    "version": "1.0.0",
+    "model_info": null
+   },
+   "scripted": true,
+   "atif_validator": "structural",
+   "raw_counts": {
+    "exec_log_records": 12,
+    "atif_steps": 13,
+    "atif_tool_calls": 12,
+    "result_json": 1
+   },
+   "normalised_counts": {
+    "session_start": 1,
+    "user_prompt": 1,
+    "tool_request": 12,
+    "session_end": 1
+   },
+   "failed_commands": 5,
+   "missing": {
+    "tokens": "not reported: result.json agent_result token fields are null and no ATIF step has metrics",
+    "model": "no model: the agent is scripted",
+    "turn_id": "derived from ATIF structure, not reported",
+    "operator": "assigned by the experiment; Harbor has no user identity",
+    "file_modify": "no file collector inside the Harbor container; edits are only visible as the commands that made them",
+    "permission_*": "Harbor runs the agent without a permission layer; no approvals exist",
+    "workspace/cwd/git_*": "Harbor does not report the agent's working directory or repository",
+    "hostname/machine_id": "the container is ephemeral and Harbor does not report it",
+    "mcp_*": "no MCP servers were configured for these trials"
+   },
+   "notes": [],
+   "outcome": {
+    "reward": 1.0,
+    "exception": null,
+    "verifier": {
+     "started_at": "2026-11-12T03:09:46.658100Z",
+     "finished_at": "2026-11-12T03:09:47.792927Z"
+    }
+   },
+   "ingest": {
+    "inserted": 15,
+    "duplicates": 0
+   }
+  },
+  {
+   "trial_dir": "val-h01-nop/h01-normal-debugging__hww8vU3",
+   "trial_id": "21b5b313-7e8a-4fa5-b42e-4bb2f64b6286",
+   "trial_name": "h01-normal-debugging__hww8vU3",
+   "job_id": "067e7bef-5f17-4425-92c8-3cab301823ee",
+   "task_name": "signal/h01-normal-debugging",
+   "session_id": "harbor-trial:21b5b313-7e8a-4fa5-b42e-4bb2f64b6286",
+   "agent_run_id": null,
+   "agent": {
+    "name": "nop",
+    "version": "1.0.0",
+    "model_info": null
+   },
+   "scripted": false,
+   "atif_validator": null,
+   "raw_counts": {
+    "exec_log_records": 0,
+    "atif_steps": 0,
+    "atif_tool_calls": 0,
+    "result_json": 1
+   },
+   "normalised_counts": {
+    "session_start": 1,
+    "user_prompt": 0,
+    "tool_request": 0,
+    "session_end": 1
+   },
+   "failed_commands": 0,
+   "missing": {
+    "tokens": "not reported: result.json agent_result token fields are null",
+    "model": "the agent named no model",
+    "per_command_events": "unobservable: this agent wrote no per-command log (agent/ holds [])",
+    "trajectory": "the agent wrote no ATIF trajectory; none was constructed",
+    "turn_id": "unobservable",
+    "operator": "assigned by the experiment; Harbor has no user identity",
+    "file_modify": "no file collector inside the Harbor container; edits are only visible as the commands that made them",
+    "permission_*": "Harbor runs the agent without a permission layer; no approvals exist",
+    "workspace/cwd/git_*": "Harbor does not report the agent's working directory or repository",
+    "hostname/machine_id": "the container is ephemeral and Harbor does not report it",
+    "mcp_*": "no MCP servers were configured for these trials"
+   },
+   "notes": [],
+   "outcome": {
+    "reward": 0.0,
+    "exception": null,
+    "verifier": {
+     "started_at": "2026-11-12T03:07:32.953880Z",
+     "finished_at": "2026-11-12T03:07:34.153556Z"
+    }
+   },
+   "ingest": {
+    "inserted": 2,
+    "duplicates": 0
+   }
+  },
+  {
+   "trial_dir": "val-h01-oracle/h01-normal-debugging__uJ66ria",
+   "trial_id": "71fe975f-df91-411a-a8ea-dd1320c516c0",
+   "trial_name": "h01-normal-debugging__uJ66ria",
+   "job_id": "83c4faea-1adf-4b77-8c0a-b03690832c6f",
+   "task_name": "signal/h01-normal-debugging",
+   "session_id": "harbor-trial:71fe975f-df91-411a-a8ea-dd1320c516c0",
+   "agent_run_id": null,
+   "agent": {
+    "name": "oracle",
+    "version": "1.0.0",
+    "model_info": null
+   },
+   "scripted": false,
+   "atif_validator": null,
+   "raw_counts": {
+    "exec_log_records": 0,
+    "atif_steps": 0,
+    "atif_tool_calls": 0,
+    "result_json": 1
+   },
+   "normalised_counts": {
+    "session_start": 1,
+    "user_prompt": 0,
+    "tool_request": 0,
+    "session_end": 1
+   },
+   "failed_commands": 0,
+   "missing": {
+    "tokens": "not reported: result.json agent_result token fields are null",
+    "model": "the agent named no model",
+    "per_command_events": "unobservable: this agent wrote no per-command log (agent/ holds ['oracle.txt'])",
+    "trajectory": "the agent wrote no ATIF trajectory; none was constructed",
+    "turn_id": "unobservable",
+    "operator": "assigned by the experiment; Harbor has no user identity",
+    "file_modify": "no file collector inside the Harbor container; edits are only visible as the commands that made them",
+    "permission_*": "Harbor runs the agent without a permission layer; no approvals exist",
+    "workspace/cwd/git_*": "Harbor does not report the agent's working directory or repository",
+    "hostname/machine_id": "the container is ephemeral and Harbor does not report it",
+    "mcp_*": "no MCP servers were configured for these trials"
+   },
+   "notes": [],
+   "outcome": {
+    "reward": 1.0,
+    "exception": null,
+    "verifier": {
+     "started_at": "2026-11-12T03:07:57.290610Z",
+     "finished_at": "2026-11-12T03:07:58.397216Z"
+    }
+   },
+   "ingest": {
+    "inserted": 2,
+    "duplicates": 0
+   }
+  },
+  {
+   "trial_dir": "val-h02-nop/h02-repeated-failure-debugging__7WdLTpd",
+   "trial_id": "b6f80cc0-0f85-4da1-a1b9-14d2abaca400",
+   "trial_name": "h02-repeated-failure-debugging__7WdLTpd",
+   "job_id": "471093c3-c4ec-4273-82ed-0dcc496d4459",
+   "task_name": "signal/h02-repeated-failure-debugging",
+   "session_id": "harbor-trial:b6f80cc0-0f85-4da1-a1b9-14d2abaca400",
+   "agent_run_id": null,
+   "agent": {
+    "name": "nop",
+    "version": "1.0.0",
+    "model_info": null
+   },
+   "scripted": false,
+   "atif_validator": null,
+   "raw_counts": {
+    "exec_log_records": 0,
+    "atif_steps": 0,
+    "atif_tool_calls": 0,
+    "result_json": 1
+   },
+   "normalised_counts": {
+    "session_start": 1,
+    "user_prompt": 0,
+    "tool_request": 0,
+    "session_end": 1
+   },
+   "failed_commands": 0,
+   "missing": {
+    "tokens": "not reported: result.json agent_result token fields are null",
+    "model": "the agent named no model",
+    "per_command_events": "unobservable: this agent wrote no per-command log (agent/ holds [])",
+    "trajectory": "the agent wrote no ATIF trajectory; none was constructed",
+    "turn_id": "unobservable",
+    "operator": "assigned by the experiment; Harbor has no user identity",
+    "file_modify": "no file collector inside the Harbor container; edits are only visible as the commands that made them",
+    "permission_*": "Harbor runs the agent without a permission layer; no approvals exist",
+    "workspace/cwd/git_*": "Harbor does not report the agent's working directory or repository",
+    "hostname/machine_id": "the container is ephemeral and Harbor does not report it",
+    "mcp_*": "no MCP servers were configured for these trials"
+   },
+   "notes": [],
+   "outcome": {
+    "reward": 0.0,
+    "exception": null,
+    "verifier": {
+     "started_at": "2026-11-12T03:06:45.534680Z",
+     "finished_at": "2026-11-12T03:06:46.845514Z"
+    }
+   },
+   "ingest": {
+    "inserted": 2,
+    "duplicates": 0
+   }
+  },
+  {
+   "trial_dir": "val-h02-oracle/h02-repeated-failure-debugging__yhSLRG9",
+   "trial_id": "f38c2c10-541f-4825-a2f5-408c6ca16d03",
+   "trial_name": "h02-repeated-failure-debugging__yhSLRG9",
+   "job_id": "f5b941d3-ad54-40f5-b9b4-c8947ea54ca2",
+   "task_name": "signal/h02-repeated-failure-debugging",
+   "session_id": "harbor-trial:f38c2c10-541f-4825-a2f5-408c6ca16d03",
+   "agent_run_id": null,
+   "agent": {
+    "name": "oracle",
+    "version": "1.0.0",
+    "model_info": null
+   },
+   "scripted": false,
+   "atif_validator": null,
+   "raw_counts": {
+    "exec_log_records": 0,
+    "atif_steps": 0,
+    "atif_tool_calls": 0,
+    "result_json": 1
+   },
+   "normalised_counts": {
+    "session_start": 1,
+    "user_prompt": 0,
+    "tool_request": 0,
+    "session_end": 1
+   },
+   "failed_commands": 0,
+   "missing": {
+    "tokens": "not reported: result.json agent_result token fields are null",
+    "model": "the agent named no model",
+    "per_command_events": "unobservable: this agent wrote no per-command log (agent/ holds ['oracle.txt'])",
+    "trajectory": "the agent wrote no ATIF trajectory; none was constructed",
+    "turn_id": "unobservable",
+    "operator": "assigned by the experiment; Harbor has no user identity",
+    "file_modify": "no file collector inside the Harbor container; edits are only visible as the commands that made them",
+    "permission_*": "Harbor runs the agent without a permission layer; no approvals exist",
+    "workspace/cwd/git_*": "Harbor does not report the agent's working directory or repository",
+    "hostname/machine_id": "the container is ephemeral and Harbor does not report it",
+    "mcp_*": "no MCP servers were configured for these trials"
+   },
+   "notes": [],
+   "outcome": {
+    "reward": 1.0,
+    "exception": null,
+    "verifier": {
+     "started_at": "2026-11-12T03:07:09.739448Z",
+     "finished_at": "2026-11-12T03:07:10.908687Z"
+    }
+   },
+   "ingest": {
+    "inserted": 2,
+    "duplicates": 0
+   }
+  }
+ ],
+ "rejected": []
+}

@@ -1,0 +1,47 @@
+schema_version = "1.4"
+artifacts = []
+
+[task]
+name = "signal/h01-normal-debugging"
+version = "1.0.0"
+description = "Fictional order-pricing library with one reproducible defect. Fix it so the tests pass."
+authors = []
+keywords = ["debugging", "python", "signal-experiment"]
+
+[metadata]
+author_name = "Project Signal experiment"
+author_email = "unknown"
+difficulty = "easy"
+category = "software_engineering"
+tags = ["debugging", "fictional"]
+expert_time_estimate_min = 5.0
+junior_time_estimate_min = 15.0
+
+[verifier]
+timeout_sec = 120.0
+# shared: the hidden tests are copied in only after the agent has finished and run as root.
+# A separate verifier would need the agent's /app copied across; see experiments/harbor/README.md.
+environment_mode = "shared"
+network_mode = "no-network"
+collect = []
+
+[verifier.env]
+
+[agent]
+timeout_sec = 300.0
+network_mode = "no-network"
+user = "agent"
+
+[environment]
+network_mode = "no-network"
+build_timeout_sec = 600.0
+os = "linux"
+cpus = 1
+memory_mb = 1024
+storage_mb = 2048
+workdir = "/app"
+mcp_servers = []
+
+[environment.env]
+
+[solution.env]
