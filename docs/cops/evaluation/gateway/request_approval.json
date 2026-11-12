@@ -1,0 +1,1339 @@
+{
+ "recording": "request_approval",
+ "version": "gateway-recordings-1",
+ "case_id": "gw-approval",
+ "cop": "anomaly_detection",
+ "session_id": "sp1",
+ "decision_id": "e6afa727-21a3-5fa2-979b-f147b5af9a21",
+ "execution_mode": "scripted simulation (model replies) + real local gateway execution",
+ "simulated": {
+  "model_replies": "scripted (FixtureProvider)",
+  "reviewer": "fixed test identity answering in code",
+  "tool_runner": null,
+  "action_targets": "loopback HTTP endpoint and local SQLite"
+ },
+ "events": [
+  {
+   "step": "approval_requested",
+   "approval_id": "28fc1cdc-c9ed-5167-9096-3cc39ff25693",
+   "typed_action": "ALERT",
+   "pending_before_decision": [
+    "28fc1cdc-c9ed-5167-9096-3cc39ff25693"
+   ],
+   "delivered_while_pending": 0
+  },
+  {
+   "step": "approval_decided",
+   "approval_id": "28fc1cdc-c9ed-5167-9096-3cc39ff25693",
+   "decision": "approve",
+   "reviewer": "reviewer@tenant-a.example",
+   "reviewer_kind": "fixed test identity"
+  },
+  {
+   "step": "resumed_and_executed",
+   "execution_status": "EXECUTED_SANDBOX",
+   "gateway_action_id": "fa476152-a725-5f9e-a0fc-0ee3e536a358"
+  }
+ ],
+ "detail": {
+  "record_version": "decision-record-1",
+  "decision_id": "e6afa727-21a3-5fa2-979b-f147b5af9a21",
+  "run_key": "gw-approval:anomaly_detection",
+  "cop": "anomaly_detection",
+  "case_id": "gw-approval",
+  "run_id": "eval-gw-approval",
+  "session_id": "sp1",
+  "tenant_id": "tenant-a",
+  "decided_at": "2026-10-29T00:00:00Z",
+  "mode": "supervised",
+  "classification": "llm",
+  "finding": {
+   "finding_id": "bb9bc628-1398-54fc-a6a8-3f5e93090969",
+   "label": "ANOMALOUS",
+   "status": "SUBSTANTIVE",
+   "confidence": 0.8,
+   "verified": true,
+   "rationale": "token deviation recomputed from raw rows; action count is near the median, so a larger task does not explain it",
+   "severity": "NONE",
+   "claims": [
+    {
+     "statement": "insights.token_outlier is CRITICAL",
+     "kind": "metric_state",
+     "metric_id": "insights.token_outlier",
+     "asserted_state": "CRITICAL",
+     "asserted_value": null,
+     "tool_call_id": null,
+     "result_field": null,
+     "record_id": null,
+     "upstream_cop": null,
+     "upstream_label": null,
+     "evidence_refs": [
+      "metric:insights.token_outlier"
+     ],
+     "origin": "llm_hypothesis"
+    },
+    {
+     "statement": "raw tokens 40.0x median",
+     "kind": "tool_observation",
+     "metric_id": null,
+     "asserted_state": null,
+     "asserted_value": 40.0,
+     "tool_call_id": "507b541e-3166-5ce6-ae6e-4eae80461089",
+     "result_field": "ratio_to_median",
+     "record_id": null,
+     "upstream_cop": null,
+     "upstream_label": null,
+     "evidence_refs": [
+      "tool:507b541e-3166-5ce6-ae6e-4eae80461089"
+     ],
+     "origin": "llm_hypothesis"
+    },
+    {
+     "statement": "actions 1.143x median",
+     "kind": "tool_observation",
+     "metric_id": null,
+     "asserted_state": null,
+     "asserted_value": 1.143,
+     "tool_call_id": "e570f0d3-b869-5aea-8543-ccf774c3bf8f",
+     "result_field": "ratio_to_median",
+     "record_id": null,
+     "upstream_cop": null,
+     "upstream_label": null,
+     "evidence_refs": [
+      "tool:e570f0d3-b869-5aea-8543-ccf774c3bf8f"
+     ],
+     "origin": "llm_hypothesis"
+    },
+    {
+     "statement": "compare_versioned_baseline.sessions_in_baseline = 7",
+     "kind": "tool_observation",
+     "metric_id": null,
+     "asserted_state": null,
+     "asserted_value": 7,
+     "tool_call_id": "327313ca-f3ca-54a8-a4d3-c58cfe7acef0",
+     "result_field": "sessions_in_baseline",
+     "record_id": null,
+     "upstream_cop": null,
+     "upstream_label": null,
+     "evidence_refs": [
+      "tool:327313ca-f3ca-54a8-a4d3-c58cfe7acef0"
+     ],
+     "origin": "llm_hypothesis"
+    }
+   ],
+   "missing_evidence": [],
+   "missing_dependencies": [],
+   "upstream_used": [],
+   "qualifications": [],
+   "lineage": [
+    "insights.token_outlier",
+    "tool_call:327313ca-f3ca-54a8-a4d3-c58cfe7acef0",
+    "tool_call:507b541e-3166-5ce6-ae6e-4eae80461089",
+    "tool_call:e570f0d3-b869-5aea-8543-ccf774c3bf8f"
+   ],
+   "baseline": {
+    "label": "ANOMALOUS",
+    "confidence": 0.5,
+    "status": "SUBSTANTIVE",
+    "origin": "computational",
+    "note": "computational baseline, recorded separately"
+   }
+  },
+  "verification_support": {
+   "version": "support-1",
+   "cop": "anomaly_detection",
+   "label": "ANOMALOUS",
+   "label_class": "attention",
+   "assessed": "finding",
+   "decision": "SUPPORTED",
+   "basis": "support 0.6909 >= supported_min 0.4091, corroborated by 2 sources, against 0 <= 0.1",
+   "limitations": [],
+   "score": 0.6909,
+   "against": 0,
+   "unknown": 0.3091,
+   "dimensions": {
+    "relevance": 1.0,
+    "reliability": 0.95,
+    "completeness": 0.7273,
+    "consistency": 1.0,
+    "corroboration": 2
+   },
+   "corroborating_sources": [
+    "baseline_history",
+    "telemetry"
+   ],
+   "thresholds": {
+    "total_weight": 2.75,
+    "required_weight": 1.0,
+    "primary_weight": 1.0,
+    "smallest_corroborating_weight": 0.25,
+    "supported_min": 0.4091,
+    "provisional_min": 0.2182,
+    "reject_min": 0.2182,
+    "max_against_supported": 0.1,
+    "min_corroboration_supported": 2,
+    "derivation": {
+     "RHO_SUPPORTED": 0.9,
+     "RHO_PROVISIONAL": 0.6,
+     "source": "interpret.EVIDENCE_LEVEL (SUFFICIENT, DEGRADED)"
+    }
+   },
+   "hard_checks": [
+    {
+     "check": "EV-01",
+     "result": "PASS",
+     "reason": "well_formed",
+     "kind": "reference: the finding is well formed"
+    },
+    {
+     "check": "EV-02",
+     "result": "PASS",
+     "reason": "refs_resolve",
+     "kind": "reference: every cited reference resolves"
+    },
+    {
+     "check": "ID-01",
+     "result": "PASS",
+     "reason": "provenance_ok",
+     "kind": "provenance: cited metric rows carry provenance"
+    },
+    {
+     "check": "ID-02",
+     "result": "PASS",
+     "reason": "in_scope",
+     "kind": "provenance: cited calls and records belong to this case and tenant"
+    },
+    {
+     "check": "MC-01",
+     "result": "PASS",
+     "reason": "recomputed",
+     "kind": "factual: cited metric values recompute from raw observables"
+    },
+    {
+     "check": "SC-01",
+     "result": "PASS",
+     "reason": "claims_supported",
+     "kind": "factual: each claim matches the data it cites"
+    }
+   ],
+   "graded_checks": [
+    {
+     "check": "SC-02",
+     "result": "PASS",
+     "reason": "directly_supported",
+     "kind": "corroboration: a definite label has independent support"
+    },
+    {
+     "check": "DS-01",
+     "result": "PASS",
+     "reason": "state_consistent",
+     "kind": "completeness: the label is one the evidence state permits"
+    },
+    {
+     "check": "DS-02",
+     "result": "NOT_RUN",
+     "reason": "no_corroboration_claimed",
+     "kind": "corroboration: no correlated upstream counted as independent"
+    },
+    {
+     "check": "DS-03",
+     "result": "NOT_RUN",
+     "reason": "not_a_quiet_model_reading",
+     "kind": "consistency: a quiet model reading is not contradicted by the rule baseline"
+    },
+    {
+     "check": "RP-01",
+     "result": "PASS",
+     "reason": "baseline_agrees",
+     "kind": "consistency: rule re-run or baseline agreement (diagnostic)"
+    }
+   ],
+   "consistency_flags": [],
+   "required_unknown": [],
+   "unknown_items": [
+    {
+     "component": "upstream:behavior_analytics",
+     "basis": "behavior_analytics finding absent",
+     "retrievable_with": []
+    },
+    {
+     "component": "validated_memory",
+     "basis": "no validated precedent",
+     "retrievable_with": []
+    }
+   ],
+   "components": [
+    {
+     "name": "deviation_metrics",
+     "kind": "metrics",
+     "relevance": "direct",
+     "weight": 1.0,
+     "required": "all",
+     "source": "telemetry",
+     "defines_attention": true,
+     "tools": [],
+     "metrics": [
+      "insights.token_outlier",
+      "insights.duration_outlier",
+      "path.transition_novelty",
+      "activity.action_rate_ratio",
+      "access.first_seen_mcp",
+      "insights.retry",
+      "insights.repetition"
+     ],
+     "item": {
+      "direction": "supports",
+      "strength": 1.0,
+      "reliability": 0.9,
+      "basis": "attention state observed (claimed severity NONE): insights.token_outlier=CRITICAL (40.0), path.transition_novelty=EXCEPTION (0.545)",
+      "refs": [
+       "metric:insights.token_outlier",
+       "metric:path.transition_novelty"
+      ],
+      "applicable": true,
+      "retrievable_with": []
+     },
+     "contribution": 0.3273
+    },
+    {
+     "name": "versioned_baseline",
+     "kind": "baseline_history",
+     "relevance": "supporting",
+     "weight": 0.5,
+     "required": null,
+     "source": "baseline_history",
+     "tools": [
+      "compare_versioned_baseline"
+     ],
+     "metrics": [],
+     "item": {
+      "direction": "supports",
+      "strength": 1.0,
+      "reliability": 1.0,
+      "basis": "outside every value in the versioned baseline: insights.token_outlier=40.0 vs [1.0, 1.0] over 7 sessions",
+      "refs": [
+       "tool:327313ca-f3ca-54a8-a4d3-c58cfe7acef0"
+      ],
+      "applicable": true,
+      "retrievable_with": []
+     },
+     "contribution": 0.1818
+    },
+    {
+     "name": "upstream:behavior_analytics",
+     "kind": "upstream",
+     "relevance": "supporting",
+     "weight": 0.5,
+     "required": null,
+     "source": "upstream:behavior_analytics",
+     "upstream": "behavior_analytics",
+     "tools": [],
+     "metrics": [],
+     "item": {
+      "direction": "unknown",
+      "strength": 0.0,
+      "reliability": 1.0,
+      "basis": "behavior_analytics finding absent",
+      "refs": [],
+      "applicable": true,
+      "retrievable_with": []
+     },
+     "contribution": 0.0
+    },
+    {
+     "name": "rule_baseline",
+     "kind": "baseline",
+     "relevance": "supporting",
+     "weight": 0.5,
+     "required": null,
+     "source": "rule_baseline",
+     "tools": [],
+     "metrics": [],
+     "item": {
+      "direction": "supports",
+      "strength": 1.0,
+      "reliability": 1.0,
+      "basis": "rule baseline reads ANOMALOUS too",
+      "refs": [],
+      "applicable": true,
+      "retrievable_with": []
+     },
+     "contribution": 0.1818
+    },
+    {
+     "name": "validated_memory",
+     "kind": "memory",
+     "relevance": "contextual",
+     "weight": 0.25,
+     "required": null,
+     "source": "validated_memory",
+     "tools": [],
+     "metrics": [],
+     "item": {
+      "direction": "unknown",
+      "strength": 0.0,
+      "reliability": 1.0,
+      "basis": "no validated precedent",
+      "refs": [],
+      "applicable": true,
+      "retrievable_with": []
+     },
+     "contribution": 0.0
+    }
+   ],
+   "telemetry_reliability": 0.9,
+   "assumptions": [
+    {
+     "item": "telemetry_reliability",
+     "value": 0.9,
+     "owner": "runtime_monitoring",
+     "basis": "no verified Runtime Monitoring finding: the default evidence ceiling 0.9 is assumed, not observed"
+    }
+   ],
+   "note": "computed from evidence only; the model's self-reported confidence is not an input"
+  },
+  "sufficiency": {
+   "items": [
+    {
+     "item": "metric:insights.token_outlier",
+     "kind": "METRIC",
+     "state": "RETRIEVED_AND_VALIDATED",
+     "evidence": "OBSERVED",
+     "reason": ""
+    },
+    {
+     "item": "metric:insights.duration_outlier",
+     "kind": "METRIC",
+     "state": "RETRIEVED_AND_VALIDATED",
+     "evidence": "OBSERVED",
+     "reason": ""
+    },
+    {
+     "item": "metric:path.transition_novelty",
+     "kind": "METRIC",
+     "state": "RETRIEVED_AND_VALIDATED",
+     "evidence": "OBSERVED",
+     "reason": ""
+    },
+    {
+     "item": "metric:activity.action_rate_ratio",
+     "kind": "METRIC",
+     "state": "RETRIEVED_AND_VALIDATED",
+     "evidence": "OBSERVED",
+     "reason": ""
+    },
+    {
+     "item": "metric:access.first_seen_mcp",
+     "kind": "METRIC",
+     "state": "RETRIEVED_AND_VALIDATED",
+     "evidence": "OBSERVED",
+     "reason": ""
+    },
+    {
+     "item": "metric:insights.retry",
+     "kind": "METRIC",
+     "state": "NOT_APPLICABLE",
+     "evidence": "NOT_APPLICABLE",
+     "reason": "did not arise: commands"
+    },
+    {
+     "item": "metric:insights.repetition",
+     "kind": "METRIC",
+     "state": "RETRIEVED_AND_VALIDATED",
+     "evidence": "OBSERVED",
+     "reason": ""
+    },
+    {
+     "item": "finding:runtime_monitoring",
+     "kind": "UPSTREAM",
+     "role": "bounds_quiet_label",
+     "state": "MISSING_AND_UNAVAILABLE",
+     "label": null,
+     "status": null
+    },
+    {
+     "item": "finding:behavior_analytics",
+     "kind": "UPSTREAM",
+     "role": "context",
+     "state": "MISSING_AND_UNAVAILABLE",
+     "label": null,
+     "status": null
+    }
+   ],
+   "quiet_label_permitted": true,
+   "blocks_all_labels": false,
+   "reasons": [
+    {
+     "code": "MISSING_DEPENDENCY",
+     "item": "finding:runtime_monitoring",
+     "gates": "none",
+     "detail": "upstream runtime_monitoring is absent; it is context only and supports nothing"
+    },
+    {
+     "code": "MISSING_DEPENDENCY",
+     "item": "finding:behavior_analytics",
+     "gates": "none",
+     "detail": "upstream behavior_analytics is absent; it is context only and supports nothing"
+    }
+   ]
+  },
+  "upstream_view": [
+   {
+    "cop": "runtime_monitoring",
+    "present": false,
+    "verified": false,
+    "status": null,
+    "label": null,
+    "finding_id": null
+   },
+   {
+    "cop": "behavior_analytics",
+    "present": false,
+    "verified": false,
+    "status": null,
+    "label": null,
+    "finding_id": null
+   }
+  ],
+  "tool_calls": [
+   {
+    "tool_call_id": "507b541e-3166-5ce6-ae6e-4eae80461089",
+    "tool": "calculate_deviation",
+    "args": {
+     "quantity": "tokens"
+    },
+    "requested_by": "llm",
+    "status": "OK",
+    "rejection_reason": null,
+    "latency_ms": 0.194,
+    "purpose": "raw token deviation against comparable sessions",
+    "result": {
+     "quantity": "tokens",
+     "current": 40000.0,
+     "n_baseline": 7,
+     "baseline_median": 1000.0,
+     "ratio_to_median": 40.0,
+     "z_score": null
+    }
+   },
+   {
+    "tool_call_id": "327313ca-f3ca-54a8-a4d3-c58cfe7acef0",
+    "tool": "compare_versioned_baseline",
+    "args": {
+     "metric_id": "insights.token_outlier"
+    },
+    "requested_by": "llm",
+    "status": "OK",
+    "rejection_reason": null,
+    "latency_ms": 0.166,
+    "purpose": "which baseline version the outlier is against",
+    "result": {
+     "metric_id": "insights.token_outlier",
+     "baseline_version": "2026-10-05.1#9fdaea38e7",
+     "sessions_in_baseline": 7,
+     "current_value": 40.0,
+     "current_state": "CRITICAL",
+     "median": 1.0,
+     "max": 1.0,
+     "min": 1.0
+    }
+   },
+   {
+    "tool_call_id": "e570f0d3-b869-5aea-8543-ccf774c3bf8f",
+    "tool": "calculate_deviation",
+    "args": {
+     "quantity": "actions"
+    },
+    "requested_by": "llm",
+    "status": "OK",
+    "rejection_reason": null,
+    "latency_ms": 0.179,
+    "purpose": "does action count rise with tokens",
+    "result": {
+     "quantity": "actions",
+     "current": 8.0,
+     "n_baseline": 7,
+     "baseline_median": 7.0,
+     "ratio_to_median": 1.143,
+     "z_score": null
+    }
+   },
+   {
+    "tool_call_id": "b6f09c26-1c52-5439-b842-b4e0991c8e5a",
+    "tool": "analyse_tool_call_sequence",
+    "args": {},
+    "requested_by": "llm",
+    "status": "OK",
+    "rejection_reason": null,
+    "latency_ms": 0.094,
+    "purpose": "is the sequence itself unusual",
+    "result": {
+     "calls": 8,
+     "distinct_tools": 4,
+     "max_consecutive_same_tool": 1,
+     "top_bigrams": {
+      "WebFetch>Bash": 3,
+      "Bash>WebFetch": 2,
+      "Bash>Read": 1,
+      "Read>Edit": 1
+     },
+     "repeated_commands": {},
+     "failed_calls": 0,
+     "failed_refs": []
+    }
+   }
+  ],
+  "llm_invocations": [
+   {
+    "invocation_id": "2e420f09-d84f-5c86-abf9-75ea2766fa8e",
+    "purpose": "plan",
+    "provider": "fixture",
+    "model": "fixture-model",
+    "simulated": true,
+    "evidence_refs": [
+     "metric:insights.token_outlier",
+     "metric:insights.duration_outlier",
+     "metric:path.transition_novelty",
+     "metric:activity.action_rate_ratio",
+     "metric:access.first_seen_mcp",
+     "metric:insights.retry",
+     "metric:insights.repetition"
+    ],
+    "tools_exposed": [
+     "retrieve_trace_window",
+     "compare_versioned_baseline",
+     "find_similar_validated_cases",
+     "calculate_deviation",
+     "analyse_tool_call_sequence"
+    ],
+    "latency_ms": 0.583,
+    "cost_usd": null,
+    "cost_basis": "unpriced"
+   },
+   {
+    "invocation_id": "a32d4fd1-feee-5cf4-9c0e-609a1740adca",
+    "purpose": "assess",
+    "provider": "fixture",
+    "model": "fixture-model",
+    "simulated": true,
+    "evidence_refs": [
+     "metric:insights.token_outlier",
+     "metric:insights.duration_outlier",
+     "metric:path.transition_novelty",
+     "metric:activity.action_rate_ratio",
+     "metric:access.first_seen_mcp",
+     "metric:insights.retry",
+     "metric:insights.repetition",
+     "tool:507b541e-3166-5ce6-ae6e-4eae80461089",
+     "tool:327313ca-f3ca-54a8-a4d3-c58cfe7acef0"
+    ],
+    "tools_exposed": [
+     "retrieve_trace_window",
+     "compare_versioned_baseline",
+     "find_similar_validated_cases",
+     "calculate_deviation",
+     "analyse_tool_call_sequence"
+    ],
+    "latency_ms": 3.125,
+    "cost_usd": null,
+    "cost_basis": "unpriced"
+   },
+   {
+    "invocation_id": "e5133cd4-7cf5-5228-860b-f7a76015c891",
+    "purpose": "assess",
+    "provider": "fixture",
+    "model": "fixture-model",
+    "simulated": true,
+    "evidence_refs": [
+     "metric:insights.token_outlier",
+     "metric:insights.duration_outlier",
+     "metric:path.transition_novelty",
+     "metric:activity.action_rate_ratio",
+     "metric:access.first_seen_mcp",
+     "metric:insights.retry",
+     "metric:insights.repetition",
+     "tool:507b541e-3166-5ce6-ae6e-4eae80461089",
+     "tool:327313ca-f3ca-54a8-a4d3-c58cfe7acef0",
+     "tool:e570f0d3-b869-5aea-8543-ccf774c3bf8f",
+     "tool:b6f09c26-1c52-5439-b842-b4e0991c8e5a"
+    ],
+    "tools_exposed": [
+     "retrieve_trace_window",
+     "compare_versioned_baseline",
+     "find_similar_validated_cases",
+     "calculate_deviation",
+     "analyse_tool_call_sequence"
+    ],
+    "latency_ms": 2.36,
+    "cost_usd": null,
+    "cost_basis": "unpriced"
+   }
+  ],
+  "stop_reason": "concluded",
+  "verifier_results": [
+   {
+    "check_id": "EV-01",
+    "result": "PASS",
+    "reason_code": "well_formed",
+    "detail": "",
+    "effect": "BLOCKS_FINDING",
+    "subject": ""
+   },
+   {
+    "check_id": "EV-02",
+    "result": "PASS",
+    "reason_code": "refs_resolve",
+    "detail": "",
+    "effect": "BLOCKS_FINDING",
+    "subject": ""
+   },
+   {
+    "check_id": "ID-01",
+    "result": "PASS",
+    "reason_code": "provenance_ok",
+    "detail": "",
+    "effect": "BLOCKS_FINDING",
+    "subject": ""
+   },
+   {
+    "check_id": "ID-02",
+    "result": "PASS",
+    "reason_code": "in_scope",
+    "detail": "",
+    "effect": "BLOCKS_FINDING",
+    "subject": ""
+   },
+   {
+    "check_id": "MC-01",
+    "result": "PASS",
+    "reason_code": "recomputed",
+    "detail": "recomputed ['insights.token_outlier']",
+    "effect": "BLOCKS_FINDING",
+    "subject": ""
+   },
+   {
+    "check_id": "SC-01",
+    "result": "PASS",
+    "reason_code": "claims_supported",
+    "detail": "",
+    "effect": "BLOCKS_FINDING",
+    "subject": ""
+   },
+   {
+    "check_id": "SC-02",
+    "result": "PASS",
+    "reason_code": "directly_supported",
+    "detail": "",
+    "effect": "BLOCKS_FINDING",
+    "subject": ""
+   },
+   {
+    "check_id": "DS-01",
+    "result": "PASS",
+    "reason_code": "state_consistent",
+    "detail": "",
+    "effect": "BLOCKS_FINDING",
+    "subject": ""
+   },
+   {
+    "check_id": "DS-02",
+    "result": "NOT_RUN",
+    "reason_code": "no_corroboration_claimed",
+    "detail": "",
+    "effect": "BLOCKS_FINDING",
+    "subject": ""
+   },
+   {
+    "check_id": "DS-03",
+    "result": "NOT_RUN",
+    "reason_code": "not_a_quiet_model_reading",
+    "detail": "",
+    "effect": "BLOCKS_FINDING",
+    "subject": ""
+   },
+   {
+    "check_id": "RP-01",
+    "result": "PASS",
+    "reason_code": "baseline_agrees",
+    "detail": "computational baseline reads ANOMALOUS; diagnostic only",
+    "effect": "DIAGNOSTIC",
+    "subject": ""
+   },
+   {
+    "check_id": "VS-01",
+    "result": "PASS",
+    "reason_code": "SUPPORTED",
+    "detail": "support 0.6909 >= supported_min 0.4091, corroborated by 2 sources, against 0 <= 0.1",
+    "effect": "BLOCKS_FINDING",
+    "subject": ""
+   },
+   {
+    "check_id": "AU-01",
+    "result": "PASS",
+    "reason_code": "permitted",
+    "detail": "",
+    "effect": "BLOCKS_ACTION",
+    "subject": "original_proposal"
+   },
+   {
+    "check_id": "AU-01",
+    "result": "PASS",
+    "reason_code": "permitted",
+    "detail": "",
+    "effect": "BLOCKS_ACTION",
+    "subject": "final_action"
+   },
+   {
+    "check_id": "PE-01",
+    "result": "NOT_RUN",
+    "reason_code": "not_intervening",
+    "detail": "",
+    "effect": "BLOCKS_ACTION",
+    "subject": ""
+   },
+   {
+    "check_id": "AU-02",
+    "result": "PASS",
+    "reason_code": "approved",
+    "detail": "by reviewer@tenant-a.example",
+    "effect": "BLOCKS_ACTION",
+    "subject": ""
+   },
+   {
+    "check_id": "EX-01",
+    "result": "PASS",
+    "reason_code": "outcome_confirmed",
+    "detail": "sandbox gateway: ALERT -> VERIFIED",
+    "effect": "BLOCKS_ACTION",
+    "subject": ""
+   },
+   {
+    "check_id": "MU-01",
+    "result": "PASS",
+    "reason_code": "memory_ok",
+    "detail": "",
+    "effect": "BLOCKS_MEMORY",
+    "subject": ""
+   }
+  ],
+  "triage": {
+   "version": "triage-1",
+   "cop": "anomaly_detection",
+   "outcome": "FAIL",
+   "outcome_reason": "verified attention reading ANOMALOUS",
+   "evidence_support": {
+    "score": 4,
+    "meaning": "strong support with bounded, named limitations",
+    "rule": "SUPPORTED: support 0.6909 >= supported_min 0.4091, corroborated by 2 sources, against 0 <= 0.1",
+    "reading": "ANOMALOUS",
+    "candidate_verification": "VERIFIED",
+    "provisional": false,
+    "supporting": [
+     {
+      "kind": "deviation_metrics",
+      "evidence": [
+       "attention state observed (claimed severity NONE): insights.token_outlier=CRITICAL (40.0), path.transition_novelty=EXCEPTION (0.545)"
+      ],
+      "contribution": 0.3273
+     },
+     {
+      "kind": "versioned_baseline",
+      "evidence": [
+       "outside every value in the versioned baseline: insights.token_outlier=40.0 vs [1.0, 1.0] over 7 sessions"
+      ],
+      "contribution": 0.1818
+     },
+     {
+      "kind": "rule_baseline",
+      "evidence": [
+       "rule baseline reads ANOMALOUS too"
+      ],
+      "contribution": 0.1818
+     }
+    ],
+    "limiting": [
+     {
+      "kind": "unknown",
+      "item": "upstream:behavior_analytics",
+      "detail": "behavior_analytics finding absent",
+      "material": false
+     },
+     {
+      "kind": "unknown",
+      "item": "validated_memory",
+      "detail": "no validated precedent",
+      "material": false
+     }
+    ],
+    "contradictions": {
+     "factual": [],
+     "interpretive": [],
+     "status": "none"
+    },
+    "verification_support": {
+     "decision": "SUPPORTED",
+     "basis": "support 0.6909 >= supported_min 0.4091, corroborated by 2 sources, against 0 <= 0.1",
+     "score": 0.6909,
+     "against": 0,
+     "unknown": 0.3091,
+     "dimensions": {
+      "relevance": 1.0,
+      "reliability": 0.95,
+      "completeness": 0.7273,
+      "consistency": 1.0,
+      "corroboration": 2
+     },
+     "label": "ANOMALOUS"
+    },
+    "derived_from": "verification_support"
+   },
+   "confidence": {
+    "value": 0.8,
+    "raw": 0.8,
+    "raw_source": "model self-report, then verifier evidence ceiling",
+    "cap_from_score": 0.85,
+    "capped": false,
+    "calibration": "uncalibrated: no validated outcome history",
+    "definite_reading": true,
+    "note": "confidence never replaces verification: an unverified or inconclusive finding has value 0"
+   },
+   "llm_assessment": {
+    "label": "ANOMALOUS",
+    "self_reported_confidence": 0.8,
+    "proposed_action": "ALERT",
+    "note": "model candidate as proposed; not the verified score"
+   },
+   "perceived_handling_quotient": {
+    "value": 0.835,
+    "version": "triage-1",
+    "components": {
+     "evidence_strength": {
+      "value": 0.75,
+      "weight": 0.25,
+      "contribution": 0.1875,
+      "basis": "score 4 -> (score-1)/4 (band of SUPPORTED)"
+     },
+     "completeness": {
+      "value": 1.0,
+      "weight": 0.15,
+      "contribution": 0.15,
+      "basis": "6 of 6 required/metric items available"
+     },
+     "interpretability": {
+      "value": 1.0,
+      "weight": 0.1,
+      "contribution": 0.1,
+      "basis": "definite verified reading"
+     },
+     "contradiction_free": {
+      "value": 1.0,
+      "weight": 0.15,
+      "contribution": 0.15,
+      "basis": "contradiction status: none"
+     },
+     "tool_availability": {
+      "value": 1.0,
+      "weight": 0.1,
+      "contribution": 0.1,
+      "basis": "3 of 3 tools returned OK"
+     },
+     "authority": {
+      "value": 0.5,
+      "weight": 0.08,
+      "contribution": 0.04,
+      "basis": "ALERT: spec.permitted_actions; needs approval"
+     },
+     "reversibility": {
+      "value": 1.0,
+      "weight": 0.05,
+      "contribution": 0.05,
+      "basis": "ALERT: reversible"
+     },
+     "upstream_reliability": {
+      "value": 0.45,
+      "weight": 0.05,
+      "contribution": 0.0225,
+      "basis": "evidence ceiling 0.9; 0 of 2 upstream verified"
+     },
+     "validated_history": {
+      "value": 0.5,
+      "weight": 0.03,
+      "contribution": 0.015,
+      "basis": "no validated history: neutral"
+     },
+     "expertise": {
+      "value": 1.0,
+      "weight": 0.02,
+      "contribution": 0.02,
+      "basis": "within the COP's domain"
+     },
+     "no_external_approval": {
+      "value": 0.0,
+      "weight": 0.02,
+      "contribution": 0.0,
+      "basis": "approval required"
+     }
+    },
+    "note": "separate from the event's inherent risk; no component is self-reported by the COP"
+   },
+   "thresholds": {
+    "autonomous": 0.8,
+    "assisted": 0.6,
+    "specialist": 0.35,
+    "justification": "ALERT on anomalies; default bands",
+    "human_labels": [],
+    "version": "thresholds-1"
+   },
+   "routing": {
+    "tier": "human",
+    "band_from_quotient": "autonomous",
+    "primary_reason": "ALERT requires approval",
+    "rules_fired": [
+     "R3 human-required action or label"
+    ],
+    "threshold_version": "thresholds-1",
+    "next_step": "ALERT via authority_check",
+    "human_needed": true,
+    "automated_action_authorised": false,
+    "specialist_triggers": [],
+    "supporting_metrics": {
+     "score": 4,
+     "confidence": 0.8,
+     "quotient": 0.835,
+     "contradictions": "none",
+     "completeness": 1.0,
+     "action_reversibility": "reversible",
+     "approval_required": true
+    }
+   },
+   "action_selection": {
+    "original_proposal": "ALERT",
+    "verified_proposal": "ALERT",
+    "selected": "ALERT",
+    "legacy_alias": "ALERT",
+    "reason": "the COP's proposal ALERT is permitted and within the NOTIFY ceiling for ANOMALOUS",
+    "cause": null,
+    "suppressed_on_pass": null
+   },
+   "referral": null,
+   "human_task": {
+    "kind": "approval",
+    "question": "anomaly_detection: ALERT requires approval",
+    "proposed_action": "ALERT",
+    "evidence": [
+     "deviation_metrics",
+     "versioned_baseline",
+     "rule_baseline"
+    ]
+   },
+   "sufficiency_at_triage": {
+    "items": [
+     {
+      "item": "metric:insights.token_outlier",
+      "kind": "METRIC",
+      "state": "RETRIEVED_AND_VALIDATED"
+     },
+     {
+      "item": "metric:insights.duration_outlier",
+      "kind": "METRIC",
+      "state": "RETRIEVED_AND_VALIDATED"
+     },
+     {
+      "item": "metric:path.transition_novelty",
+      "kind": "METRIC",
+      "state": "RETRIEVED_AND_VALIDATED"
+     },
+     {
+      "item": "metric:activity.action_rate_ratio",
+      "kind": "METRIC",
+      "state": "RETRIEVED_AND_VALIDATED"
+     },
+     {
+      "item": "metric:access.first_seen_mcp",
+      "kind": "METRIC",
+      "state": "RETRIEVED_AND_VALIDATED"
+     },
+     {
+      "item": "metric:insights.retry",
+      "kind": "METRIC",
+      "state": "NOT_APPLICABLE"
+     },
+     {
+      "item": "metric:insights.repetition",
+      "kind": "METRIC",
+      "state": "RETRIEVED_AND_VALIDATED"
+     },
+     {
+      "item": "finding:runtime_monitoring",
+      "kind": "UPSTREAM",
+      "state": "MISSING_AND_UNAVAILABLE"
+     },
+     {
+      "item": "finding:behavior_analytics",
+      "kind": "UPSTREAM",
+      "state": "MISSING_AND_UNAVAILABLE"
+     }
+    ]
+   },
+   "authority": {
+    "selected": "ALERT",
+    "final": "ALERT",
+    "authorised": true,
+    "substituted": false,
+    "reason": "",
+    "original_proposal_check": {
+     "check_id": "AU-01",
+     "result": "PASS",
+     "reason_code": "permitted"
+    }
+   },
+   "feedback": {
+    "execution_status": "EXECUTED_SANDBOX",
+    "stage": "EXECUTED",
+    "receipt": false,
+    "verified_by": "alert recorded with the finding id",
+    "follow_up": "VERIFY_RECOVERY on the next case"
+   }
+  },
+  "proposed_action": {
+   "cop": "anomaly_detection",
+   "action": "ALERT",
+   "reason": "the COP's proposal ALERT is permitted and within the NOTIFY ceiling for ANOMALOUS",
+   "target": "sp1",
+   "requires_approval": true,
+   "authority_tier": "ALERT",
+   "authorised": true,
+   "authority_reason": "",
+   "approval": {
+    "decision": "approve",
+    "reviewer": "reviewer@tenant-a.example",
+    "note": "",
+    "at": "2026-11-12T15:26:30Z"
+   },
+   "execution_status": "EXECUTED_SANDBOX",
+   "execution_outcome": {
+    "applied": true,
+    "outcome_confirmed": true,
+    "simulated": true,
+    "sandbox": true,
+    "gateway_action_id": "fa476152-a725-5f9e-a0fc-0ee3e536a358",
+    "detail": "sandbox gateway: ALERT -> VERIFIED"
+   },
+   "typed_action": "ALERT",
+   "triage_selected": "ALERT",
+   "requested_action": "ALERT",
+   "original_proposal": {
+    "action": "ALERT",
+    "reason": "the COP's proposal ALERT is permitted and within the NOTIFY ceiling for ANOMALOUS",
+    "authority_tier": "ALERT"
+   },
+   "original_verification": {
+    "check_id": "AU-01",
+    "version": "1",
+    "category": "proposed-action authority",
+    "result": "PASS",
+    "effect": "BLOCKS_ACTION",
+    "reason_code": "permitted",
+    "detail": "",
+    "evidence_refs": [],
+    "independent": true,
+    "subject": "original_proposal",
+    "failures": []
+   },
+   "corrected_proposal": null,
+   "final_authority": {
+    "action": "ALERT",
+    "authorised": true,
+    "checks": [
+     {
+      "check_id": "AU-01",
+      "result": "PASS",
+      "reason_code": "permitted",
+      "subject": "final_action"
+     },
+     {
+      "check_id": "PE-01",
+      "result": "NOT_RUN",
+      "reason_code": "not_intervening",
+      "subject": ""
+     }
+    ],
+    "execution_status": "AWAITING_APPROVAL"
+   },
+   "lifecycle": {
+    "stage": "EXECUTED",
+    "candidate_action": "ALERT",
+    "verified_action": "ALERT",
+    "final_action": "ALERT",
+    "final_typed_action": "ALERT",
+    "execution_status": "EXECUTED_SANDBOX",
+    "mode": "supervised",
+    "authorised": true,
+    "authority_reason": "",
+    "withdrawn_reason": "",
+    "substitute": null,
+    "dry_run_receipt": null,
+    "execution_outcome": {
+     "applied": true,
+     "outcome_confirmed": true,
+     "simulated": true,
+     "sandbox": true,
+     "gateway_action_id": "fa476152-a725-5f9e-a0fc-0ee3e536a358",
+     "detail": "sandbox gateway: ALERT -> VERIFIED"
+    },
+    "approval": {
+     "decision": "approve",
+     "reviewer": "reviewer@tenant-a.example",
+     "note": "",
+     "at": "2026-11-12T15:26:30Z"
+    },
+    "external_effect": false,
+    "simulated": true,
+    "checks": [
+     {
+      "check_id": "AU-01",
+      "result": "PASS",
+      "reason_code": "permitted"
+     },
+     {
+      "check_id": "AU-01",
+      "result": "PASS",
+      "reason_code": "permitted"
+     },
+     {
+      "check_id": "PE-01",
+      "result": "NOT_RUN",
+      "reason_code": "not_intervening"
+     }
+    ]
+   }
+  },
+  "node_timings": {
+   "receive_case": 0.423,
+   "load_inputs": 0.005,
+   "validate_evidence": 0.097,
+   "retrieve_memory": 0.716,
+   "computational_baseline": 0.235,
+   "evidence_precheck": 0.092,
+   "llm_plan_investigation": 1.233,
+   "validate_tool_request": 0.01,
+   "execute_authorised_tool": 0.292,
+   "validate_tool_result": 0.008,
+   "llm_assess_evidence": 3.176,
+   "formulate_finding": 0.101,
+   "independent_verify": 0.499,
+   "grade_and_route": 0.244,
+   "authority_check": 0.13,
+   "await_approval": 0.503,
+   "execute_action": 37.01,
+   "record_decision": 0.032,
+   "validate_memory_update": 0.763,
+   "persist_and_publish": 1.445
+  }
+ },
+ "gateway": {
+  "actions": [
+   {
+    "action_id": "fa476152-a725-5f9e-a0fc-0ee3e536a358",
+    "case_id": "gw-approval",
+    "cop": "anomaly_detection",
+    "finding_id": "bb9bc628-1398-54fc-a6a8-3f5e93090969",
+    "typed_action": "ALERT",
+    "target": "sp1",
+    "state": "VERIFIED",
+    "history": [
+     {
+      "state": "PROPOSED",
+      "at": "2026-11-12T15:26:30.614+00:00",
+      "source": "graph await_approval"
+     },
+     {
+      "state": "AUTHORISED",
+      "at": "2026-11-12T15:26:30.616+00:00",
+      "approval_required": true
+     },
+     {
+      "state": "AWAITING_APPROVAL",
+      "at": "2026-11-12T15:26:30.619+00:00",
+      "approval_id": "28fc1cdc-c9ed-5167-9096-3cc39ff25693",
+      "tool_call_id": null
+     },
+     {
+      "state": "AUTHORISED",
+      "at": "2026-11-12T15:26:30.639+00:00",
+      "approved_by": "reviewer@tenant-a.example"
+     },
+     {
+      "state": "DELIVERED",
+      "at": "2026-11-12T15:26:30.655+00:00",
+      "endpoint": "http://127.0.0.1:42531",
+      "ack_id": "f285d2d4-e94d-4313-883b-5acceed1273d",
+      "http_status": 201
+     },
+     {
+      "state": "APPLIED",
+      "at": "2026-11-12T15:26:30.656+00:00",
+      "received_at": "2026-11-12T15:26:30.654+00:00"
+     },
+     {
+      "state": "VERIFIED",
+      "at": "2026-11-12T15:26:30.674+00:00",
+      "observed": "endpoint returned 200 for ack f285d2d4-e94d-4313-883b-5acceed1273d"
+     }
+    ],
+    "detail": {
+     "source": "graph await_approval",
+     "approval_required": true,
+     "approval_id": "28fc1cdc-c9ed-5167-9096-3cc39ff25693",
+     "tool_call_id": null,
+     "approved_by": "reviewer@tenant-a.example",
+     "endpoint": "http://127.0.0.1:42531",
+     "ack_id": "f285d2d4-e94d-4313-883b-5acceed1273d",
+     "http_status": 201,
+     "received_at": "2026-11-12T15:26:30.654+00:00",
+     "observed": "endpoint returned 200 for ack f285d2d4-e94d-4313-883b-5acceed1273d"
+    },
+    "created_at": "2026-11-12T15:26:30.611+00:00",
+    "updated_at": "2026-11-12T15:26:30.674+00:00"
+   }
+  ],
+  "approvals": [
+   {
+    "approval_id": "28fc1cdc-c9ed-5167-9096-3cc39ff25693",
+    "action_id": "fa476152-a725-5f9e-a0fc-0ee3e536a358",
+    "case_id": "gw-approval",
+    "cop": "anomaly_detection",
+    "typed_action": "ALERT",
+    "question": "anomaly_detection: ALERT on sp1: the COP's proposal ALERT is permitted and within the NOTIFY ceiling for ANOMALOUS",
+    "status": "APPROVED",
+    "requested_at": "2026-11-12T15:26:30.618+00:00",
+    "expires_at": "2026-11-12T16:26:30.618+00:00",
+    "decided_at": "2026-11-12T15:26:30.623+00:00",
+    "reviewer": "reviewer@tenant-a.example",
+    "note": "checked the spike"
+   }
+  ],
+  "holds": []
+ },
+ "endpoint_received": [
+  {
+   "ack_id": "f285d2d4-e94d-4313-883b-5acceed1273d",
+   "received_at": "2026-11-12T15:26:30.654+00:00",
+   "alert": {
+    "action_id": "fa476152-a725-5f9e-a0fc-0ee3e536a358",
+    "case_id": "gw-approval",
+    "cop": "anomaly_detection",
+    "finding_id": "bb9bc628-1398-54fc-a6a8-3f5e93090969",
+    "label": null,
+    "verification_support": {
+     "decision": null,
+     "score": null,
+     "against": null,
+     "unknown": null
+    },
+    "reason": "approved",
+    "sandbox": true
+   }
+  }
+ ]
+}

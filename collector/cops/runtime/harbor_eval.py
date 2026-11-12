@@ -43,7 +43,8 @@ import signal_harbor as H                                         # noqa: E402
 from . import evaluation as E                                     # noqa: E402
 from . import gateway as G                                        # noqa: E402
 from .graph import CONSUMES, run_cop, act_cop                     # noqa: E402
-from .persistence import SQLiteStore                              # noqa: E402
+from .persistence import SQLiteStore, decision_id                 # noqa: E402
+from .decision_record import run_detail                           # noqa: E402
 
 VERSION = "harbor-cops-validation-1"
 TENANT = "harbor-experiment"
@@ -124,7 +125,13 @@ def run_case_for(session_id, case_id, rows, workdir):
         records = []
         for cop in COPS:                                 # act phase on the decided state: no re-run
             acted = act_cop(rx, states[cop], checkpointer=InMemorySaver(), thread_id=f"{case_id}:{cop}:act")
-            records.append(finding_record(cop, states[cop], acted, gw))
+            rec = finding_record(cop, states[cop], acted, gw)
+            rec["decision_id"] = decision_id(rt.run_id, session_id, cop)
+            rec["detail"] = run_detail(states[cop], rec["decision_id"], f"{case_id}:{cop}:decide")
+            rec["act_detail"] = run_detail(acted, decision_id(rx.run_id, session_id, cop), f"{case_id}:{cop}:act")
+            # the sessions every baseline tool compares against (CaseData.other_sessions)
+            rec["baseline_session_ids"] = [x.id for x in rt.case.other_sessions()]
+            records.append(rec)
         case = rt.case
         metrics = [{"metric_id": e["metric_id"], "value": e["value"], "state": e["state"],
                     "evidence_refs": (e.get("evidence_refs") or [])[:6]}

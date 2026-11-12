@@ -1,0 +1,18 @@
+{
+ "contract": "cops-hierarchy/1",
+ "status": "MISSING",
+ "note": "Placeholder. The seven-primary-COP architecture diagram was not found in any source this repository can reach. Fill this file from that diagram, set status to DOCUMENTED, and re-run the export. Do not fill it from COP names or from this repository's dependency graph.",
+ "source_document": null,
+ "schema": {
+  "status": "DOCUMENTED | MISSING",
+  "source_document": "path or link of the original diagram, and its version or date",
+  "levels": [
+   {"level": "primary", "cops": ["<cop id from cops/specs.py>", "... seven ids"]},
+   {"level": "secondary", "cops": ["..."]},
+   {"level": "tertiary", "cops": ["..."]}
+  ],
+  "parent_of": {"<secondary or tertiary cop id>": "<parent cop id, if the diagram draws one>"}
+ },
+ "levels": [],
+ "parent_of": {}
+}

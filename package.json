@@ -8,6 +8,10 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
+    "cops:export": "cd collector && python3 -m cops.dashboard_export --out ../cops-dashboard/public/data",
+    "cops:dev": "vite --config cops-dashboard/vite.config.js",
+    "cops:build": "vite build --config cops-dashboard/vite.config.js",
+    "cops:preview": "vite preview --config cops-dashboard/vite.config.js",
     "push": "npm run build && git add -A && git commit -m \"update\" && git push"
   },
   "dependencies": {

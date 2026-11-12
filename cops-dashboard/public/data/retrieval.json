@@ -1,0 +1,279 @@
+{
+ "contract": "cops-retrieval/1",
+ "data_access_audit": {
+  "summary": "No LangGraph runtime COP executes a database query. Runtime tools read CaseData in memory. The only Supabase reads are the legacy COPRunner path, through narrow REST GETs.",
+  "paths": [
+   {
+    "path": "legacy COPRunner (cops/run.py)",
+    "reaches_database": true,
+    "database": "Supabase (REST)",
+    "mode": "read",
+    "code_ref": "collector/cops/reader.py:SupabaseBackend",
+    "reads": [
+     "metric_events (SupabaseBackend.metrics, sessions)",
+     "trace_steps (SupabaseBackend.lane_path, matched_policy)",
+     "observables (SupabaseBackend.evidence_rows, collector_breakdown)"
+    ],
+    "used_by": "cops/run.py when SUPABASE_URL is configured; not used by the LangGraph runtime",
+    "note": "not executed in this prototype; no credentials are configured or used"
+   },
+   {
+    "path": "LangGraph runtime tools (cops/runtime/tools.py:TOOLS)",
+    "reaches_database": false,
+    "database": null,
+    "mode": "read",
+    "code_ref": "collector/cops/runtime/case.py:CaseData",
+    "reads": [
+     "CaseData.events / sessions / rows (signal_metrics.compute over the estate rows)",
+     "CaseData.artifacts (policy_store, quotas, agent_registry, context_snapshots, ...)"
+    ],
+    "used_by": "every runtime COP"
+   },
+   {
+    "path": "aggregate COP decision history (tools._decisions)",
+    "reaches_database": "local only",
+    "database": "SQLite (persistence.SQLiteStore), when a decision_store is passed",
+    "mode": "read",
+    "code_ref": "collector/cops/runtime/tools.py:_decisions",
+    "reads": [
+     "cop_decisions"
+    ],
+    "used_by": "governance_intelligence tools (query_aggregate_report, compare_time_windows)",
+    "note": "local file or in-memory SQLite; not Supabase"
+   },
+   {
+    "path": "runtime result writer",
+    "reaches_database": "write only, injected poster",
+    "database": "Supabase (via signal_traces.post) or a test recorder",
+    "mode": "write",
+    "code_ref": "collector/cops/runtime/persistence.py:SupabaseRuntimeWriter",
+    "reads": [],
+    "used_by": "not used by any COP for retrieval"
+   }
+  ]
+ },
+ "query_types": {
+  "decision_history": {
+   "params": {
+    "cop": "str|None",
+    "window_days": "int"
+   },
+   "scope": [
+    "tenant_id"
+   ],
+   "returns": "cop_decisions rows (decision_id, cop, session_id, interpretation, decided_at)",
+   "in_memory_source": "CaseData.decision_store.select('cop_decisions') (persistence.SQLiteStore)",
+   "max_rows": 500
+  },
+  "metric_baseline": {
+   "params": {
+    "metric_id": "str"
+   },
+   "scope": [
+    "tenant_id",
+    "session_ids"
+   ],
+   "returns": "metric_events of the same metric in other sessions of the same tool",
+   "in_memory_source": "CaseData.metric_history(metric_id)",
+   "max_rows": 500
+  },
+  "behaviour_history": {
+   "params": {
+    "metric_ids": "list[str]"
+   },
+   "scope": [
+    "tenant_id",
+    "session_ids"
+   ],
+   "returns": "per-metric history for behaviour metrics in other sessions",
+   "in_memory_source": "CaseData.metric_history(metric_id)",
+   "max_rows": 1500
+  },
+  "policy_versions": {
+   "params": {},
+   "scope": [
+    "tenant_id"
+   ],
+   "returns": "policy store versions with approval records and rule counts",
+   "in_memory_source": "CaseData.artifact('policy_store')",
+   "max_rows": 50
+  },
+  "quota": {
+   "params": {},
+   "scope": [
+    "tenant_id",
+    "agent_id"
+   ],
+   "returns": "the quota entry for the scoped agent, or the '*' default",
+   "in_memory_source": "CaseData.artifact('quotas')",
+   "max_rows": 1
+  },
+  "agent_registry": {
+   "params": {},
+   "scope": [
+    "tenant_id",
+    "agent_id"
+   ],
+   "returns": "registry entry and approved changes for the scoped agent",
+   "in_memory_source": "CaseData.artifact('agent_registry')",
+   "max_rows": 50
+  },
+  "context_snapshots": {
+   "params": {},
+   "scope": [
+    "tenant_id",
+    "session_ids"
+   ],
+   "returns": "context snapshots ordered by time",
+   "in_memory_source": "CaseData.artifact('context_snapshots')",
+   "max_rows": 200
+  }
+ },
+ "consumer_assessment": {
+  "governance_intelligence": {
+   "cop": "governance_intelligence",
+   "needs": "historical decision trends across sessions",
+   "current_tools": [
+    "query_aggregate_report",
+    "compare_time_windows",
+    "get_confirmed_incidents",
+    "get_previous_reviews"
+   ],
+   "current_data_source": "CaseData.decision_store (local SQLiteStore) when passed; otherwise a typed missing dependency",
+   "reaches_database": false,
+   "proposed_query_types": [
+    "decision_history"
+   ],
+   "gap": "no tenant-scoped production decision history"
+  },
+  "behavior_analytics": {
+   "cop": "behavior_analytics",
+   "needs": "behaviour baselines from earlier sessions",
+   "current_tools": [
+    "compare_behaviour_history",
+    "compute_sequence_statistics"
+   ],
+   "current_data_source": "CaseData.metric_history over the in-memory estate",
+   "reaches_database": false,
+   "proposed_query_types": [
+    "behaviour_history"
+   ],
+   "gap": "history limited to the sessions loaded into the case estate"
+  },
+  "context_memory": {
+   "cop": "context_memory",
+   "needs": "context snapshots and instruction versions",
+   "current_tools": [
+    "get_context_snapshots",
+    "compare_instruction_versions",
+    "inspect_context_references",
+    "verify_context_provenance"
+   ],
+   "current_data_source": "CaseData.artifact('context_snapshots') (synthetic in evaluation)",
+   "reaches_database": false,
+   "proposed_query_types": [
+    "context_snapshots"
+   ],
+   "gap": "no authoritative context snapshot store"
+  },
+  "audit_traceability": {
+   "cop": "audit_traceability",
+   "needs": "trace reconstruction and decision linkage",
+   "current_tools": [
+    "reconstruct_trace",
+    "check_decision_linkage"
+   ],
+   "current_data_source": "CaseData.session (in-memory trace)",
+   "reaches_database": false,
+   "proposed_query_types": [
+    "decision_history"
+   ],
+   "gap": "cross-session linkage limited to the loaded estate"
+  },
+  "knowledge_policy_management": {
+   "cop": "knowledge_policy_management",
+   "needs": "policy versions and authorisation records",
+   "current_tools": [
+    "get_policy_versions",
+    "compare_policy_documents",
+    "inspect_rule_dependencies",
+    "check_authorisation_records"
+   ],
+   "current_data_source": "CaseData.artifact('policy_store') (synthetic in evaluation)",
+   "reaches_database": false,
+   "proposed_query_types": [
+    "policy_versions"
+   ],
+   "gap": "no authoritative policy store"
+  },
+  "agent_lifecycle_management": {
+   "cop": "agent_lifecycle_management",
+   "needs": "registry and configuration history",
+   "current_tools": [
+    "get_agent_registry",
+    "detect_configuration_changes"
+   ],
+   "current_data_source": "CaseData.artifact('agent_registry') and CaseData.earlier_sessions()",
+   "reaches_database": false,
+   "proposed_query_types": [
+    "agent_registry"
+   ],
+   "gap": "no authoritative agent registry"
+  },
+  "policy_enforcement": {
+   "cop": "policy_enforcement",
+   "needs": "authoritative policy lookup",
+   "current_tools": [
+    "evaluate_session_operations",
+    "check_entitlements"
+   ],
+   "current_data_source": "CaseData.artifact('policy_store') via tools.latest_policy",
+   "reaches_database": false,
+   "proposed_query_types": [
+    "policy_versions"
+   ],
+   "gap": "without a policy store the COP returns POLICY_UNAVAILABLE"
+  },
+  "anomaly_detection": {
+   "cop": "anomaly_detection",
+   "needs": "baseline retrieval",
+   "current_tools": [
+    "calculate_deviation",
+    "compare_versioned_baseline",
+    "retrieve_trace_window",
+    "analyse_tool_call_sequence",
+    "find_similar_validated_cases"
+   ],
+   "current_data_source": "CaseData.other_sessions() and metric_history over the in-memory estate",
+   "reaches_database": false,
+   "proposed_query_types": [
+    "metric_baseline"
+   ],
+   "gap": "baseline limited to the loaded estate"
+  },
+  "resource_management": {
+   "cop": "resource_management",
+   "needs": "quota lookup",
+   "current_tools": [
+    "get_quota",
+    "compute_consumption"
+   ],
+   "current_data_source": "CaseData.artifact('quotas') (synthetic in evaluation)",
+   "reaches_database": false,
+   "proposed_query_types": [
+    "quota"
+   ],
+   "gap": "no authoritative quota source; get_quota returns budget_or_quota missing"
+  }
+ },
+ "meta": {
+  "git_commit": "dfc8932",
+  "generated_by": "collector/cops/dashboard_export.py",
+  "sources": [
+   {
+    "file": "collector/cops/runtime/evidence_query.py",
+    "sha256": "c1d72a97db2c00cd222c16bbb913acb94439d48b9bdfebb3a18e08eca12a2473"
+   }
+  ]
+ }
+}

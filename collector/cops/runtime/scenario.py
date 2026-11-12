@@ -44,6 +44,7 @@ from .graph import act_cop, resume_act
 from .outcomes import OutcomeLedger
 from .persistence import SQLiteStore, decision_id
 from .memory import MemoryGateway
+from .decision_record import run_detail
 
 SCENARIO_VERSION = "coding-agent-scenario-1"
 VARIANTS = ("successful", "contradictory", "missing_evidence", "timeout", "denied_approval")
@@ -356,6 +357,15 @@ def _run(variant, workdir, reviewer, tr, paths, case_id, ep):
              "scoring_history": [h["feedback_id"] for h in l2.scoring_history(COP)]}
     tr.add("restart_check", **after)
     s2.conn.close()
+
+    # every COP run of the investigation and the act phase, in full, for the dashboard export
+    def _did(st):
+        r = st.get("result") or {}
+        return decision_id(r.get("run_id"), r.get("session_id"), st.get("cop")) if r else None
+    tr.add("run_details", runs=[run_detail(st, _did(st), k) for k, st in res["states"].items()],
+           act=run_detail(out, decision_id(rx.run_id, SESSION, COP), f"{root_key}:act"),
+           # the sessions every baseline tool compares against (CaseData.other_sessions)
+           baseline_session_ids=[x.id for x in rt.case.other_sessions()])
 
     summary = {"variant": variant, "case_id": case_id, "version": SCENARIO_VERSION, "simulated": {
                    "coding_agent": "synthetic event generator", "model_replies": "scripted (FixtureProvider)",
