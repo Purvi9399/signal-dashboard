@@ -57,7 +57,7 @@ Everything a referral produces is persisted under its own run id, so the first
 and the revised decision of the same COP are separate rows.
 """
 
-import copy, time
+import copy, threading, time
 from dataclasses import dataclass, field, asdict, replace
 from datetime import datetime, timezone
 from typing import Optional, TypedDict
@@ -246,9 +246,18 @@ def _question(initiator, receiver, need):
 
 # ====================================================================== response checks
 
-def _refs_resolve(result, claims, case=None):
+def _memory_ids(memory_view):
+    """Record ids the receiver's run actually read (retrieve_memory). Excluded records are not
+    readable evidence, so they do not count."""
+    mv = memory_view or {}
+    return {r.get("record_id") for k in ("established", "verified_pending", "unverified")
+            for r in mv.get(k) or [] if r.get("record_id")}
+
+
+def _refs_resolve(result, claims, case=None, memory_ids=None):
     """Evidence refs in the receiver's claims that do not resolve in its own run.
-    A ref of a kind this check cannot resolve counts as unresolved."""
+    A ref of a kind this check cannot resolve counts as unresolved. A memory ref resolves
+    only to a record the receiver's own run retrieved."""
     rows = {r["metric"] for r in (result.get("evidence") or {}).get("rows", [])}
     tools = {c["tool_call_id"] for c in result.get("tool_calls") or []}
     fids = {u.get("finding_id") for u in result.get("upstream") or [] if u.get("finding_id")}
@@ -260,7 +269,7 @@ def _refs_resolve(result, claims, case=None):
             kind, _, ident = ref.partition(":")
             ok = (kind == "metric" and ident in rows) or (kind in ("tool", "tool_call") and ident in tools) or \
                  (kind == "finding" and ident in fids) or (kind == "observable" and ident in obs) or \
-                 (kind == "artifact" and ident in arts) or kind == "memory"
+                 (kind == "artifact" and ident in arts) or (kind == "memory" and ident in (memory_ids or set()))
             if not ok:
                 bad.append(ref)
     return bad
@@ -282,7 +291,7 @@ def verify_response(req, out, scope, elapsed, cost, case=None):
                 f"{f.get('cop')} / {f.get('case_id')} / {res.get('tenant_id')}")
     verified = add("RS-02", bool(f.get("verified")) and f.get("status") == SUBSTANTIVE,
                    f"receiver finding {f.get('label')} status {f.get('status')} verified={f.get('verified')}")
-    bad = _refs_resolve(res, f.get("claims") or [], case)
+    bad = _refs_resolve(res, f.get("claims") or [], case, _memory_ids(out.get("memory_view")))
     trace = add("RS-03", not bad, "every evidence ref resolves in the receiver's run" if not bad
                 else f"unresolved refs: {bad[:5]}")
     tools_used = {c["tool"] for c in res.get("tool_calls") or []}
@@ -312,13 +321,62 @@ def _deliverable(out, admissible, referral_id):
 
 # ====================================================================== the investigation
 
+class _Deadline(Exception):
+    pass
+
+
+class _Cancelled(RuntimeError):
+    pass
+
+
+_local = threading.local()
+
+
+def _bounded(tr, seconds, fn):
+    """Run fn in a worker thread and wait at most `seconds` of wall time. On expiry the
+    worker is marked cancelled (its next COP run is refused) and _Deadline is raised."""
+    if seconds <= 0:
+        raise _Deadline()
+    box, cancel = {}, threading.Event()
+    parent_cancel = getattr(_local, "cancel", None)
+
+    def work():
+        _local.cancel = cancel if parent_cancel is None else _Either(cancel, parent_cancel)
+        try:
+            box["value"] = fn()
+        except BaseException as e:                 # handed back to the waiting thread
+            box["error"] = e
+
+    t = threading.Thread(target=work, daemon=True, name="cops-referral")
+    t.start()
+    t.join(seconds)
+    if t.is_alive():
+        cancel.set()
+        tr.abandoned += 1
+        raise _Deadline()
+    if "error" in box:
+        raise box["error"]
+    return box["value"]
+
+
+class _Either:
+    def __init__(self, a, b):
+        self.a, self.b = a, b
+
+    def is_set(self):
+        return self.a.is_set() or self.b.is_set()
+
+
 class Tree:
     """Shared by every investigation in one tree: limits, spend, answers, the event log."""
 
     def __init__(self, rt, clock=time.monotonic, cost_limit=COST_LIMIT_USD, timeout_s=TIMEOUT_S,
                  max_depth=MAX_DEPTH, max_rounds=MAX_ROUNDS, max_runs=MAX_RUNS, max_retries=MAX_RETRIES,
-                 run_hook=None):
+                 run_hook=None, wall_timeout_s=None):
         self.rt, self.clock = rt, clock
+        # the wall-time bound enforced pre-emptively; defaults to the referral timeout
+        self.wall_timeout_s = timeout_s if wall_timeout_s is None else wall_timeout_s
+        self.abandoned = 0
         self.cost_limit, self.timeout_s, self.max_depth = cost_limit, timeout_s, max_depth
         self.max_rounds, self.max_runs, self.max_retries = max_rounds, max_runs, max_retries
         self.spent, self.runs, self.answers, self.events = 0.0, 0, {}, []
@@ -332,12 +390,18 @@ class Tree:
 
     def log(self, kind, cop, **detail):
         e = {"seq": len(self.events) + 1, "at": _iso(), "kind": kind, "cop": cop, **detail}
+        c = getattr(_local, "cancel", None)
+        if c is not None and c.is_set():
+            e["late"] = True              # from a referral already abandoned at its deadline
         self.events.append(e)
         return e
 
     def run(self, cop, upstream, run_key, budget_cap=None):
         """One COP run through the LangGraph subgraph, under its own run id."""
         from .graph import run_cop
+        c = getattr(_local, "cancel", None)
+        if c is not None and c.is_set():
+            raise _Cancelled(f"{cop}: the referral this run belonged to was abandoned at its deadline")
         if self.run_hook:
             self.run_hook(cop, run_key)
         rt = copy.copy(self.rt)
@@ -407,7 +471,8 @@ def n_assess(state):
 
 def _slim(out):
     return {"finding": out["finding"], "published": out["published"], "result": out["result"],
-            "proposed_action": out.get("proposed_action"), "node_timings": out.get("node_timings") or {}}
+            "proposed_action": out.get("proposed_action"), "node_timings": out.get("node_timings") or {},
+            "memory_view": out.get("memory_view")}
 
 
 def build_request(tr, investigation_id, cop, out, snap, n, chain, depth, rnd=1, parent=None):
@@ -524,12 +589,27 @@ def dispatch_one(tr, req):
            depth=req["depth"], budget_usd=req["permitted_scope"]["budget_usd"])
     up = {k: tr.answers[k]["_delivered"] for k in CONSUMES[rcv] if k in tr.answers}
     attempts, err, sub = 0, "", None
-    t0, spent0 = tr.clock(), tr.spent
+    t0, spent0, wall0 = tr.clock(), tr.spent, time.monotonic()
     while attempts <= tr.max_retries:
         attempts += 1
+        left = tr.wall_timeout_s - (time.monotonic() - wall0)
         try:
-            sub = investigate(tr, rcv, up, chain=req["chain"], depth=req["depth"],
-                              parent=req["referral_id"], attempt=attempts)
+            sub = _bounded(tr, left, lambda: investigate(tr, rcv, up, chain=req["chain"], depth=req["depth"],
+                                                         parent=req["referral_id"], attempt=attempts))
+        except _Deadline:
+            # pre-emptive: the initiator stops waiting now. The worker thread cannot be killed, so
+            # it is cancelled (Tree.run refuses further COP runs for it) and anything it returns
+            # later is discarded.
+            el = round(time.monotonic() - wall0, 3)
+            r = ReferralResponse(req["referral_id"], rcv, TIMED_OUT, attempts=attempts, elapsed_s=el,
+                                 cost_usd=round(tr.spent - spent0, 6),
+                                 detail=f"no answer within {tr.wall_timeout_s}s wall time: abandoned, "
+                                        f"any late answer is discarded", answered_at=_iso())
+            tr.failed[rcv] = {"status": TIMED_OUT, "referral_id": req["referral_id"]}
+            tr.log("referral_answered", rcv, referral_id=req["referral_id"], status=TIMED_OUT, label=None,
+                   verified=False, admissible=False, delivered_as="not_delivered", elapsed_s=el,
+                   cost_usd=r.cost_usd, checks={"RS-05": "FAIL"}, preemptive=True)
+            return r.to_dict()
         except Exception as e:                 # a receiver that crashes is a failed answer, retried once
             err = f"{type(e).__name__}: {e}"[:300]
             tr.log("receiver_error", rcv, referral_id=req["referral_id"], attempt=attempts, error=err)

@@ -30,6 +30,7 @@ Modes
                  There is no live enforcement gateway in this repository.
 """
 
+import contextvars
 import time
 from dataclasses import dataclass, field
 from typing import Any, Optional, TypedDict
@@ -113,15 +114,22 @@ class Runtime:
 
 
 RUNTIMES = {}
+# The runtime registered in the current context wins over the module registry, so two runs of
+# the same case in different threads (a referral abandoned at its deadline still finishing in
+# the background) never read each other's runtime. LangGraph copies the context into the
+# threads it runs nodes in.
+_CURRENT = contextvars.ContextVar("cops_runtimes", default=None)
 
 
 def register(rt):
     RUNTIMES[rt.case.case_id] = rt
+    _CURRENT.set({**(_CURRENT.get() or {}), rt.case.case_id: rt})
     return rt
 
 
 def _rt(state):
-    return RUNTIMES[state["case_id"]]
+    cur = _CURRENT.get() or {}
+    return cur.get(state["case_id"]) or RUNTIMES[state["case_id"]]
 
 
 # ====================================================================== state
@@ -1150,6 +1158,11 @@ def persist_and_publish(state):
                                                  "verified", "lineage", "claims", "rationale",
                                                  "severity", "cop_specific", "upstream_used")}
     pub["proposed_action"] = state["proposed_action"]
+    # VS-01's record travels with the finding, so a downstream COP in the case graph weighs it
+    # exactly as a referral receiver would (support._upstream reads the decision)
+    vs = state["finding"].get("verification_support") or {}
+    pub["verification_support"] = {k: vs.get(k) for k in ("decision", "score", "against", "unknown")} \
+        if vs else None
     t = state.get("triage") or {}
     pub["triage"] = {"outcome": t.get("outcome"), "score": (t.get("evidence_support") or {}).get("score"),
                      "tier": (t.get("routing") or {}).get("tier")} if t else None
@@ -1193,6 +1206,61 @@ def build_cop_graph(checkpointer=None):
     g.add_edge("validate_memory_update", "persist_and_publish")
     g.add_edge("persist_and_publish", END)
     return g.compile(checkpointer=checkpointer)
+
+
+# ====================================================================== act on a decided finding
+
+DECIDE_ONLY_CHECKS = ("AU-01", "PE-01", "AU-02", "EX-01")
+
+
+def build_action_graph(checkpointer=None):
+    """The action half of the COP graph, entered with a finding that was already formed and
+    verified. Nothing before grade_and_route runs again: no model call, no tool call, no
+    re-verification. Triage, authority, approval and execution are decided for the current
+    mode on exactly the evidence and finding the investigation ended with."""
+    g = StateGraph(COPState)
+    for fn in (grade_and_route, authority_check, await_approval, execute_action, record_decision,
+               validate_memory_update, persist_and_publish):
+        g.add_node(fn.__name__, fn)
+    g.add_edge(START, "grade_and_route")
+    g.add_edge("grade_and_route", "authority_check")
+    g.add_conditional_edges("authority_check", route_after_authority, ["await_approval", "execute_action"])
+    g.add_edge("await_approval", "execute_action")
+    g.add_edge("execute_action", "record_decision")
+    g.add_edge("record_decision", "validate_memory_update")
+    g.add_edge("validate_memory_update", "persist_and_publish")
+    g.add_edge("persist_and_publish", END)
+    return g.compile(checkpointer=checkpointer)
+
+
+def act_cop(rt, decided, checkpointer=None, thread_id=None):
+    """Act on a decided COP state (a run_cop result, typically the investigation's last
+    reassessment). The checks that belong to the decide run's action are dropped and made
+    again; every other verifier result is carried over unchanged."""
+    register(rt)
+    keep = set(COPState.__annotations__) - {"proposed_action", "approval", "execution", "memory_write",
+                                            "result", "published", "triage"}
+    st = {k: v for k, v in decided.items() if k in keep}
+    st["verifier_results"] = [r for r in decided["verifier_results"] if r.get("check_id") not in DECIDE_ONLY_CHECKS]
+    st["node_timings"] = {}
+    st["case_id"] = rt.case.case_id
+    g = build_action_graph(checkpointer)
+    cfg = {"configurable": {"thread_id": thread_id or f"{rt.case.case_id}:{decided['cop']}:act"},
+           "recursion_limit": 50}
+    out = g.invoke(st, cfg)
+    if out.get("__interrupt__"):
+        return {"interrupted": [i.value for i in out["__interrupt__"]], **out}
+    return out
+
+
+def resume_act(rt, decision, checkpointer, thread_id):
+    """Resume an act_cop run that stopped at await_approval."""
+    register(rt)
+    g = build_action_graph(checkpointer)
+    out = g.invoke(Command(resume=decision), {"configurable": {"thread_id": thread_id}, "recursion_limit": 50})
+    if out.get("__interrupt__"):
+        return {"interrupted": [i.value for i in out["__interrupt__"]], **out}
+    return out
 
 
 class CaseState(TypedDict, total=False):

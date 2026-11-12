@@ -21,9 +21,10 @@ What runs and what is simulated:
     - the reviewer is a named test identity answering in code
 
 Two phases. The decide phase is the investigation in dry_run (no effect anywhere).
-The act phase runs the same COP once more in supervised mode on the final evidence,
-so grade_and_route, authority_check, await_approval and execute_action make the
-decision on the revised inputs; it is a separate run with its own decision id.
+The act phase (graph.act_cop) enters the action half of the COP graph with the
+investigation's final state: grade_and_route, authority_check, await_approval and
+execute_action decide in supervised mode on exactly the finding and VS-01 record the
+investigation ended with. No model or tool call is repeated. It has its own decision id.
 
 Variants: successful, contradictory, missing_evidence, timeout, denied_approval.
 """
@@ -39,7 +40,7 @@ from langgraph.checkpoint.memory import InMemorySaver
 from . import evaluation as E, fixtures as FX, synthetic as S
 from . import referrals as RF
 from . import gateway as G
-from .graph import run_cop, resume_cop
+from .graph import act_cop, resume_act
 from .outcomes import OutcomeLedger
 from .persistence import SQLiteStore, decision_id
 from .memory import MemoryGateway
@@ -257,7 +258,7 @@ def _run(variant, workdir, reviewer, tr, paths, case_id, ep):
                    human_task=final["human_task"], selected_action=final["selected_action"],
                    resolution=inv["resolution"]["status"], reassessed=revised_seen)
 
-    # 9-12. act phase: the same COP on the final evidence, supervised, through the sandbox gateway
+    # 9-12. act phase: the decided state, supervised, through the sandbox gateway
     rx = copy.copy(rt)
     rx.mode, rx.live_session, rx.run_id = "supervised", True, f"{rt.run_id}:exec"
     sel = final["selected_action"]
@@ -267,7 +268,9 @@ def _run(variant, workdir, reviewer, tr, paths, case_id, ep):
         if sel not in p.approval_actions:
             rx.profiles = {**rx.profiles, COP: replace(p, approval_actions=p.approval_actions + (sel,))}
     saver, thread = InMemorySaver(), f"{case_id}:{COP}:exec"
-    out = run_cop(rx, COP, upstream=res["upstream"], checkpointer=saver, thread_id=thread)
+    # act on the investigation's own final state: no model or tool call is repeated, so the action
+    # is decided on exactly the finding and VS-01 record the investigation ended with
+    out = act_cop(rx, res["states"][last["run_key"]], checkpointer=saver, thread_id=thread)
     f, pa = out["finding"], out["proposed_action"]
     tr.add("final_action", typed_action=pa["typed_action"], triage_selected=pa["triage_selected"],
            requires_approval=bool(pa.get("requires_approval")),
@@ -290,7 +293,7 @@ def _run(variant, workdir, reviewer, tr, paths, case_id, ep):
         note = "planned load test, not an incident" if decision == "deny" else "checked the failing runs"
         gw.decide(intr["approval_id"], decision, reviewer, note)
         tr.add("approval_decided", approval_id=intr["approval_id"], decision=decision, reviewer=reviewer, note=note)
-        out = resume_cop(rx, {"decision": "approve" if decision == "approve" else "reject",
+        out = resume_act(rx, {"decision": "approve" if decision == "approve" else "reject",
                               "reviewer": reviewer, "note": note}, saver, thread)
         f, pa = out["finding"], out["proposed_action"]
     gateway_action_id = (pa.get("execution_outcome") or {}).get("gateway_action_id")
