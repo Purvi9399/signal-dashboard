@@ -40,6 +40,10 @@ class CollectorRegistry:
     def active_ids(self) -> List[str]:
         return list(self._active_ids)
 
+    def iter_active(self) -> Iterator[Collector]:
+        for cid in self._active_ids:
+            yield self._collectors[cid]
+
     def _record_failure(self, collector_id: str, stage: str, exc: Exception) -> None:
         msg = f"{type(exc).__name__}: {exc}"
         self._failures.append(CollectorFailure(collector_id, stage, msg))

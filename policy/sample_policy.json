@@ -13,17 +13,23 @@
 
   "technique_rules": [
     {
-      "agent": "*",
+      "agent": "cursor",
       "technique": "mcp_proxy",
-      "allowed": false,
-      "reason": "MCP Proxy is the most invasive technique across every agent it's implemented for: it sits on the JSON-RPC wire and captures full tool call arguments and results verbatim (see copilot_mcp_proxy.py / antigravity_mcp_proxy.py / codex_mcp_proxy.py / cursor_mcp_proxy.py, all of which record complete request/response payloads, not just metadata). That includes whatever an operator pastes into a tool call -- file contents, credentials-shaped strings, anything -- with zero redaction at the collector layer (redaction is explicitly a later Policy/Normalizer-stage concern per core.py, not yet built). Denied everywhere pending a security review of what a redaction stage in front of this specific technique needs to look like, before any MCP Proxy collector is allowed to activate on a real machine.",
-      "_precedent": "mirrors the real, already-documented MCP Proxy delegation-blindness gap in the collector framework's own README (invoke_subagent-style delegation never crosses this transport for Antigravity/Codex either) -- this technique already has more open questions than the others, on both coverage and exposure."
+      "allowed": true,
+      "reason": "Pilot Cursor live capture: allow the cursor.sh network-proxy collector so every Cursor technique can activate. Wildcard mcp_proxy deny still applies to other agents. This collector intercepts Cursor backend traffic (cursor_proxy2.py / cursor_mcp_proxy.py) with no redaction at the collector layer."
     },
     {
       "agent": "cursor",
       "technique": "cli_wrapper",
+      "allowed": true,
+      "reason": "Pilot Cursor live capture: approve cursor.cli_wrapper so policy is not the gate. Live activate is a documented no-op placeholder (no pty spawn); it will register/activate but will not emit a headless Cursor CLI trace."
+    },
+    {
+      "agent": "*",
+      "technique": "mcp_proxy",
       "allowed": false,
-      "reason": "cursor_cli_wrapper.py's own detect() docstring flags this UNVERIFIED: no Cursor_CLIWrapper/ research folder exists and no confirmed headless `cursor` CLI invocation was ever tested, unlike its Codex/Copilot/Antigravity/Claude Code siblings which all have a dedicated *_CLIWrapper/RESULTS.md. Not denying the agent (Cursor's Hooks/OTel/MCP-proxy-adjacent techniques are fine), just this one specific unverified technique."
+      "reason": "MCP Proxy is the most invasive technique across every agent it's implemented for: it sits on the JSON-RPC wire and captures full tool call arguments and results verbatim (see copilot_mcp_proxy.py / antigravity_mcp_proxy.py / codex_mcp_proxy.py / cursor_mcp_proxy.py, all of which record complete request/response payloads, not just metadata). That includes whatever an operator pastes into a tool call -- file contents, credentials-shaped strings, anything -- with zero redaction at the collector layer (redaction is explicitly a later Policy/Normalizer-stage concern per core.py, not yet built). Denied everywhere pending a security review of what a redaction stage in front of this specific technique needs to look like, before any MCP Proxy collector is allowed to activate on a real machine. Cursor is excepted by a more specific technique_rule.",
+      "_precedent": "mirrors the real, already-documented MCP Proxy delegation-blindness gap in the collector framework's own README (invoke_subagent-style delegation never crosses this transport for Antigravity/Codex either) -- this technique already has more open questions than the others, on both coverage and exposure."
     },
     {
       "agent": "codex",

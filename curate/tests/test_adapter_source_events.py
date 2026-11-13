@@ -152,5 +152,26 @@ class LoadJsonlTests(unittest.TestCase):
         self.assertEqual(loaded[0][1]["observable_type"], "session_start")
 
 
+class AdaptCursorStringToolInputTests(unittest.TestCase):
+    def test_string_tool_input_does_not_crash(self) -> None:
+        event = {
+            "timestamp": "2026-10-09T10:55:00+00:00",
+            "collector_id": "cursor.hooks",
+            "agent": "cursor",
+            "raw_payload": {
+                "event_type": "preToolUse",
+                "conversation_id": "sess-str",
+                "tool_name": "Shell",
+                "tool_input": "echo hello",
+            },
+        }
+        triple = adapt_raw_event(event)
+        self.assertIsNotNone(triple)
+        _, fields, _ = triple
+        self.assertEqual(fields["tool"], "cursor")
+        self.assertEqual(fields["tool_arguments"]["raw"], "echo hello")
+
+
 if __name__ == "__main__":
     unittest.main()
+

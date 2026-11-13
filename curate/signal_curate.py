@@ -137,14 +137,21 @@ def has_secret(text):
     return any(m in (text or "").lower() for m in SECRET_SHAPES)
 
 
+def _mapping_or_wrapped(value):
+    if isinstance(value, dict):
+        return value
+    if value:
+        return {"raw": value}
+    return {}
+
+
 def extract_claude_hook(p, when, decision=None):
     ev = p.get("hook_event_name", "")
     tin = p.get("tool_input") or {}
     # tool_input is an object on most tools and a bare string on some.
     # Assuming the object shape crashes the whole load rather than skipping
     # one row.
-    if not isinstance(tin, dict):
-        tin = {"raw": tin} if tin else {}
+    tin = _mapping_or_wrapped(tin)
     resp = p.get("tool_response") or p.get("tool_output") or {}
     # tool_response is not one shape. Some tools return an object, some a list
     # of content blocks, some a bare string. Assuming a dict silently loses
@@ -239,7 +246,7 @@ def extract_claude_hook(p, when, decision=None):
 
 def extract_cursor_hook(p, when, decision=None):
     ev = p.get("hook_event_name", "")
-    tin = p.get("tool_input") or {}
+    tin = _mapping_or_wrapped(p.get("tool_input") or {})
     out_raw = p.get("tool_output") or ""
     exit_code, out_text = None, out_raw
     if isinstance(out_raw, str) and out_raw.strip().startswith("{"):

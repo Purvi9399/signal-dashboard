@@ -133,14 +133,25 @@ def _guard_upload_flags(args: argparse.Namespace) -> Optional[int]:
     return None
 
 
-def _capture_live_events(args: argparse.Namespace):
+def _capture_live_events(args: argparse.Namespace, on_session=None):
     discovery_report = scan_this_machine()
     policy = PolicyConfig.load(str(args.policy))
     decision_report = PolicyEngine(policy).evaluate(discovery_report)
     mode = "live" if args.live else "replay"
     engine = ActivationEngine(mode=mode, allow_live_hazards=args.allow_live_hazards)
     registry, wiring_result = engine.wire(decision_report)
-    events = _live_events(mode, registry, getattr(args, "listen_seconds", None))
+    if mode == "live":
+        print(
+            f"listening; activated ({len(wiring_result.activated)}): "
+            f"{wiring_result.activated}",
+            file=sys.stderr,
+        )
+    events = _live_events(
+        mode,
+        registry,
+        getattr(args, "listen_seconds", None),
+        on_session=on_session,
+    )
     registry.deactivate_all()
     failures = [
         {"collector_id": f.collector_id, "stage": f.stage, "error": f.error}
@@ -187,12 +198,21 @@ def _print_run_human(
         print(f"upload: {data['upload']}")
 
 
-def _live_events(mode: str, registry: Any, listen_seconds: Optional[float]):
+def _live_events(mode: str, registry: Any, listen_seconds: Optional[float], on_session=None):
     if mode != "live":
         return []
     from package.live_capture import drain_until_stop
 
-    return drain_until_stop(registry, listen_seconds)
+    return drain_until_stop(registry, listen_seconds, on_session=on_session)
+
+
+def _make_session_flusher(batches: list):
+    from package.live_upload import try_flush_session
+
+    def flush(raw_events) -> None:
+        try_flush_session(raw_events, batches)
+
+    return flush
 
 
 def cmd_run(args: argparse.Namespace) -> int:
@@ -202,7 +222,11 @@ def cmd_run(args: argparse.Namespace) -> int:
     if guard is not None:
         return guard
 
-    mode, wiring_result, events, failures = _capture_live_events(args)
+    batches: list = []
+    on_session = _make_session_flusher(batches) if args.upload else None
+    mode, wiring_result, events, failures = _capture_live_events(
+        args, on_session=on_session
+    )
     data: Dict[str, Any] = {
         "mode": mode,
         "wiring": wiring_result.to_dict(),
@@ -213,7 +237,7 @@ def cmd_run(args: argparse.Namespace) -> int:
     export_error = _maybe_export_jsonl(args, event_dicts, data)
     if export_error is not None:
         return export_error
-    upload_error = _maybe_upload_events(args, event_dicts, data)
+    upload_error = _record_live_uploads(args, batches, data)
     if upload_error is not None:
         return upload_error
 
@@ -249,30 +273,20 @@ def _maybe_export_jsonl(
     return None
 
 
-def _maybe_upload_events(
+def _record_live_uploads(
     args: argparse.Namespace,
-    event_dicts: list,
+    batches: list,
     data: Dict[str, Any],
 ) -> Optional[int]:
-    from export.upload_events import upload_event_dicts
+    from package.live_upload import summarize_uploads
 
     if not getattr(args, "upload", False):
         return None
-    try:
-        result = upload_event_dicts(event_dicts, origin="live-capture")
-    except (EnvironmentError, ValueError, RuntimeError) as exc:
-        print(f"upload failed: {exc}", file=sys.stderr)
+    summary = summarize_uploads(batches)
+    data["upload"] = summary
+    if summary.get("errors"):
+        print(f"upload failed: {summary['errors'][0]}", file=sys.stderr)
         return 1
-    data["upload"] = {
-        "mode": result.get("mode"),
-        "inserted": result.get("inserted"),
-        "observables_curated": result.get("observables_curated"),
-        "observables_upserted": result.get("observables_upserted"),
-        "ingest_batch_id": result.get("ingest_batch_id"),
-        "events_read": result.get("events_read"),
-        "tenant_id": result.get("tenant_id"),
-        "device_id": result.get("device_id"),
-    }
     return None
 
 
@@ -536,7 +550,7 @@ def build_parser() -> argparse.ArgumentParser:
     p_run.add_argument(
         "--upload",
         action="store_true",
-        help="after live capture, upload events via SIGNAL_UPLOAD_MODE (requires --live)",
+        help="while live, upload each completed session via SIGNAL_UPLOAD_MODE (requires --live)",
     )
     p_run.add_argument(
         "--listen-seconds",
