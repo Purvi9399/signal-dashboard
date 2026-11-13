@@ -1,6 +1,6 @@
 /* Data contracts for the COPS prototype.
  *
- * The three files in public/data are written by
+ * The four files in public/data are written by
  *   cd collector && python3 -m cops.dashboard_export --out ../cops-dashboard/public/data
  * and are the only data this prototype reads. Nothing here computes a result:
  * the loader checks the contract version and the fields each renderer needs,
@@ -11,12 +11,14 @@ export const CONTRACTS = {
   network: "cops-network/1",
   decisions: "cops-decisions/1",
   retrieval: "cops-retrieval/1",
+  activation: "cops-activation/1",
 };
 
 const REQUIRED = {
   network: ["cops", "metrics", "metric_edges", "cop_edges", "hierarchy", "relationship_rules", "versions", "meta"],
   decisions: ["decisions", "sessions", "coverage_states", "meta"],
   retrieval: ["data_access_audit", "query_types", "consumer_assessment", "meta"],
+  activation: ["status", "states", "mapping", "registry", "scenarios", "meta"],
 };
 
 const DECISION_FIELDS = ["decision_id", "cop", "source", "execution_mode", "session_ids", "timestamp", "trigger",
@@ -44,11 +46,11 @@ async function fetchJson(name) {
 }
 
 export async function loadAll() {
-  const [network, decisions, retrieval] = await Promise.all(
-    ["network", "decisions", "retrieval"].map(fetchJson));
+  const [network, decisions, retrieval, activation] = await Promise.all(
+    ["network", "decisions", "retrieval", "activation"].map(fetchJson));
   const errors = [...validate("network", network), ...validate("decisions", decisions),
-    ...validate("retrieval", retrieval)];
-  return { network, decisions, retrieval, errors };
+    ...validate("retrieval", retrieval), ...validate("activation", activation)];
+  return { network, decisions, retrieval, activation, errors };
 }
 
 /* A value in an export is one of: a plain value, {unavailable: why}, {undefined: missing contract}. */

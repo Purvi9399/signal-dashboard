@@ -372,8 +372,11 @@ class Tree:
 
     def __init__(self, rt, clock=time.monotonic, cost_limit=COST_LIMIT_USD, timeout_s=TIMEOUT_S,
                  max_depth=MAX_DEPTH, max_rounds=MAX_ROUNDS, max_runs=MAX_RUNS, max_retries=MAX_RETRIES,
-                 run_hook=None, wall_timeout_s=None):
+                 run_hook=None, wall_timeout_s=None, consultations=None):
         self.rt, self.clock = rt, clock
+        # {initiator: set(receivers)} from typed consultation contracts (activation.ConsultationContract).
+        # None keeps the milestone-1 behaviour: any consumed COP inside SCOPE_RECEIVERS.
+        self.consultations = consultations
         # the wall-time bound enforced pre-emptively; defaults to the referral timeout
         self.wall_timeout_s = timeout_s if wall_timeout_s is None else wall_timeout_s
         self.abandoned = 0
@@ -530,6 +533,11 @@ def n_plan(state):
     cop = state["cop"]
     out = state["last_out"]
     nd, skipped = needs(cop, out, state.get("upstream") or {}, set(state["asked"]), on_behalf=state["depth"] > 0)
+    if tr.consultations is not None:
+        allowed = tr.consultations.get(cop, set())
+        skipped += [{**n, "reason": f"no approved consultation contract from {cop} to {n['receiver']}"}
+                    for n in nd if n["receiver"] not in allowed]
+        nd = [n for n in nd if n["receiver"] in allowed]
     snap = state["runs"][-1]
     pending = []
     if state["round"] >= tr.max_rounds:

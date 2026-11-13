@@ -1,0 +1,1149 @@
+{
+ "bundle": {
+  "contract": "cops-activation/1",
+  "version": "map-4d9303c348c9f5cf",
+  "label": "first slice: RM, BA, AD, R&R",
+  "parent": null,
+  "metrics": [
+   {
+    "metric_id": "access.first_seen_mcp",
+    "name": "MCP server new for this operator",
+    "basis": "mcp",
+    "required_fields": [
+     "mcp_server"
+    ],
+    "applies_when": "always",
+    "thresholds": {
+     "direction": "above",
+     "warning": 1,
+     "exception": 1,
+     "critical": 3
+    },
+    "quality": {
+     "judgeable_when": "basis 'mcp' present in the session rows; otherwise state UNKNOWN",
+     "applies_when": "always",
+     "min_sessions_for_baseline": 5
+    },
+    "provenance": {
+     "computed_by": "m_first_seen_mcp",
+     "code_ref": "collector/signal_metrics.py:320",
+     "config_digest": "523922a27dd7fd50"
+    }
+   },
+   {
+    "metric_id": "activity.action_rate_ratio",
+    "name": "Actions/min vs tool median",
+    "basis": "always",
+    "required_fields": [
+     "tool_name",
+     "occurred_at"
+    ],
+    "applies_when": "always",
+    "thresholds": {
+     "direction": "above",
+     "warning": 3,
+     "exception": 5,
+     "critical": 15
+    },
+    "quality": {
+     "judgeable_when": "basis 'always' present in the session rows; otherwise state UNKNOWN",
+     "applies_when": "always",
+     "min_sessions_for_baseline": 5
+    },
+    "provenance": {
+     "computed_by": "m_action_rate",
+     "code_ref": "collector/signal_metrics.py:312",
+     "config_digest": "a2ead887d1e89620"
+    }
+   },
+   {
+    "metric_id": "insights.duration_outlier",
+    "name": "Steps beyond 10x median duration",
+    "basis": "durations",
+    "required_fields": [
+     "tool_duration_ms"
+    ],
+    "applies_when": "steps",
+    "thresholds": {
+     "direction": "above",
+     "warning": 1,
+     "exception": 1,
+     "critical": 5
+    },
+    "quality": {
+     "judgeable_when": "basis 'durations' present in the session rows; otherwise state UNKNOWN",
+     "applies_when": "steps",
+     "min_sessions_for_baseline": 5
+    },
+    "provenance": {
+     "computed_by": "m_duration_outlier",
+     "code_ref": "collector/signal_metrics.py:257",
+     "config_digest": "b7d58a878f2b1216"
+    }
+   },
+   {
+    "metric_id": "insights.failed",
+    "name": "Actions that failed",
+    "basis": "outcomes",
+    "required_fields": [
+     "success",
+     "exit_code"
+    ],
+    "applies_when": "actions",
+    "thresholds": {
+     "direction": "above",
+     "warning": 1,
+     "exception": 5,
+     "critical": 20
+    },
+    "quality": {
+     "judgeable_when": "basis 'outcomes' present in the session rows; otherwise state UNKNOWN",
+     "applies_when": "actions",
+     "min_sessions_for_baseline": 5
+    },
+    "provenance": {
+     "computed_by": "m_failed",
+     "code_ref": "collector/signal_metrics.py:242",
+     "config_digest": "ebd6c8f7b4dbb561"
+    }
+   },
+   {
+    "metric_id": "insights.repetition",
+    "name": "Identical call repeated within a turn",
+    "basis": "args",
+    "required_fields": [
+     "tool_name",
+     "tool_arguments",
+     "turn_id"
+    ],
+    "applies_when": "actions",
+    "thresholds": {
+     "direction": "above",
+     "warning": 1,
+     "exception": 3,
+     "critical": 10
+    },
+    "quality": {
+     "judgeable_when": "basis 'args' present in the session rows; otherwise state UNKNOWN",
+     "applies_when": "actions",
+     "min_sessions_for_baseline": 5
+    },
+    "provenance": {
+     "computed_by": "m_repetition",
+     "code_ref": "collector/signal_metrics.py:169",
+     "config_digest": "7f53b082f505de02"
+    }
+   },
+   {
+    "metric_id": "insights.retry",
+    "name": "Failed command reissued unchanged",
+    "basis": "commands",
+    "required_fields": [
+     "command",
+     "exit_code"
+    ],
+    "applies_when": "commands",
+    "thresholds": {
+     "direction": "above",
+     "warning": 1,
+     "exception": 2,
+     "critical": 5
+    },
+    "quality": {
+     "judgeable_when": "basis 'commands' present in the session rows; otherwise state UNKNOWN",
+     "applies_when": "commands",
+     "min_sessions_for_baseline": 5
+    },
+    "provenance": {
+     "computed_by": "m_retry",
+     "code_ref": "collector/signal_metrics.py:182",
+     "config_digest": "b559493317489c23"
+    }
+   },
+   {
+    "metric_id": "insights.reverted",
+    "name": "Agent work put back",
+    "basis": "hashes",
+    "required_fields": [
+     "content_hash",
+     "reverted_to_earlier"
+    ],
+    "applies_when": "effects",
+    "thresholds": {
+     "direction": "above",
+     "warning": 1,
+     "exception": 3,
+     "critical": 10
+    },
+    "quality": {
+     "judgeable_when": "basis 'hashes' present in the session rows; otherwise state UNKNOWN",
+     "applies_when": "effects",
+     "min_sessions_for_baseline": 5
+    },
+    "provenance": {
+     "computed_by": "m_reverted",
+     "code_ref": "collector/signal_metrics.py:230",
+     "config_digest": "7f53b082f505de02"
+    }
+   },
+   {
+    "metric_id": "insights.stalled",
+    "name": "Execution left hanging",
+    "basis": "wrapper",
+    "required_fields": [
+     "hung_seconds"
+    ],
+    "applies_when": "always",
+    "thresholds": {
+     "direction": "above",
+     "warning": 1,
+     "exception": 1,
+     "critical": 3
+    },
+    "quality": {
+     "judgeable_when": "basis 'wrapper' present in the session rows; otherwise state UNKNOWN",
+     "applies_when": "always",
+     "min_sessions_for_baseline": 5
+    },
+    "provenance": {
+     "computed_by": "m_stalled",
+     "code_ref": "collector/signal_metrics.py:193",
+     "config_digest": "523922a27dd7fd50"
+    }
+   },
+   {
+    "metric_id": "insights.token_outlier",
+    "name": "Session tokens / estate median",
+    "basis": "tokens",
+    "required_fields": [
+     "total_tokens"
+    ],
+    "applies_when": "always",
+    "thresholds": {
+     "direction": "above",
+     "warning": 3,
+     "exception": 5,
+     "critical": 15
+    },
+    "quality": {
+     "judgeable_when": "basis 'tokens' present in the session rows; otherwise state UNKNOWN",
+     "applies_when": "always",
+     "min_sessions_for_baseline": 5
+    },
+    "provenance": {
+     "computed_by": "m_token_outlier",
+     "code_ref": "collector/signal_metrics.py:251",
+     "config_digest": "a2ead887d1e89620"
+    }
+   },
+   {
+    "metric_id": "oversight.fast_approvals",
+    "name": "Approvals returned in under a second",
+    "basis": "approvals",
+    "required_fields": [
+     "observable_type",
+     "occurred_at"
+    ],
+    "applies_when": "asked",
+    "thresholds": {
+     "direction": "above",
+     "warning": 1,
+     "exception": 3,
+     "critical": 10
+    },
+    "quality": {
+     "judgeable_when": "basis 'approvals' present in the session rows; otherwise state UNKNOWN",
+     "applies_when": "asked",
+     "min_sessions_for_baseline": 5
+    },
+    "provenance": {
+     "computed_by": "m_fast_approvals",
+     "code_ref": "collector/signal_metrics.py:329",
+     "config_digest": "7f53b082f505de02"
+    }
+   },
+   {
+    "metric_id": "path.transition_novelty",
+    "name": "Step transitions unseen for this tool",
+    "basis": "always",
+    "required_fields": [
+     "tool_name",
+     "command",
+     "observable_type"
+    ],
+    "applies_when": "always",
+    "thresholds": {
+     "direction": "above",
+     "warning": 0.25,
+     "exception": 0.5,
+     "critical": 0.8
+    },
+    "quality": {
+     "judgeable_when": "basis 'always' present in the session rows; otherwise state UNKNOWN",
+     "applies_when": "always",
+     "min_sessions_for_baseline": 5
+    },
+    "provenance": {
+     "computed_by": "m_transition_novelty",
+     "code_ref": "collector/signal_metrics.py:300",
+     "config_digest": "029cd4bf80fee13f"
+    }
+   },
+   {
+    "metric_id": "telemetry.collector_coverage",
+    "name": "Expected collectors present",
+    "basis": "always",
+    "required_fields": [
+     "collector",
+     "contributing"
+    ],
+    "applies_when": "always",
+    "thresholds": {
+     "direction": "below",
+     "warning": 0.99,
+     "exception": 0.5,
+     "critical": 0.0
+    },
+    "quality": {
+     "judgeable_when": "basis 'always' present in the session rows; otherwise state UNKNOWN",
+     "applies_when": "always",
+     "min_sessions_for_baseline": 5
+    },
+    "provenance": {
+     "computed_by": "m_collector_coverage",
+     "code_ref": "collector/signal_metrics.py:268",
+     "config_digest": "a6775ff3ee89f1c1"
+    }
+   },
+   {
+    "metric_id": "telemetry.lane_linkage",
+    "name": "Subagent lanes linked to a handoff",
+    "basis": "always",
+    "required_fields": [
+     "agent_id",
+     "observable_type"
+    ],
+    "applies_when": "subagents",
+    "thresholds": {
+     "direction": "below",
+     "warning": 0.99,
+     "exception": 0.5,
+     "critical": 0.0
+    },
+    "quality": {
+     "judgeable_when": "basis 'always' present in the session rows; otherwise state UNKNOWN",
+     "applies_when": "subagents",
+     "min_sessions_for_baseline": 5
+    },
+    "provenance": {
+     "computed_by": "m_lane_linkage",
+     "code_ref": "collector/signal_metrics.py:291",
+     "config_digest": "a6775ff3ee89f1c1"
+    }
+   },
+   {
+    "metric_id": "telemetry.source_agreement",
+    "name": "Cross-collector agreement",
+    "basis": "always",
+    "required_fields": [
+     "collectors_agree"
+    ],
+    "applies_when": "multi",
+    "thresholds": {
+     "direction": "below",
+     "warning": 0.99,
+     "exception": 0.9,
+     "critical": 0.5
+    },
+    "quality": {
+     "judgeable_when": "basis 'always' present in the session rows; otherwise state UNKNOWN",
+     "applies_when": "multi",
+     "min_sessions_for_baseline": 5
+    },
+    "provenance": {
+     "computed_by": "m_source_agreement",
+     "code_ref": "collector/signal_metrics.py:276",
+     "config_digest": "8b94f4ba2a178277"
+    }
+   },
+   {
+    "metric_id": "telemetry.turn_linkage",
+    "name": "Steps carrying a turn id",
+    "basis": "always",
+    "required_fields": [
+     "turn_id"
+    ],
+    "applies_when": "steps",
+    "thresholds": {
+     "direction": "below",
+     "warning": 0.9,
+     "exception": 0.6,
+     "critical": 0.2
+    },
+    "quality": {
+     "judgeable_when": "basis 'always' present in the session rows; otherwise state UNKNOWN",
+     "applies_when": "steps",
+     "min_sessions_for_baseline": 5
+    },
+    "provenance": {
+     "computed_by": "m_turn_linkage",
+     "code_ref": "collector/signal_metrics.py:284",
+     "config_digest": "ad8a178eb1c677ae"
+    }
+   },
+   {
+    "metric_id": "telemetry.unknown_share",
+    "name": "Share of metrics that could not be judged",
+    "basis": "derived",
+    "required_fields": [],
+    "applies_when": "always",
+    "thresholds": {
+     "direction": "above",
+     "warning": 0.25,
+     "exception": 0.5,
+     "critical": 0.75
+    },
+    "quality": {
+     "judgeable_when": "always: derived from the other metrics' states",
+     "applies_when": "always"
+    },
+    "provenance": {
+     "computed_by": "signal_metrics.compute (derived)",
+     "code_ref": "collector/signal_metrics.py:573",
+     "config_digest": "e18c2417c35532b4"
+    }
+   }
+  ],
+  "edges": [
+   {
+    "edge_id": "anomaly_detection|access.first_seen_mcp@1",
+    "cop": "anomaly_detection",
+    "metric_id": "access.first_seen_mcp",
+    "behavioural_question": "Is the observed behaviour materially different from what is expected in this context?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "interpret.RuleInterpreter.anomaly_detection",
+    "interpretation_rule": "EXCEPTION/CRITICAL -> ANOMALOUS and adds policy_enforcement downstream",
+    "role": "driver",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_first_seen_mcp",
+     "required_fields": [
+      "mcp_server"
+     ],
+     "basis": "mcp",
+     "applies_when": "always",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "events": [
+      "mcp_call"
+     ],
+     "field_materiality_for_this_cop": {
+      "mcp_server": "BLOCKING"
+     },
+     "why": "novelty is a property of the server's identity"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py"
+   },
+   {
+    "edge_id": "anomaly_detection|activity.action_rate_ratio@1",
+    "cop": "anomaly_detection",
+    "metric_id": "activity.action_rate_ratio",
+    "behavioural_question": "Is the observed behaviour materially different from what is expected in this context?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "interpret.RuleInterpreter.anomaly_detection",
+    "interpretation_rule": "EXCEPTION/CRITICAL -> ANOMALOUS (same ladder)",
+    "role": "driver",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_action_rate",
+     "required_fields": [
+      "tool_name",
+      "occurred_at"
+     ],
+     "basis": "always",
+     "applies_when": "always",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "events": [
+      "tool_call"
+     ],
+     "field_materiality_for_this_cop": {
+      "timestamp": "BLOCKING",
+      "tool_name": "IMMATERIAL"
+     },
+     "why": "rate needs times; which tool it was does not change the rate"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py"
+   },
+   {
+    "edge_id": "anomaly_detection|insights.duration_outlier@1",
+    "cop": "anomaly_detection",
+    "metric_id": "insights.duration_outlier",
+    "behavioural_question": "Is the observed behaviour materially different from what is expected in this context?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "interpret.RuleInterpreter.anomaly_detection",
+    "interpretation_rule": "EXCEPTION/CRITICAL -> ANOMALOUS (same ladder)",
+    "role": "driver",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_duration_outlier",
+     "required_fields": [
+      "tool_duration_ms"
+     ],
+     "basis": "durations",
+     "applies_when": "steps",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "events": [
+      "tool_call"
+     ],
+     "field_materiality_for_this_cop": {
+      "tool_duration_ms": "BLOCKING",
+      "tool_name": "DEGRADING"
+     },
+     "why": "duration is the measure; the tool name groups the baseline"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py"
+   },
+   {
+    "edge_id": "anomaly_detection|insights.repetition@1",
+    "cop": "anomaly_detection",
+    "metric_id": "insights.repetition",
+    "behavioural_question": "Is the observed behaviour materially different from what is expected in this context?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "interpret.RuleInterpreter.anomaly_detection",
+    "interpretation_rule": "EXCEPTION/CRITICAL named in rationale only; never drives",
+    "role": "supporting",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_repetition",
+     "required_fields": [
+      "tool_name",
+      "tool_arguments",
+      "turn_id"
+     ],
+     "basis": "args",
+     "applies_when": "actions",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "events": [
+      "tool_call"
+     ],
+     "field_materiality_for_this_cop": {
+      "turn_id": "BLOCKING",
+      "tool_name": "BLOCKING",
+      "tool_arguments": "DEGRADING"
+     },
+     "why": "repetition is defined within a turn; without turns there is no window"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py"
+   },
+   {
+    "edge_id": "anomaly_detection|insights.retry@1",
+    "cop": "anomaly_detection",
+    "metric_id": "insights.retry",
+    "behavioural_question": "Is the observed behaviour materially different from what is expected in this context?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "interpret.RuleInterpreter.anomaly_detection",
+    "interpretation_rule": "EXCEPTION/CRITICAL named in rationale only; never drives",
+    "role": "supporting",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_retry",
+     "required_fields": [
+      "command",
+      "exit_code"
+     ],
+     "basis": "commands",
+     "applies_when": "commands",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py"
+   },
+   {
+    "edge_id": "anomaly_detection|insights.token_outlier@1",
+    "cop": "anomaly_detection",
+    "metric_id": "insights.token_outlier",
+    "behavioural_question": "Is the observed behaviour materially different from what is expected in this context?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "interpret.RuleInterpreter.anomaly_detection",
+    "interpretation_rule": "EXCEPTION/CRITICAL -> ANOMALOUS; WATCH if single, ALERT if >=2 hot or any CRITICAL; ranked by value/threshold",
+    "role": "driver",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_token_outlier",
+     "required_fields": [
+      "total_tokens"
+     ],
+     "basis": "tokens",
+     "applies_when": "always",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "events": [
+      "model_request"
+     ],
+     "field_materiality_for_this_cop": {
+      "total_tokens": "BLOCKING",
+      "model": "DEGRADING",
+      "lane_id": "DEGRADING"
+     },
+     "why": "without a token count there is nothing to compare; lanes only apportion it"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py"
+   },
+   {
+    "edge_id": "anomaly_detection|path.transition_novelty@1",
+    "cop": "anomaly_detection",
+    "metric_id": "path.transition_novelty",
+    "behavioural_question": "Is the observed behaviour materially different from what is expected in this context?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "interpret.RuleInterpreter.anomaly_detection",
+    "interpretation_rule": "EXCEPTION/CRITICAL -> REQUEST_CONTEXT lane_path first, then ANOMALOUS with novel transitions named",
+    "role": "driver",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_transition_novelty",
+     "required_fields": [
+      "tool_name",
+      "command",
+      "observable_type"
+     ],
+     "basis": "always",
+     "applies_when": "always",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py"
+   },
+   {
+    "edge_id": "behavior_analytics|insights.failed@1",
+    "cop": "behavior_analytics",
+    "metric_id": "insights.failed",
+    "behavioural_question": "What behavioural pattern best characterizes this execution or sequence of executions?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "collector/cops/runtime/rules.py:behavior_analytics",
+    "interpretation_rule": "read by the deterministic rule; see the function for the exact condition",
+    "role": "rule_input",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_failed",
+     "required_fields": [
+      "success",
+      "exit_code"
+     ],
+     "basis": "outcomes",
+     "applies_when": "actions",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py + collector/cops/runtime/rules.py"
+   },
+   {
+    "edge_id": "behavior_analytics|insights.repetition@1",
+    "cop": "behavior_analytics",
+    "metric_id": "insights.repetition",
+    "behavioural_question": "What behavioural pattern best characterizes this execution or sequence of executions?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "collector/cops/runtime/rules.py:behavior_analytics",
+    "interpretation_rule": "read by the deterministic rule; see the function for the exact condition",
+    "role": "rule_input",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_repetition",
+     "required_fields": [
+      "tool_name",
+      "tool_arguments",
+      "turn_id"
+     ],
+     "basis": "args",
+     "applies_when": "actions",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "events": [
+      "tool_call"
+     ],
+     "field_materiality_for_this_cop": {
+      "turn_id": "BLOCKING",
+      "tool_name": "BLOCKING",
+      "tool_arguments": "DEGRADING"
+     },
+     "why": "repetition is defined within a turn; without turns there is no window"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py + collector/cops/runtime/rules.py"
+   },
+   {
+    "edge_id": "behavior_analytics|insights.retry@1",
+    "cop": "behavior_analytics",
+    "metric_id": "insights.retry",
+    "behavioural_question": "What behavioural pattern best characterizes this execution or sequence of executions?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "collector/cops/runtime/rules.py:behavior_analytics",
+    "interpretation_rule": "read by the deterministic rule; see the function for the exact condition",
+    "role": "rule_input",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_retry",
+     "required_fields": [
+      "command",
+      "exit_code"
+     ],
+     "basis": "commands",
+     "applies_when": "commands",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py + collector/cops/runtime/rules.py"
+   },
+   {
+    "edge_id": "behavior_analytics|insights.stalled@1",
+    "cop": "behavior_analytics",
+    "metric_id": "insights.stalled",
+    "behavioural_question": "What behavioural pattern best characterizes this execution or sequence of executions?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "collector/cops/runtime/rules.py:behavior_analytics",
+    "interpretation_rule": "read by the deterministic rule; see the function for the exact condition",
+    "role": "rule_input",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_stalled",
+     "required_fields": [
+      "hung_seconds"
+     ],
+     "basis": "wrapper",
+     "applies_when": "always",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "events": [
+      "command"
+     ],
+     "field_materiality_for_this_cop": {
+      "command": "DEGRADING",
+      "timestamp": "BLOCKING"
+     },
+     "why": "a stall is a gap in time; the command only describes it"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py + collector/cops/runtime/rules.py"
+   },
+   {
+    "edge_id": "behavior_analytics|oversight.fast_approvals@1",
+    "cop": "behavior_analytics",
+    "metric_id": "oversight.fast_approvals",
+    "behavioural_question": "What behavioural pattern best characterizes this execution or sequence of executions?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "collector/cops/runtime/rules.py:behavior_analytics",
+    "interpretation_rule": "read by the deterministic rule; see the function for the exact condition",
+    "role": "rule_input",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_fast_approvals",
+     "required_fields": [
+      "observable_type",
+      "occurred_at"
+     ],
+     "basis": "approvals",
+     "applies_when": "asked",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py + collector/cops/runtime/rules.py"
+   },
+   {
+    "edge_id": "recovery_resilience|insights.failed@1",
+    "cop": "recovery_resilience",
+    "metric_id": "insights.failed",
+    "behavioural_question": "After failure or intervention, did the system return to a viable state without compounding the problem?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "collector/cops/runtime/rules.py:recovery_resilience",
+    "interpretation_rule": "read by the deterministic rule; see the function for the exact condition",
+    "role": "rule_input",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_failed",
+     "required_fields": [
+      "success",
+      "exit_code"
+     ],
+     "basis": "outcomes",
+     "applies_when": "actions",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py + collector/cops/runtime/rules.py"
+   },
+   {
+    "edge_id": "recovery_resilience|insights.retry@1",
+    "cop": "recovery_resilience",
+    "metric_id": "insights.retry",
+    "behavioural_question": "After failure or intervention, did the system return to a viable state without compounding the problem?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "collector/cops/runtime/rules.py:recovery_resilience",
+    "interpretation_rule": "read by the deterministic rule; see the function for the exact condition",
+    "role": "rule_input",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_retry",
+     "required_fields": [
+      "command",
+      "exit_code"
+     ],
+     "basis": "commands",
+     "applies_when": "commands",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py + collector/cops/runtime/rules.py"
+   },
+   {
+    "edge_id": "recovery_resilience|insights.reverted@1",
+    "cop": "recovery_resilience",
+    "metric_id": "insights.reverted",
+    "behavioural_question": "After failure or intervention, did the system return to a viable state without compounding the problem?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "collector/cops/runtime/rules.py:recovery_resilience",
+    "interpretation_rule": "read by the deterministic rule; see the function for the exact condition",
+    "role": "rule_input",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_reverted",
+     "required_fields": [
+      "content_hash",
+      "reverted_to_earlier"
+     ],
+     "basis": "hashes",
+     "applies_when": "effects",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py + collector/cops/runtime/rules.py"
+   },
+   {
+    "edge_id": "runtime_monitoring|telemetry.collector_coverage@1",
+    "cop": "runtime_monitoring",
+    "metric_id": "telemetry.collector_coverage",
+    "behavioural_question": "Is the evidence required for this governance decision present, reliable and sufficiently complete?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "interpret.RuleInterpreter.runtime_monitoring",
+    "interpretation_rule": "EXCEPTION/CRITICAL -> INSUFFICIENT (ALERT); UNKNOWN -> DEGRADED; features.missing -> request collector_breakdown context",
+    "role": "driver",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_collector_coverage",
+     "required_fields": [
+      "collector",
+      "contributing"
+     ],
+     "basis": "always",
+     "applies_when": "always",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "events": [
+      "tool_call"
+     ],
+     "field_materiality_for_this_cop": {
+      "tool_name": "IMMATERIAL",
+      "timestamp": "IMMATERIAL"
+     },
+     "why": "this metric reports on collection itself; a gap is its subject, not its obstacle"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py"
+   },
+   {
+    "edge_id": "runtime_monitoring|telemetry.lane_linkage@1",
+    "cop": "runtime_monitoring",
+    "metric_id": "telemetry.lane_linkage",
+    "behavioural_question": "Is the evidence required for this governance decision present, reliable and sufficiently complete?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "interpret.RuleInterpreter.runtime_monitoring",
+    "interpretation_rule": "WARNING+ -> DEGRADED (WATCH); generic: any hot state counts alike, no metric-specific rule",
+    "role": "evidence",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_lane_linkage",
+     "required_fields": [
+      "agent_id",
+      "observable_type"
+     ],
+     "basis": "always",
+     "applies_when": "subagents",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "events": [
+      "delegation"
+     ],
+     "field_materiality_for_this_cop": {
+      "lane_id": "IMMATERIAL",
+      "parent_agent_id": "IMMATERIAL"
+     },
+     "why": "a missing lane id is the finding here, not a blocker"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py"
+   },
+   {
+    "edge_id": "runtime_monitoring|telemetry.source_agreement@1",
+    "cop": "runtime_monitoring",
+    "metric_id": "telemetry.source_agreement",
+    "behavioural_question": "Is the evidence required for this governance decision present, reliable and sufficiently complete?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "interpret.RuleInterpreter.runtime_monitoring",
+    "interpretation_rule": "WARNING+ -> DEGRADED (WATCH); generic: any hot state counts alike, no metric-specific rule",
+    "role": "evidence",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_source_agreement",
+     "required_fields": [
+      "collectors_agree"
+     ],
+     "basis": "always",
+     "applies_when": "multi",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py"
+   },
+   {
+    "edge_id": "runtime_monitoring|telemetry.turn_linkage@1",
+    "cop": "runtime_monitoring",
+    "metric_id": "telemetry.turn_linkage",
+    "behavioural_question": "Is the evidence required for this governance decision present, reliable and sufficiently complete?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "interpret.RuleInterpreter.runtime_monitoring",
+    "interpretation_rule": "WARNING+ -> DEGRADED (WATCH); generic: any hot state counts alike, no metric-specific rule",
+    "role": "evidence",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_turn_linkage",
+     "required_fields": [
+      "turn_id"
+     ],
+     "basis": "always",
+     "applies_when": "steps",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "events": [
+      "tool_call"
+     ],
+     "field_materiality_for_this_cop": {
+      "turn_id": "IMMATERIAL"
+     },
+     "why": "a missing turn id is the finding here, not a blocker"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py"
+   },
+   {
+    "edge_id": "runtime_monitoring|telemetry.unknown_share@1",
+    "cop": "runtime_monitoring",
+    "metric_id": "telemetry.unknown_share",
+    "behavioural_question": "Is the evidence required for this governance decision present, reliable and sufficiently complete?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "interpret.RuleInterpreter.runtime_monitoring",
+    "interpretation_rule": "EXCEPTION/CRITICAL -> INSUFFICIENT; features.unknown listed as 'cannot judge'",
+    "role": "driver",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.compute (appended)",
+     "required_fields": [],
+     "basis": "always",
+     "applies_when": "always",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py"
+   }
+  ],
+  "policies": [
+   {
+    "cop": "runtime_monitoring",
+    "owner": "runtime_monitoring",
+    "rule_ref": "rule:case_has_telemetry@1",
+    "conditions": [],
+    "required_context": [
+     "telemetry.collector_coverage",
+     "telemetry.unknown_share",
+     "telemetry.turn_linkage"
+    ],
+    "missing_evidence": "ACTIVATE_TO_ASSESS",
+    "depends_on": [],
+    "rationale": "telemetry reliability bounds every other COP's evidence; Runtime Monitoring reports what is missing",
+    "version": "1",
+    "policy_id": "runtime_monitoring@1#05d90513af"
+   },
+   {
+    "cop": "behavior_analytics",
+    "owner": "behavior_analytics",
+    "rule_ref": "rule:any_condition@1",
+    "conditions": [
+     {
+      "metric_id": "insights.retry",
+      "at_least": "EXCEPTION"
+     },
+     {
+      "metric_id": "insights.failed",
+      "at_least": "EXCEPTION"
+     },
+     {
+      "metric_id": "insights.repetition",
+      "at_least": "EXCEPTION"
+     }
+    ],
+    "required_context": [
+     "insights.retry",
+     "insights.failed",
+     "insights.repetition"
+    ],
+    "missing_evidence": "REPORT_UNKNOWN",
+    "depends_on": [
+     "runtime_monitoring",
+     "context_memory",
+     "workflow_orchestration"
+    ],
+    "rationale": "one failed test run followed by a rerun is ordinary debugging (retry=1 is WARNING); behaviour is investigated from EXCEPTION up",
+    "version": "1",
+    "policy_id": "behavior_analytics@1#cadc46f0dc"
+   },
+   {
+    "cop": "anomaly_detection",
+    "owner": "anomaly_detection",
+    "rule_ref": "rule:any_condition@1",
+    "conditions": [
+     {
+      "metric_id": "insights.token_outlier",
+      "at_least": "EXCEPTION"
+     },
+     {
+      "metric_id": "insights.duration_outlier",
+      "at_least": "EXCEPTION"
+     },
+     {
+      "metric_id": "activity.action_rate_ratio",
+      "at_least": "EXCEPTION"
+     },
+     {
+      "metric_id": "access.first_seen_mcp",
+      "at_least": "EXCEPTION"
+     },
+     {
+      "metric_id": "path.transition_novelty",
+      "at_least": "EXCEPTION"
+     }
+    ],
+    "required_context": [
+     "insights.token_outlier",
+     "insights.duration_outlier",
+     "activity.action_rate_ratio",
+     "access.first_seen_mcp",
+     "path.transition_novelty"
+    ],
+    "missing_evidence": "REPORT_UNKNOWN",
+    "depends_on": [
+     "runtime_monitoring",
+     "behavior_analytics"
+    ],
+    "rationale": "only the mapping's driver metrics; insights.retry and insights.repetition are supporting-only for this COP and never trigger it",
+    "version": "1",
+    "policy_id": "anomaly_detection@1#c33f5fba76"
+   },
+   {
+    "cop": "recovery_resilience",
+    "owner": "recovery_resilience",
+    "rule_ref": "rule:any_condition@1",
+    "conditions": [
+     {
+      "metric_id": "insights.reverted",
+      "at_least": "WARNING"
+     },
+     {
+      "metric_id": "insights.retry",
+      "at_least": "EXCEPTION"
+     },
+     {
+      "metric_id": "insights.failed",
+      "at_least": "EXCEPTION"
+     }
+    ],
+    "required_context": [
+     "insights.reverted",
+     "insights.retry",
+     "insights.failed"
+    ],
+    "missing_evidence": "REPORT_UNKNOWN",
+    "depends_on": [
+     "behavior_analytics"
+    ],
+    "rationale": "work put back, or repeated failure, raises whether a viable state was restored",
+    "version": "1",
+    "policy_id": "recovery_resilience@1#c89326d33e"
+   }
+  ],
+  "consultations": [
+   {
+    "initiator": "recovery_resilience",
+    "receiver": "behavior_analytics",
+    "kind": "upstream_evidence",
+    "question": "What behavioural pattern best characterizes this execution or sequence of executions?",
+    "when": "referrals.needs: the VS-01 upstream component is unknown or assumed, and the finding is not SUPPORTED or its action is not quiet",
+    "max_depth": 2,
+    "timeout_s": 900,
+    "source": "collector/cops/specs.py CONSUMES",
+    "contract_id": "recovery_resilience->behavior_analytics#84fd4726cc"
+   },
+   {
+    "initiator": "anomaly_detection",
+    "receiver": "behavior_analytics",
+    "kind": "specialist_support",
+    "question": "What behavioural pattern best characterizes this execution or sequence of executions?",
+    "when": "referrals.needs: the VS-01 upstream component is unknown or assumed, and the finding is not SUPPORTED or its action is not quiet",
+    "max_depth": 2,
+    "timeout_s": 900,
+    "source": "collector/cops/runtime/triage.py SPECIALISTS[anomaly_detection].support_cops",
+    "contract_id": "anomaly_detection->behavior_analytics#86475e2832"
+   },
+   {
+    "initiator": "anomaly_detection",
+    "receiver": "runtime_monitoring",
+    "kind": "upstream_evidence",
+    "question": "Is the evidence required for this governance decision present, reliable and sufficiently complete?",
+    "when": "referrals.needs: the VS-01 upstream component is unknown or assumed, and the finding is not SUPPORTED or its action is not quiet",
+    "max_depth": 2,
+    "timeout_s": 900,
+    "source": "collector/cops/specs.py CONSUMES",
+    "contract_id": "anomaly_detection->runtime_monitoring#949a399b59"
+   },
+   {
+    "initiator": "behavior_analytics",
+    "receiver": "runtime_monitoring",
+    "kind": "upstream_evidence",
+    "question": "Is the evidence required for this governance decision present, reliable and sufficiently complete?",
+    "when": "referrals.needs: the VS-01 upstream component is unknown or assumed, and the finding is not SUPPORTED or its action is not quiet",
+    "max_depth": 2,
+    "timeout_s": 900,
+    "source": "collector/cops/specs.py CONSUMES",
+    "contract_id": "behavior_analytics->runtime_monitoring#67a996e738"
+   }
+  ]
+ },
+ "registry": {
+  "active_version": "map-4d9303c348c9f5cf",
+  "versions": [
+   {
+    "version": "map-4d9303c348c9f5cf",
+    "label": "first slice: RM, BA, AD, R&R",
+    "status": "APPROVED",
+    "parent": null,
+    "proposed_by": "cops-maintainer@tenant-a.example",
+    "proposer_kind": "human",
+    "approved_by": "cops-owner@tenant-a.example",
+    "reason": "first slice of the activation contract",
+    "history": [
+     {
+      "at": "2026-11-13T23:27:12.661+00:00",
+      "event": "proposed",
+      "by": "cops-maintainer@tenant-a.example",
+      "kind": "human",
+      "errors": []
+     },
+     {
+      "at": "2026-11-13T23:27:12.661+00:00",
+      "event": "approved",
+      "by": "cops-owner@tenant-a.example"
+     },
+     {
+      "at": "2026-11-13T23:27:12.662+00:00",
+      "event": "activated"
+     }
+    ]
+   }
+  ]
+ },
+ "validation_errors": []
+}

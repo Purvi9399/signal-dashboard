@@ -1,0 +1,3445 @@
+{
+ "contract": "cops-activation/1",
+ "status": "RECORDED",
+ "states": {
+  "defined": "the COP has an activation policy in the approved, active mapping version (mapping.json)",
+  "eligible": "the router recorded ELIGIBLE for the COP in this case (an ELIGIBLE activation record)",
+  "active": "the router recorded ACTIVATED for the COP in this case (an ACTIVATED activation record)"
+ },
+ "mapping": {
+  "contract": "cops-activation/1",
+  "version": "map-4d9303c348c9f5cf",
+  "label": "first slice: RM, BA, AD, R&R",
+  "parent": null,
+  "metrics": [
+   {
+    "metric_id": "access.first_seen_mcp",
+    "name": "MCP server new for this operator",
+    "basis": "mcp",
+    "required_fields": [
+     "mcp_server"
+    ],
+    "applies_when": "always",
+    "thresholds": {
+     "direction": "above",
+     "warning": 1,
+     "exception": 1,
+     "critical": 3
+    },
+    "quality": {
+     "judgeable_when": "basis 'mcp' present in the session rows; otherwise state UNKNOWN",
+     "applies_when": "always",
+     "min_sessions_for_baseline": 5
+    },
+    "provenance": {
+     "computed_by": "m_first_seen_mcp",
+     "code_ref": "collector/signal_metrics.py:320",
+     "config_digest": "523922a27dd7fd50"
+    }
+   },
+   {
+    "metric_id": "activity.action_rate_ratio",
+    "name": "Actions/min vs tool median",
+    "basis": "always",
+    "required_fields": [
+     "tool_name",
+     "occurred_at"
+    ],
+    "applies_when": "always",
+    "thresholds": {
+     "direction": "above",
+     "warning": 3,
+     "exception": 5,
+     "critical": 15
+    },
+    "quality": {
+     "judgeable_when": "basis 'always' present in the session rows; otherwise state UNKNOWN",
+     "applies_when": "always",
+     "min_sessions_for_baseline": 5
+    },
+    "provenance": {
+     "computed_by": "m_action_rate",
+     "code_ref": "collector/signal_metrics.py:312",
+     "config_digest": "a2ead887d1e89620"
+    }
+   },
+   {
+    "metric_id": "insights.duration_outlier",
+    "name": "Steps beyond 10x median duration",
+    "basis": "durations",
+    "required_fields": [
+     "tool_duration_ms"
+    ],
+    "applies_when": "steps",
+    "thresholds": {
+     "direction": "above",
+     "warning": 1,
+     "exception": 1,
+     "critical": 5
+    },
+    "quality": {
+     "judgeable_when": "basis 'durations' present in the session rows; otherwise state UNKNOWN",
+     "applies_when": "steps",
+     "min_sessions_for_baseline": 5
+    },
+    "provenance": {
+     "computed_by": "m_duration_outlier",
+     "code_ref": "collector/signal_metrics.py:257",
+     "config_digest": "b7d58a878f2b1216"
+    }
+   },
+   {
+    "metric_id": "insights.failed",
+    "name": "Actions that failed",
+    "basis": "outcomes",
+    "required_fields": [
+     "success",
+     "exit_code"
+    ],
+    "applies_when": "actions",
+    "thresholds": {
+     "direction": "above",
+     "warning": 1,
+     "exception": 5,
+     "critical": 20
+    },
+    "quality": {
+     "judgeable_when": "basis 'outcomes' present in the session rows; otherwise state UNKNOWN",
+     "applies_when": "actions",
+     "min_sessions_for_baseline": 5
+    },
+    "provenance": {
+     "computed_by": "m_failed",
+     "code_ref": "collector/signal_metrics.py:242",
+     "config_digest": "ebd6c8f7b4dbb561"
+    }
+   },
+   {
+    "metric_id": "insights.repetition",
+    "name": "Identical call repeated within a turn",
+    "basis": "args",
+    "required_fields": [
+     "tool_name",
+     "tool_arguments",
+     "turn_id"
+    ],
+    "applies_when": "actions",
+    "thresholds": {
+     "direction": "above",
+     "warning": 1,
+     "exception": 3,
+     "critical": 10
+    },
+    "quality": {
+     "judgeable_when": "basis 'args' present in the session rows; otherwise state UNKNOWN",
+     "applies_when": "actions",
+     "min_sessions_for_baseline": 5
+    },
+    "provenance": {
+     "computed_by": "m_repetition",
+     "code_ref": "collector/signal_metrics.py:169",
+     "config_digest": "7f53b082f505de02"
+    }
+   },
+   {
+    "metric_id": "insights.retry",
+    "name": "Failed command reissued unchanged",
+    "basis": "commands",
+    "required_fields": [
+     "command",
+     "exit_code"
+    ],
+    "applies_when": "commands",
+    "thresholds": {
+     "direction": "above",
+     "warning": 1,
+     "exception": 2,
+     "critical": 5
+    },
+    "quality": {
+     "judgeable_when": "basis 'commands' present in the session rows; otherwise state UNKNOWN",
+     "applies_when": "commands",
+     "min_sessions_for_baseline": 5
+    },
+    "provenance": {
+     "computed_by": "m_retry",
+     "code_ref": "collector/signal_metrics.py:182",
+     "config_digest": "b559493317489c23"
+    }
+   },
+   {
+    "metric_id": "insights.reverted",
+    "name": "Agent work put back",
+    "basis": "hashes",
+    "required_fields": [
+     "content_hash",
+     "reverted_to_earlier"
+    ],
+    "applies_when": "effects",
+    "thresholds": {
+     "direction": "above",
+     "warning": 1,
+     "exception": 3,
+     "critical": 10
+    },
+    "quality": {
+     "judgeable_when": "basis 'hashes' present in the session rows; otherwise state UNKNOWN",
+     "applies_when": "effects",
+     "min_sessions_for_baseline": 5
+    },
+    "provenance": {
+     "computed_by": "m_reverted",
+     "code_ref": "collector/signal_metrics.py:230",
+     "config_digest": "7f53b082f505de02"
+    }
+   },
+   {
+    "metric_id": "insights.stalled",
+    "name": "Execution left hanging",
+    "basis": "wrapper",
+    "required_fields": [
+     "hung_seconds"
+    ],
+    "applies_when": "always",
+    "thresholds": {
+     "direction": "above",
+     "warning": 1,
+     "exception": 1,
+     "critical": 3
+    },
+    "quality": {
+     "judgeable_when": "basis 'wrapper' present in the session rows; otherwise state UNKNOWN",
+     "applies_when": "always",
+     "min_sessions_for_baseline": 5
+    },
+    "provenance": {
+     "computed_by": "m_stalled",
+     "code_ref": "collector/signal_metrics.py:193",
+     "config_digest": "523922a27dd7fd50"
+    }
+   },
+   {
+    "metric_id": "insights.token_outlier",
+    "name": "Session tokens / estate median",
+    "basis": "tokens",
+    "required_fields": [
+     "total_tokens"
+    ],
+    "applies_when": "always",
+    "thresholds": {
+     "direction": "above",
+     "warning": 3,
+     "exception": 5,
+     "critical": 15
+    },
+    "quality": {
+     "judgeable_when": "basis 'tokens' present in the session rows; otherwise state UNKNOWN",
+     "applies_when": "always",
+     "min_sessions_for_baseline": 5
+    },
+    "provenance": {
+     "computed_by": "m_token_outlier",
+     "code_ref": "collector/signal_metrics.py:251",
+     "config_digest": "a2ead887d1e89620"
+    }
+   },
+   {
+    "metric_id": "oversight.fast_approvals",
+    "name": "Approvals returned in under a second",
+    "basis": "approvals",
+    "required_fields": [
+     "observable_type",
+     "occurred_at"
+    ],
+    "applies_when": "asked",
+    "thresholds": {
+     "direction": "above",
+     "warning": 1,
+     "exception": 3,
+     "critical": 10
+    },
+    "quality": {
+     "judgeable_when": "basis 'approvals' present in the session rows; otherwise state UNKNOWN",
+     "applies_when": "asked",
+     "min_sessions_for_baseline": 5
+    },
+    "provenance": {
+     "computed_by": "m_fast_approvals",
+     "code_ref": "collector/signal_metrics.py:329",
+     "config_digest": "7f53b082f505de02"
+    }
+   },
+   {
+    "metric_id": "path.transition_novelty",
+    "name": "Step transitions unseen for this tool",
+    "basis": "always",
+    "required_fields": [
+     "tool_name",
+     "command",
+     "observable_type"
+    ],
+    "applies_when": "always",
+    "thresholds": {
+     "direction": "above",
+     "warning": 0.25,
+     "exception": 0.5,
+     "critical": 0.8
+    },
+    "quality": {
+     "judgeable_when": "basis 'always' present in the session rows; otherwise state UNKNOWN",
+     "applies_when": "always",
+     "min_sessions_for_baseline": 5
+    },
+    "provenance": {
+     "computed_by": "m_transition_novelty",
+     "code_ref": "collector/signal_metrics.py:300",
+     "config_digest": "029cd4bf80fee13f"
+    }
+   },
+   {
+    "metric_id": "telemetry.collector_coverage",
+    "name": "Expected collectors present",
+    "basis": "always",
+    "required_fields": [
+     "collector",
+     "contributing"
+    ],
+    "applies_when": "always",
+    "thresholds": {
+     "direction": "below",
+     "warning": 0.99,
+     "exception": 0.5,
+     "critical": 0.0
+    },
+    "quality": {
+     "judgeable_when": "basis 'always' present in the session rows; otherwise state UNKNOWN",
+     "applies_when": "always",
+     "min_sessions_for_baseline": 5
+    },
+    "provenance": {
+     "computed_by": "m_collector_coverage",
+     "code_ref": "collector/signal_metrics.py:268",
+     "config_digest": "a6775ff3ee89f1c1"
+    }
+   },
+   {
+    "metric_id": "telemetry.lane_linkage",
+    "name": "Subagent lanes linked to a handoff",
+    "basis": "always",
+    "required_fields": [
+     "agent_id",
+     "observable_type"
+    ],
+    "applies_when": "subagents",
+    "thresholds": {
+     "direction": "below",
+     "warning": 0.99,
+     "exception": 0.5,
+     "critical": 0.0
+    },
+    "quality": {
+     "judgeable_when": "basis 'always' present in the session rows; otherwise state UNKNOWN",
+     "applies_when": "subagents",
+     "min_sessions_for_baseline": 5
+    },
+    "provenance": {
+     "computed_by": "m_lane_linkage",
+     "code_ref": "collector/signal_metrics.py:291",
+     "config_digest": "a6775ff3ee89f1c1"
+    }
+   },
+   {
+    "metric_id": "telemetry.source_agreement",
+    "name": "Cross-collector agreement",
+    "basis": "always",
+    "required_fields": [
+     "collectors_agree"
+    ],
+    "applies_when": "multi",
+    "thresholds": {
+     "direction": "below",
+     "warning": 0.99,
+     "exception": 0.9,
+     "critical": 0.5
+    },
+    "quality": {
+     "judgeable_when": "basis 'always' present in the session rows; otherwise state UNKNOWN",
+     "applies_when": "multi",
+     "min_sessions_for_baseline": 5
+    },
+    "provenance": {
+     "computed_by": "m_source_agreement",
+     "code_ref": "collector/signal_metrics.py:276",
+     "config_digest": "8b94f4ba2a178277"
+    }
+   },
+   {
+    "metric_id": "telemetry.turn_linkage",
+    "name": "Steps carrying a turn id",
+    "basis": "always",
+    "required_fields": [
+     "turn_id"
+    ],
+    "applies_when": "steps",
+    "thresholds": {
+     "direction": "below",
+     "warning": 0.9,
+     "exception": 0.6,
+     "critical": 0.2
+    },
+    "quality": {
+     "judgeable_when": "basis 'always' present in the session rows; otherwise state UNKNOWN",
+     "applies_when": "steps",
+     "min_sessions_for_baseline": 5
+    },
+    "provenance": {
+     "computed_by": "m_turn_linkage",
+     "code_ref": "collector/signal_metrics.py:284",
+     "config_digest": "ad8a178eb1c677ae"
+    }
+   },
+   {
+    "metric_id": "telemetry.unknown_share",
+    "name": "Share of metrics that could not be judged",
+    "basis": "derived",
+    "required_fields": [],
+    "applies_when": "always",
+    "thresholds": {
+     "direction": "above",
+     "warning": 0.25,
+     "exception": 0.5,
+     "critical": 0.75
+    },
+    "quality": {
+     "judgeable_when": "always: derived from the other metrics' states",
+     "applies_when": "always"
+    },
+    "provenance": {
+     "computed_by": "signal_metrics.compute (derived)",
+     "code_ref": "collector/signal_metrics.py:573",
+     "config_digest": "e18c2417c35532b4"
+    }
+   }
+  ],
+  "edges": [
+   {
+    "edge_id": "anomaly_detection|access.first_seen_mcp@1",
+    "cop": "anomaly_detection",
+    "metric_id": "access.first_seen_mcp",
+    "behavioural_question": "Is the observed behaviour materially different from what is expected in this context?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "interpret.RuleInterpreter.anomaly_detection",
+    "interpretation_rule": "EXCEPTION/CRITICAL -> ANOMALOUS and adds policy_enforcement downstream",
+    "role": "driver",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_first_seen_mcp",
+     "required_fields": [
+      "mcp_server"
+     ],
+     "basis": "mcp",
+     "applies_when": "always",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "events": [
+      "mcp_call"
+     ],
+     "field_materiality_for_this_cop": {
+      "mcp_server": "BLOCKING"
+     },
+     "why": "novelty is a property of the server's identity"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py"
+   },
+   {
+    "edge_id": "anomaly_detection|activity.action_rate_ratio@1",
+    "cop": "anomaly_detection",
+    "metric_id": "activity.action_rate_ratio",
+    "behavioural_question": "Is the observed behaviour materially different from what is expected in this context?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "interpret.RuleInterpreter.anomaly_detection",
+    "interpretation_rule": "EXCEPTION/CRITICAL -> ANOMALOUS (same ladder)",
+    "role": "driver",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_action_rate",
+     "required_fields": [
+      "tool_name",
+      "occurred_at"
+     ],
+     "basis": "always",
+     "applies_when": "always",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "events": [
+      "tool_call"
+     ],
+     "field_materiality_for_this_cop": {
+      "timestamp": "BLOCKING",
+      "tool_name": "IMMATERIAL"
+     },
+     "why": "rate needs times; which tool it was does not change the rate"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py"
+   },
+   {
+    "edge_id": "anomaly_detection|insights.duration_outlier@1",
+    "cop": "anomaly_detection",
+    "metric_id": "insights.duration_outlier",
+    "behavioural_question": "Is the observed behaviour materially different from what is expected in this context?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "interpret.RuleInterpreter.anomaly_detection",
+    "interpretation_rule": "EXCEPTION/CRITICAL -> ANOMALOUS (same ladder)",
+    "role": "driver",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_duration_outlier",
+     "required_fields": [
+      "tool_duration_ms"
+     ],
+     "basis": "durations",
+     "applies_when": "steps",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "events": [
+      "tool_call"
+     ],
+     "field_materiality_for_this_cop": {
+      "tool_duration_ms": "BLOCKING",
+      "tool_name": "DEGRADING"
+     },
+     "why": "duration is the measure; the tool name groups the baseline"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py"
+   },
+   {
+    "edge_id": "anomaly_detection|insights.repetition@1",
+    "cop": "anomaly_detection",
+    "metric_id": "insights.repetition",
+    "behavioural_question": "Is the observed behaviour materially different from what is expected in this context?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "interpret.RuleInterpreter.anomaly_detection",
+    "interpretation_rule": "EXCEPTION/CRITICAL named in rationale only; never drives",
+    "role": "supporting",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_repetition",
+     "required_fields": [
+      "tool_name",
+      "tool_arguments",
+      "turn_id"
+     ],
+     "basis": "args",
+     "applies_when": "actions",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "events": [
+      "tool_call"
+     ],
+     "field_materiality_for_this_cop": {
+      "turn_id": "BLOCKING",
+      "tool_name": "BLOCKING",
+      "tool_arguments": "DEGRADING"
+     },
+     "why": "repetition is defined within a turn; without turns there is no window"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py"
+   },
+   {
+    "edge_id": "anomaly_detection|insights.retry@1",
+    "cop": "anomaly_detection",
+    "metric_id": "insights.retry",
+    "behavioural_question": "Is the observed behaviour materially different from what is expected in this context?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "interpret.RuleInterpreter.anomaly_detection",
+    "interpretation_rule": "EXCEPTION/CRITICAL named in rationale only; never drives",
+    "role": "supporting",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_retry",
+     "required_fields": [
+      "command",
+      "exit_code"
+     ],
+     "basis": "commands",
+     "applies_when": "commands",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py"
+   },
+   {
+    "edge_id": "anomaly_detection|insights.token_outlier@1",
+    "cop": "anomaly_detection",
+    "metric_id": "insights.token_outlier",
+    "behavioural_question": "Is the observed behaviour materially different from what is expected in this context?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "interpret.RuleInterpreter.anomaly_detection",
+    "interpretation_rule": "EXCEPTION/CRITICAL -> ANOMALOUS; WATCH if single, ALERT if >=2 hot or any CRITICAL; ranked by value/threshold",
+    "role": "driver",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_token_outlier",
+     "required_fields": [
+      "total_tokens"
+     ],
+     "basis": "tokens",
+     "applies_when": "always",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "events": [
+      "model_request"
+     ],
+     "field_materiality_for_this_cop": {
+      "total_tokens": "BLOCKING",
+      "model": "DEGRADING",
+      "lane_id": "DEGRADING"
+     },
+     "why": "without a token count there is nothing to compare; lanes only apportion it"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py"
+   },
+   {
+    "edge_id": "anomaly_detection|path.transition_novelty@1",
+    "cop": "anomaly_detection",
+    "metric_id": "path.transition_novelty",
+    "behavioural_question": "Is the observed behaviour materially different from what is expected in this context?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "interpret.RuleInterpreter.anomaly_detection",
+    "interpretation_rule": "EXCEPTION/CRITICAL -> REQUEST_CONTEXT lane_path first, then ANOMALOUS with novel transitions named",
+    "role": "driver",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_transition_novelty",
+     "required_fields": [
+      "tool_name",
+      "command",
+      "observable_type"
+     ],
+     "basis": "always",
+     "applies_when": "always",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py"
+   },
+   {
+    "edge_id": "behavior_analytics|insights.failed@1",
+    "cop": "behavior_analytics",
+    "metric_id": "insights.failed",
+    "behavioural_question": "What behavioural pattern best characterizes this execution or sequence of executions?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "collector/cops/runtime/rules.py:behavior_analytics",
+    "interpretation_rule": "read by the deterministic rule; see the function for the exact condition",
+    "role": "rule_input",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_failed",
+     "required_fields": [
+      "success",
+      "exit_code"
+     ],
+     "basis": "outcomes",
+     "applies_when": "actions",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py + collector/cops/runtime/rules.py"
+   },
+   {
+    "edge_id": "behavior_analytics|insights.repetition@1",
+    "cop": "behavior_analytics",
+    "metric_id": "insights.repetition",
+    "behavioural_question": "What behavioural pattern best characterizes this execution or sequence of executions?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "collector/cops/runtime/rules.py:behavior_analytics",
+    "interpretation_rule": "read by the deterministic rule; see the function for the exact condition",
+    "role": "rule_input",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_repetition",
+     "required_fields": [
+      "tool_name",
+      "tool_arguments",
+      "turn_id"
+     ],
+     "basis": "args",
+     "applies_when": "actions",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "events": [
+      "tool_call"
+     ],
+     "field_materiality_for_this_cop": {
+      "turn_id": "BLOCKING",
+      "tool_name": "BLOCKING",
+      "tool_arguments": "DEGRADING"
+     },
+     "why": "repetition is defined within a turn; without turns there is no window"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py + collector/cops/runtime/rules.py"
+   },
+   {
+    "edge_id": "behavior_analytics|insights.retry@1",
+    "cop": "behavior_analytics",
+    "metric_id": "insights.retry",
+    "behavioural_question": "What behavioural pattern best characterizes this execution or sequence of executions?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "collector/cops/runtime/rules.py:behavior_analytics",
+    "interpretation_rule": "read by the deterministic rule; see the function for the exact condition",
+    "role": "rule_input",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_retry",
+     "required_fields": [
+      "command",
+      "exit_code"
+     ],
+     "basis": "commands",
+     "applies_when": "commands",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py + collector/cops/runtime/rules.py"
+   },
+   {
+    "edge_id": "behavior_analytics|insights.stalled@1",
+    "cop": "behavior_analytics",
+    "metric_id": "insights.stalled",
+    "behavioural_question": "What behavioural pattern best characterizes this execution or sequence of executions?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "collector/cops/runtime/rules.py:behavior_analytics",
+    "interpretation_rule": "read by the deterministic rule; see the function for the exact condition",
+    "role": "rule_input",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_stalled",
+     "required_fields": [
+      "hung_seconds"
+     ],
+     "basis": "wrapper",
+     "applies_when": "always",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "events": [
+      "command"
+     ],
+     "field_materiality_for_this_cop": {
+      "command": "DEGRADING",
+      "timestamp": "BLOCKING"
+     },
+     "why": "a stall is a gap in time; the command only describes it"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py + collector/cops/runtime/rules.py"
+   },
+   {
+    "edge_id": "behavior_analytics|oversight.fast_approvals@1",
+    "cop": "behavior_analytics",
+    "metric_id": "oversight.fast_approvals",
+    "behavioural_question": "What behavioural pattern best characterizes this execution or sequence of executions?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "collector/cops/runtime/rules.py:behavior_analytics",
+    "interpretation_rule": "read by the deterministic rule; see the function for the exact condition",
+    "role": "rule_input",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_fast_approvals",
+     "required_fields": [
+      "observable_type",
+      "occurred_at"
+     ],
+     "basis": "approvals",
+     "applies_when": "asked",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py + collector/cops/runtime/rules.py"
+   },
+   {
+    "edge_id": "recovery_resilience|insights.failed@1",
+    "cop": "recovery_resilience",
+    "metric_id": "insights.failed",
+    "behavioural_question": "After failure or intervention, did the system return to a viable state without compounding the problem?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "collector/cops/runtime/rules.py:recovery_resilience",
+    "interpretation_rule": "read by the deterministic rule; see the function for the exact condition",
+    "role": "rule_input",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_failed",
+     "required_fields": [
+      "success",
+      "exit_code"
+     ],
+     "basis": "outcomes",
+     "applies_when": "actions",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py + collector/cops/runtime/rules.py"
+   },
+   {
+    "edge_id": "recovery_resilience|insights.retry@1",
+    "cop": "recovery_resilience",
+    "metric_id": "insights.retry",
+    "behavioural_question": "After failure or intervention, did the system return to a viable state without compounding the problem?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "collector/cops/runtime/rules.py:recovery_resilience",
+    "interpretation_rule": "read by the deterministic rule; see the function for the exact condition",
+    "role": "rule_input",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_retry",
+     "required_fields": [
+      "command",
+      "exit_code"
+     ],
+     "basis": "commands",
+     "applies_when": "commands",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py + collector/cops/runtime/rules.py"
+   },
+   {
+    "edge_id": "recovery_resilience|insights.reverted@1",
+    "cop": "recovery_resilience",
+    "metric_id": "insights.reverted",
+    "behavioural_question": "After failure or intervention, did the system return to a viable state without compounding the problem?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "collector/cops/runtime/rules.py:recovery_resilience",
+    "interpretation_rule": "read by the deterministic rule; see the function for the exact condition",
+    "role": "rule_input",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_reverted",
+     "required_fields": [
+      "content_hash",
+      "reverted_to_earlier"
+     ],
+     "basis": "hashes",
+     "applies_when": "effects",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py + collector/cops/runtime/rules.py"
+   },
+   {
+    "edge_id": "runtime_monitoring|telemetry.collector_coverage@1",
+    "cop": "runtime_monitoring",
+    "metric_id": "telemetry.collector_coverage",
+    "behavioural_question": "Is the evidence required for this governance decision present, reliable and sufficiently complete?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "interpret.RuleInterpreter.runtime_monitoring",
+    "interpretation_rule": "EXCEPTION/CRITICAL -> INSUFFICIENT (ALERT); UNKNOWN -> DEGRADED; features.missing -> request collector_breakdown context",
+    "role": "driver",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_collector_coverage",
+     "required_fields": [
+      "collector",
+      "contributing"
+     ],
+     "basis": "always",
+     "applies_when": "always",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "events": [
+      "tool_call"
+     ],
+     "field_materiality_for_this_cop": {
+      "tool_name": "IMMATERIAL",
+      "timestamp": "IMMATERIAL"
+     },
+     "why": "this metric reports on collection itself; a gap is its subject, not its obstacle"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py"
+   },
+   {
+    "edge_id": "runtime_monitoring|telemetry.lane_linkage@1",
+    "cop": "runtime_monitoring",
+    "metric_id": "telemetry.lane_linkage",
+    "behavioural_question": "Is the evidence required for this governance decision present, reliable and sufficiently complete?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "interpret.RuleInterpreter.runtime_monitoring",
+    "interpretation_rule": "WARNING+ -> DEGRADED (WATCH); generic: any hot state counts alike, no metric-specific rule",
+    "role": "evidence",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_lane_linkage",
+     "required_fields": [
+      "agent_id",
+      "observable_type"
+     ],
+     "basis": "always",
+     "applies_when": "subagents",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "events": [
+      "delegation"
+     ],
+     "field_materiality_for_this_cop": {
+      "lane_id": "IMMATERIAL",
+      "parent_agent_id": "IMMATERIAL"
+     },
+     "why": "a missing lane id is the finding here, not a blocker"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py"
+   },
+   {
+    "edge_id": "runtime_monitoring|telemetry.source_agreement@1",
+    "cop": "runtime_monitoring",
+    "metric_id": "telemetry.source_agreement",
+    "behavioural_question": "Is the evidence required for this governance decision present, reliable and sufficiently complete?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "interpret.RuleInterpreter.runtime_monitoring",
+    "interpretation_rule": "WARNING+ -> DEGRADED (WATCH); generic: any hot state counts alike, no metric-specific rule",
+    "role": "evidence",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_source_agreement",
+     "required_fields": [
+      "collectors_agree"
+     ],
+     "basis": "always",
+     "applies_when": "multi",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py"
+   },
+   {
+    "edge_id": "runtime_monitoring|telemetry.turn_linkage@1",
+    "cop": "runtime_monitoring",
+    "metric_id": "telemetry.turn_linkage",
+    "behavioural_question": "Is the evidence required for this governance decision present, reliable and sufficiently complete?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "interpret.RuleInterpreter.runtime_monitoring",
+    "interpretation_rule": "WARNING+ -> DEGRADED (WATCH); generic: any hot state counts alike, no metric-specific rule",
+    "role": "evidence",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.py:m_turn_linkage",
+     "required_fields": [
+      "turn_id"
+     ],
+     "basis": "always",
+     "applies_when": "steps",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "events": [
+      "tool_call"
+     ],
+     "field_materiality_for_this_cop": {
+      "turn_id": "IMMATERIAL"
+     },
+     "why": "a missing turn id is the finding here, not a blocker"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py"
+   },
+   {
+    "edge_id": "runtime_monitoring|telemetry.unknown_share@1",
+    "cop": "runtime_monitoring",
+    "metric_id": "telemetry.unknown_share",
+    "behavioural_question": "Is the evidence required for this governance decision present, reliable and sufficiently complete?",
+    "spec_version": "1",
+    "interpretation_status": "DEFINED",
+    "interpretation_ref": "interpret.RuleInterpreter.runtime_monitoring",
+    "interpretation_rule": "EXCEPTION/CRITICAL -> INSUFFICIENT; features.unknown listed as 'cannot judge'",
+    "role": "driver",
+    "evidence_requirements": {
+     "computed_by": "signal_metrics.compute (appended)",
+     "required_fields": [],
+     "basis": "always",
+     "applies_when": "always",
+     "if_basis_absent": "state UNKNOWN, not NORMAL (signal_metrics.compute)",
+     "field_materiality_for_this_cop": "UNDEFINED: metric not in evidence_map.METRIC_NEEDS"
+    },
+    "source": "docs/cops/metric_cop_mappings.json + collector/cops/specs.py"
+   }
+  ],
+  "policies": [
+   {
+    "cop": "runtime_monitoring",
+    "owner": "runtime_monitoring",
+    "rule_ref": "rule:case_has_telemetry@1",
+    "conditions": [],
+    "required_context": [
+     "telemetry.collector_coverage",
+     "telemetry.unknown_share",
+     "telemetry.turn_linkage"
+    ],
+    "missing_evidence": "ACTIVATE_TO_ASSESS",
+    "depends_on": [],
+    "rationale": "telemetry reliability bounds every other COP's evidence; Runtime Monitoring reports what is missing",
+    "version": "1",
+    "policy_id": "runtime_monitoring@1#05d90513af"
+   },
+   {
+    "cop": "behavior_analytics",
+    "owner": "behavior_analytics",
+    "rule_ref": "rule:any_condition@1",
+    "conditions": [
+     {
+      "metric_id": "insights.retry",
+      "at_least": "EXCEPTION"
+     },
+     {
+      "metric_id": "insights.failed",
+      "at_least": "EXCEPTION"
+     },
+     {
+      "metric_id": "insights.repetition",
+      "at_least": "EXCEPTION"
+     }
+    ],
+    "required_context": [
+     "insights.retry",
+     "insights.failed",
+     "insights.repetition"
+    ],
+    "missing_evidence": "REPORT_UNKNOWN",
+    "depends_on": [
+     "runtime_monitoring",
+     "context_memory",
+     "workflow_orchestration"
+    ],
+    "rationale": "one failed test run followed by a rerun is ordinary debugging (retry=1 is WARNING); behaviour is investigated from EXCEPTION up",
+    "version": "1",
+    "policy_id": "behavior_analytics@1#cadc46f0dc"
+   },
+   {
+    "cop": "anomaly_detection",
+    "owner": "anomaly_detection",
+    "rule_ref": "rule:any_condition@1",
+    "conditions": [
+     {
+      "metric_id": "insights.token_outlier",
+      "at_least": "EXCEPTION"
+     },
+     {
+      "metric_id": "insights.duration_outlier",
+      "at_least": "EXCEPTION"
+     },
+     {
+      "metric_id": "activity.action_rate_ratio",
+      "at_least": "EXCEPTION"
+     },
+     {
+      "metric_id": "access.first_seen_mcp",
+      "at_least": "EXCEPTION"
+     },
+     {
+      "metric_id": "path.transition_novelty",
+      "at_least": "EXCEPTION"
+     }
+    ],
+    "required_context": [
+     "insights.token_outlier",
+     "insights.duration_outlier",
+     "activity.action_rate_ratio",
+     "access.first_seen_mcp",
+     "path.transition_novelty"
+    ],
+    "missing_evidence": "REPORT_UNKNOWN",
+    "depends_on": [
+     "runtime_monitoring",
+     "behavior_analytics"
+    ],
+    "rationale": "only the mapping's driver metrics; insights.retry and insights.repetition are supporting-only for this COP and never trigger it",
+    "version": "1",
+    "policy_id": "anomaly_detection@1#c33f5fba76"
+   },
+   {
+    "cop": "recovery_resilience",
+    "owner": "recovery_resilience",
+    "rule_ref": "rule:any_condition@1",
+    "conditions": [
+     {
+      "metric_id": "insights.reverted",
+      "at_least": "WARNING"
+     },
+     {
+      "metric_id": "insights.retry",
+      "at_least": "EXCEPTION"
+     },
+     {
+      "metric_id": "insights.failed",
+      "at_least": "EXCEPTION"
+     }
+    ],
+    "required_context": [
+     "insights.reverted",
+     "insights.retry",
+     "insights.failed"
+    ],
+    "missing_evidence": "REPORT_UNKNOWN",
+    "depends_on": [
+     "behavior_analytics"
+    ],
+    "rationale": "work put back, or repeated failure, raises whether a viable state was restored",
+    "version": "1",
+    "policy_id": "recovery_resilience@1#c89326d33e"
+   }
+  ],
+  "consultations": [
+   {
+    "initiator": "recovery_resilience",
+    "receiver": "behavior_analytics",
+    "kind": "upstream_evidence",
+    "question": "What behavioural pattern best characterizes this execution or sequence of executions?",
+    "when": "referrals.needs: the VS-01 upstream component is unknown or assumed, and the finding is not SUPPORTED or its action is not quiet",
+    "max_depth": 2,
+    "timeout_s": 900,
+    "source": "collector/cops/specs.py CONSUMES",
+    "contract_id": "recovery_resilience->behavior_analytics#84fd4726cc"
+   },
+   {
+    "initiator": "anomaly_detection",
+    "receiver": "behavior_analytics",
+    "kind": "specialist_support",
+    "question": "What behavioural pattern best characterizes this execution or sequence of executions?",
+    "when": "referrals.needs: the VS-01 upstream component is unknown or assumed, and the finding is not SUPPORTED or its action is not quiet",
+    "max_depth": 2,
+    "timeout_s": 900,
+    "source": "collector/cops/runtime/triage.py SPECIALISTS[anomaly_detection].support_cops",
+    "contract_id": "anomaly_detection->behavior_analytics#86475e2832"
+   },
+   {
+    "initiator": "anomaly_detection",
+    "receiver": "runtime_monitoring",
+    "kind": "upstream_evidence",
+    "question": "Is the evidence required for this governance decision present, reliable and sufficiently complete?",
+    "when": "referrals.needs: the VS-01 upstream component is unknown or assumed, and the finding is not SUPPORTED or its action is not quiet",
+    "max_depth": 2,
+    "timeout_s": 900,
+    "source": "collector/cops/specs.py CONSUMES",
+    "contract_id": "anomaly_detection->runtime_monitoring#949a399b59"
+   },
+   {
+    "initiator": "behavior_analytics",
+    "receiver": "runtime_monitoring",
+    "kind": "upstream_evidence",
+    "question": "Is the evidence required for this governance decision present, reliable and sufficiently complete?",
+    "when": "referrals.needs: the VS-01 upstream component is unknown or assumed, and the finding is not SUPPORTED or its action is not quiet",
+    "max_depth": 2,
+    "timeout_s": 900,
+    "source": "collector/cops/specs.py CONSUMES",
+    "contract_id": "behavior_analytics->runtime_monitoring#67a996e738"
+   }
+  ]
+ },
+ "registry": {
+  "active_version": "map-4d9303c348c9f5cf",
+  "versions": [
+   {
+    "version": "map-4d9303c348c9f5cf",
+    "label": "first slice: RM, BA, AD, R&R",
+    "status": "APPROVED",
+    "parent": null,
+    "proposed_by": "cops-maintainer@tenant-a.example",
+    "proposer_kind": "human",
+    "approved_by": "cops-owner@tenant-a.example",
+    "reason": "first slice of the activation contract",
+    "history": [
+     {
+      "at": "2026-11-13T23:27:12.661+00:00",
+      "event": "proposed",
+      "by": "cops-maintainer@tenant-a.example",
+      "kind": "human",
+      "errors": []
+     },
+     {
+      "at": "2026-11-13T23:27:12.661+00:00",
+      "event": "approved",
+      "by": "cops-owner@tenant-a.example"
+     },
+     {
+      "at": "2026-11-13T23:27:12.662+00:00",
+      "event": "activated"
+     }
+    ]
+   }
+  ]
+ },
+ "validation_errors": [],
+ "scenarios": [
+  {
+   "scenario": "normal_debugging",
+   "version": "activation-scenario-1",
+   "case_id": "case:tenant-a:dbg-normal",
+   "investigation_id": "a6669595-c07e-5e58",
+   "session_id": "dbg-normal",
+   "tenant_id": "tenant-a",
+   "mapping_version": "map-4d9303c348c9f5cf",
+   "simulated": {
+    "session_rows": "synthetic, collector schema fields",
+    "estate": "synthetic: 7 earlier ordinary debugging sessions",
+    "anomaly_detection_model": "none (UnavailableProvider): stops at llm_unavailable",
+    "mode": "dry_run",
+    "approver": "cops-owner@tenant-a.example (fixed test identity)"
+   },
+   "summary": {
+    "verdicts": {
+     "runtime_monitoring": "ELIGIBLE",
+     "behavior_analytics": "NOT_ELIGIBLE",
+     "anomaly_detection": "NOT_ELIGIBLE",
+     "recovery_resilience": "NOT_ELIGIBLE"
+    },
+    "final": {
+     "runtime_monitoring": "COMPLETED",
+     "behavior_analytics": "NOT_ELIGIBLE",
+     "anomaly_detection": "NOT_ELIGIBLE",
+     "recovery_resilience": "NOT_ELIGIBLE"
+    },
+    "labels": {
+     "runtime_monitoring": "SUFFICIENT"
+    },
+    "waves": [
+     0
+    ],
+    "concurrent": {
+     "runtime_monitoring": []
+    }
+   },
+   "chain_verified": true,
+   "replay": {
+    "pinned_version": "map-4d9303c348c9f5cf",
+    "identical": true
+   },
+   "records": [
+    {
+     "record_id": "53742eb3-217a-52ae-85a9-8d711e1b454a",
+     "seq": 1,
+     "case_id": "case:tenant-a:dbg-normal",
+     "investigation_id": "a6669595-c07e-5e58",
+     "cop": "runtime_monitoring",
+     "transition": "CANDIDATE",
+     "reasons": [
+      "policy runtime_monitoring@1#05d90513af in mapping map-4d9303c348c9f5cf"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "runtime_monitoring@1#05d90513af",
+     "evidence": [],
+     "prev_record_id": null,
+     "decision_id": null,
+     "detail": {},
+     "at": "2026-11-13T23:27:12.668+00:00"
+    },
+    {
+     "record_id": "612b0c80-94a1-56bb-a386-7c136b00eb7b",
+     "seq": 2,
+     "case_id": "case:tenant-a:dbg-normal",
+     "investigation_id": "a6669595-c07e-5e58",
+     "cop": "runtime_monitoring",
+     "transition": "ELIGIBLE",
+     "reasons": [
+      "8 observables in the case"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "runtime_monitoring@1#05d90513af",
+     "evidence": [
+      {
+       "metric": "telemetry.collector_coverage",
+       "state": "NORMAL",
+       "value": 1.0,
+       "refs": []
+      },
+      {
+       "metric": "telemetry.turn_linkage",
+       "state": "NORMAL",
+       "value": 1.0,
+       "refs": []
+      },
+      {
+       "metric": "telemetry.unknown_share",
+       "state": "NORMAL",
+       "value": 0.045,
+       "refs": []
+      }
+     ],
+     "prev_record_id": "53742eb3-217a-52ae-85a9-8d711e1b454a",
+     "decision_id": null,
+     "detail": {
+      "missing_evidence": "ACTIVATE_TO_ASSESS"
+     },
+     "at": "2026-11-13T23:27:12.668+00:00"
+    },
+    {
+     "record_id": "7136083a-eb6e-5214-8ec0-3580ac154caf",
+     "seq": 3,
+     "case_id": "case:tenant-a:dbg-normal",
+     "investigation_id": "a6669595-c07e-5e58",
+     "cop": "behavior_analytics",
+     "transition": "CANDIDATE",
+     "reasons": [
+      "policy behavior_analytics@1#cadc46f0dc in mapping map-4d9303c348c9f5cf"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "behavior_analytics@1#cadc46f0dc",
+     "evidence": [],
+     "prev_record_id": "612b0c80-94a1-56bb-a386-7c136b00eb7b",
+     "decision_id": null,
+     "detail": {},
+     "at": "2026-11-13T23:27:12.668+00:00"
+    },
+    {
+     "record_id": "10f71552-648e-59bb-a036-5dbb345cdb66",
+     "seq": 4,
+     "case_id": "case:tenant-a:dbg-normal",
+     "investigation_id": "a6669595-c07e-5e58",
+     "cop": "behavior_analytics",
+     "transition": "NOT_ELIGIBLE",
+     "reasons": [
+      "insights.retry=1 is WARNING (needs >= EXCEPTION)",
+      "insights.failed=1 is WARNING (needs >= EXCEPTION)",
+      "insights.repetition=1 is WARNING (needs >= EXCEPTION)"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "behavior_analytics@1#cadc46f0dc",
+     "evidence": [
+      {
+       "metric": "insights.failed",
+       "state": "WARNING",
+       "value": 1,
+       "refs": [
+        "observable:dbg-normal-4"
+       ]
+      },
+      {
+       "metric": "insights.repetition",
+       "state": "WARNING",
+       "value": 1,
+       "refs": [
+        "observable:dbg-normal-7"
+       ]
+      },
+      {
+       "metric": "insights.retry",
+       "state": "WARNING",
+       "value": 1,
+       "refs": [
+        "observable:dbg-normal-7"
+       ]
+      }
+     ],
+     "prev_record_id": "7136083a-eb6e-5214-8ec0-3580ac154caf",
+     "decision_id": null,
+     "detail": {
+      "missing_evidence": "REPORT_UNKNOWN"
+     },
+     "at": "2026-11-13T23:27:12.668+00:00"
+    },
+    {
+     "record_id": "946cdd10-45a5-5e47-aca2-fd94fe1b8808",
+     "seq": 5,
+     "case_id": "case:tenant-a:dbg-normal",
+     "investigation_id": "a6669595-c07e-5e58",
+     "cop": "anomaly_detection",
+     "transition": "CANDIDATE",
+     "reasons": [
+      "policy anomaly_detection@1#c33f5fba76 in mapping map-4d9303c348c9f5cf"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "anomaly_detection@1#c33f5fba76",
+     "evidence": [],
+     "prev_record_id": "10f71552-648e-59bb-a036-5dbb345cdb66",
+     "decision_id": null,
+     "detail": {},
+     "at": "2026-11-13T23:27:12.668+00:00"
+    },
+    {
+     "record_id": "a625d0e9-6c41-5493-aa0b-88e835502e04",
+     "seq": 6,
+     "case_id": "case:tenant-a:dbg-normal",
+     "investigation_id": "a6669595-c07e-5e58",
+     "cop": "anomaly_detection",
+     "transition": "NOT_ELIGIBLE",
+     "reasons": [
+      "insights.token_outlier=1.0 is NORMAL (needs >= EXCEPTION)",
+      "insights.duration_outlier=0 is NORMAL (needs >= EXCEPTION)",
+      "activity.action_rate_ratio=1.0 is NORMAL (needs >= EXCEPTION)",
+      "access.first_seen_mcp=0 is NORMAL (needs >= EXCEPTION)",
+      "path.transition_novelty=0.0 is NORMAL (needs >= EXCEPTION)"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "anomaly_detection@1#c33f5fba76",
+     "evidence": [
+      {
+       "metric": "access.first_seen_mcp",
+       "state": "NORMAL",
+       "value": 0,
+       "refs": []
+      },
+      {
+       "metric": "activity.action_rate_ratio",
+       "state": "NORMAL",
+       "value": 1.0,
+       "refs": []
+      },
+      {
+       "metric": "insights.duration_outlier",
+       "state": "NORMAL",
+       "value": 0,
+       "refs": []
+      },
+      {
+       "metric": "insights.token_outlier",
+       "state": "NORMAL",
+       "value": 1.0,
+       "refs": []
+      },
+      {
+       "metric": "path.transition_novelty",
+       "state": "NORMAL",
+       "value": 0.0,
+       "refs": []
+      }
+     ],
+     "prev_record_id": "946cdd10-45a5-5e47-aca2-fd94fe1b8808",
+     "decision_id": null,
+     "detail": {
+      "missing_evidence": "REPORT_UNKNOWN"
+     },
+     "at": "2026-11-13T23:27:12.668+00:00"
+    },
+    {
+     "record_id": "deb16c3d-e8ab-54a7-8a4e-26c3fe29c04e",
+     "seq": 7,
+     "case_id": "case:tenant-a:dbg-normal",
+     "investigation_id": "a6669595-c07e-5e58",
+     "cop": "recovery_resilience",
+     "transition": "CANDIDATE",
+     "reasons": [
+      "policy recovery_resilience@1#c89326d33e in mapping map-4d9303c348c9f5cf"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "recovery_resilience@1#c89326d33e",
+     "evidence": [],
+     "prev_record_id": "a625d0e9-6c41-5493-aa0b-88e835502e04",
+     "decision_id": null,
+     "detail": {},
+     "at": "2026-11-13T23:27:12.668+00:00"
+    },
+    {
+     "record_id": "6b8ac54d-2feb-531c-8497-7dfa192b21e9",
+     "seq": 8,
+     "case_id": "case:tenant-a:dbg-normal",
+     "investigation_id": "a6669595-c07e-5e58",
+     "cop": "recovery_resilience",
+     "transition": "NOT_ELIGIBLE",
+     "reasons": [
+      "insights.reverted=0 is NORMAL (needs >= WARNING)",
+      "insights.retry=1 is WARNING (needs >= EXCEPTION)",
+      "insights.failed=1 is WARNING (needs >= EXCEPTION)"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "recovery_resilience@1#c89326d33e",
+     "evidence": [
+      {
+       "metric": "insights.failed",
+       "state": "WARNING",
+       "value": 1,
+       "refs": [
+        "observable:dbg-normal-4"
+       ]
+      },
+      {
+       "metric": "insights.retry",
+       "state": "WARNING",
+       "value": 1,
+       "refs": [
+        "observable:dbg-normal-7"
+       ]
+      },
+      {
+       "metric": "insights.reverted",
+       "state": "NORMAL",
+       "value": 0,
+       "refs": []
+      }
+     ],
+     "prev_record_id": "deb16c3d-e8ab-54a7-8a4e-26c3fe29c04e",
+     "decision_id": null,
+     "detail": {
+      "missing_evidence": "REPORT_UNKNOWN"
+     },
+     "at": "2026-11-13T23:27:12.668+00:00"
+    },
+    {
+     "record_id": "ca9f8135-1311-5236-a2e7-ec113559ac4c",
+     "seq": 9,
+     "case_id": "case:tenant-a:dbg-normal",
+     "investigation_id": "a6669595-c07e-5e58",
+     "cop": "runtime_monitoring",
+     "transition": "ACTIVATED",
+     "reasons": [
+      "wave 0; concurrent with none"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "runtime_monitoring@1#05d90513af",
+     "evidence": [],
+     "prev_record_id": "6b8ac54d-2feb-531c-8497-7dfa192b21e9",
+     "decision_id": null,
+     "detail": {
+      "wave": 0,
+      "concurrent_with": []
+     },
+     "at": "2026-11-13T23:27:12.668+00:00"
+    },
+    {
+     "record_id": "a8840feb-b16f-58f6-b2fe-c643d1f44d0e",
+     "seq": 10,
+     "case_id": "case:tenant-a:dbg-normal",
+     "investigation_id": "a6669595-c07e-5e58",
+     "cop": "runtime_monitoring",
+     "transition": "COMPLETED",
+     "reasons": [
+      "SUFFICIENT (SUBSTANTIVE)"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "runtime_monitoring@1#05d90513af",
+     "evidence": [],
+     "prev_record_id": "ca9f8135-1311-5236-a2e7-ec113559ac4c",
+     "decision_id": "c26d78c0-6315-59d7-ac5b-8404c003f8af",
+     "detail": {
+      "label": "SUFFICIENT",
+      "status": "SUBSTANTIVE",
+      "verified": true,
+      "vs01": "SUPPORTED",
+      "selected_action": "NONE",
+      "authority_stage": "NO_ACTION_PROPOSED",
+      "execution_status": "NOT_EXECUTED_NO_ACTION",
+      "finding_id": "d13b66e4-5b2e-5a89-97c3-e6e8e5a1a75c",
+      "run_id": "route:a6669595-c07e-5e58",
+      "consultation": null
+     },
+     "at": "2026-11-13T23:27:12.688+00:00"
+    }
+   ],
+   "source": "docs/cops/evaluation/activation/normal_debugging.json"
+  },
+  {
+   "scenario": "repeated_failures",
+   "version": "activation-scenario-1",
+   "case_id": "case:tenant-a:dbg-repeat",
+   "investigation_id": "cea3c4dc-d3f7-5d29",
+   "session_id": "dbg-repeat",
+   "tenant_id": "tenant-a",
+   "mapping_version": "map-4d9303c348c9f5cf",
+   "simulated": {
+    "session_rows": "synthetic, collector schema fields",
+    "estate": "synthetic: 7 earlier ordinary debugging sessions",
+    "anomaly_detection_model": "none (UnavailableProvider): stops at llm_unavailable",
+    "mode": "dry_run",
+    "approver": "cops-owner@tenant-a.example (fixed test identity)"
+   },
+   "summary": {
+    "verdicts": {
+     "runtime_monitoring": "ELIGIBLE",
+     "behavior_analytics": "ELIGIBLE",
+     "anomaly_detection": "NOT_ELIGIBLE",
+     "recovery_resilience": "ELIGIBLE"
+    },
+    "final": {
+     "runtime_monitoring": "COMPLETED",
+     "behavior_analytics": "COMPLETED",
+     "anomaly_detection": "NOT_ELIGIBLE",
+     "recovery_resilience": "COMPLETED"
+    },
+    "labels": {
+     "runtime_monitoring": "SUFFICIENT",
+     "behavior_analytics": "POOR_RECOVERY",
+     "recovery_resilience": "INCONCLUSIVE"
+    },
+    "waves": [
+     0,
+     1,
+     2
+    ],
+    "concurrent": {
+     "runtime_monitoring": [],
+     "behavior_analytics": [],
+     "recovery_resilience": []
+    }
+   },
+   "chain_verified": true,
+   "replay": {
+    "pinned_version": "map-4d9303c348c9f5cf",
+    "identical": true
+   },
+   "records": [
+    {
+     "record_id": "4b692323-d67d-56d8-955c-7d8a8678e03c",
+     "seq": 1,
+     "case_id": "case:tenant-a:dbg-repeat",
+     "investigation_id": "cea3c4dc-d3f7-5d29",
+     "cop": "runtime_monitoring",
+     "transition": "CANDIDATE",
+     "reasons": [
+      "policy runtime_monitoring@1#05d90513af in mapping map-4d9303c348c9f5cf"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "runtime_monitoring@1#05d90513af",
+     "evidence": [],
+     "prev_record_id": null,
+     "decision_id": null,
+     "detail": {},
+     "at": "2026-11-13T23:27:12.711+00:00"
+    },
+    {
+     "record_id": "09e55649-e0f5-5a6f-bffa-704bba3fe020",
+     "seq": 2,
+     "case_id": "case:tenant-a:dbg-repeat",
+     "investigation_id": "cea3c4dc-d3f7-5d29",
+     "cop": "runtime_monitoring",
+     "transition": "ELIGIBLE",
+     "reasons": [
+      "17 observables in the case"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "runtime_monitoring@1#05d90513af",
+     "evidence": [
+      {
+       "metric": "telemetry.collector_coverage",
+       "state": "NORMAL",
+       "value": 1.0,
+       "refs": []
+      },
+      {
+       "metric": "telemetry.turn_linkage",
+       "state": "NORMAL",
+       "value": 1.0,
+       "refs": []
+      },
+      {
+       "metric": "telemetry.unknown_share",
+       "state": "NORMAL",
+       "value": 0.045,
+       "refs": []
+      }
+     ],
+     "prev_record_id": "4b692323-d67d-56d8-955c-7d8a8678e03c",
+     "decision_id": null,
+     "detail": {
+      "missing_evidence": "ACTIVATE_TO_ASSESS"
+     },
+     "at": "2026-11-13T23:27:12.711+00:00"
+    },
+    {
+     "record_id": "309b7d1b-1054-5510-83f2-aecc8dcc6cd0",
+     "seq": 3,
+     "case_id": "case:tenant-a:dbg-repeat",
+     "investigation_id": "cea3c4dc-d3f7-5d29",
+     "cop": "behavior_analytics",
+     "transition": "CANDIDATE",
+     "reasons": [
+      "policy behavior_analytics@1#cadc46f0dc in mapping map-4d9303c348c9f5cf"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "behavior_analytics@1#cadc46f0dc",
+     "evidence": [],
+     "prev_record_id": "09e55649-e0f5-5a6f-bffa-704bba3fe020",
+     "decision_id": null,
+     "detail": {},
+     "at": "2026-11-13T23:27:12.711+00:00"
+    },
+    {
+     "record_id": "0ae07d50-a8ea-5a7d-9438-87ae3ba1f90e",
+     "seq": 4,
+     "case_id": "case:tenant-a:dbg-repeat",
+     "investigation_id": "cea3c4dc-d3f7-5d29",
+     "cop": "behavior_analytics",
+     "transition": "ELIGIBLE",
+     "reasons": [
+      "insights.retry=4 is EXCEPTION (needs >= EXCEPTION)",
+      "insights.failed=5 is EXCEPTION (needs >= EXCEPTION)",
+      "insights.repetition=4 is EXCEPTION (needs >= EXCEPTION)"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "behavior_analytics@1#cadc46f0dc",
+     "evidence": [
+      {
+       "metric": "insights.failed",
+       "state": "EXCEPTION",
+       "value": 5,
+       "refs": [
+        "observable:dbg-repeat-4",
+        "observable:dbg-repeat-7",
+        "observable:dbg-repeat-10",
+        "observable:dbg-repeat-13",
+        "observable:dbg-repeat-16"
+       ]
+      },
+      {
+       "metric": "insights.repetition",
+       "state": "EXCEPTION",
+       "value": 4,
+       "refs": [
+        "observable:dbg-repeat-7",
+        "observable:dbg-repeat-10",
+        "observable:dbg-repeat-13",
+        "observable:dbg-repeat-16"
+       ]
+      },
+      {
+       "metric": "insights.retry",
+       "state": "EXCEPTION",
+       "value": 4,
+       "refs": [
+        "observable:dbg-repeat-7",
+        "observable:dbg-repeat-10",
+        "observable:dbg-repeat-13",
+        "observable:dbg-repeat-16"
+       ]
+      }
+     ],
+     "prev_record_id": "309b7d1b-1054-5510-83f2-aecc8dcc6cd0",
+     "decision_id": null,
+     "detail": {
+      "missing_evidence": "REPORT_UNKNOWN"
+     },
+     "at": "2026-11-13T23:27:12.711+00:00"
+    },
+    {
+     "record_id": "d36af1f3-0885-52a9-a883-d79f478d6c12",
+     "seq": 5,
+     "case_id": "case:tenant-a:dbg-repeat",
+     "investigation_id": "cea3c4dc-d3f7-5d29",
+     "cop": "anomaly_detection",
+     "transition": "CANDIDATE",
+     "reasons": [
+      "policy anomaly_detection@1#c33f5fba76 in mapping map-4d9303c348c9f5cf"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "anomaly_detection@1#c33f5fba76",
+     "evidence": [],
+     "prev_record_id": "0ae07d50-a8ea-5a7d-9438-87ae3ba1f90e",
+     "decision_id": null,
+     "detail": {},
+     "at": "2026-11-13T23:27:12.711+00:00"
+    },
+    {
+     "record_id": "1b44017c-df13-588b-97f8-bdb09354b9bc",
+     "seq": 6,
+     "case_id": "case:tenant-a:dbg-repeat",
+     "investigation_id": "cea3c4dc-d3f7-5d29",
+     "cop": "anomaly_detection",
+     "transition": "NOT_ELIGIBLE",
+     "reasons": [
+      "insights.token_outlier=1.0 is NORMAL (needs >= EXCEPTION)",
+      "insights.duration_outlier=0 is NORMAL (needs >= EXCEPTION)",
+      "activity.action_rate_ratio=2.5 is NORMAL (needs >= EXCEPTION)",
+      "access.first_seen_mcp=0 is NORMAL (needs >= EXCEPTION)",
+      "path.transition_novelty=0.0 is NORMAL (needs >= EXCEPTION)"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "anomaly_detection@1#c33f5fba76",
+     "evidence": [
+      {
+       "metric": "access.first_seen_mcp",
+       "state": "NORMAL",
+       "value": 0,
+       "refs": []
+      },
+      {
+       "metric": "activity.action_rate_ratio",
+       "state": "NORMAL",
+       "value": 2.5,
+       "refs": []
+      },
+      {
+       "metric": "insights.duration_outlier",
+       "state": "NORMAL",
+       "value": 0,
+       "refs": []
+      },
+      {
+       "metric": "insights.token_outlier",
+       "state": "NORMAL",
+       "value": 1.0,
+       "refs": []
+      },
+      {
+       "metric": "path.transition_novelty",
+       "state": "NORMAL",
+       "value": 0.0,
+       "refs": []
+      }
+     ],
+     "prev_record_id": "d36af1f3-0885-52a9-a883-d79f478d6c12",
+     "decision_id": null,
+     "detail": {
+      "missing_evidence": "REPORT_UNKNOWN"
+     },
+     "at": "2026-11-13T23:27:12.711+00:00"
+    },
+    {
+     "record_id": "4df768a9-1844-54de-9daf-6d0c29be7a5d",
+     "seq": 7,
+     "case_id": "case:tenant-a:dbg-repeat",
+     "investigation_id": "cea3c4dc-d3f7-5d29",
+     "cop": "recovery_resilience",
+     "transition": "CANDIDATE",
+     "reasons": [
+      "policy recovery_resilience@1#c89326d33e in mapping map-4d9303c348c9f5cf"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "recovery_resilience@1#c89326d33e",
+     "evidence": [],
+     "prev_record_id": "1b44017c-df13-588b-97f8-bdb09354b9bc",
+     "decision_id": null,
+     "detail": {},
+     "at": "2026-11-13T23:27:12.711+00:00"
+    },
+    {
+     "record_id": "f7dca6c5-153e-5c69-91c3-a7763e413e0c",
+     "seq": 8,
+     "case_id": "case:tenant-a:dbg-repeat",
+     "investigation_id": "cea3c4dc-d3f7-5d29",
+     "cop": "recovery_resilience",
+     "transition": "ELIGIBLE",
+     "reasons": [
+      "insights.reverted=6 is EXCEPTION (needs >= WARNING)",
+      "insights.retry=4 is EXCEPTION (needs >= EXCEPTION)",
+      "insights.failed=5 is EXCEPTION (needs >= EXCEPTION)"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "recovery_resilience@1#c89326d33e",
+     "evidence": [
+      {
+       "metric": "insights.failed",
+       "state": "EXCEPTION",
+       "value": 5,
+       "refs": [
+        "observable:dbg-repeat-4",
+        "observable:dbg-repeat-7",
+        "observable:dbg-repeat-10",
+        "observable:dbg-repeat-13",
+        "observable:dbg-repeat-16"
+       ]
+      },
+      {
+       "metric": "insights.retry",
+       "state": "EXCEPTION",
+       "value": 4,
+       "refs": [
+        "observable:dbg-repeat-7",
+        "observable:dbg-repeat-10",
+        "observable:dbg-repeat-13",
+        "observable:dbg-repeat-16"
+       ]
+      },
+      {
+       "metric": "insights.reverted",
+       "state": "EXCEPTION",
+       "value": 6,
+       "refs": [
+        "observable:dbg-repeat-9",
+        "observable:dbg-repeat-12",
+        "observable:dbg-repeat-15",
+        "observable:dbg-repeat-9",
+        "observable:dbg-repeat-12",
+        "observable:dbg-repeat-15"
+       ]
+      }
+     ],
+     "prev_record_id": "4df768a9-1844-54de-9daf-6d0c29be7a5d",
+     "decision_id": null,
+     "detail": {
+      "missing_evidence": "REPORT_UNKNOWN"
+     },
+     "at": "2026-11-13T23:27:12.711+00:00"
+    },
+    {
+     "record_id": "606a8251-b751-513d-a3a6-3c21603e8ec7",
+     "seq": 9,
+     "case_id": "case:tenant-a:dbg-repeat",
+     "investigation_id": "cea3c4dc-d3f7-5d29",
+     "cop": "runtime_monitoring",
+     "transition": "ACTIVATED",
+     "reasons": [
+      "wave 0; concurrent with none"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "runtime_monitoring@1#05d90513af",
+     "evidence": [],
+     "prev_record_id": "f7dca6c5-153e-5c69-91c3-a7763e413e0c",
+     "decision_id": null,
+     "detail": {
+      "wave": 0,
+      "concurrent_with": []
+     },
+     "at": "2026-11-13T23:27:12.711+00:00"
+    },
+    {
+     "record_id": "4add22cc-1116-59b4-8be9-6c4c2cafa936",
+     "seq": 10,
+     "case_id": "case:tenant-a:dbg-repeat",
+     "investigation_id": "cea3c4dc-d3f7-5d29",
+     "cop": "runtime_monitoring",
+     "transition": "COMPLETED",
+     "reasons": [
+      "SUFFICIENT (SUBSTANTIVE)"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "runtime_monitoring@1#05d90513af",
+     "evidence": [],
+     "prev_record_id": "606a8251-b751-513d-a3a6-3c21603e8ec7",
+     "decision_id": "c69b3e39-96ec-55ed-ab75-8b66368af2fd",
+     "detail": {
+      "label": "SUFFICIENT",
+      "status": "SUBSTANTIVE",
+      "verified": true,
+      "vs01": "SUPPORTED",
+      "selected_action": "NONE",
+      "authority_stage": "NO_ACTION_PROPOSED",
+      "execution_status": "NOT_EXECUTED_NO_ACTION",
+      "finding_id": "3aaddc66-d9fd-573a-bbda-6fc4f5e9a93e",
+      "run_id": "route:cea3c4dc-d3f7-5d29",
+      "consultation": null
+     },
+     "at": "2026-11-13T23:27:12.727+00:00"
+    },
+    {
+     "record_id": "7da08174-6fd9-5e4d-9f2f-aaa7402ccbaf",
+     "seq": 11,
+     "case_id": "case:tenant-a:dbg-repeat",
+     "investigation_id": "cea3c4dc-d3f7-5d29",
+     "cop": "behavior_analytics",
+     "transition": "WAITING",
+     "reasons": [
+      "waiting on runtime_monitoring",
+      "dependency context_memory not activated in this case: consumed as absent",
+      "dependency workflow_orchestration not activated in this case: consumed as absent"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "behavior_analytics@1#cadc46f0dc",
+     "evidence": [],
+     "prev_record_id": "4add22cc-1116-59b4-8be9-6c4c2cafa936",
+     "decision_id": null,
+     "detail": {
+      "waiting_on": [
+       "runtime_monitoring"
+      ],
+      "wave": 1
+     },
+     "at": "2026-11-13T23:27:12.727+00:00"
+    },
+    {
+     "record_id": "2160a205-21a5-5f28-891d-8fd6227eaffd",
+     "seq": 12,
+     "case_id": "case:tenant-a:dbg-repeat",
+     "investigation_id": "cea3c4dc-d3f7-5d29",
+     "cop": "behavior_analytics",
+     "transition": "ACTIVATED",
+     "reasons": [
+      "wave 1; concurrent with none"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "behavior_analytics@1#cadc46f0dc",
+     "evidence": [],
+     "prev_record_id": "7da08174-6fd9-5e4d-9f2f-aaa7402ccbaf",
+     "decision_id": null,
+     "detail": {
+      "wave": 1,
+      "concurrent_with": []
+     },
+     "at": "2026-11-13T23:27:12.727+00:00"
+    },
+    {
+     "record_id": "95f1b422-6842-576c-8fda-945aa0f53148",
+     "seq": 13,
+     "case_id": "case:tenant-a:dbg-repeat",
+     "investigation_id": "cea3c4dc-d3f7-5d29",
+     "cop": "behavior_analytics",
+     "transition": "COMPLETED",
+     "reasons": [
+      "POOR_RECOVERY (SUBSTANTIVE)"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "behavior_analytics@1#cadc46f0dc",
+     "evidence": [],
+     "prev_record_id": "2160a205-21a5-5f28-891d-8fd6227eaffd",
+     "decision_id": "6ac23185-608e-52c1-9ccc-24e435a5e919",
+     "detail": {
+      "label": "POOR_RECOVERY",
+      "status": "SUBSTANTIVE",
+      "verified": true,
+      "vs01": "SUPPORTED",
+      "selected_action": "WATCH",
+      "authority_stage": "AUTHORISED_DRY_RUN",
+      "execution_status": "NOT_EXECUTED_NO_ACTION",
+      "finding_id": "98cfda39-ac20-51c1-898d-9cbe175ae1fc",
+      "run_id": "route:cea3c4dc-d3f7-5d29:root:behavior_analytics:65a467a0-2418:r0",
+      "consultation": "{\"not_referred\": [{\"reason\": \"SUPPORTED and the action only records: nothing to check\", \"receiver\": null}], \"resolution\": {\"admitted\": [], \"component_changes\": [], \"limit_hit\": [], \"reason\": \"needs were found but none could be referred: SUPPORTED and the action only records: nothing to check\", \"status\": \"NOT_NEEDED\", \"still_uncertain\": false, \"support_direction\": null}, \"responses\": [], \"runs\": 1, \"spent_usd\": 0.0, \"via\": \"referrals.run_investigation\"}"
+     },
+     "at": "2026-11-13T23:27:12.751+00:00"
+    },
+    {
+     "record_id": "6e1b31df-b005-5716-9015-66b303b67f90",
+     "seq": 14,
+     "case_id": "case:tenant-a:dbg-repeat",
+     "investigation_id": "cea3c4dc-d3f7-5d29",
+     "cop": "recovery_resilience",
+     "transition": "WAITING",
+     "reasons": [
+      "waiting on behavior_analytics"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "recovery_resilience@1#c89326d33e",
+     "evidence": [],
+     "prev_record_id": "95f1b422-6842-576c-8fda-945aa0f53148",
+     "decision_id": null,
+     "detail": {
+      "waiting_on": [
+       "behavior_analytics"
+      ],
+      "wave": 2
+     },
+     "at": "2026-11-13T23:27:12.751+00:00"
+    },
+    {
+     "record_id": "65dbcb92-3e6b-5731-893d-b4e8ddd43bb2",
+     "seq": 15,
+     "case_id": "case:tenant-a:dbg-repeat",
+     "investigation_id": "cea3c4dc-d3f7-5d29",
+     "cop": "recovery_resilience",
+     "transition": "ACTIVATED",
+     "reasons": [
+      "wave 2; concurrent with none"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "recovery_resilience@1#c89326d33e",
+     "evidence": [],
+     "prev_record_id": "6e1b31df-b005-5716-9015-66b303b67f90",
+     "decision_id": null,
+     "detail": {
+      "wave": 2,
+      "concurrent_with": []
+     },
+     "at": "2026-11-13T23:27:12.752+00:00"
+    },
+    {
+     "record_id": "78fb41e1-c2a2-500b-8384-dffc8d518dc9",
+     "seq": 16,
+     "case_id": "case:tenant-a:dbg-repeat",
+     "investigation_id": "cea3c4dc-d3f7-5d29",
+     "cop": "recovery_resilience",
+     "transition": "COMPLETED",
+     "reasons": [
+      "INCONCLUSIVE (MISSING_DEPENDENCY)"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "recovery_resilience@1#c89326d33e",
+     "evidence": [],
+     "prev_record_id": "65dbcb92-3e6b-5731-893d-b4e8ddd43bb2",
+     "decision_id": "79979231-aef3-528a-9dcf-4ab2a47aa2b4",
+     "detail": {
+      "label": "INCONCLUSIVE",
+      "status": "MISSING_DEPENDENCY",
+      "verified": false,
+      "vs01": "INSUFFICIENT_EVIDENCE",
+      "selected_action": "REQUEST_CONTEXT",
+      "authority_stage": "AUTHORISED_DRY_RUN",
+      "execution_status": "NOT_EXECUTED_DRY_RUN",
+      "finding_id": "1a4de4b3-0531-5ad5-884c-d35a29422115",
+      "run_id": "route:cea3c4dc-d3f7-5d29:root:recovery_resilience:024fa354-bb4a:r1",
+      "consultation": "{\"not_referred\": [], \"resolution\": {\"admitted\": [\"behavior_analytics\"], \"component_changes\": [], \"limit_hit\": [], \"reason\": \"answers were admitted (behavior_analytics) but the reading is still INCONCLUSIVE INSUFFICIENT_EVIDENCE; unknown 1.0 -> 1.0\", \"status\": \"UNRESOLVED\", \"still_uncertain\": true, \"support_direction\": \"level\"}, \"responses\": [{\"delivered_as\": \"evidence\", \"receiver\": \"behavior_analytics\", \"referral_id\": \"6ed6ee81-87e4-5791-b8cc-6df92d39172c\", \"status\": \"ANSWERED_VERIFIED\"}], \"runs\": 5, \"spent_usd\": 0.0, \"via\": \"referrals.run_investigation\"}"
+     },
+     "at": "2026-11-13T23:27:12.846+00:00"
+    }
+   ],
+   "source": "docs/cops/evaluation/activation/repeated_failures.json"
+  },
+  {
+   "scenario": "missing_evidence",
+   "version": "activation-scenario-1",
+   "case_id": "case:tenant-a:dbg-missing",
+   "investigation_id": "51631717-da42-55b4",
+   "session_id": "dbg-missing",
+   "tenant_id": "tenant-a",
+   "mapping_version": "map-4d9303c348c9f5cf",
+   "simulated": {
+    "session_rows": "synthetic, collector schema fields",
+    "estate": "synthetic: 7 earlier ordinary debugging sessions",
+    "anomaly_detection_model": "none (UnavailableProvider): stops at llm_unavailable",
+    "mode": "dry_run",
+    "approver": "cops-owner@tenant-a.example (fixed test identity)"
+   },
+   "summary": {
+    "verdicts": {
+     "runtime_monitoring": "ELIGIBLE",
+     "behavior_analytics": "UNKNOWN",
+     "anomaly_detection": "NOT_ELIGIBLE",
+     "recovery_resilience": "UNKNOWN"
+    },
+    "final": {
+     "runtime_monitoring": "COMPLETED",
+     "behavior_analytics": "UNKNOWN",
+     "anomaly_detection": "NOT_ELIGIBLE",
+     "recovery_resilience": "UNKNOWN"
+    },
+    "labels": {
+     "runtime_monitoring": "INSUFFICIENT"
+    },
+    "waves": [
+     0
+    ],
+    "concurrent": {
+     "runtime_monitoring": []
+    }
+   },
+   "chain_verified": true,
+   "replay": {
+    "pinned_version": "map-4d9303c348c9f5cf",
+    "identical": true
+   },
+   "records": [
+    {
+     "record_id": "a2f8fc84-cefe-5c47-8a96-843ed58d7910",
+     "seq": 1,
+     "case_id": "case:tenant-a:dbg-missing",
+     "investigation_id": "51631717-da42-55b4",
+     "cop": "runtime_monitoring",
+     "transition": "CANDIDATE",
+     "reasons": [
+      "policy runtime_monitoring@1#05d90513af in mapping map-4d9303c348c9f5cf"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "runtime_monitoring@1#05d90513af",
+     "evidence": [],
+     "prev_record_id": null,
+     "decision_id": null,
+     "detail": {},
+     "at": "2026-11-13T23:27:12.965+00:00"
+    },
+    {
+     "record_id": "99c2f8d4-a742-5d3f-8414-e4c15ebd635c",
+     "seq": 2,
+     "case_id": "case:tenant-a:dbg-missing",
+     "investigation_id": "51631717-da42-55b4",
+     "cop": "runtime_monitoring",
+     "transition": "ELIGIBLE",
+     "reasons": [
+      "10 observables in the case"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "runtime_monitoring@1#05d90513af",
+     "evidence": [
+      {
+       "metric": "telemetry.collector_coverage",
+       "state": "EXCEPTION",
+       "value": 0.5,
+       "refs": []
+      },
+      {
+       "metric": "telemetry.turn_linkage",
+       "state": "NORMAL",
+       "value": 1.0,
+       "refs": []
+      },
+      {
+       "metric": "telemetry.unknown_share",
+       "state": "WARNING",
+       "value": 0.3,
+       "refs": []
+      }
+     ],
+     "prev_record_id": "a2f8fc84-cefe-5c47-8a96-843ed58d7910",
+     "decision_id": null,
+     "detail": {
+      "missing_evidence": "ACTIVATE_TO_ASSESS"
+     },
+     "at": "2026-11-13T23:27:12.965+00:00"
+    },
+    {
+     "record_id": "b297d952-a2b3-5091-867a-29584722ac7d",
+     "seq": 3,
+     "case_id": "case:tenant-a:dbg-missing",
+     "investigation_id": "51631717-da42-55b4",
+     "cop": "behavior_analytics",
+     "transition": "CANDIDATE",
+     "reasons": [
+      "policy behavior_analytics@1#cadc46f0dc in mapping map-4d9303c348c9f5cf"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "behavior_analytics@1#cadc46f0dc",
+     "evidence": [],
+     "prev_record_id": "99c2f8d4-a742-5d3f-8414-e4c15ebd635c",
+     "decision_id": null,
+     "detail": {},
+     "at": "2026-11-13T23:27:12.965+00:00"
+    },
+    {
+     "record_id": "ec58ba3c-80b4-5dbd-8d81-79eee2ac62cb",
+     "seq": 4,
+     "case_id": "case:tenant-a:dbg-missing",
+     "investigation_id": "51631717-da42-55b4",
+     "cop": "behavior_analytics",
+     "transition": "UNKNOWN",
+     "reasons": [
+      "insights.retry is UNKNOWN: cannot be judged",
+      "insights.failed is UNKNOWN: cannot be judged",
+      "insights.repetition=2 is WARNING (needs >= EXCEPTION)"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "behavior_analytics@1#cadc46f0dc",
+     "evidence": [
+      {
+       "metric": "insights.failed",
+       "state": "UNKNOWN",
+       "value": 0,
+       "refs": []
+      },
+      {
+       "metric": "insights.repetition",
+       "state": "WARNING",
+       "value": 2,
+       "refs": [
+        "observable:dbg-missing-6",
+        "observable:dbg-missing-8"
+       ]
+      },
+      {
+       "metric": "insights.retry",
+       "state": "UNKNOWN",
+       "value": 0,
+       "refs": []
+      }
+     ],
+     "prev_record_id": "b297d952-a2b3-5091-867a-29584722ac7d",
+     "decision_id": null,
+     "detail": {
+      "missing_evidence": "REPORT_UNKNOWN"
+     },
+     "at": "2026-11-13T23:27:12.965+00:00"
+    },
+    {
+     "record_id": "cdb00e95-7a81-5d12-8eb5-0826cd83f1e0",
+     "seq": 5,
+     "case_id": "case:tenant-a:dbg-missing",
+     "investigation_id": "51631717-da42-55b4",
+     "cop": "anomaly_detection",
+     "transition": "CANDIDATE",
+     "reasons": [
+      "policy anomaly_detection@1#c33f5fba76 in mapping map-4d9303c348c9f5cf"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "anomaly_detection@1#c33f5fba76",
+     "evidence": [],
+     "prev_record_id": "ec58ba3c-80b4-5dbd-8d81-79eee2ac62cb",
+     "decision_id": null,
+     "detail": {},
+     "at": "2026-11-13T23:27:12.966+00:00"
+    },
+    {
+     "record_id": "21491c29-ca37-536b-97f0-987f70e3f78e",
+     "seq": 6,
+     "case_id": "case:tenant-a:dbg-missing",
+     "investigation_id": "51631717-da42-55b4",
+     "cop": "anomaly_detection",
+     "transition": "NOT_ELIGIBLE",
+     "reasons": [
+      "insights.token_outlier=1.0 is NORMAL (needs >= EXCEPTION)",
+      "insights.duration_outlier=0 is NORMAL (needs >= EXCEPTION)",
+      "activity.action_rate_ratio=1.75 is NORMAL (needs >= EXCEPTION)",
+      "access.first_seen_mcp=0 is NORMAL (needs >= EXCEPTION)",
+      "path.transition_novelty=0.111 is NORMAL (needs >= EXCEPTION)"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "anomaly_detection@1#c33f5fba76",
+     "evidence": [
+      {
+       "metric": "access.first_seen_mcp",
+       "state": "NORMAL",
+       "value": 0,
+       "refs": []
+      },
+      {
+       "metric": "activity.action_rate_ratio",
+       "state": "NORMAL",
+       "value": 1.75,
+       "refs": []
+      },
+      {
+       "metric": "insights.duration_outlier",
+       "state": "NORMAL",
+       "value": 0,
+       "refs": []
+      },
+      {
+       "metric": "insights.token_outlier",
+       "state": "NORMAL",
+       "value": 1.0,
+       "refs": []
+      },
+      {
+       "metric": "path.transition_novelty",
+       "state": "NORMAL",
+       "value": 0.111,
+       "refs": []
+      }
+     ],
+     "prev_record_id": "cdb00e95-7a81-5d12-8eb5-0826cd83f1e0",
+     "decision_id": null,
+     "detail": {
+      "missing_evidence": "REPORT_UNKNOWN"
+     },
+     "at": "2026-11-13T23:27:12.966+00:00"
+    },
+    {
+     "record_id": "0ee2bf67-86ab-54a5-b11e-7c4f5c82b1ee",
+     "seq": 7,
+     "case_id": "case:tenant-a:dbg-missing",
+     "investigation_id": "51631717-da42-55b4",
+     "cop": "recovery_resilience",
+     "transition": "CANDIDATE",
+     "reasons": [
+      "policy recovery_resilience@1#c89326d33e in mapping map-4d9303c348c9f5cf"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "recovery_resilience@1#c89326d33e",
+     "evidence": [],
+     "prev_record_id": "21491c29-ca37-536b-97f0-987f70e3f78e",
+     "decision_id": null,
+     "detail": {},
+     "at": "2026-11-13T23:27:12.966+00:00"
+    },
+    {
+     "record_id": "61cde85e-be29-5fc6-abfd-a7d80d9a3ff0",
+     "seq": 8,
+     "case_id": "case:tenant-a:dbg-missing",
+     "investigation_id": "51631717-da42-55b4",
+     "cop": "recovery_resilience",
+     "transition": "UNKNOWN",
+     "reasons": [
+      "insights.reverted is NOT_APPLICABLE: cannot be judged",
+      "insights.retry is UNKNOWN: cannot be judged",
+      "insights.failed is UNKNOWN: cannot be judged"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "recovery_resilience@1#c89326d33e",
+     "evidence": [
+      {
+       "metric": "insights.failed",
+       "state": "UNKNOWN",
+       "value": 0,
+       "refs": []
+      },
+      {
+       "metric": "insights.retry",
+       "state": "UNKNOWN",
+       "value": 0,
+       "refs": []
+      },
+      {
+       "metric": "insights.reverted",
+       "state": "NOT_APPLICABLE",
+       "value": null,
+       "refs": []
+      }
+     ],
+     "prev_record_id": "0ee2bf67-86ab-54a5-b11e-7c4f5c82b1ee",
+     "decision_id": null,
+     "detail": {
+      "missing_evidence": "REPORT_UNKNOWN"
+     },
+     "at": "2026-11-13T23:27:12.966+00:00"
+    },
+    {
+     "record_id": "7ab9ed2e-0ed4-57d2-8707-f92f29b2233b",
+     "seq": 9,
+     "case_id": "case:tenant-a:dbg-missing",
+     "investigation_id": "51631717-da42-55b4",
+     "cop": "runtime_monitoring",
+     "transition": "ACTIVATED",
+     "reasons": [
+      "wave 0; concurrent with none"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "runtime_monitoring@1#05d90513af",
+     "evidence": [],
+     "prev_record_id": "61cde85e-be29-5fc6-abfd-a7d80d9a3ff0",
+     "decision_id": null,
+     "detail": {
+      "wave": 0,
+      "concurrent_with": []
+     },
+     "at": "2026-11-13T23:27:12.966+00:00"
+    },
+    {
+     "record_id": "dea21f59-08d7-54a1-a645-41404138df03",
+     "seq": 10,
+     "case_id": "case:tenant-a:dbg-missing",
+     "investigation_id": "51631717-da42-55b4",
+     "cop": "runtime_monitoring",
+     "transition": "COMPLETED",
+     "reasons": [
+      "INSUFFICIENT (SUBSTANTIVE)"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "runtime_monitoring@1#05d90513af",
+     "evidence": [],
+     "prev_record_id": "7ab9ed2e-0ed4-57d2-8707-f92f29b2233b",
+     "decision_id": "581dc3af-a607-50da-908c-ebf6722bb750",
+     "detail": {
+      "label": "INSUFFICIENT",
+      "status": "SUBSTANTIVE",
+      "verified": true,
+      "vs01": "SUPPORTED",
+      "selected_action": "ALERT",
+      "authority_stage": "AUTHORISED_DRY_RUN",
+      "execution_status": "NOT_EXECUTED_DRY_RUN",
+      "finding_id": "7051201e-39c1-5a62-a7e6-4accfbeab4f2",
+      "run_id": "route:51631717-da42-55b4",
+      "consultation": null
+     },
+     "at": "2026-11-13T23:27:12.978+00:00"
+    }
+   ],
+   "source": "docs/cops/evaluation/activation/missing_evidence.json"
+  },
+  {
+   "scenario": "concurrent",
+   "version": "activation-scenario-1",
+   "case_id": "case:tenant-a:dbg-concurrent",
+   "investigation_id": "5cfed68b-c32f-5983",
+   "session_id": "dbg-concurrent",
+   "tenant_id": "tenant-a",
+   "mapping_version": "map-4d9303c348c9f5cf",
+   "simulated": {
+    "session_rows": "synthetic, collector schema fields",
+    "estate": "synthetic: 7 earlier ordinary debugging sessions",
+    "anomaly_detection_model": "none (UnavailableProvider): stops at llm_unavailable",
+    "mode": "dry_run",
+    "approver": "cops-owner@tenant-a.example (fixed test identity)"
+   },
+   "summary": {
+    "verdicts": {
+     "runtime_monitoring": "ELIGIBLE",
+     "behavior_analytics": "ELIGIBLE",
+     "anomaly_detection": "ELIGIBLE",
+     "recovery_resilience": "ELIGIBLE"
+    },
+    "final": {
+     "runtime_monitoring": "COMPLETED",
+     "behavior_analytics": "COMPLETED",
+     "anomaly_detection": "COMPLETED",
+     "recovery_resilience": "COMPLETED"
+    },
+    "labels": {
+     "runtime_monitoring": "SUFFICIENT",
+     "behavior_analytics": "POOR_RECOVERY",
+     "anomaly_detection": "INCONCLUSIVE",
+     "recovery_resilience": "INCONCLUSIVE"
+    },
+    "waves": [
+     0,
+     1,
+     2,
+     2
+    ],
+    "concurrent": {
+     "runtime_monitoring": [],
+     "behavior_analytics": [],
+     "anomaly_detection": [
+      "recovery_resilience"
+     ],
+     "recovery_resilience": [
+      "anomaly_detection"
+     ]
+    }
+   },
+   "chain_verified": true,
+   "replay": {
+    "pinned_version": "map-4d9303c348c9f5cf",
+    "identical": true
+   },
+   "records": [
+    {
+     "record_id": "33e5e60a-e068-5642-906e-b9aed3023567",
+     "seq": 1,
+     "case_id": "case:tenant-a:dbg-concurrent",
+     "investigation_id": "5cfed68b-c32f-5983",
+     "cop": "runtime_monitoring",
+     "transition": "CANDIDATE",
+     "reasons": [
+      "policy runtime_monitoring@1#05d90513af in mapping map-4d9303c348c9f5cf"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "runtime_monitoring@1#05d90513af",
+     "evidence": [],
+     "prev_record_id": null,
+     "decision_id": null,
+     "detail": {},
+     "at": "2026-11-13T23:27:13.000+00:00"
+    },
+    {
+     "record_id": "6f68432d-75d4-5d42-811c-c415f80f5ebe",
+     "seq": 2,
+     "case_id": "case:tenant-a:dbg-concurrent",
+     "investigation_id": "5cfed68b-c32f-5983",
+     "cop": "runtime_monitoring",
+     "transition": "ELIGIBLE",
+     "reasons": [
+      "17 observables in the case"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "runtime_monitoring@1#05d90513af",
+     "evidence": [
+      {
+       "metric": "telemetry.collector_coverage",
+       "state": "NORMAL",
+       "value": 1.0,
+       "refs": []
+      },
+      {
+       "metric": "telemetry.turn_linkage",
+       "state": "NORMAL",
+       "value": 1.0,
+       "refs": []
+      },
+      {
+       "metric": "telemetry.unknown_share",
+       "state": "NORMAL",
+       "value": 0.045,
+       "refs": []
+      }
+     ],
+     "prev_record_id": "33e5e60a-e068-5642-906e-b9aed3023567",
+     "decision_id": null,
+     "detail": {
+      "missing_evidence": "ACTIVATE_TO_ASSESS"
+     },
+     "at": "2026-11-13T23:27:13.000+00:00"
+    },
+    {
+     "record_id": "78878105-a1c2-5214-8428-f49cc306808f",
+     "seq": 3,
+     "case_id": "case:tenant-a:dbg-concurrent",
+     "investigation_id": "5cfed68b-c32f-5983",
+     "cop": "behavior_analytics",
+     "transition": "CANDIDATE",
+     "reasons": [
+      "policy behavior_analytics@1#cadc46f0dc in mapping map-4d9303c348c9f5cf"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "behavior_analytics@1#cadc46f0dc",
+     "evidence": [],
+     "prev_record_id": "6f68432d-75d4-5d42-811c-c415f80f5ebe",
+     "decision_id": null,
+     "detail": {},
+     "at": "2026-11-13T23:27:13.000+00:00"
+    },
+    {
+     "record_id": "26833211-c44e-591f-93ec-2e654876924b",
+     "seq": 4,
+     "case_id": "case:tenant-a:dbg-concurrent",
+     "investigation_id": "5cfed68b-c32f-5983",
+     "cop": "behavior_analytics",
+     "transition": "ELIGIBLE",
+     "reasons": [
+      "insights.retry=4 is EXCEPTION (needs >= EXCEPTION)",
+      "insights.failed=5 is EXCEPTION (needs >= EXCEPTION)",
+      "insights.repetition=4 is EXCEPTION (needs >= EXCEPTION)"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "behavior_analytics@1#cadc46f0dc",
+     "evidence": [
+      {
+       "metric": "insights.failed",
+       "state": "EXCEPTION",
+       "value": 5,
+       "refs": [
+        "observable:dbg-concurrent-4",
+        "observable:dbg-concurrent-7",
+        "observable:dbg-concurrent-10",
+        "observable:dbg-concurrent-13",
+        "observable:dbg-concurrent-16"
+       ]
+      },
+      {
+       "metric": "insights.repetition",
+       "state": "EXCEPTION",
+       "value": 4,
+       "refs": [
+        "observable:dbg-concurrent-7",
+        "observable:dbg-concurrent-10",
+        "observable:dbg-concurrent-13",
+        "observable:dbg-concurrent-16"
+       ]
+      },
+      {
+       "metric": "insights.retry",
+       "state": "EXCEPTION",
+       "value": 4,
+       "refs": [
+        "observable:dbg-concurrent-7",
+        "observable:dbg-concurrent-10",
+        "observable:dbg-concurrent-13",
+        "observable:dbg-concurrent-16"
+       ]
+      }
+     ],
+     "prev_record_id": "78878105-a1c2-5214-8428-f49cc306808f",
+     "decision_id": null,
+     "detail": {
+      "missing_evidence": "REPORT_UNKNOWN"
+     },
+     "at": "2026-11-13T23:27:13.000+00:00"
+    },
+    {
+     "record_id": "2837fed9-1521-58da-9e50-9000e90f79d3",
+     "seq": 5,
+     "case_id": "case:tenant-a:dbg-concurrent",
+     "investigation_id": "5cfed68b-c32f-5983",
+     "cop": "anomaly_detection",
+     "transition": "CANDIDATE",
+     "reasons": [
+      "policy anomaly_detection@1#c33f5fba76 in mapping map-4d9303c348c9f5cf"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "anomaly_detection@1#c33f5fba76",
+     "evidence": [],
+     "prev_record_id": "26833211-c44e-591f-93ec-2e654876924b",
+     "decision_id": null,
+     "detail": {},
+     "at": "2026-11-13T23:27:13.000+00:00"
+    },
+    {
+     "record_id": "8e4049f9-93a5-5d43-bd33-de009d0383e6",
+     "seq": 6,
+     "case_id": "case:tenant-a:dbg-concurrent",
+     "investigation_id": "5cfed68b-c32f-5983",
+     "cop": "anomaly_detection",
+     "transition": "ELIGIBLE",
+     "reasons": [
+      "insights.token_outlier=40.0 is CRITICAL (needs >= EXCEPTION)"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "anomaly_detection@1#c33f5fba76",
+     "evidence": [
+      {
+       "metric": "access.first_seen_mcp",
+       "state": "NORMAL",
+       "value": 0,
+       "refs": []
+      },
+      {
+       "metric": "activity.action_rate_ratio",
+       "state": "NORMAL",
+       "value": 2.5,
+       "refs": []
+      },
+      {
+       "metric": "insights.duration_outlier",
+       "state": "NORMAL",
+       "value": 0,
+       "refs": []
+      },
+      {
+       "metric": "insights.token_outlier",
+       "state": "CRITICAL",
+       "value": 40.0,
+       "refs": []
+      },
+      {
+       "metric": "path.transition_novelty",
+       "state": "NORMAL",
+       "value": 0.0,
+       "refs": []
+      }
+     ],
+     "prev_record_id": "2837fed9-1521-58da-9e50-9000e90f79d3",
+     "decision_id": null,
+     "detail": {
+      "missing_evidence": "REPORT_UNKNOWN"
+     },
+     "at": "2026-11-13T23:27:13.000+00:00"
+    },
+    {
+     "record_id": "f362f105-c21b-5d55-be44-9ae31216db3d",
+     "seq": 7,
+     "case_id": "case:tenant-a:dbg-concurrent",
+     "investigation_id": "5cfed68b-c32f-5983",
+     "cop": "recovery_resilience",
+     "transition": "CANDIDATE",
+     "reasons": [
+      "policy recovery_resilience@1#c89326d33e in mapping map-4d9303c348c9f5cf"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "recovery_resilience@1#c89326d33e",
+     "evidence": [],
+     "prev_record_id": "8e4049f9-93a5-5d43-bd33-de009d0383e6",
+     "decision_id": null,
+     "detail": {},
+     "at": "2026-11-13T23:27:13.000+00:00"
+    },
+    {
+     "record_id": "7150c5a7-624f-585b-bbde-8ececb63a0c6",
+     "seq": 8,
+     "case_id": "case:tenant-a:dbg-concurrent",
+     "investigation_id": "5cfed68b-c32f-5983",
+     "cop": "recovery_resilience",
+     "transition": "ELIGIBLE",
+     "reasons": [
+      "insights.reverted=6 is EXCEPTION (needs >= WARNING)",
+      "insights.retry=4 is EXCEPTION (needs >= EXCEPTION)",
+      "insights.failed=5 is EXCEPTION (needs >= EXCEPTION)"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "recovery_resilience@1#c89326d33e",
+     "evidence": [
+      {
+       "metric": "insights.failed",
+       "state": "EXCEPTION",
+       "value": 5,
+       "refs": [
+        "observable:dbg-concurrent-4",
+        "observable:dbg-concurrent-7",
+        "observable:dbg-concurrent-10",
+        "observable:dbg-concurrent-13",
+        "observable:dbg-concurrent-16"
+       ]
+      },
+      {
+       "metric": "insights.retry",
+       "state": "EXCEPTION",
+       "value": 4,
+       "refs": [
+        "observable:dbg-concurrent-7",
+        "observable:dbg-concurrent-10",
+        "observable:dbg-concurrent-13",
+        "observable:dbg-concurrent-16"
+       ]
+      },
+      {
+       "metric": "insights.reverted",
+       "state": "EXCEPTION",
+       "value": 6,
+       "refs": [
+        "observable:dbg-concurrent-9",
+        "observable:dbg-concurrent-12",
+        "observable:dbg-concurrent-15",
+        "observable:dbg-concurrent-9",
+        "observable:dbg-concurrent-12",
+        "observable:dbg-concurrent-15"
+       ]
+      }
+     ],
+     "prev_record_id": "f362f105-c21b-5d55-be44-9ae31216db3d",
+     "decision_id": null,
+     "detail": {
+      "missing_evidence": "REPORT_UNKNOWN"
+     },
+     "at": "2026-11-13T23:27:13.000+00:00"
+    },
+    {
+     "record_id": "16658dce-af51-5140-80c6-e693643afc71",
+     "seq": 9,
+     "case_id": "case:tenant-a:dbg-concurrent",
+     "investigation_id": "5cfed68b-c32f-5983",
+     "cop": "runtime_monitoring",
+     "transition": "ACTIVATED",
+     "reasons": [
+      "wave 0; concurrent with none"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "runtime_monitoring@1#05d90513af",
+     "evidence": [],
+     "prev_record_id": "7150c5a7-624f-585b-bbde-8ececb63a0c6",
+     "decision_id": null,
+     "detail": {
+      "wave": 0,
+      "concurrent_with": []
+     },
+     "at": "2026-11-13T23:27:13.000+00:00"
+    },
+    {
+     "record_id": "5ad7c35c-e4a7-54de-a8b6-8a563c15e342",
+     "seq": 10,
+     "case_id": "case:tenant-a:dbg-concurrent",
+     "investigation_id": "5cfed68b-c32f-5983",
+     "cop": "runtime_monitoring",
+     "transition": "COMPLETED",
+     "reasons": [
+      "SUFFICIENT (SUBSTANTIVE)"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "runtime_monitoring@1#05d90513af",
+     "evidence": [],
+     "prev_record_id": "16658dce-af51-5140-80c6-e693643afc71",
+     "decision_id": "74200631-a51c-5a55-bcad-7feee942f2be",
+     "detail": {
+      "label": "SUFFICIENT",
+      "status": "SUBSTANTIVE",
+      "verified": true,
+      "vs01": "SUPPORTED",
+      "selected_action": "NONE",
+      "authority_stage": "NO_ACTION_PROPOSED",
+      "execution_status": "NOT_EXECUTED_NO_ACTION",
+      "finding_id": "991f533f-8af4-54d1-8eed-a6bacc5bc50f",
+      "run_id": "route:5cfed68b-c32f-5983",
+      "consultation": null
+     },
+     "at": "2026-11-13T23:27:13.014+00:00"
+    },
+    {
+     "record_id": "4019649d-5635-5287-ae2d-8489533b2a9d",
+     "seq": 11,
+     "case_id": "case:tenant-a:dbg-concurrent",
+     "investigation_id": "5cfed68b-c32f-5983",
+     "cop": "behavior_analytics",
+     "transition": "WAITING",
+     "reasons": [
+      "waiting on runtime_monitoring",
+      "dependency context_memory not activated in this case: consumed as absent",
+      "dependency workflow_orchestration not activated in this case: consumed as absent"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "behavior_analytics@1#cadc46f0dc",
+     "evidence": [],
+     "prev_record_id": "5ad7c35c-e4a7-54de-a8b6-8a563c15e342",
+     "decision_id": null,
+     "detail": {
+      "waiting_on": [
+       "runtime_monitoring"
+      ],
+      "wave": 1
+     },
+     "at": "2026-11-13T23:27:13.014+00:00"
+    },
+    {
+     "record_id": "4c84ee5d-2537-5885-b289-3bc677aa89a8",
+     "seq": 12,
+     "case_id": "case:tenant-a:dbg-concurrent",
+     "investigation_id": "5cfed68b-c32f-5983",
+     "cop": "behavior_analytics",
+     "transition": "ACTIVATED",
+     "reasons": [
+      "wave 1; concurrent with none"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "behavior_analytics@1#cadc46f0dc",
+     "evidence": [],
+     "prev_record_id": "4019649d-5635-5287-ae2d-8489533b2a9d",
+     "decision_id": null,
+     "detail": {
+      "wave": 1,
+      "concurrent_with": []
+     },
+     "at": "2026-11-13T23:27:13.014+00:00"
+    },
+    {
+     "record_id": "4b0db0a5-ad67-56f5-8cbc-f4b530c2d343",
+     "seq": 13,
+     "case_id": "case:tenant-a:dbg-concurrent",
+     "investigation_id": "5cfed68b-c32f-5983",
+     "cop": "behavior_analytics",
+     "transition": "COMPLETED",
+     "reasons": [
+      "POOR_RECOVERY (SUBSTANTIVE)"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "behavior_analytics@1#cadc46f0dc",
+     "evidence": [],
+     "prev_record_id": "4c84ee5d-2537-5885-b289-3bc677aa89a8",
+     "decision_id": "67c70000-dc80-5a2d-a394-064e39630bd2",
+     "detail": {
+      "label": "POOR_RECOVERY",
+      "status": "SUBSTANTIVE",
+      "verified": true,
+      "vs01": "SUPPORTED",
+      "selected_action": "WATCH",
+      "authority_stage": "AUTHORISED_DRY_RUN",
+      "execution_status": "NOT_EXECUTED_NO_ACTION",
+      "finding_id": "fa14520a-b7ce-5416-a49a-acd55ca47f44",
+      "run_id": "route:5cfed68b-c32f-5983:root:behavior_analytics:038b8356-b1ad:r0",
+      "consultation": "{\"not_referred\": [{\"reason\": \"SUPPORTED and the action only records: nothing to check\", \"receiver\": null}], \"resolution\": {\"admitted\": [], \"component_changes\": [], \"limit_hit\": [], \"reason\": \"needs were found but none could be referred: SUPPORTED and the action only records: nothing to check\", \"status\": \"NOT_NEEDED\", \"still_uncertain\": false, \"support_direction\": null}, \"responses\": [], \"runs\": 1, \"spent_usd\": 0.0, \"via\": \"referrals.run_investigation\"}"
+     },
+     "at": "2026-11-13T23:27:13.033+00:00"
+    },
+    {
+     "record_id": "6c8d91c5-0019-54ad-848b-a601bebcefa8",
+     "seq": 14,
+     "case_id": "case:tenant-a:dbg-concurrent",
+     "investigation_id": "5cfed68b-c32f-5983",
+     "cop": "anomaly_detection",
+     "transition": "WAITING",
+     "reasons": [
+      "waiting on runtime_monitoring, behavior_analytics"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "anomaly_detection@1#c33f5fba76",
+     "evidence": [],
+     "prev_record_id": "4b0db0a5-ad67-56f5-8cbc-f4b530c2d343",
+     "decision_id": null,
+     "detail": {
+      "waiting_on": [
+       "runtime_monitoring",
+       "behavior_analytics"
+      ],
+      "wave": 2
+     },
+     "at": "2026-11-13T23:27:13.033+00:00"
+    },
+    {
+     "record_id": "83a2c3b9-974e-5530-86bb-a85f70dc0773",
+     "seq": 15,
+     "case_id": "case:tenant-a:dbg-concurrent",
+     "investigation_id": "5cfed68b-c32f-5983",
+     "cop": "recovery_resilience",
+     "transition": "WAITING",
+     "reasons": [
+      "waiting on behavior_analytics"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "recovery_resilience@1#c89326d33e",
+     "evidence": [],
+     "prev_record_id": "6c8d91c5-0019-54ad-848b-a601bebcefa8",
+     "decision_id": null,
+     "detail": {
+      "waiting_on": [
+       "behavior_analytics"
+      ],
+      "wave": 2
+     },
+     "at": "2026-11-13T23:27:13.033+00:00"
+    },
+    {
+     "record_id": "4bedb455-3e56-5247-bc2d-3ec35c7de21b",
+     "seq": 16,
+     "case_id": "case:tenant-a:dbg-concurrent",
+     "investigation_id": "5cfed68b-c32f-5983",
+     "cop": "anomaly_detection",
+     "transition": "ACTIVATED",
+     "reasons": [
+      "wave 2; concurrent with recovery_resilience"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "anomaly_detection@1#c33f5fba76",
+     "evidence": [],
+     "prev_record_id": "83a2c3b9-974e-5530-86bb-a85f70dc0773",
+     "decision_id": null,
+     "detail": {
+      "wave": 2,
+      "concurrent_with": [
+       "recovery_resilience"
+      ]
+     },
+     "at": "2026-11-13T23:27:13.033+00:00"
+    },
+    {
+     "record_id": "c30d97fc-4317-5c88-9f40-ff663d745f75",
+     "seq": 17,
+     "case_id": "case:tenant-a:dbg-concurrent",
+     "investigation_id": "5cfed68b-c32f-5983",
+     "cop": "recovery_resilience",
+     "transition": "ACTIVATED",
+     "reasons": [
+      "wave 2; concurrent with anomaly_detection"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "recovery_resilience@1#c89326d33e",
+     "evidence": [],
+     "prev_record_id": "4bedb455-3e56-5247-bc2d-3ec35c7de21b",
+     "decision_id": null,
+     "detail": {
+      "wave": 2,
+      "concurrent_with": [
+       "anomaly_detection"
+      ]
+     },
+     "at": "2026-11-13T23:27:13.033+00:00"
+    },
+    {
+     "record_id": "7234c42f-5819-5110-9cb8-f28f0a4df346",
+     "seq": 18,
+     "case_id": "case:tenant-a:dbg-concurrent",
+     "investigation_id": "5cfed68b-c32f-5983",
+     "cop": "anomaly_detection",
+     "transition": "COMPLETED",
+     "reasons": [
+      "INCONCLUSIVE (INCONCLUSIVE)"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "anomaly_detection@1#c33f5fba76",
+     "evidence": [],
+     "prev_record_id": "c30d97fc-4317-5c88-9f40-ff663d745f75",
+     "decision_id": "65260acd-074f-5066-823b-577644fedb25",
+     "detail": {
+      "label": "INCONCLUSIVE",
+      "status": "INCONCLUSIVE",
+      "verified": false,
+      "vs01": "INSUFFICIENT_EVIDENCE",
+      "selected_action": "NONE",
+      "authority_stage": "NO_ACTION_PROPOSED",
+      "execution_status": "NOT_EXECUTED_NO_ACTION",
+      "finding_id": "e88f1688-74ca-5a93-a247-b9c57d2ef4b4",
+      "run_id": "route:5cfed68b-c32f-5983:root:anomaly_detection:0e3153c9-467a:r1",
+      "consultation": "{\"not_referred\": [], \"resolution\": {\"admitted\": [\"behavior_analytics\"], \"component_changes\": [], \"limit_hit\": [], \"reason\": \"answers were admitted (behavior_analytics) but the reading is still INCONCLUSIVE INSUFFICIENT_EVIDENCE; unknown 1.0 -> 1.0\", \"status\": \"UNRESOLVED\", \"still_uncertain\": true, \"support_direction\": \"level\"}, \"responses\": [{\"delivered_as\": \"evidence\", \"receiver\": \"behavior_analytics\", \"referral_id\": \"d2f81239-5329-5670-bf1c-e976c5919d66\", \"status\": \"ANSWERED_VERIFIED\"}], \"runs\": 5, \"spent_usd\": 0.0, \"via\": \"referrals.run_investigation\"}"
+     },
+     "at": "2026-11-13T23:27:13.201+00:00"
+    },
+    {
+     "record_id": "d695d167-a421-5e4e-b92b-a794a4d31355",
+     "seq": 19,
+     "case_id": "case:tenant-a:dbg-concurrent",
+     "investigation_id": "5cfed68b-c32f-5983",
+     "cop": "recovery_resilience",
+     "transition": "COMPLETED",
+     "reasons": [
+      "INCONCLUSIVE (MISSING_DEPENDENCY)"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "recovery_resilience@1#c89326d33e",
+     "evidence": [],
+     "prev_record_id": "7234c42f-5819-5110-9cb8-f28f0a4df346",
+     "decision_id": "a858063c-b4f2-58bf-85c1-3d8ca65144d8",
+     "detail": {
+      "label": "INCONCLUSIVE",
+      "status": "MISSING_DEPENDENCY",
+      "verified": false,
+      "vs01": "INSUFFICIENT_EVIDENCE",
+      "selected_action": "REQUEST_CONTEXT",
+      "authority_stage": "AUTHORISED_DRY_RUN",
+      "execution_status": "NOT_EXECUTED_DRY_RUN",
+      "finding_id": "eeb3287b-d4eb-55f3-9de1-5567bd364f6b",
+      "run_id": "route:5cfed68b-c32f-5983:root:recovery_resilience:1785ab02-4ee1:r1",
+      "consultation": "{\"not_referred\": [], \"resolution\": {\"admitted\": [\"behavior_analytics\"], \"component_changes\": [], \"limit_hit\": [], \"reason\": \"answers were admitted (behavior_analytics) but the reading is still INCONCLUSIVE INSUFFICIENT_EVIDENCE; unknown 1.0 -> 1.0\", \"status\": \"UNRESOLVED\", \"still_uncertain\": true, \"support_direction\": \"level\"}, \"responses\": [{\"delivered_as\": \"evidence\", \"receiver\": \"behavior_analytics\", \"referral_id\": \"32dd65fe-dc0a-5240-91d8-27564a1d672f\", \"status\": \"ANSWERED_VERIFIED\"}], \"runs\": 5, \"spent_usd\": 0.0, \"via\": \"referrals.run_investigation\"}"
+     },
+     "at": "2026-11-13T23:27:13.201+00:00"
+    }
+   ],
+   "source": "docs/cops/evaluation/activation/concurrent.json"
+  },
+  {
+   "scenario": "consultation",
+   "version": "activation-scenario-1",
+   "case_id": "case:tenant-a:dbg-consult",
+   "investigation_id": "88586638-7b55-5d1e",
+   "session_id": "dbg-consult",
+   "tenant_id": "tenant-a",
+   "mapping_version": "map-4d9303c348c9f5cf",
+   "simulated": {
+    "session_rows": "synthetic, collector schema fields",
+    "estate": "synthetic: 7 earlier ordinary debugging sessions",
+    "anomaly_detection_model": "none (UnavailableProvider): stops at llm_unavailable",
+    "mode": "dry_run",
+    "approver": "cops-owner@tenant-a.example (fixed test identity)"
+   },
+   "summary": {
+    "verdicts": {
+     "runtime_monitoring": "ELIGIBLE",
+     "behavior_analytics": "NOT_ELIGIBLE",
+     "anomaly_detection": "NOT_ELIGIBLE",
+     "recovery_resilience": "ELIGIBLE"
+    },
+    "final": {
+     "runtime_monitoring": "COMPLETED",
+     "behavior_analytics": "NOT_ELIGIBLE",
+     "anomaly_detection": "NOT_ELIGIBLE",
+     "recovery_resilience": "COMPLETED"
+    },
+    "labels": {
+     "recovery_resilience": "INCONCLUSIVE",
+     "runtime_monitoring": "SUFFICIENT"
+    },
+    "waves": [
+     0,
+     0
+    ],
+    "concurrent": {
+     "recovery_resilience": [
+      "runtime_monitoring"
+     ],
+     "runtime_monitoring": [
+      "recovery_resilience"
+     ]
+    }
+   },
+   "chain_verified": true,
+   "replay": {
+    "pinned_version": "map-4d9303c348c9f5cf",
+    "identical": true
+   },
+   "records": [
+    {
+     "record_id": "9943be1d-0330-5982-817e-6c774e856e19",
+     "seq": 1,
+     "case_id": "case:tenant-a:dbg-consult",
+     "investigation_id": "88586638-7b55-5d1e",
+     "cop": "runtime_monitoring",
+     "transition": "CANDIDATE",
+     "reasons": [
+      "policy runtime_monitoring@1#05d90513af in mapping map-4d9303c348c9f5cf"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "runtime_monitoring@1#05d90513af",
+     "evidence": [],
+     "prev_record_id": null,
+     "decision_id": null,
+     "detail": {},
+     "at": "2026-11-13T23:27:13.403+00:00"
+    },
+    {
+     "record_id": "15d71cb6-8c2f-5842-a73c-d8d05f95e624",
+     "seq": 2,
+     "case_id": "case:tenant-a:dbg-consult",
+     "investigation_id": "88586638-7b55-5d1e",
+     "cop": "runtime_monitoring",
+     "transition": "ELIGIBLE",
+     "reasons": [
+      "9 observables in the case"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "runtime_monitoring@1#05d90513af",
+     "evidence": [
+      {
+       "metric": "telemetry.collector_coverage",
+       "state": "NORMAL",
+       "value": 1.0,
+       "refs": []
+      },
+      {
+       "metric": "telemetry.turn_linkage",
+       "state": "NORMAL",
+       "value": 1.0,
+       "refs": []
+      },
+      {
+       "metric": "telemetry.unknown_share",
+       "state": "NORMAL",
+       "value": 0.045,
+       "refs": []
+      }
+     ],
+     "prev_record_id": "9943be1d-0330-5982-817e-6c774e856e19",
+     "decision_id": null,
+     "detail": {
+      "missing_evidence": "ACTIVATE_TO_ASSESS"
+     },
+     "at": "2026-11-13T23:27:13.403+00:00"
+    },
+    {
+     "record_id": "b2387cfe-9bf0-5c09-bca5-73b3a4f669eb",
+     "seq": 3,
+     "case_id": "case:tenant-a:dbg-consult",
+     "investigation_id": "88586638-7b55-5d1e",
+     "cop": "behavior_analytics",
+     "transition": "CANDIDATE",
+     "reasons": [
+      "policy behavior_analytics@1#cadc46f0dc in mapping map-4d9303c348c9f5cf"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "behavior_analytics@1#cadc46f0dc",
+     "evidence": [],
+     "prev_record_id": "15d71cb6-8c2f-5842-a73c-d8d05f95e624",
+     "decision_id": null,
+     "detail": {},
+     "at": "2026-11-13T23:27:13.403+00:00"
+    },
+    {
+     "record_id": "7669d142-195e-5075-bf37-72a158a496bc",
+     "seq": 4,
+     "case_id": "case:tenant-a:dbg-consult",
+     "investigation_id": "88586638-7b55-5d1e",
+     "cop": "behavior_analytics",
+     "transition": "NOT_ELIGIBLE",
+     "reasons": [
+      "insights.retry=0 is NORMAL (needs >= EXCEPTION)",
+      "insights.failed=0 is NORMAL (needs >= EXCEPTION)",
+      "insights.repetition=0 is NORMAL (needs >= EXCEPTION)"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "behavior_analytics@1#cadc46f0dc",
+     "evidence": [
+      {
+       "metric": "insights.failed",
+       "state": "NORMAL",
+       "value": 0,
+       "refs": []
+      },
+      {
+       "metric": "insights.repetition",
+       "state": "NORMAL",
+       "value": 0,
+       "refs": []
+      },
+      {
+       "metric": "insights.retry",
+       "state": "NORMAL",
+       "value": 0,
+       "refs": []
+      }
+     ],
+     "prev_record_id": "b2387cfe-9bf0-5c09-bca5-73b3a4f669eb",
+     "decision_id": null,
+     "detail": {
+      "missing_evidence": "REPORT_UNKNOWN"
+     },
+     "at": "2026-11-13T23:27:13.403+00:00"
+    },
+    {
+     "record_id": "c574cb11-2de2-5f04-b904-56a7f6fdde6f",
+     "seq": 5,
+     "case_id": "case:tenant-a:dbg-consult",
+     "investigation_id": "88586638-7b55-5d1e",
+     "cop": "anomaly_detection",
+     "transition": "CANDIDATE",
+     "reasons": [
+      "policy anomaly_detection@1#c33f5fba76 in mapping map-4d9303c348c9f5cf"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "anomaly_detection@1#c33f5fba76",
+     "evidence": [],
+     "prev_record_id": "7669d142-195e-5075-bf37-72a158a496bc",
+     "decision_id": null,
+     "detail": {},
+     "at": "2026-11-13T23:27:13.403+00:00"
+    },
+    {
+     "record_id": "69f17a0a-ff65-5bf0-ad36-ad386067b463",
+     "seq": 6,
+     "case_id": "case:tenant-a:dbg-consult",
+     "investigation_id": "88586638-7b55-5d1e",
+     "cop": "anomaly_detection",
+     "transition": "NOT_ELIGIBLE",
+     "reasons": [
+      "insights.token_outlier=1.0 is NORMAL (needs >= EXCEPTION)",
+      "insights.duration_outlier=0 is NORMAL (needs >= EXCEPTION)",
+      "activity.action_rate_ratio=1.0 is NORMAL (needs >= EXCEPTION)",
+      "access.first_seen_mcp=0 is NORMAL (needs >= EXCEPTION)",
+      "path.transition_novelty=0.333 is WARNING (needs >= EXCEPTION)"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "anomaly_detection@1#c33f5fba76",
+     "evidence": [
+      {
+       "metric": "access.first_seen_mcp",
+       "state": "NORMAL",
+       "value": 0,
+       "refs": []
+      },
+      {
+       "metric": "activity.action_rate_ratio",
+       "state": "NORMAL",
+       "value": 1.0,
+       "refs": []
+      },
+      {
+       "metric": "insights.duration_outlier",
+       "state": "NORMAL",
+       "value": 0,
+       "refs": []
+      },
+      {
+       "metric": "insights.token_outlier",
+       "state": "NORMAL",
+       "value": 1.0,
+       "refs": []
+      },
+      {
+       "metric": "path.transition_novelty",
+       "state": "WARNING",
+       "value": 0.333,
+       "refs": []
+      }
+     ],
+     "prev_record_id": "c574cb11-2de2-5f04-b904-56a7f6fdde6f",
+     "decision_id": null,
+     "detail": {
+      "missing_evidence": "REPORT_UNKNOWN"
+     },
+     "at": "2026-11-13T23:27:13.404+00:00"
+    },
+    {
+     "record_id": "31ee96c5-f209-5573-86d4-dc7e5c327ac8",
+     "seq": 7,
+     "case_id": "case:tenant-a:dbg-consult",
+     "investigation_id": "88586638-7b55-5d1e",
+     "cop": "recovery_resilience",
+     "transition": "CANDIDATE",
+     "reasons": [
+      "policy recovery_resilience@1#c89326d33e in mapping map-4d9303c348c9f5cf"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "recovery_resilience@1#c89326d33e",
+     "evidence": [],
+     "prev_record_id": "69f17a0a-ff65-5bf0-ad36-ad386067b463",
+     "decision_id": null,
+     "detail": {},
+     "at": "2026-11-13T23:27:13.404+00:00"
+    },
+    {
+     "record_id": "8422b341-dcc9-549c-a495-da559c9fae77",
+     "seq": 8,
+     "case_id": "case:tenant-a:dbg-consult",
+     "investigation_id": "88586638-7b55-5d1e",
+     "cop": "recovery_resilience",
+     "transition": "ELIGIBLE",
+     "reasons": [
+      "insights.reverted=2 is WARNING (needs >= WARNING)"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "recovery_resilience@1#c89326d33e",
+     "evidence": [
+      {
+       "metric": "insights.failed",
+       "state": "NORMAL",
+       "value": 0,
+       "refs": []
+      },
+      {
+       "metric": "insights.retry",
+       "state": "NORMAL",
+       "value": 0,
+       "refs": []
+      },
+      {
+       "metric": "insights.reverted",
+       "state": "WARNING",
+       "value": 2,
+       "refs": [
+        "observable:dbg-consult-7",
+        "observable:dbg-consult-7"
+       ]
+      }
+     ],
+     "prev_record_id": "31ee96c5-f209-5573-86d4-dc7e5c327ac8",
+     "decision_id": null,
+     "detail": {
+      "missing_evidence": "REPORT_UNKNOWN"
+     },
+     "at": "2026-11-13T23:27:13.404+00:00"
+    },
+    {
+     "record_id": "91e863d3-2784-5a22-806d-27e246c3dc25",
+     "seq": 9,
+     "case_id": "case:tenant-a:dbg-consult",
+     "investigation_id": "88586638-7b55-5d1e",
+     "cop": "recovery_resilience",
+     "transition": "ACTIVATED",
+     "reasons": [
+      "wave 0; concurrent with runtime_monitoring"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "recovery_resilience@1#c89326d33e",
+     "evidence": [],
+     "prev_record_id": "8422b341-dcc9-549c-a495-da559c9fae77",
+     "decision_id": null,
+     "detail": {
+      "wave": 0,
+      "concurrent_with": [
+       "runtime_monitoring"
+      ]
+     },
+     "at": "2026-11-13T23:27:13.404+00:00"
+    },
+    {
+     "record_id": "8acdb896-383d-5e3a-aeac-b53cc517ce46",
+     "seq": 10,
+     "case_id": "case:tenant-a:dbg-consult",
+     "investigation_id": "88586638-7b55-5d1e",
+     "cop": "runtime_monitoring",
+     "transition": "ACTIVATED",
+     "reasons": [
+      "wave 0; concurrent with recovery_resilience"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "runtime_monitoring@1#05d90513af",
+     "evidence": [],
+     "prev_record_id": "91e863d3-2784-5a22-806d-27e246c3dc25",
+     "decision_id": null,
+     "detail": {
+      "wave": 0,
+      "concurrent_with": [
+       "recovery_resilience"
+      ]
+     },
+     "at": "2026-11-13T23:27:13.404+00:00"
+    },
+    {
+     "record_id": "2e5afeb8-1416-5294-acf2-d19dfce32e81",
+     "seq": 11,
+     "case_id": "case:tenant-a:dbg-consult",
+     "investigation_id": "88586638-7b55-5d1e",
+     "cop": "recovery_resilience",
+     "transition": "COMPLETED",
+     "reasons": [
+      "INCONCLUSIVE (MISSING_DEPENDENCY)"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "recovery_resilience@1#c89326d33e",
+     "evidence": [],
+     "prev_record_id": "8acdb896-383d-5e3a-aeac-b53cc517ce46",
+     "decision_id": "263ce4b0-eb0d-570f-96b2-e2f8632003d3",
+     "detail": {
+      "label": "INCONCLUSIVE",
+      "status": "MISSING_DEPENDENCY",
+      "verified": false,
+      "vs01": "INSUFFICIENT_EVIDENCE",
+      "selected_action": "REQUEST_CONTEXT",
+      "authority_stage": "AUTHORISED_DRY_RUN",
+      "execution_status": "NOT_EXECUTED_DRY_RUN",
+      "finding_id": "74947af1-28d9-51bd-918e-90f92b442fe4",
+      "run_id": "route:88586638-7b55-5d1e:root:recovery_resilience:070a1939-1718:r1",
+      "consultation": "{\"not_referred\": [], \"resolution\": {\"admitted\": [\"behavior_analytics\"], \"component_changes\": [], \"limit_hit\": [], \"reason\": \"answers were admitted (behavior_analytics) but the reading is still INCONCLUSIVE INSUFFICIENT_EVIDENCE; unknown 1.0 -> 1.0\", \"status\": \"UNRESOLVED\", \"still_uncertain\": true, \"support_direction\": \"level\"}, \"responses\": [{\"delivered_as\": \"evidence\", \"receiver\": \"behavior_analytics\", \"referral_id\": \"c6fd9822-01ab-52e1-8881-4cfb22f2aabe\", \"status\": \"ANSWERED_VERIFIED\"}], \"runs\": 5, \"spent_usd\": 0.0, \"via\": \"referrals.run_investigation\"}"
+     },
+     "at": "2026-11-13T23:27:13.506+00:00"
+    },
+    {
+     "record_id": "6b327241-9f1a-5736-b506-219a1e6d5642",
+     "seq": 12,
+     "case_id": "case:tenant-a:dbg-consult",
+     "investigation_id": "88586638-7b55-5d1e",
+     "cop": "runtime_monitoring",
+     "transition": "COMPLETED",
+     "reasons": [
+      "SUFFICIENT (SUBSTANTIVE)"
+     ],
+     "mapping_version": "map-4d9303c348c9f5cf",
+     "policy_id": "runtime_monitoring@1#05d90513af",
+     "evidence": [],
+     "prev_record_id": "2e5afeb8-1416-5294-acf2-d19dfce32e81",
+     "decision_id": "2175edaa-949f-5c2c-8a28-f7bf24b12198",
+     "detail": {
+      "label": "SUFFICIENT",
+      "status": "SUBSTANTIVE",
+      "verified": true,
+      "vs01": "SUPPORTED",
+      "selected_action": "NONE",
+      "authority_stage": "NO_ACTION_PROPOSED",
+      "execution_status": "NOT_EXECUTED_NO_ACTION",
+      "finding_id": "b5f27839-847c-5019-a962-7db95011416e",
+      "run_id": "route:88586638-7b55-5d1e",
+      "consultation": null
+     },
+     "at": "2026-11-13T23:27:13.506+00:00"
+    }
+   ],
+   "source": "docs/cops/evaluation/activation/consultation.json"
+  }
+ ],
+ "meta": {
+  "git_commit": "6132f16",
+  "generated_by": "collector/cops/dashboard_export.py",
+  "sources": [
+   {
+    "file": "docs/cops/evaluation/activation/mapping.json",
+    "sha256": "4d45c67ad2eb8aa8e29b5a1d9b0acdae1b027c33939769f193c5fd7f54ee7f48"
+   },
+   {
+    "file": "docs/cops/evaluation/activation/concurrent.json",
+    "sha256": "707123f4a48e34056fb2c62fa95993e409dbf1a896ca00759afdfd84208b571e"
+   },
+   {
+    "file": "docs/cops/evaluation/activation/consultation.json",
+    "sha256": "af96e9cbfcc55d0163bbe4786d42eb55d0fa65913fefcb2e6f4a806a41b2ab83"
+   },
+   {
+    "file": "docs/cops/evaluation/activation/missing_evidence.json",
+    "sha256": "33bcd0878949773593706d8eb1b87be569a0881bc9807a1fd0836e6584eb08a7"
+   },
+   {
+    "file": "docs/cops/evaluation/activation/normal_debugging.json",
+    "sha256": "ad3f7f60e19aa5deeca4a6b30848b84d7fbeecd4d448b2a9ba4886d74b58234d"
+   },
+   {
+    "file": "docs/cops/evaluation/activation/repeated_failures.json",
+    "sha256": "4a63f2ca151ecadfb93354147bf50d038c01e7dc00a13f78686f143e2201f534"
+   }
+  ]
+ }
+}

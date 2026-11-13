@@ -4,6 +4,7 @@ import { RELATIONSHIP_TYPES, COP_EDGE_KINDS } from "../data/contracts.js";
 import { G, layout, metricEdgePath, copEdgePath, nameLines } from "./layout.js";
 import { EdgeDetail, CopEdgeDetail, CopDetail, MetricDetail, Overview } from "./Details.jsx";
 import HierarchyView from "./HierarchyView.jsx";
+import ActivationView from "./ActivationView.jsx";
 import { go } from "../nav.js";
 
 /* Page 1. Renders network.json (contract cops-network/1). Every node, edge and field
@@ -20,7 +21,7 @@ const csv = (s) => (s ? s.split(",").filter(Boolean) : null);
 
 export default function NetworkPage({ data, params }) {
   const net = data.network;
-  const view = params.view === "hierarchy" ? "hierarchy" : "network";
+  const view = ["hierarchy", "activation"].includes(params.view) ? params.view : "network";
   const mode = params.mode === "exercised" ? "exercised" : "configured";
   const rels = csv(params.rel) || RELATIONSHIP_TYPES;
   const kinds = csv(params.kinds) || ["consumes", "referral"];
@@ -73,7 +74,7 @@ export default function NetworkPage({ data, params }) {
     <div className="flex flex-col gap-3">
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex gap-1">
-          {[["network", "Network"], ["hierarchy", "Hierarchy"]].map(([v, t]) => (
+          {[["network", "Network"], ["activation", "Activation"], ["hierarchy", "Hierarchy"]].map(([v, t]) => (
             <button key={v} onClick={() => set({ view: v })} className="text-xs px-2.5 py-1 rounded"
                     style={view === v ? { background: C.ink, color: "#fff" } : { border: `1px solid ${C.rule}`, color: C.body, background: C.panel }}>{t}</button>
           ))}
@@ -108,7 +109,10 @@ export default function NetworkPage({ data, params }) {
         </>}
       </div>
 
-      {view === "hierarchy" ? <HierarchyView net={net} /> : (
+      {view === "activation" ? (data.activation.status === "RECORDED"
+        ? <ActivationView act={data.activation} params={params} set={set} />
+        : <Panel title="Activation records: MISSING" sub={data.activation.missing} />)
+      : view === "hierarchy" ? <HierarchyView net={net} /> : (
         <div className="grid gap-3" style={{ gridTemplateColumns: "minmax(0,1fr) minmax(320px, 420px)" }}>
           <Panel title={`${net.cops.length} COPs · ${net.metrics.length} metrics · ${mEdges.length} metric edges · ${cEdges.length} COP edges shown`}
                  sub={mode === "exercised" ? net.exercised_rule : "Configured relationships from the export; columns are dependency depth in the executed case graph, not the COP hierarchy."}>

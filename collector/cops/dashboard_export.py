@@ -52,6 +52,7 @@ from cops.runtime.evidence_query import ASSESSMENT, QUERY_TYPES, DATA_ACCESS_AUD
 NETWORK_CONTRACT = "cops-network/1"
 DECISIONS_CONTRACT = "cops-decisions/1"
 RETRIEVAL_CONTRACT = "cops-retrieval/1"
+ACTIVATION_CONTRACT = "cops-activation/1"
 
 EVAL = os.path.join(REPO, "docs", "cops", "evaluation")
 SOURCES = {
@@ -63,6 +64,7 @@ SOURCES = {
 SCENARIO_DIR = os.path.join(EVAL, "scenario")
 GATEWAY_DIR = os.path.join(EVAL, "gateway")
 HARBOR_DIR = os.path.join(EVAL, "harbor")
+ACTIVATION_DIR = os.path.join(EVAL, "activation")
 HIERARCHY = os.path.join(REPO, "docs", "cops", "cop_hierarchy.json")
 
 ATTENTION = ("WARNING", "EXCEPTION", "CRITICAL")
@@ -929,6 +931,46 @@ def build_retrieval():
             "query_types": QUERY_TYPES, "consumer_assessment": ASSESSMENT}
 
 
+# ====================================================================== activation
+
+ACTIVATION_STATES = {
+    "defined": "the COP has an activation policy in the approved, active mapping version (mapping.json)",
+    "eligible": "the router recorded ELIGIBLE for the COP in this case (an ELIGIBLE activation record)",
+    "active": "the router recorded ACTIVATED for the COP in this case (an ACTIVATED activation record)",
+}
+
+
+def build_activation():
+    """Activation records as the router wrote them (docs/cops/evaluation/activation, written by
+    python -m cops.runtime.activation_scenario). Nothing is computed here: no state, edge or
+    transition is added that is not in those files."""
+    files = []
+    mp = os.path.join(ACTIVATION_DIR, "mapping.json")
+    if not os.path.exists(mp):
+        return {"contract": ACTIVATION_CONTRACT, "status": "MISSING",
+                "missing": "run: cd collector && python3 -m cops.runtime.activation_scenario "
+                           "--out ../docs/cops/evaluation/activation",
+                "states": ACTIVATION_STATES, "mapping": None, "registry": None, "scenarios": [], "_files": files}
+    m = load(mp)
+    files.append(mp)
+    scenarios = []
+    for name in sorted(os.listdir(ACTIVATION_DIR)):
+        if name == "mapping.json" or not name.endswith(".json"):
+            continue
+        p = os.path.join(ACTIVATION_DIR, name)
+        t = load(p)
+        files.append(p)
+        scenarios.append({k: t[k] for k in ("scenario", "version", "case_id", "investigation_id", "session_id",
+                                            "tenant_id", "mapping_version", "simulated", "summary",
+                                            "chain_verified", "replay", "records")}
+                         | {"source": rel(p)})
+    order = ["normal_debugging", "repeated_failures", "missing_evidence", "concurrent", "consultation"]
+    scenarios.sort(key=lambda x: order.index(x["scenario"]) if x["scenario"] in order else len(order))
+    return {"contract": ACTIVATION_CONTRACT, "status": "RECORDED", "states": ACTIVATION_STATES,
+            "mapping": m["bundle"], "registry": m["registry"], "validation_errors": m["validation_errors"],
+            "scenarios": scenarios, "_files": files}
+
+
 # ====================================================================== main
 
 def _meta(files):
@@ -995,12 +1037,17 @@ def main(argv=None):
     annotate_exercised(net, dec)
     ret = build_retrieval()
     ret["meta"] = _meta([inspect.getsourcefile(sys.modules["cops.runtime.evidence_query"])])
-    for name, obj in (("network.json", net), ("decisions.json", dec), ("retrieval.json", ret)):
+    act = build_activation()
+    act["meta"] = _meta(act.pop("_files"))
+    for name, obj in (("network.json", net), ("decisions.json", dec), ("retrieval.json", ret),
+                      ("activation.json", act)):
         with open(os.path.join(a.out, name), "w") as f:
             json.dump(obj, f, indent=1, default=str, sort_keys=False)
     print(f"cops {len(net['cops'])}  metrics {len(net['metrics'])}  metric edges {len(net['metric_edges'])}  "
           f"cop edges {len(net['cop_edges'])}  hierarchy {net['hierarchy']['status']}")
     print(f"decisions {len(dec['decisions'])}  sessions {len(dec['sessions'])}")
+    print(f"activation {act['status']}  scenarios {len(act['scenarios'])}  "
+          f"records {sum(len(x['records']) for x in act['scenarios'])}")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,439 @@
+{
+ "scenario": "consultation",
+ "version": "activation-scenario-1",
+ "case_id": "case:tenant-a:dbg-consult",
+ "investigation_id": "88586638-7b55-5d1e",
+ "session_id": "dbg-consult",
+ "tenant_id": "tenant-a",
+ "mapping_version": "map-4d9303c348c9f5cf",
+ "simulated": {
+  "session_rows": "synthetic, collector schema fields",
+  "estate": "synthetic: 7 earlier ordinary debugging sessions",
+  "anomaly_detection_model": "none (UnavailableProvider): stops at llm_unavailable",
+  "mode": "dry_run",
+  "approver": "cops-owner@tenant-a.example (fixed test identity)"
+ },
+ "summary": {
+  "verdicts": {
+   "runtime_monitoring": "ELIGIBLE",
+   "behavior_analytics": "NOT_ELIGIBLE",
+   "anomaly_detection": "NOT_ELIGIBLE",
+   "recovery_resilience": "ELIGIBLE"
+  },
+  "final": {
+   "runtime_monitoring": "COMPLETED",
+   "behavior_analytics": "NOT_ELIGIBLE",
+   "anomaly_detection": "NOT_ELIGIBLE",
+   "recovery_resilience": "COMPLETED"
+  },
+  "labels": {
+   "recovery_resilience": "INCONCLUSIVE",
+   "runtime_monitoring": "SUFFICIENT"
+  },
+  "waves": [
+   0,
+   0
+  ],
+  "concurrent": {
+   "recovery_resilience": [
+    "runtime_monitoring"
+   ],
+   "runtime_monitoring": [
+    "recovery_resilience"
+   ]
+  }
+ },
+ "chain_verified": true,
+ "records": [
+  {
+   "record_id": "9943be1d-0330-5982-817e-6c774e856e19",
+   "seq": 1,
+   "case_id": "case:tenant-a:dbg-consult",
+   "investigation_id": "88586638-7b55-5d1e",
+   "cop": "runtime_monitoring",
+   "transition": "CANDIDATE",
+   "reasons": [
+    "policy runtime_monitoring@1#05d90513af in mapping map-4d9303c348c9f5cf"
+   ],
+   "mapping_version": "map-4d9303c348c9f5cf",
+   "policy_id": "runtime_monitoring@1#05d90513af",
+   "evidence": [],
+   "prev_record_id": null,
+   "decision_id": null,
+   "detail": {},
+   "at": "2026-11-13T23:27:13.403+00:00"
+  },
+  {
+   "record_id": "15d71cb6-8c2f-5842-a73c-d8d05f95e624",
+   "seq": 2,
+   "case_id": "case:tenant-a:dbg-consult",
+   "investigation_id": "88586638-7b55-5d1e",
+   "cop": "runtime_monitoring",
+   "transition": "ELIGIBLE",
+   "reasons": [
+    "9 observables in the case"
+   ],
+   "mapping_version": "map-4d9303c348c9f5cf",
+   "policy_id": "runtime_monitoring@1#05d90513af",
+   "evidence": [
+    {
+     "metric": "telemetry.collector_coverage",
+     "state": "NORMAL",
+     "value": 1.0,
+     "refs": []
+    },
+    {
+     "metric": "telemetry.turn_linkage",
+     "state": "NORMAL",
+     "value": 1.0,
+     "refs": []
+    },
+    {
+     "metric": "telemetry.unknown_share",
+     "state": "NORMAL",
+     "value": 0.045,
+     "refs": []
+    }
+   ],
+   "prev_record_id": "9943be1d-0330-5982-817e-6c774e856e19",
+   "decision_id": null,
+   "detail": {
+    "missing_evidence": "ACTIVATE_TO_ASSESS"
+   },
+   "at": "2026-11-13T23:27:13.403+00:00"
+  },
+  {
+   "record_id": "b2387cfe-9bf0-5c09-bca5-73b3a4f669eb",
+   "seq": 3,
+   "case_id": "case:tenant-a:dbg-consult",
+   "investigation_id": "88586638-7b55-5d1e",
+   "cop": "behavior_analytics",
+   "transition": "CANDIDATE",
+   "reasons": [
+    "policy behavior_analytics@1#cadc46f0dc in mapping map-4d9303c348c9f5cf"
+   ],
+   "mapping_version": "map-4d9303c348c9f5cf",
+   "policy_id": "behavior_analytics@1#cadc46f0dc",
+   "evidence": [],
+   "prev_record_id": "15d71cb6-8c2f-5842-a73c-d8d05f95e624",
+   "decision_id": null,
+   "detail": {},
+   "at": "2026-11-13T23:27:13.403+00:00"
+  },
+  {
+   "record_id": "7669d142-195e-5075-bf37-72a158a496bc",
+   "seq": 4,
+   "case_id": "case:tenant-a:dbg-consult",
+   "investigation_id": "88586638-7b55-5d1e",
+   "cop": "behavior_analytics",
+   "transition": "NOT_ELIGIBLE",
+   "reasons": [
+    "insights.retry=0 is NORMAL (needs >= EXCEPTION)",
+    "insights.failed=0 is NORMAL (needs >= EXCEPTION)",
+    "insights.repetition=0 is NORMAL (needs >= EXCEPTION)"
+   ],
+   "mapping_version": "map-4d9303c348c9f5cf",
+   "policy_id": "behavior_analytics@1#cadc46f0dc",
+   "evidence": [
+    {
+     "metric": "insights.failed",
+     "state": "NORMAL",
+     "value": 0,
+     "refs": []
+    },
+    {
+     "metric": "insights.repetition",
+     "state": "NORMAL",
+     "value": 0,
+     "refs": []
+    },
+    {
+     "metric": "insights.retry",
+     "state": "NORMAL",
+     "value": 0,
+     "refs": []
+    }
+   ],
+   "prev_record_id": "b2387cfe-9bf0-5c09-bca5-73b3a4f669eb",
+   "decision_id": null,
+   "detail": {
+    "missing_evidence": "REPORT_UNKNOWN"
+   },
+   "at": "2026-11-13T23:27:13.403+00:00"
+  },
+  {
+   "record_id": "c574cb11-2de2-5f04-b904-56a7f6fdde6f",
+   "seq": 5,
+   "case_id": "case:tenant-a:dbg-consult",
+   "investigation_id": "88586638-7b55-5d1e",
+   "cop": "anomaly_detection",
+   "transition": "CANDIDATE",
+   "reasons": [
+    "policy anomaly_detection@1#c33f5fba76 in mapping map-4d9303c348c9f5cf"
+   ],
+   "mapping_version": "map-4d9303c348c9f5cf",
+   "policy_id": "anomaly_detection@1#c33f5fba76",
+   "evidence": [],
+   "prev_record_id": "7669d142-195e-5075-bf37-72a158a496bc",
+   "decision_id": null,
+   "detail": {},
+   "at": "2026-11-13T23:27:13.403+00:00"
+  },
+  {
+   "record_id": "69f17a0a-ff65-5bf0-ad36-ad386067b463",
+   "seq": 6,
+   "case_id": "case:tenant-a:dbg-consult",
+   "investigation_id": "88586638-7b55-5d1e",
+   "cop": "anomaly_detection",
+   "transition": "NOT_ELIGIBLE",
+   "reasons": [
+    "insights.token_outlier=1.0 is NORMAL (needs >= EXCEPTION)",
+    "insights.duration_outlier=0 is NORMAL (needs >= EXCEPTION)",
+    "activity.action_rate_ratio=1.0 is NORMAL (needs >= EXCEPTION)",
+    "access.first_seen_mcp=0 is NORMAL (needs >= EXCEPTION)",
+    "path.transition_novelty=0.333 is WARNING (needs >= EXCEPTION)"
+   ],
+   "mapping_version": "map-4d9303c348c9f5cf",
+   "policy_id": "anomaly_detection@1#c33f5fba76",
+   "evidence": [
+    {
+     "metric": "access.first_seen_mcp",
+     "state": "NORMAL",
+     "value": 0,
+     "refs": []
+    },
+    {
+     "metric": "activity.action_rate_ratio",
+     "state": "NORMAL",
+     "value": 1.0,
+     "refs": []
+    },
+    {
+     "metric": "insights.duration_outlier",
+     "state": "NORMAL",
+     "value": 0,
+     "refs": []
+    },
+    {
+     "metric": "insights.token_outlier",
+     "state": "NORMAL",
+     "value": 1.0,
+     "refs": []
+    },
+    {
+     "metric": "path.transition_novelty",
+     "state": "WARNING",
+     "value": 0.333,
+     "refs": []
+    }
+   ],
+   "prev_record_id": "c574cb11-2de2-5f04-b904-56a7f6fdde6f",
+   "decision_id": null,
+   "detail": {
+    "missing_evidence": "REPORT_UNKNOWN"
+   },
+   "at": "2026-11-13T23:27:13.404+00:00"
+  },
+  {
+   "record_id": "31ee96c5-f209-5573-86d4-dc7e5c327ac8",
+   "seq": 7,
+   "case_id": "case:tenant-a:dbg-consult",
+   "investigation_id": "88586638-7b55-5d1e",
+   "cop": "recovery_resilience",
+   "transition": "CANDIDATE",
+   "reasons": [
+    "policy recovery_resilience@1#c89326d33e in mapping map-4d9303c348c9f5cf"
+   ],
+   "mapping_version": "map-4d9303c348c9f5cf",
+   "policy_id": "recovery_resilience@1#c89326d33e",
+   "evidence": [],
+   "prev_record_id": "69f17a0a-ff65-5bf0-ad36-ad386067b463",
+   "decision_id": null,
+   "detail": {},
+   "at": "2026-11-13T23:27:13.404+00:00"
+  },
+  {
+   "record_id": "8422b341-dcc9-549c-a495-da559c9fae77",
+   "seq": 8,
+   "case_id": "case:tenant-a:dbg-consult",
+   "investigation_id": "88586638-7b55-5d1e",
+   "cop": "recovery_resilience",
+   "transition": "ELIGIBLE",
+   "reasons": [
+    "insights.reverted=2 is WARNING (needs >= WARNING)"
+   ],
+   "mapping_version": "map-4d9303c348c9f5cf",
+   "policy_id": "recovery_resilience@1#c89326d33e",
+   "evidence": [
+    {
+     "metric": "insights.failed",
+     "state": "NORMAL",
+     "value": 0,
+     "refs": []
+    },
+    {
+     "metric": "insights.retry",
+     "state": "NORMAL",
+     "value": 0,
+     "refs": []
+    },
+    {
+     "metric": "insights.reverted",
+     "state": "WARNING",
+     "value": 2,
+     "refs": [
+      "observable:dbg-consult-7",
+      "observable:dbg-consult-7"
+     ]
+    }
+   ],
+   "prev_record_id": "31ee96c5-f209-5573-86d4-dc7e5c327ac8",
+   "decision_id": null,
+   "detail": {
+    "missing_evidence": "REPORT_UNKNOWN"
+   },
+   "at": "2026-11-13T23:27:13.404+00:00"
+  },
+  {
+   "record_id": "91e863d3-2784-5a22-806d-27e246c3dc25",
+   "seq": 9,
+   "case_id": "case:tenant-a:dbg-consult",
+   "investigation_id": "88586638-7b55-5d1e",
+   "cop": "recovery_resilience",
+   "transition": "ACTIVATED",
+   "reasons": [
+    "wave 0; concurrent with runtime_monitoring"
+   ],
+   "mapping_version": "map-4d9303c348c9f5cf",
+   "policy_id": "recovery_resilience@1#c89326d33e",
+   "evidence": [],
+   "prev_record_id": "8422b341-dcc9-549c-a495-da559c9fae77",
+   "decision_id": null,
+   "detail": {
+    "wave": 0,
+    "concurrent_with": [
+     "runtime_monitoring"
+    ]
+   },
+   "at": "2026-11-13T23:27:13.404+00:00"
+  },
+  {
+   "record_id": "8acdb896-383d-5e3a-aeac-b53cc517ce46",
+   "seq": 10,
+   "case_id": "case:tenant-a:dbg-consult",
+   "investigation_id": "88586638-7b55-5d1e",
+   "cop": "runtime_monitoring",
+   "transition": "ACTIVATED",
+   "reasons": [
+    "wave 0; concurrent with recovery_resilience"
+   ],
+   "mapping_version": "map-4d9303c348c9f5cf",
+   "policy_id": "runtime_monitoring@1#05d90513af",
+   "evidence": [],
+   "prev_record_id": "91e863d3-2784-5a22-806d-27e246c3dc25",
+   "decision_id": null,
+   "detail": {
+    "wave": 0,
+    "concurrent_with": [
+     "recovery_resilience"
+    ]
+   },
+   "at": "2026-11-13T23:27:13.404+00:00"
+  },
+  {
+   "record_id": "2e5afeb8-1416-5294-acf2-d19dfce32e81",
+   "seq": 11,
+   "case_id": "case:tenant-a:dbg-consult",
+   "investigation_id": "88586638-7b55-5d1e",
+   "cop": "recovery_resilience",
+   "transition": "COMPLETED",
+   "reasons": [
+    "INCONCLUSIVE (MISSING_DEPENDENCY)"
+   ],
+   "mapping_version": "map-4d9303c348c9f5cf",
+   "policy_id": "recovery_resilience@1#c89326d33e",
+   "evidence": [],
+   "prev_record_id": "8acdb896-383d-5e3a-aeac-b53cc517ce46",
+   "decision_id": "263ce4b0-eb0d-570f-96b2-e2f8632003d3",
+   "detail": {
+    "label": "INCONCLUSIVE",
+    "status": "MISSING_DEPENDENCY",
+    "verified": false,
+    "vs01": "INSUFFICIENT_EVIDENCE",
+    "selected_action": "REQUEST_CONTEXT",
+    "authority_stage": "AUTHORISED_DRY_RUN",
+    "execution_status": "NOT_EXECUTED_DRY_RUN",
+    "finding_id": "74947af1-28d9-51bd-918e-90f92b442fe4",
+    "run_id": "route:88586638-7b55-5d1e:root:recovery_resilience:070a1939-1718:r1",
+    "consultation": "{\"not_referred\": [], \"resolution\": {\"admitted\": [\"behavior_analytics\"], \"component_changes\": [], \"limit_hit\": [], \"reason\": \"answers were admitted (behavior_analytics) but the reading is still INCONCLUSIVE INSUFFICIENT_EVIDENCE; unknown 1.0 -> 1.0\", \"status\": \"UNRESOLVED\", \"still_uncertain\": true, \"support_direction\": \"level\"}, \"responses\": [{\"delivered_as\": \"evidence\", \"receiver\": \"behavior_analytics\", \"referral_id\": \"c6fd9822-01ab-52e1-8881-4cfb22f2aabe\", \"status\": \"ANSWERED_VERIFIED\"}], \"runs\": 5, \"spent_usd\": 0.0, \"via\": \"referrals.run_investigation\"}"
+   },
+   "at": "2026-11-13T23:27:13.506+00:00"
+  },
+  {
+   "record_id": "6b327241-9f1a-5736-b506-219a1e6d5642",
+   "seq": 12,
+   "case_id": "case:tenant-a:dbg-consult",
+   "investigation_id": "88586638-7b55-5d1e",
+   "cop": "runtime_monitoring",
+   "transition": "COMPLETED",
+   "reasons": [
+    "SUFFICIENT (SUBSTANTIVE)"
+   ],
+   "mapping_version": "map-4d9303c348c9f5cf",
+   "policy_id": "runtime_monitoring@1#05d90513af",
+   "evidence": [],
+   "prev_record_id": "2e5afeb8-1416-5294-acf2-d19dfce32e81",
+   "decision_id": "2175edaa-949f-5c2c-8a28-f7bf24b12198",
+   "detail": {
+    "label": "SUFFICIENT",
+    "status": "SUBSTANTIVE",
+    "verified": true,
+    "vs01": "SUPPORTED",
+    "selected_action": "NONE",
+    "authority_stage": "NO_ACTION_PROPOSED",
+    "execution_status": "NOT_EXECUTED_NO_ACTION",
+    "finding_id": "b5f27839-847c-5019-a962-7db95011416e",
+    "run_id": "route:88586638-7b55-5d1e",
+    "consultation": null
+   },
+   "at": "2026-11-13T23:27:13.506+00:00"
+  }
+ ],
+ "mapping": {
+  "active_version": "map-4d9303c348c9f5cf",
+  "versions": [
+   {
+    "version": "map-4d9303c348c9f5cf",
+    "label": "first slice: RM, BA, AD, R&R",
+    "status": "APPROVED",
+    "parent": null,
+    "proposed_by": "cops-maintainer@tenant-a.example",
+    "proposer_kind": "human",
+    "approved_by": "cops-owner@tenant-a.example",
+    "reason": "first slice of the activation contract",
+    "history": [
+     {
+      "at": "2026-11-13T23:27:12.661+00:00",
+      "event": "proposed",
+      "by": "cops-maintainer@tenant-a.example",
+      "kind": "human",
+      "errors": []
+     },
+     {
+      "at": "2026-11-13T23:27:12.661+00:00",
+      "event": "approved",
+      "by": "cops-owner@tenant-a.example"
+     },
+     {
+      "at": "2026-11-13T23:27:12.662+00:00",
+      "event": "activated"
+     }
+    ]
+   }
+  ]
+ },
+ "replay": {
+  "pinned_version": "map-4d9303c348c9f5cf",
+  "identical": true
+ }
+}
