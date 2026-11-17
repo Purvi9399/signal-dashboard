@@ -8,6 +8,7 @@
     "build": "vite build",
     "lint": "oxlint",
     "preview": "vite preview",
+    "cops:pages": "cd collector && python3 -m cops.signal_pages_export --out ../src/data/cops",
     "cops:export": "cd collector && python3 -m cops.dashboard_export --out ../cops-dashboard/public/data",
     "cops:dev": "vite --config cops-dashboard/vite.config.js",
     "cops:build": "vite build --config cops-dashboard/vite.config.js",

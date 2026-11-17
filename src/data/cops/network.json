@@ -1,0 +1,3294 @@
+{
+ "contract": "signal-cops-network/1",
+ "cops": [
+  {
+   "id": "workflow_orchestration",
+   "name": "Workflow Orchestration",
+   "order": 1,
+   "question": "Is the task progressing coherently toward its intended state?",
+   "metrics": [
+    "insights.stalled",
+    "insights.repetition",
+    "oversight.declined_inferred",
+    "interaction.subagent_lanes"
+   ],
+   "source": "collector/cops/specs.py workflow_orchestration metric_keys"
+  },
+  {
+   "id": "runtime_monitoring",
+   "name": "Runtime Monitoring",
+   "order": 2,
+   "question": "Is the evidence required for this governance decision present, reliable and sufficiently complete?",
+   "metrics": [
+    "telemetry.collector_coverage",
+    "telemetry.source_agreement",
+    "telemetry.turn_linkage",
+    "telemetry.lane_linkage",
+    "telemetry.unknown_share"
+   ],
+   "source": "collector/cops/specs.py runtime_monitoring metric_keys"
+  },
+  {
+   "id": "anomaly_detection",
+   "name": "Anomaly Detection",
+   "order": 3,
+   "question": "Is the observed behaviour materially different from what is expected in this context?",
+   "metrics": [
+    "insights.token_outlier",
+    "insights.duration_outlier",
+    "path.transition_novelty",
+    "activity.action_rate_ratio",
+    "access.first_seen_mcp",
+    "insights.retry",
+    "insights.repetition"
+   ],
+   "source": "collector/cops/specs.py anomaly_detection metric_keys"
+  },
+  {
+   "id": "context_memory",
+   "name": "Context & Memory",
+   "order": 4,
+   "question": "Is the current context internally consistent, relevant to the task, and supported by useful precedent?",
+   "metrics": [
+    "compaction_count",
+    "context_loss_after_compaction",
+    "session_reset",
+    "precedent_match",
+    "context_consistency"
+   ],
+   "source": "collector/cops/specs.py context_memory missing_metrics"
+  },
+  {
+   "id": "interaction_discovery",
+   "name": "Interaction Discovery",
+   "order": 5,
+   "question": "Who or what is interacting with whom, through what route, and how is the activity propagating?",
+   "metrics": [
+    "interaction.subagent_lanes",
+    "interaction.mcp_servers",
+    "access.first_seen_mcp",
+    "telemetry.lane_linkage",
+    "insights.outside"
+   ],
+   "source": "collector/cops/specs.py interaction_discovery metric_keys"
+  },
+  {
+   "id": "incident_response",
+   "name": "Incident Response",
+   "order": 6,
+   "question": "Do the current findings constitute an actionable incident, and what should happen now?",
+   "metrics": [
+    "insights.secrets",
+    "insights.sensitive_unasked",
+    "insights.blocked"
+   ],
+   "source": "collector/cops/specs.py incident_response metric_keys"
+  },
+  {
+   "id": "classification_tagging",
+   "name": "Classification & Tagging",
+   "order": 7,
+   "question": "What kind of governance event is this, and which entities should remain associated with it?",
+   "metrics": [
+    "insights.secrets",
+    "insights.sensitive_unasked",
+    "insights.outside",
+    "insights.blocked"
+   ],
+   "source": "collector/cops/specs.py classification_tagging metric_keys"
+  },
+  {
+   "id": "policy_enforcement",
+   "name": "Policy Enforcement",
+   "order": 8,
+   "question": "Does the observed behaviour violate an explicit permission, policy, entitlement, boundary, or approval requirement?",
+   "metrics": [
+    "insights.blocked",
+    "insights.sensitive_unasked",
+    "insights.outside",
+    "insights.secrets",
+    "oversight.declined_inferred"
+   ],
+   "source": "collector/cops/specs.py policy_enforcement metric_keys"
+  },
+  {
+   "id": "risk_mitigation",
+   "name": "Risk Mitigation",
+   "order": 9,
+   "question": "Do the combined findings create a material or emerging risk, and what residual risk remains after available controls?",
+   "metrics": [
+    "insights.secrets",
+    "insights.sensitive_unasked",
+    "insights.outside",
+    "insights.reverted",
+    "insights.token_outlier"
+   ],
+   "source": "collector/cops/specs.py risk_mitigation metric_keys"
+  },
+  {
+   "id": "resource_management",
+   "name": "Resource Management",
+   "order": 10,
+   "question": "Is resource consumption within entitlement and acceptable operating bounds?",
+   "metrics": [
+    "insights.token_outlier",
+    "insights.duration_outlier",
+    "insights.stalled",
+    "activity.action_rate_ratio"
+   ],
+   "source": "collector/cops/specs.py resource_management metric_keys"
+  },
+  {
+   "id": "governance_intelligence",
+   "name": "Governance Intelligence",
+   "order": 11,
+   "question": "What recurring patterns, concentrations or blind spots indicate a broader governance problem?",
+   "metrics": [
+    "metric_state_trends_from_metric_events",
+    "decision_trends_from_cop_decisions",
+    "repeat_actor_concentration"
+   ],
+   "source": "collector/cops/specs.py governance_intelligence missing_metrics"
+  },
+  {
+   "id": "behavior_analytics",
+   "name": "Behavior Analytics",
+   "order": 12,
+   "question": "What behavioural pattern best characterizes this execution or sequence of executions?",
+   "metrics": [
+    "insights.repetition",
+    "insights.retry",
+    "insights.stalled",
+    "insights.failed",
+    "oversight.fast_approvals"
+   ],
+   "source": "collector/cops/specs.py behavior_analytics metric_keys"
+  },
+  {
+   "id": "recovery_resilience",
+   "name": "Recovery & Resilience",
+   "order": 13,
+   "question": "After failure or intervention, did the system return to a viable state without compounding the problem?",
+   "metrics": [
+    "insights.reverted",
+    "insights.retry",
+    "insights.failed"
+   ],
+   "source": "collector/cops/specs.py recovery_resilience metric_keys"
+  },
+  {
+   "id": "workload_optimization",
+   "name": "Workload Optimization",
+   "order": 14,
+   "question": "Is the workload using tools, models, time and resources efficiently for the task being performed?",
+   "metrics": [
+    "insights.repetition",
+    "insights.duration_outlier",
+    "insights.token_outlier",
+    "activity.action_rate_ratio"
+   ],
+   "source": "collector/cops/specs.py workload_optimization metric_keys"
+  },
+  {
+   "id": "audit_traceability",
+   "name": "Audit & Traceability",
+   "order": 15,
+   "question": "Can every consequential finding, decision and action be attributed and reconstructed from trustworthy evidence?",
+   "metrics": [
+    "insights.unattributed",
+    "telemetry.turn_linkage",
+    "telemetry.lane_linkage",
+    "telemetry.source_agreement"
+   ],
+   "source": "collector/cops/specs.py audit_traceability metric_keys"
+  },
+  {
+   "id": "knowledge_policy_management",
+   "name": "Knowledge & Policy Management",
+   "order": 16,
+   "question": "Are the rules, policies and governance knowledge currently being used still current, coherent and internally consistent?",
+   "metrics": [
+    "policy_store",
+    "policy_version",
+    "rule_conflicts",
+    "rule_hit_rate",
+    "override_rate"
+   ],
+   "source": "collector/cops/specs.py knowledge_policy_management missing_metrics"
+  },
+  {
+   "id": "agent_lifecycle_management",
+   "name": "Agent Lifecycle Management",
+   "order": 17,
+   "question": "Has an agent's identity, version, configuration, capability or connectivity changed in a way requiring governance attention?",
+   "metrics": [
+    "access.first_seen_mcp"
+   ],
+   "source": "collector/cops/specs.py agent_lifecycle_management metric_keys"
+  },
+  {
+   "id": "governance_architecture",
+   "name": "Governance Architecture",
+   "order": 18,
+   "question": "Does the current governance architecture adequately cover the estate and the behaviours actually occurring?",
+   "metrics": [
+    "telemetry.unknown_share"
+   ],
+   "source": "collector/cops/specs.py governance_architecture metric_keys"
+  }
+ ],
+ "metrics": [
+  {
+   "id": "insights.repetition",
+   "name": "Identical call repeated within a turn",
+   "family": "insights",
+   "declared_only": false,
+   "calculation": {
+    "function": "m_repetition",
+    "code": "collector/signal_metrics.py:169",
+    "applies_when": "actions",
+    "basis": "args"
+   },
+   "raw_fields": [
+    "tool_name",
+    "tool_arguments",
+    "turn_id"
+   ],
+   "collector_source": "Signal observables (collector/observables_schema.sql), computed by signal_metrics.compute",
+   "thresholds": {
+    "direction": "above",
+    "warning": 1,
+    "exception": 3,
+    "critical": 10
+   }
+  },
+  {
+   "id": "insights.retry",
+   "name": "Failed command reissued unchanged",
+   "family": "insights",
+   "declared_only": false,
+   "calculation": {
+    "function": "m_retry",
+    "code": "collector/signal_metrics.py:182",
+    "applies_when": "commands",
+    "basis": "commands"
+   },
+   "raw_fields": [
+    "command",
+    "exit_code"
+   ],
+   "collector_source": "Signal observables (collector/observables_schema.sql), computed by signal_metrics.compute",
+   "thresholds": {
+    "direction": "above",
+    "warning": 1,
+    "exception": 2,
+    "critical": 5
+   }
+  },
+  {
+   "id": "insights.stalled",
+   "name": "Execution left hanging",
+   "family": "insights",
+   "declared_only": false,
+   "calculation": {
+    "function": "m_stalled",
+    "code": "collector/signal_metrics.py:193",
+    "applies_when": "always",
+    "basis": "wrapper"
+   },
+   "raw_fields": [
+    "hung_seconds"
+   ],
+   "collector_source": "Signal observables (collector/observables_schema.sql), computed by signal_metrics.compute",
+   "thresholds": {
+    "direction": "above",
+    "warning": 1,
+    "exception": 1,
+    "critical": 3
+   }
+  },
+  {
+   "id": "insights.outside",
+   "name": "Work outside the workspace",
+   "family": "insights",
+   "declared_only": false,
+   "calculation": {
+    "function": "m_outside",
+    "code": "collector/signal_metrics.py:198",
+    "applies_when": "always",
+    "basis": "paths"
+   },
+   "raw_fields": [
+    "file_path",
+    "outside_workspace"
+   ],
+   "collector_source": "Signal observables (collector/observables_schema.sql), computed by signal_metrics.compute",
+   "thresholds": {
+    "direction": "above",
+    "warning": 1,
+    "exception": 1,
+    "critical": 10
+   }
+  },
+  {
+   "id": "insights.sensitive_unasked",
+   "name": "Sensitive path, no approval in session",
+   "family": "insights",
+   "declared_only": false,
+   "calculation": {
+    "function": "m_sensitive_unasked",
+    "code": "collector/signal_metrics.py:203",
+    "applies_when": "always",
+    "basis": "approvals"
+   },
+   "raw_fields": [
+    "sensitivity_tier",
+    "permission_decision"
+   ],
+   "collector_source": "Signal observables (collector/observables_schema.sql), computed by signal_metrics.compute",
+   "thresholds": {
+    "direction": "above",
+    "warning": 1,
+    "exception": 1,
+    "critical": 5
+   }
+  },
+  {
+   "id": "insights.secrets",
+   "name": "Secret-shaped content handled",
+   "family": "insights",
+   "declared_only": false,
+   "calculation": {
+    "function": "m_secrets",
+    "code": "collector/signal_metrics.py:213",
+    "applies_when": "always",
+    "basis": "content"
+   },
+   "raw_fields": [
+    "secret_detected"
+   ],
+   "collector_source": "Signal observables (collector/observables_schema.sql), computed by signal_metrics.compute",
+   "thresholds": {
+    "direction": "above",
+    "warning": 1,
+    "exception": 1,
+    "critical": 3
+   }
+  },
+  {
+   "id": "insights.blocked",
+   "name": "Action stopped by our deny rules",
+   "family": "insights",
+   "declared_only": false,
+   "calculation": {
+    "function": "m_blocked",
+    "code": "collector/signal_metrics.py:218",
+    "applies_when": "always",
+    "basis": "our_rules"
+   },
+   "raw_fields": [
+    "policy_rule_matched"
+   ],
+   "collector_source": "Signal observables (collector/observables_schema.sql), computed by signal_metrics.compute",
+   "thresholds": {
+    "direction": "above",
+    "warning": 1,
+    "exception": 1,
+    "critical": 5
+   }
+  },
+  {
+   "id": "insights.no_oversight",
+   "name": "Long session, nobody asked",
+   "family": "insights",
+   "declared_only": false,
+   "calculation": {
+    "function": "m_no_oversight",
+    "code": "collector/signal_metrics.py:223",
+    "applies_when": "always",
+    "basis": "approvals"
+   },
+   "raw_fields": [
+    "tool_name",
+    "permission_decision"
+   ],
+   "collector_source": "Signal observables (collector/observables_schema.sql), computed by signal_metrics.compute",
+   "thresholds": {
+    "direction": "above",
+    "warning": 41,
+    "exception": 41,
+    "critical": 200
+   }
+  },
+  {
+   "id": "insights.reverted",
+   "name": "Agent work put back",
+   "family": "insights",
+   "declared_only": false,
+   "calculation": {
+    "function": "m_reverted",
+    "code": "collector/signal_metrics.py:230",
+    "applies_when": "effects",
+    "basis": "hashes"
+   },
+   "raw_fields": [
+    "content_hash",
+    "reverted_to_earlier"
+   ],
+   "collector_source": "Signal observables (collector/observables_schema.sql), computed by signal_metrics.compute",
+   "thresholds": {
+    "direction": "above",
+    "warning": 1,
+    "exception": 3,
+    "critical": 10
+   }
+  },
+  {
+   "id": "insights.lockfile",
+   "name": "Manifest changed without lockfile",
+   "family": "insights",
+   "declared_only": false,
+   "calculation": {
+    "function": "m_lockfile",
+    "code": "collector/signal_metrics.py:235",
+    "applies_when": "always",
+    "basis": "fs"
+   },
+   "raw_fields": [
+    "is_dependency_manifest",
+    "is_lockfile"
+   ],
+   "collector_source": "Signal observables (collector/observables_schema.sql), computed by signal_metrics.compute",
+   "thresholds": {
+    "direction": "above",
+    "warning": 1,
+    "exception": 1,
+    "critical": 5
+   }
+  },
+  {
+   "id": "insights.failed",
+   "name": "Actions that failed",
+   "family": "insights",
+   "declared_only": false,
+   "calculation": {
+    "function": "m_failed",
+    "code": "collector/signal_metrics.py:242",
+    "applies_when": "actions",
+    "basis": "outcomes"
+   },
+   "raw_fields": [
+    "success",
+    "exit_code"
+   ],
+   "collector_source": "Signal observables (collector/observables_schema.sql), computed by signal_metrics.compute",
+   "thresholds": {
+    "direction": "above",
+    "warning": 1,
+    "exception": 5,
+    "critical": 20
+   }
+  },
+  {
+   "id": "insights.unattributed",
+   "name": "Disk change no agent accounts for",
+   "family": "insights",
+   "declared_only": false,
+   "calculation": {
+    "function": "m_unattributed",
+    "code": "collector/signal_metrics.py:247",
+    "applies_when": "always",
+    "basis": "fs"
+   },
+   "raw_fields": [
+    "file_path",
+    "attribution"
+   ],
+   "collector_source": "Signal observables (collector/observables_schema.sql), computed by signal_metrics.compute",
+   "thresholds": {
+    "direction": "above",
+    "warning": 1,
+    "exception": 5,
+    "critical": 25
+   }
+  },
+  {
+   "id": "insights.token_outlier",
+   "name": "Session tokens / estate median",
+   "family": "insights",
+   "declared_only": false,
+   "calculation": {
+    "function": "m_token_outlier",
+    "code": "collector/signal_metrics.py:251",
+    "applies_when": "always",
+    "basis": "tokens"
+   },
+   "raw_fields": [
+    "total_tokens"
+   ],
+   "collector_source": "Signal observables (collector/observables_schema.sql), computed by signal_metrics.compute",
+   "thresholds": {
+    "direction": "above",
+    "warning": 3,
+    "exception": 5,
+    "critical": 15
+   }
+  },
+  {
+   "id": "insights.duration_outlier",
+   "name": "Steps beyond 10x median duration",
+   "family": "insights",
+   "declared_only": false,
+   "calculation": {
+    "function": "m_duration_outlier",
+    "code": "collector/signal_metrics.py:257",
+    "applies_when": "steps",
+    "basis": "durations"
+   },
+   "raw_fields": [
+    "tool_duration_ms"
+   ],
+   "collector_source": "Signal observables (collector/observables_schema.sql), computed by signal_metrics.compute",
+   "thresholds": {
+    "direction": "above",
+    "warning": 1,
+    "exception": 1,
+    "critical": 5
+   }
+  },
+  {
+   "id": "telemetry.collector_coverage",
+   "name": "Expected collectors present",
+   "family": "telemetry",
+   "declared_only": false,
+   "calculation": {
+    "function": "m_collector_coverage",
+    "code": "collector/signal_metrics.py:268",
+    "applies_when": "always",
+    "basis": "always"
+   },
+   "raw_fields": [
+    "collector",
+    "contributing"
+   ],
+   "collector_source": "Signal observables (collector/observables_schema.sql), computed by signal_metrics.compute",
+   "thresholds": {
+    "direction": "below",
+    "warning": 0.99,
+    "exception": 0.5,
+    "critical": 0.0
+   }
+  },
+  {
+   "id": "telemetry.source_agreement",
+   "name": "Cross-collector agreement",
+   "family": "telemetry",
+   "declared_only": false,
+   "calculation": {
+    "function": "m_source_agreement",
+    "code": "collector/signal_metrics.py:276",
+    "applies_when": "multi",
+    "basis": "always"
+   },
+   "raw_fields": [
+    "collectors_agree"
+   ],
+   "collector_source": "Signal observables (collector/observables_schema.sql), computed by signal_metrics.compute",
+   "thresholds": {
+    "direction": "below",
+    "warning": 0.99,
+    "exception": 0.9,
+    "critical": 0.5
+   }
+  },
+  {
+   "id": "telemetry.turn_linkage",
+   "name": "Steps carrying a turn id",
+   "family": "telemetry",
+   "declared_only": false,
+   "calculation": {
+    "function": "m_turn_linkage",
+    "code": "collector/signal_metrics.py:284",
+    "applies_when": "steps",
+    "basis": "always"
+   },
+   "raw_fields": [
+    "turn_id"
+   ],
+   "collector_source": "Signal observables (collector/observables_schema.sql), computed by signal_metrics.compute",
+   "thresholds": {
+    "direction": "below",
+    "warning": 0.9,
+    "exception": 0.6,
+    "critical": 0.2
+   }
+  },
+  {
+   "id": "telemetry.lane_linkage",
+   "name": "Subagent lanes linked to a handoff",
+   "family": "telemetry",
+   "declared_only": false,
+   "calculation": {
+    "function": "m_lane_linkage",
+    "code": "collector/signal_metrics.py:291",
+    "applies_when": "subagents",
+    "basis": "always"
+   },
+   "raw_fields": [
+    "agent_id",
+    "observable_type"
+   ],
+   "collector_source": "Signal observables (collector/observables_schema.sql), computed by signal_metrics.compute",
+   "thresholds": {
+    "direction": "below",
+    "warning": 0.99,
+    "exception": 0.5,
+    "critical": 0.0
+   }
+  },
+  {
+   "id": "path.transition_novelty",
+   "name": "Step transitions unseen for this tool",
+   "family": "path",
+   "declared_only": false,
+   "calculation": {
+    "function": "m_transition_novelty",
+    "code": "collector/signal_metrics.py:300",
+    "applies_when": "always",
+    "basis": "always"
+   },
+   "raw_fields": [
+    "tool_name",
+    "command",
+    "observable_type"
+   ],
+   "collector_source": "Signal observables (collector/observables_schema.sql), computed by signal_metrics.compute",
+   "thresholds": {
+    "direction": "above",
+    "warning": 0.25,
+    "exception": 0.5,
+    "critical": 0.8
+   }
+  },
+  {
+   "id": "activity.action_rate_ratio",
+   "name": "Actions/min vs tool median",
+   "family": "activity",
+   "declared_only": false,
+   "calculation": {
+    "function": "m_action_rate",
+    "code": "collector/signal_metrics.py:312",
+    "applies_when": "always",
+    "basis": "always"
+   },
+   "raw_fields": [
+    "tool_name",
+    "occurred_at"
+   ],
+   "collector_source": "Signal observables (collector/observables_schema.sql), computed by signal_metrics.compute",
+   "thresholds": {
+    "direction": "above",
+    "warning": 3,
+    "exception": 5,
+    "critical": 15
+   }
+  },
+  {
+   "id": "access.first_seen_mcp",
+   "name": "MCP server new for this operator",
+   "family": "access",
+   "declared_only": false,
+   "calculation": {
+    "function": "m_first_seen_mcp",
+    "code": "collector/signal_metrics.py:320",
+    "applies_when": "always",
+    "basis": "mcp"
+   },
+   "raw_fields": [
+    "mcp_server"
+   ],
+   "collector_source": "Signal observables (collector/observables_schema.sql), computed by signal_metrics.compute",
+   "thresholds": {
+    "direction": "above",
+    "warning": 1,
+    "exception": 1,
+    "critical": 3
+   }
+  },
+  {
+   "id": "oversight.fast_approvals",
+   "name": "Approvals returned in under a second",
+   "family": "oversight",
+   "declared_only": false,
+   "calculation": {
+    "function": "m_fast_approvals",
+    "code": "collector/signal_metrics.py:329",
+    "applies_when": "asked",
+    "basis": "approvals"
+   },
+   "raw_fields": [
+    "observable_type",
+    "occurred_at"
+   ],
+   "collector_source": "Signal observables (collector/observables_schema.sql), computed by signal_metrics.compute",
+   "thresholds": {
+    "direction": "above",
+    "warning": 1,
+    "exception": 3,
+    "critical": 10
+   }
+  },
+  {
+   "id": "oversight.declined_inferred",
+   "name": "Approval requests apparently declined",
+   "family": "oversight",
+   "declared_only": false,
+   "calculation": {
+    "function": "m_declined_inferred",
+    "code": "collector/signal_metrics.py:334",
+    "applies_when": "asked",
+    "basis": "approvals"
+   },
+   "raw_fields": [
+    "observable_type",
+    "turn_id"
+   ],
+   "collector_source": "Signal observables (collector/observables_schema.sql), computed by signal_metrics.compute",
+   "thresholds": {
+    "direction": "above",
+    "warning": 1,
+    "exception": 3,
+    "critical": 10
+   }
+  },
+  {
+   "id": "interaction.subagent_lanes",
+   "name": "Subagent lanes in session",
+   "family": "interaction",
+   "declared_only": false,
+   "calculation": {
+    "function": "m_subagent_lanes",
+    "code": "collector/signal_metrics.py:340",
+    "applies_when": "always",
+    "basis": "always"
+   },
+   "raw_fields": [
+    "agent_id"
+   ],
+   "collector_source": "Signal observables (collector/observables_schema.sql), computed by signal_metrics.compute",
+   "thresholds": {
+    "direction": "above",
+    "warning": 5,
+    "exception": 15,
+    "critical": 50
+   }
+  },
+  {
+   "id": "interaction.mcp_servers",
+   "name": "Distinct MCP servers used",
+   "family": "interaction",
+   "declared_only": false,
+   "calculation": {
+    "function": "m_mcp_servers",
+    "code": "collector/signal_metrics.py:344",
+    "applies_when": "always",
+    "basis": "mcp"
+   },
+   "raw_fields": [
+    "mcp_server"
+   ],
+   "collector_source": "Signal observables (collector/observables_schema.sql), computed by signal_metrics.compute",
+   "thresholds": {
+    "direction": "above",
+    "warning": 3,
+    "exception": 6,
+    "critical": 12
+   }
+  },
+  {
+   "id": "telemetry.unknown_share",
+   "name": "Share of metrics that could not be judged",
+   "family": "telemetry",
+   "declared_only": false,
+   "calculation": {
+    "function": "compute (telemetry.unknown_share)",
+    "code": "collector/signal_metrics.py:537",
+    "applies_when": "always",
+    "basis": "always"
+   },
+   "raw_fields": [],
+   "collector_source": "Signal observables (collector/observables_schema.sql), computed by signal_metrics.compute",
+   "thresholds": {
+    "direction": "above",
+    "warning": 0.25,
+    "exception": 0.5,
+    "critical": 0.75
+   }
+  },
+  {
+   "id": "compaction_count",
+   "name": "compaction_count",
+   "family": "Context & Memory",
+   "declared_only": true,
+   "calculation": {
+    "missing": "no calculation recorded in tests"
+   },
+   "raw_fields": {
+    "missing": "no calculation recorded in tests"
+   },
+   "collector_source": {
+    "missing": "no calculation recorded in tests"
+   },
+   "thresholds": {
+    "missing": "no calculation recorded in tests"
+   }
+  },
+  {
+   "id": "context_loss_after_compaction",
+   "name": "context_loss_after_compaction",
+   "family": "Context & Memory",
+   "declared_only": true,
+   "calculation": {
+    "missing": "no calculation recorded in tests"
+   },
+   "raw_fields": {
+    "missing": "no calculation recorded in tests"
+   },
+   "collector_source": {
+    "missing": "no calculation recorded in tests"
+   },
+   "thresholds": {
+    "missing": "no calculation recorded in tests"
+   }
+  },
+  {
+   "id": "session_reset",
+   "name": "session_reset",
+   "family": "Context & Memory",
+   "declared_only": true,
+   "calculation": {
+    "missing": "no calculation recorded in tests"
+   },
+   "raw_fields": {
+    "missing": "no calculation recorded in tests"
+   },
+   "collector_source": {
+    "missing": "no calculation recorded in tests"
+   },
+   "thresholds": {
+    "missing": "no calculation recorded in tests"
+   }
+  },
+  {
+   "id": "precedent_match",
+   "name": "precedent_match",
+   "family": "Context & Memory",
+   "declared_only": true,
+   "calculation": {
+    "missing": "no calculation recorded in tests"
+   },
+   "raw_fields": {
+    "missing": "no calculation recorded in tests"
+   },
+   "collector_source": {
+    "missing": "no calculation recorded in tests"
+   },
+   "thresholds": {
+    "missing": "no calculation recorded in tests"
+   }
+  },
+  {
+   "id": "context_consistency",
+   "name": "context_consistency",
+   "family": "Context & Memory",
+   "declared_only": true,
+   "calculation": {
+    "missing": "no calculation recorded in tests"
+   },
+   "raw_fields": {
+    "missing": "no calculation recorded in tests"
+   },
+   "collector_source": {
+    "missing": "no calculation recorded in tests"
+   },
+   "thresholds": {
+    "missing": "no calculation recorded in tests"
+   }
+  },
+  {
+   "id": "metric_state_trends_from_metric_events",
+   "name": "metric_state_trends_from_metric_events",
+   "family": "Governance Intelligence",
+   "declared_only": true,
+   "calculation": {
+    "missing": "no calculation recorded in tests"
+   },
+   "raw_fields": {
+    "missing": "no calculation recorded in tests"
+   },
+   "collector_source": {
+    "missing": "no calculation recorded in tests"
+   },
+   "thresholds": {
+    "missing": "no calculation recorded in tests"
+   }
+  },
+  {
+   "id": "decision_trends_from_cop_decisions",
+   "name": "decision_trends_from_cop_decisions",
+   "family": "Governance Intelligence",
+   "declared_only": true,
+   "calculation": {
+    "missing": "no calculation recorded in tests"
+   },
+   "raw_fields": {
+    "missing": "no calculation recorded in tests"
+   },
+   "collector_source": {
+    "missing": "no calculation recorded in tests"
+   },
+   "thresholds": {
+    "missing": "no calculation recorded in tests"
+   }
+  },
+  {
+   "id": "repeat_actor_concentration",
+   "name": "repeat_actor_concentration",
+   "family": "Governance Intelligence",
+   "declared_only": true,
+   "calculation": {
+    "missing": "no calculation recorded in tests"
+   },
+   "raw_fields": {
+    "missing": "no calculation recorded in tests"
+   },
+   "collector_source": {
+    "missing": "no calculation recorded in tests"
+   },
+   "thresholds": {
+    "missing": "no calculation recorded in tests"
+   }
+  },
+  {
+   "id": "policy_store",
+   "name": "policy_store",
+   "family": "Knowledge & Policy Management",
+   "declared_only": true,
+   "calculation": {
+    "missing": "no calculation recorded in tests"
+   },
+   "raw_fields": {
+    "missing": "no calculation recorded in tests"
+   },
+   "collector_source": {
+    "missing": "no calculation recorded in tests"
+   },
+   "thresholds": {
+    "missing": "no calculation recorded in tests"
+   }
+  },
+  {
+   "id": "policy_version",
+   "name": "policy_version",
+   "family": "Knowledge & Policy Management",
+   "declared_only": true,
+   "calculation": {
+    "missing": "no calculation recorded in tests"
+   },
+   "raw_fields": {
+    "missing": "no calculation recorded in tests"
+   },
+   "collector_source": {
+    "missing": "no calculation recorded in tests"
+   },
+   "thresholds": {
+    "missing": "no calculation recorded in tests"
+   }
+  },
+  {
+   "id": "rule_conflicts",
+   "name": "rule_conflicts",
+   "family": "Knowledge & Policy Management",
+   "declared_only": true,
+   "calculation": {
+    "missing": "no calculation recorded in tests"
+   },
+   "raw_fields": {
+    "missing": "no calculation recorded in tests"
+   },
+   "collector_source": {
+    "missing": "no calculation recorded in tests"
+   },
+   "thresholds": {
+    "missing": "no calculation recorded in tests"
+   }
+  },
+  {
+   "id": "rule_hit_rate",
+   "name": "rule_hit_rate",
+   "family": "Knowledge & Policy Management",
+   "declared_only": true,
+   "calculation": {
+    "missing": "no calculation recorded in tests"
+   },
+   "raw_fields": {
+    "missing": "no calculation recorded in tests"
+   },
+   "collector_source": {
+    "missing": "no calculation recorded in tests"
+   },
+   "thresholds": {
+    "missing": "no calculation recorded in tests"
+   }
+  },
+  {
+   "id": "override_rate",
+   "name": "override_rate",
+   "family": "Knowledge & Policy Management",
+   "declared_only": true,
+   "calculation": {
+    "missing": "no calculation recorded in tests"
+   },
+   "raw_fields": {
+    "missing": "no calculation recorded in tests"
+   },
+   "collector_source": {
+    "missing": "no calculation recorded in tests"
+   },
+   "thresholds": {
+    "missing": "no calculation recorded in tests"
+   }
+  }
+ ],
+ "edges": [
+  {
+   "metric_id": "insights.stalled",
+   "cop_id": "workflow_orchestration",
+   "meaning": {
+    "text": "the task stopped moving",
+    "source": "docs/cops/cops_topology.json edges[cop=workflow_orchestration,metric=insights.stalled].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": [
+     {
+      "when": "this tool cannot show approval prompts",
+      "meaning": "may be waiting on an approval we cannot see, not a hung agent"
+     }
+    ]
+   },
+   "interpretation": {
+    "rule": "read by the deterministic rule; see the function for the exact condition",
+    "where": "collector/cops/runtime/rules.py:workflow_orchestration",
+    "role": "rule_input"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 3,
+    "decision_ids": [
+     "1e882cd1-9ba5-5ab0-8172-a328052bae90",
+     "2f80f168-d09b-5529-aa43-823b02d91ff5",
+     "bench:workflow_orchestration:normal"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.repetition",
+   "cop_id": "workflow_orchestration",
+   "meaning": {
+    "text": "progress may have stopped if repetition clusters at the end of the session",
+    "source": "docs/cops/cops_topology.json edges[cop=workflow_orchestration,metric=insights.repetition].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "missing": "no rule in collector/cops/runtime/rules.py reads this metric for this COP; the metric is given to the model"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 9,
+    "decision_ids": [
+     "112d7456-ba25-5c72-ad4c-04583c38c430",
+     "1e882cd1-9ba5-5ab0-8172-a328052bae90",
+     "29ddc69d-f1ab-52ef-aaed-9cd3822c3f63",
+     "2f80f168-d09b-5529-aa43-823b02d91ff5",
+     "5dcd686b-3174-5720-b69f-6b17237bab47",
+     "88be6846-1e0f-5c00-a502-92b3257a9850",
+     "bench:workflow_orchestration:normal",
+     "d00618fe-3fb9-5f53-b566-7136d3fed648",
+     "d1afdcd7-5c92-5508-a241-1e6296bae5cb"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "oversight.declined_inferred",
+   "cop_id": "workflow_orchestration",
+   "meaning": {
+    "text": "a human stopped the work",
+    "source": "docs/cops/cops_topology.json edges[cop=workflow_orchestration,metric=oversight.declined_inferred].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "missing": "no rule in collector/cops/runtime/rules.py reads this metric for this COP; the metric is given to the model"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 0,
+    "decision_ids": [],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "interaction.subagent_lanes",
+   "cop_id": "workflow_orchestration",
+   "meaning": {
+    "text": "excessive delegation for the task",
+    "source": "docs/cops/cops_topology.json edges[cop=workflow_orchestration,metric=interaction.subagent_lanes].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "missing": "no rule in collector/cops/runtime/rules.py reads this metric for this COP; the metric is given to the model"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 9,
+    "decision_ids": [
+     "112d7456-ba25-5c72-ad4c-04583c38c430",
+     "1e882cd1-9ba5-5ab0-8172-a328052bae90",
+     "29ddc69d-f1ab-52ef-aaed-9cd3822c3f63",
+     "2f80f168-d09b-5529-aa43-823b02d91ff5",
+     "5dcd686b-3174-5720-b69f-6b17237bab47",
+     "88be6846-1e0f-5c00-a502-92b3257a9850",
+     "bench:workflow_orchestration:normal",
+     "d00618fe-3fb9-5f53-b566-7136d3fed648",
+     "d1afdcd7-5c92-5508-a241-1e6296bae5cb"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "telemetry.collector_coverage",
+   "cop_id": "runtime_monitoring",
+   "meaning": {
+    "text": "evidence present: the collectors this tool should have were running",
+    "source": "docs/cops/cops_topology.json edges[cop=runtime_monitoring,metric=telemetry.collector_coverage].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": [
+     {
+      "when": "session seen only through its transcript",
+      "meaning": "a known historical gap, before hooks were installed"
+     },
+     {
+      "when": "session seen only through the terminal wrapper",
+      "meaning": "seen from outside only; nothing about what the agent decided"
+     }
+    ]
+   },
+   "interpretation": {
+    "rule": "EXCEPTION/CRITICAL -> INSUFFICIENT (ALERT); UNKNOWN -> DEGRADED; features.missing -> request collector_breakdown context",
+    "where": "interpret.RuleInterpreter.runtime_monitoring",
+    "role": "driver"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 13,
+    "decision_ids": [
+     "2175edaa-949f-5c2c-8a28-f7bf24b12198",
+     "452794af-9866-561b-b1a0-2981a6fd8170",
+     "581dc3af-a607-50da-908c-ebf6722bb750",
+     "699e2714-ce63-5d2c-87fd-71d5c99387ed",
+     "74200631-a51c-5a55-bcad-7feee942f2be",
+     "7cc52561-e5af-52bb-b4ea-15326a5ff493",
+     "ac16fa11-6f45-58ca-b104-1828e494ef0e",
+     "bench:runtime_monitoring:normal",
+     "c26d78c0-6315-59d7-ac5b-8404c003f8af",
+     "c69b3e39-96ec-55ed-ab75-8b66368af2fd",
+     "da78abad-8c27-51bd-b528-375b3734c68d",
+     "f00d9860-8913-5c3f-bc08-8d1ecc1d2e59",
+     "fade3da6-a7e6-59f8-9021-dd92dc168711"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "telemetry.source_agreement",
+   "cop_id": "runtime_monitoring",
+   "meaning": {
+    "text": "evidence reliable: independent collectors agree",
+    "source": "docs/cops/cops_topology.json edges[cop=runtime_monitoring,metric=telemetry.source_agreement].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "rule": "WARNING+ -> DEGRADED (WATCH); generic: any hot state counts alike, no metric-specific rule",
+    "where": "interpret.RuleInterpreter.runtime_monitoring",
+    "role": "evidence"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 5,
+    "decision_ids": [
+     "2175edaa-949f-5c2c-8a28-f7bf24b12198",
+     "74200631-a51c-5a55-bcad-7feee942f2be",
+     "bench:runtime_monitoring:normal",
+     "c26d78c0-6315-59d7-ac5b-8404c003f8af",
+     "c69b3e39-96ec-55ed-ab75-8b66368af2fd"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "telemetry.turn_linkage",
+   "cop_id": "runtime_monitoring",
+   "meaning": {
+    "text": "evidence complete enough to group actions into turns",
+    "source": "docs/cops/cops_topology.json edges[cop=runtime_monitoring,metric=telemetry.turn_linkage].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "rule": "WARNING+ -> DEGRADED (WATCH); generic: any hot state counts alike, no metric-specific rule",
+    "where": "interpret.RuleInterpreter.runtime_monitoring",
+    "role": "evidence"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 15,
+    "decision_ids": [
+     "2175edaa-949f-5c2c-8a28-f7bf24b12198",
+     "452794af-9866-561b-b1a0-2981a6fd8170",
+     "581dc3af-a607-50da-908c-ebf6722bb750",
+     "699e2714-ce63-5d2c-87fd-71d5c99387ed",
+     "74200631-a51c-5a55-bcad-7feee942f2be",
+     "7cc52561-e5af-52bb-b4ea-15326a5ff493",
+     "ac16fa11-6f45-58ca-b104-1828e494ef0e",
+     "bench:runtime_monitoring:normal",
+     "c26d78c0-6315-59d7-ac5b-8404c003f8af",
+     "c69b3e39-96ec-55ed-ab75-8b66368af2fd",
+     "ceb67679-216c-5a9c-a517-f3967463d215",
+     "da78abad-8c27-51bd-b528-375b3734c68d",
+     "f00d9860-8913-5c3f-bc08-8d1ecc1d2e59",
+     "fade3da6-a7e6-59f8-9021-dd92dc168711",
+     "feeaaba7-99d7-59a4-8a0a-a89a7a058776"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "telemetry.lane_linkage",
+   "cop_id": "runtime_monitoring",
+   "meaning": {
+    "text": "subagent evidence is connected",
+    "source": "docs/cops/cops_topology.json edges[cop=runtime_monitoring,metric=telemetry.lane_linkage].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "rule": "WARNING+ -> DEGRADED (WATCH); generic: any hot state counts alike, no metric-specific rule",
+    "where": "interpret.RuleInterpreter.runtime_monitoring",
+    "role": "evidence"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 0,
+    "decision_ids": [],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "telemetry.unknown_share",
+   "cop_id": "runtime_monitoring",
+   "meaning": {
+    "text": "how much of this session cannot be judged at all",
+    "source": "docs/cops/cops_topology.json edges[cop=runtime_monitoring,metric=telemetry.unknown_share].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "rule": "EXCEPTION/CRITICAL -> INSUFFICIENT; features.unknown listed as 'cannot judge'",
+    "where": "interpret.RuleInterpreter.runtime_monitoring",
+    "role": "driver"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 15,
+    "decision_ids": [
+     "2175edaa-949f-5c2c-8a28-f7bf24b12198",
+     "452794af-9866-561b-b1a0-2981a6fd8170",
+     "581dc3af-a607-50da-908c-ebf6722bb750",
+     "699e2714-ce63-5d2c-87fd-71d5c99387ed",
+     "74200631-a51c-5a55-bcad-7feee942f2be",
+     "7cc52561-e5af-52bb-b4ea-15326a5ff493",
+     "ac16fa11-6f45-58ca-b104-1828e494ef0e",
+     "bench:runtime_monitoring:normal",
+     "c26d78c0-6315-59d7-ac5b-8404c003f8af",
+     "c69b3e39-96ec-55ed-ab75-8b66368af2fd",
+     "ceb67679-216c-5a9c-a517-f3967463d215",
+     "da78abad-8c27-51bd-b528-375b3734c68d",
+     "f00d9860-8913-5c3f-bc08-8d1ecc1d2e59",
+     "fade3da6-a7e6-59f8-9021-dd92dc168711",
+     "feeaaba7-99d7-59a4-8a0a-a89a7a058776"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.token_outlier",
+   "cop_id": "anomaly_detection",
+   "meaning": {
+    "text": "a session unlike others in size",
+    "source": "docs/cops/cops_topology.json edges[cop=anomaly_detection,metric=insights.token_outlier].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "rule": "EXCEPTION/CRITICAL -> ANOMALOUS; WATCH if single, ALERT if >=2 hot or any CRITICAL; ranked by value/threshold",
+    "where": "interpret.RuleInterpreter.anomaly_detection",
+    "role": "driver"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 18,
+    "decision_ids": [
+     "08e3b95d-0c47-5fd7-99bd-92f75271e2bf",
+     "101863f3-1240-59f6-8e8d-5cc6948af9f6",
+     "2cb41d20-0862-5d05-968d-365ee1669d34",
+     "64a8b132-8831-59da-a87b-339e0b31661e",
+     "65260acd-074f-5066-823b-577644fedb25",
+     "9b989c33-f1ed-5497-ad7f-70e8eff1737d",
+     "9fc313ee-1c27-5308-aefc-f86b47410b89",
+     "b1c093a0-aca4-56e0-9418-4c8c38088924",
+     "b28e490d-44a8-5786-91dc-9a957665f062",
+     "b86ebaa6-5b27-5184-ad6e-0bd30c3fd705",
+     "bench:anomaly_detection:normal",
+     "cace5af5-68de-5ec5-b715-4b425e340f9f",
+     "ce133726-3986-5485-962b-718399092929",
+     "e1bb6b88-6a17-50ed-8dae-e8533cbf68d4",
+     "e6afa727-21a3-5fa2-979b-f147b5af9a21",
+     "eb7d1927-66f8-5ecc-8ca0-df7fa5f660d1",
+     "f5d79805-2b78-53a5-a783-5cf32e7b1747",
+     "fbccbcf0-b2f1-5439-b173-0676692764df"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.duration_outlier",
+   "cop_id": "anomaly_detection",
+   "meaning": {
+    "text": "step timing unlike the estate",
+    "source": "docs/cops/cops_topology.json edges[cop=anomaly_detection,metric=insights.duration_outlier].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "rule": "EXCEPTION/CRITICAL -> ANOMALOUS (same ladder)",
+    "where": "interpret.RuleInterpreter.anomaly_detection",
+    "role": "driver"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 23,
+    "decision_ids": [
+     "08e3b95d-0c47-5fd7-99bd-92f75271e2bf",
+     "101863f3-1240-59f6-8e8d-5cc6948af9f6",
+     "2574c902-d4ee-5246-ac73-7e7e27b1107d",
+     "2cb41d20-0862-5d05-968d-365ee1669d34",
+     "64a8b132-8831-59da-a87b-339e0b31661e",
+     "65260acd-074f-5066-823b-577644fedb25",
+     "7a8048a6-eb79-5c9d-88af-f9edceb9ef7e",
+     "814b4360-abd3-5a93-b7c0-ef15f4416f10",
+     "9b989c33-f1ed-5497-ad7f-70e8eff1737d",
+     "9fc313ee-1c27-5308-aefc-f86b47410b89",
+     "b1c093a0-aca4-56e0-9418-4c8c38088924",
+     "b28e490d-44a8-5786-91dc-9a957665f062",
+     "b86ebaa6-5b27-5184-ad6e-0bd30c3fd705",
+     "bench:anomaly_detection:normal",
+     "bfa57225-0496-532f-a758-1b21474f2e39",
+     "c36ddacc-e388-5a2e-8ce2-1077f6610210",
+     "cace5af5-68de-5ec5-b715-4b425e340f9f",
+     "ce133726-3986-5485-962b-718399092929",
+     "e1bb6b88-6a17-50ed-8dae-e8533cbf68d4",
+     "e6afa727-21a3-5fa2-979b-f147b5af9a21",
+     "eb7d1927-66f8-5ecc-8ca0-df7fa5f660d1",
+     "f5d79805-2b78-53a5-a783-5cf32e7b1747",
+     "fbccbcf0-b2f1-5439-b173-0676692764df"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "path.transition_novelty",
+   "cop_id": "anomaly_detection",
+   "meaning": {
+    "text": "the agent moved between steps in ways this tool has not before",
+    "source": "docs/cops/cops_topology.json edges[cop=anomaly_detection,metric=path.transition_novelty].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": [
+     {
+      "when": "first session recorded for this operator",
+      "meaning": "everything is new for a new user; weak signal"
+     }
+    ]
+   },
+   "interpretation": {
+    "rule": "EXCEPTION/CRITICAL -> REQUEST_CONTEXT lane_path first, then ANOMALOUS with novel transitions named",
+    "where": "interpret.RuleInterpreter.anomaly_detection",
+    "role": "driver"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 17,
+    "decision_ids": [
+     "101863f3-1240-59f6-8e8d-5cc6948af9f6",
+     "2cb41d20-0862-5d05-968d-365ee1669d34",
+     "64a8b132-8831-59da-a87b-339e0b31661e",
+     "65260acd-074f-5066-823b-577644fedb25",
+     "9b989c33-f1ed-5497-ad7f-70e8eff1737d",
+     "9fc313ee-1c27-5308-aefc-f86b47410b89",
+     "b28e490d-44a8-5786-91dc-9a957665f062",
+     "b86ebaa6-5b27-5184-ad6e-0bd30c3fd705",
+     "bench:anomaly_detection:normal",
+     "bfa57225-0496-532f-a758-1b21474f2e39",
+     "c36ddacc-e388-5a2e-8ce2-1077f6610210",
+     "cace5af5-68de-5ec5-b715-4b425e340f9f",
+     "ce133726-3986-5485-962b-718399092929",
+     "e1bb6b88-6a17-50ed-8dae-e8533cbf68d4",
+     "e6afa727-21a3-5fa2-979b-f147b5af9a21",
+     "eb7d1927-66f8-5ecc-8ca0-df7fa5f660d1",
+     "fbccbcf0-b2f1-5439-b173-0676692764df"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "activity.action_rate_ratio",
+   "cop_id": "anomaly_detection",
+   "meaning": {
+    "text": "acting much faster than this tool normally does",
+    "source": "docs/cops/cops_topology.json edges[cop=anomaly_detection,metric=activity.action_rate_ratio].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": [
+     {
+      "when": "session delegated to subagents",
+      "meaning": "parallel lanes raise the rate legitimately"
+     }
+    ]
+   },
+   "interpretation": {
+    "rule": "EXCEPTION/CRITICAL -> ANOMALOUS (same ladder)",
+    "where": "interpret.RuleInterpreter.anomaly_detection",
+    "role": "driver"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 20,
+    "decision_ids": [
+     "08e3b95d-0c47-5fd7-99bd-92f75271e2bf",
+     "101863f3-1240-59f6-8e8d-5cc6948af9f6",
+     "2cb41d20-0862-5d05-968d-365ee1669d34",
+     "64a8b132-8831-59da-a87b-339e0b31661e",
+     "65260acd-074f-5066-823b-577644fedb25",
+     "9b989c33-f1ed-5497-ad7f-70e8eff1737d",
+     "9fc313ee-1c27-5308-aefc-f86b47410b89",
+     "b1c093a0-aca4-56e0-9418-4c8c38088924",
+     "b28e490d-44a8-5786-91dc-9a957665f062",
+     "b86ebaa6-5b27-5184-ad6e-0bd30c3fd705",
+     "bench:anomaly_detection:normal",
+     "bfa57225-0496-532f-a758-1b21474f2e39",
+     "c36ddacc-e388-5a2e-8ce2-1077f6610210",
+     "cace5af5-68de-5ec5-b715-4b425e340f9f",
+     "ce133726-3986-5485-962b-718399092929",
+     "e1bb6b88-6a17-50ed-8dae-e8533cbf68d4",
+     "e6afa727-21a3-5fa2-979b-f147b5af9a21",
+     "eb7d1927-66f8-5ecc-8ca0-df7fa5f660d1",
+     "f5d79805-2b78-53a5-a783-5cf32e7b1747",
+     "fbccbcf0-b2f1-5439-b173-0676692764df"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "access.first_seen_mcp",
+   "cop_id": "anomaly_detection",
+   "meaning": {
+    "text": "resource-access novelty",
+    "source": "docs/cops/cops_topology.json edges[cop=anomaly_detection,metric=access.first_seen_mcp].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": [
+     {
+      "when": "first session recorded for this operator",
+      "meaning": "no history to be novel against"
+     }
+    ]
+   },
+   "interpretation": {
+    "rule": "EXCEPTION/CRITICAL -> ANOMALOUS and adds policy_enforcement downstream",
+    "where": "interpret.RuleInterpreter.anomaly_detection",
+    "role": "driver"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 20,
+    "decision_ids": [
+     "08e3b95d-0c47-5fd7-99bd-92f75271e2bf",
+     "101863f3-1240-59f6-8e8d-5cc6948af9f6",
+     "2574c902-d4ee-5246-ac73-7e7e27b1107d",
+     "64a8b132-8831-59da-a87b-339e0b31661e",
+     "65260acd-074f-5066-823b-577644fedb25",
+     "7a8048a6-eb79-5c9d-88af-f9edceb9ef7e",
+     "814b4360-abd3-5a93-b7c0-ef15f4416f10",
+     "9b989c33-f1ed-5497-ad7f-70e8eff1737d",
+     "9fc313ee-1c27-5308-aefc-f86b47410b89",
+     "b1c093a0-aca4-56e0-9418-4c8c38088924",
+     "b28e490d-44a8-5786-91dc-9a957665f062",
+     "b86ebaa6-5b27-5184-ad6e-0bd30c3fd705",
+     "bench:anomaly_detection:normal",
+     "cace5af5-68de-5ec5-b715-4b425e340f9f",
+     "ce133726-3986-5485-962b-718399092929",
+     "e1bb6b88-6a17-50ed-8dae-e8533cbf68d4",
+     "e6afa727-21a3-5fa2-979b-f147b5af9a21",
+     "eb7d1927-66f8-5ecc-8ca0-df7fa5f660d1",
+     "f5d79805-2b78-53a5-a783-5cf32e7b1747",
+     "fbccbcf0-b2f1-5439-b173-0676692764df"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.retry",
+   "cop_id": "anomaly_detection",
+   "meaning": {
+    "text": "notable only against how often this tool normally retries",
+    "source": "docs/cops/cops_topology.json edges[cop=anomaly_detection,metric=insights.retry].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "rule": "EXCEPTION/CRITICAL named in rationale only; never drives",
+    "where": "interpret.RuleInterpreter.anomaly_detection",
+    "role": "supporting"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 15,
+    "decision_ids": [
+     "101863f3-1240-59f6-8e8d-5cc6948af9f6",
+     "2574c902-d4ee-5246-ac73-7e7e27b1107d",
+     "64a8b132-8831-59da-a87b-339e0b31661e",
+     "65260acd-074f-5066-823b-577644fedb25",
+     "7a8048a6-eb79-5c9d-88af-f9edceb9ef7e",
+     "814b4360-abd3-5a93-b7c0-ef15f4416f10",
+     "9fc313ee-1c27-5308-aefc-f86b47410b89",
+     "b28e490d-44a8-5786-91dc-9a957665f062",
+     "b86ebaa6-5b27-5184-ad6e-0bd30c3fd705",
+     "bfa57225-0496-532f-a758-1b21474f2e39",
+     "c36ddacc-e388-5a2e-8ce2-1077f6610210",
+     "cace5af5-68de-5ec5-b715-4b425e340f9f",
+     "ce133726-3986-5485-962b-718399092929",
+     "eb7d1927-66f8-5ecc-8ca0-df7fa5f660d1",
+     "fbccbcf0-b2f1-5439-b173-0676692764df"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.repetition",
+   "cop_id": "anomaly_detection",
+   "meaning": {
+    "text": "only notable if this tool does not normally repeat; repetition alone is not deviation",
+    "source": "docs/cops/cops_topology.json edges[cop=anomaly_detection,metric=insights.repetition].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "rule": "EXCEPTION/CRITICAL named in rationale only; never drives",
+    "where": "interpret.RuleInterpreter.anomaly_detection",
+    "role": "supporting"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 23,
+    "decision_ids": [
+     "08e3b95d-0c47-5fd7-99bd-92f75271e2bf",
+     "101863f3-1240-59f6-8e8d-5cc6948af9f6",
+     "2574c902-d4ee-5246-ac73-7e7e27b1107d",
+     "2cb41d20-0862-5d05-968d-365ee1669d34",
+     "64a8b132-8831-59da-a87b-339e0b31661e",
+     "65260acd-074f-5066-823b-577644fedb25",
+     "7a8048a6-eb79-5c9d-88af-f9edceb9ef7e",
+     "814b4360-abd3-5a93-b7c0-ef15f4416f10",
+     "9b989c33-f1ed-5497-ad7f-70e8eff1737d",
+     "9fc313ee-1c27-5308-aefc-f86b47410b89",
+     "b1c093a0-aca4-56e0-9418-4c8c38088924",
+     "b28e490d-44a8-5786-91dc-9a957665f062",
+     "b86ebaa6-5b27-5184-ad6e-0bd30c3fd705",
+     "bench:anomaly_detection:normal",
+     "bfa57225-0496-532f-a758-1b21474f2e39",
+     "c36ddacc-e388-5a2e-8ce2-1077f6610210",
+     "cace5af5-68de-5ec5-b715-4b425e340f9f",
+     "ce133726-3986-5485-962b-718399092929",
+     "e1bb6b88-6a17-50ed-8dae-e8533cbf68d4",
+     "e6afa727-21a3-5fa2-979b-f147b5af9a21",
+     "eb7d1927-66f8-5ecc-8ca0-df7fa5f660d1",
+     "f5d79805-2b78-53a5-a783-5cf32e7b1747",
+     "fbccbcf0-b2f1-5439-b173-0676692764df"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "compaction_count",
+   "cop_id": "context_memory",
+   "meaning": {
+    "missing": "no meaning recorded under this name"
+   },
+   "interpretation": {
+    "missing": "no calculation recorded in tests"
+   },
+   "implemented": {
+    "missing": "no calculation recorded in tests"
+   },
+   "used": {
+    "missing": "no calculation recorded in tests"
+   }
+  },
+  {
+   "metric_id": "context_loss_after_compaction",
+   "cop_id": "context_memory",
+   "meaning": {
+    "missing": "no meaning recorded under this name"
+   },
+   "interpretation": {
+    "missing": "no calculation recorded in tests"
+   },
+   "implemented": {
+    "missing": "no calculation recorded in tests"
+   },
+   "used": {
+    "missing": "no calculation recorded in tests"
+   }
+  },
+  {
+   "metric_id": "session_reset",
+   "cop_id": "context_memory",
+   "meaning": {
+    "missing": "no meaning recorded under this name"
+   },
+   "interpretation": {
+    "missing": "no calculation recorded in tests"
+   },
+   "implemented": {
+    "missing": "no calculation recorded in tests"
+   },
+   "used": {
+    "missing": "no calculation recorded in tests"
+   }
+  },
+  {
+   "metric_id": "precedent_match",
+   "cop_id": "context_memory",
+   "meaning": {
+    "missing": "no meaning recorded under this name"
+   },
+   "interpretation": {
+    "missing": "no calculation recorded in tests"
+   },
+   "implemented": {
+    "missing": "no calculation recorded in tests"
+   },
+   "used": {
+    "missing": "no calculation recorded in tests"
+   }
+  },
+  {
+   "metric_id": "context_consistency",
+   "cop_id": "context_memory",
+   "meaning": {
+    "missing": "no meaning recorded under this name"
+   },
+   "interpretation": {
+    "missing": "no calculation recorded in tests"
+   },
+   "implemented": {
+    "missing": "no calculation recorded in tests"
+   },
+   "used": {
+    "missing": "no calculation recorded in tests"
+   }
+  },
+  {
+   "metric_id": "interaction.subagent_lanes",
+   "cop_id": "interaction_discovery",
+   "meaning": {
+    "text": "fan-out of delegation",
+    "source": "docs/cops/cops_topology.json edges[cop=interaction_discovery,metric=interaction.subagent_lanes].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "rule": "EXCEPTION/CRITICAL -> PROPAGATING (PASS_TO_COP)",
+    "where": "interpret._interaction_discovery",
+    "role": "driver"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 3,
+    "decision_ids": [
+     "76888a4d-7ff0-59c0-964f-50490eeed8bd",
+     "9dd3a9b1-6871-5634-8551-920efac0d8e8",
+     "bench:interaction_discovery:normal"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "interaction.mcp_servers",
+   "cop_id": "interaction_discovery",
+   "meaning": {
+    "text": "how widely the session reaches",
+    "source": "docs/cops/cops_topology.json edges[cop=interaction_discovery,metric=interaction.mcp_servers].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "rule": "counted as judged; no rule fires on it",
+    "where": "interpret._interaction_discovery",
+    "role": "evidence"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 2,
+    "decision_ids": [
+     "76888a4d-7ff0-59c0-964f-50490eeed8bd",
+     "bench:interaction_discovery:normal"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "access.first_seen_mcp",
+   "cop_id": "interaction_discovery",
+   "meaning": {
+    "text": "a new edge: the agent reached a server it never had",
+    "source": "docs/cops/cops_topology.json edges[cop=interaction_discovery,metric=access.first_seen_mcp].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "rule": "EXCEPTION/CRITICAL -> NEW_ROUTE (PASS_TO_COP policy_enforcement, audit_traceability)",
+    "where": "interpret._interaction_discovery",
+    "role": "driver"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 2,
+    "decision_ids": [
+     "76888a4d-7ff0-59c0-964f-50490eeed8bd",
+     "bench:interaction_discovery:normal"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "telemetry.lane_linkage",
+   "cop_id": "interaction_discovery",
+   "meaning": {
+    "text": "the delegation path is complete",
+    "source": "docs/cops/cops_topology.json edges[cop=interaction_discovery,metric=telemetry.lane_linkage].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "rule": "EXCEPTION/CRITICAL -> PATH_PARTIAL (WATCH), adds audit_traceability; checked first",
+    "where": "interpret._interaction_discovery",
+    "role": "driver"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 0,
+    "decision_ids": [],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.outside",
+   "cop_id": "interaction_discovery",
+   "meaning": {
+    "text": "the agent's reach extends into other repos or the home directory",
+    "source": "docs/cops/cops_topology.json edges[cop=interaction_discovery,metric=insights.outside].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "rule": "EXCEPTION/CRITICAL -> PROPAGATING (PASS_TO_COP policy_enforcement, risk_mitigation)",
+    "where": "interpret._interaction_discovery",
+    "role": "driver"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 2,
+    "decision_ids": [
+     "76888a4d-7ff0-59c0-964f-50490eeed8bd",
+     "bench:interaction_discovery:normal"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.secrets",
+   "cop_id": "incident_response",
+   "meaning": {
+    "text": "secret-shaped content handled",
+    "source": "docs/cops/cops_topology.json edges[cop=incident_response,metric=insights.secrets].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": [
+     {
+      "when": "the commands involved deploy, push or publish",
+      "meaning": "the secret may have left the machine"
+     }
+    ]
+   },
+   "interpretation": {
+    "rule": "EXCEPTION/CRITICAL = exposure -> INCIDENT; ESCALATE if anomaly_detection ANOMALOUS, else ALERT",
+    "where": "interpret.RuleInterpreter.incident_response",
+    "role": "driver"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 3,
+    "decision_ids": [
+     "49a7299f-dcae-5b75-8162-8432d0dba371",
+     "6e902849-341c-5765-9a85-eb3501e8b3ae",
+     "bench:incident_response:normal"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.sensitive_unasked",
+   "cop_id": "incident_response",
+   "meaning": {
+    "text": "an exposure candidate",
+    "source": "docs/cops/cops_topology.json edges[cop=incident_response,metric=insights.sensitive_unasked].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "rule": "same as insights.secrets",
+    "where": "interpret.RuleInterpreter.incident_response",
+    "role": "driver"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 3,
+    "decision_ids": [
+     "49a7299f-dcae-5b75-8162-8432d0dba371",
+     "6e902849-341c-5765-9a85-eb3501e8b3ae",
+     "bench:incident_response:normal"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.blocked",
+   "cop_id": "incident_response",
+   "meaning": {
+    "text": "worth watching when repeated: persistence against a control",
+    "source": "docs/cops/cops_topology.json edges[cop=incident_response,metric=insights.blocked].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "rule": "WARNING+ -> WATCH ('a deny rule fired; the control worked')",
+    "where": "interpret.RuleInterpreter.incident_response",
+    "role": "supporting"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 2,
+    "decision_ids": [
+     "49a7299f-dcae-5b75-8162-8432d0dba371",
+     "bench:incident_response:normal"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.secrets",
+   "cop_id": "classification_tagging",
+   "meaning": {
+    "text": "BOUNDARY, credential",
+    "source": "docs/cops/cops_topology.json edges[cop=classification_tagging,metric=insights.secrets].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "rule": "EXCEPTION/CRITICAL -> INTEGRITY",
+    "where": "interpret._classification_tagging",
+    "role": "driver"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 3,
+    "decision_ids": [
+     "47a0e5f2-6926-5e81-b5d8-2a22520455ca",
+     "bench:classification_tagging:abnormal",
+     "c44d89a8-baf9-5a7e-b1de-3f171d50576b"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.sensitive_unasked",
+   "cop_id": "classification_tagging",
+   "meaning": {
+    "text": "OVERSIGHT",
+    "source": "docs/cops/cops_topology.json edges[cop=classification_tagging,metric=insights.sensitive_unasked].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "rule": "EXCEPTION/CRITICAL -> BOUNDARY",
+    "where": "interpret._classification_tagging",
+    "role": "driver"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 3,
+    "decision_ids": [
+     "47a0e5f2-6926-5e81-b5d8-2a22520455ca",
+     "bench:classification_tagging:abnormal",
+     "c44d89a8-baf9-5a7e-b1de-3f171d50576b"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.outside",
+   "cop_id": "classification_tagging",
+   "meaning": {
+    "text": "BOUNDARY",
+    "source": "docs/cops/cops_topology.json edges[cop=classification_tagging,metric=insights.outside].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "rule": "EXCEPTION/CRITICAL -> BOUNDARY (ranked first)",
+    "where": "interpret._classification_tagging",
+    "role": "driver"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 3,
+    "decision_ids": [
+     "47a0e5f2-6926-5e81-b5d8-2a22520455ca",
+     "bench:classification_tagging:abnormal",
+     "c44d89a8-baf9-5a7e-b1de-3f171d50576b"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.blocked",
+   "cop_id": "classification_tagging",
+   "meaning": {
+    "missing": "no documented meaning in docs/cops/cops_topology.json"
+   },
+   "interpretation": {
+    "rule": "EXCEPTION/CRITICAL -> OVERSIGHT",
+    "where": "interpret._classification_tagging",
+    "role": "driver"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 3,
+    "decision_ids": [
+     "47a0e5f2-6926-5e81-b5d8-2a22520455ca",
+     "bench:classification_tagging:abnormal",
+     "c44d89a8-baf9-5a7e-b1de-3f171d50576b"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.blocked",
+   "cop_id": "policy_enforcement",
+   "meaning": {
+    "text": "a control fired and held",
+    "source": "docs/cops/cops_topology.json edges[cop=policy_enforcement,metric=insights.blocked].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": [
+     {
+      "when": "first session recorded for this operator",
+      "meaning": "likely a new user learning the rules, not persistence"
+     }
+    ]
+   },
+   "interpretation": {
+    "rule": "EXCEPTION/CRITICAL -> VIOLATION (ALERT)",
+    "where": "interpret._policy_enforcement",
+    "role": "driver"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 4,
+    "decision_ids": [
+     "8f10fc2c-9b04-5438-b28c-d9ebc237e26c",
+     "bench:policy_enforcement:normal",
+     "c19de416-8fd4-53e8-b000-e652cc6f9249",
+     "c1ba0a11-3a28-5003-8113-c4b0b41290d7"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.sensitive_unasked",
+   "cop_id": "policy_enforcement",
+   "meaning": {
+    "text": "a sensitive resource touched with no approval in the session",
+    "source": "docs/cops/cops_topology.json edges[cop=policy_enforcement,metric=insights.sensitive_unasked].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": [
+     {
+      "when": "this tool cannot show approval prompts",
+      "meaning": "UNCERTAIN, not VIOLATION: this tool cannot show whether it asked"
+     }
+    ]
+   },
+   "interpretation": {
+    "rule": "EXCEPTION/CRITICAL without a violation metric -> APPROVAL_REQUIRED (REQUEST_APPROVAL)",
+    "where": "interpret._policy_enforcement",
+    "role": "driver"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 4,
+    "decision_ids": [
+     "8f10fc2c-9b04-5438-b28c-d9ebc237e26c",
+     "bench:policy_enforcement:normal",
+     "c19de416-8fd4-53e8-b000-e652cc6f9249",
+     "c1ba0a11-3a28-5003-8113-c4b0b41290d7"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.outside",
+   "cop_id": "policy_enforcement",
+   "meaning": {
+    "text": "a boundary crossing: work outside the workspace",
+    "source": "docs/cops/cops_topology.json edges[cop=policy_enforcement,metric=insights.outside].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": [
+     {
+      "when": "session touched a tier-3 path",
+      "meaning": "outside and sensitive together: credentials or keys, violation-grade"
+     }
+    ]
+   },
+   "interpretation": {
+    "rule": "EXCEPTION/CRITICAL -> VIOLATION (ALERT)",
+    "where": "interpret._policy_enforcement",
+    "role": "driver"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 4,
+    "decision_ids": [
+     "8f10fc2c-9b04-5438-b28c-d9ebc237e26c",
+     "bench:policy_enforcement:normal",
+     "c19de416-8fd4-53e8-b000-e652cc6f9249",
+     "c1ba0a11-3a28-5003-8113-c4b0b41290d7"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.secrets",
+   "cop_id": "policy_enforcement",
+   "meaning": {
+    "text": "secret-handling rule engaged",
+    "source": "docs/cops/cops_topology.json edges[cop=policy_enforcement,metric=insights.secrets].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "rule": "EXCEPTION/CRITICAL -> VIOLATION (ALERT), adds risk_mitigation",
+    "where": "interpret._policy_enforcement",
+    "role": "driver"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 4,
+    "decision_ids": [
+     "8f10fc2c-9b04-5438-b28c-d9ebc237e26c",
+     "bench:policy_enforcement:normal",
+     "c19de416-8fd4-53e8-b000-e652cc6f9249",
+     "c1ba0a11-3a28-5003-8113-c4b0b41290d7"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "oversight.declined_inferred",
+   "cop_id": "policy_enforcement",
+   "meaning": {
+    "text": "a refusal the agent must respect",
+    "source": "docs/cops/cops_topology.json edges[cop=policy_enforcement,metric=oversight.declined_inferred].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "rule": "EXCEPTION/CRITICAL without a violation metric -> APPROVAL_REQUIRED (REQUEST_APPROVAL)",
+    "where": "interpret._policy_enforcement",
+    "role": "driver"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 0,
+    "decision_ids": [],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.secrets",
+   "cop_id": "risk_mitigation",
+   "meaning": {
+    "text": "severity multiplier for every other finding in the session",
+    "source": "docs/cops/cops_topology.json edges[cop=risk_mitigation,metric=insights.secrets].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "missing": "no rule in collector/cops/runtime/rules.py reads this metric for this COP; the metric is given to the model"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 3,
+    "decision_ids": [
+     "3110cd0e-4a58-55db-b011-9c14016c8c54",
+     "bench:risk_mitigation:normal",
+     "ec706f85-e319-5950-9b2e-f129a6f870f7"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.sensitive_unasked",
+   "cop_id": "risk_mitigation",
+   "meaning": {
+    "text": "raises compound risk with secrets or network steps",
+    "source": "docs/cops/cops_topology.json edges[cop=risk_mitigation,metric=insights.sensitive_unasked].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "missing": "no rule in collector/cops/runtime/rules.py reads this metric for this COP; the metric is given to the model"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 3,
+    "decision_ids": [
+     "3110cd0e-4a58-55db-b011-9c14016c8c54",
+     "bench:risk_mitigation:normal",
+     "ec706f85-e319-5950-9b2e-f129a6f870f7"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.outside",
+   "cop_id": "risk_mitigation",
+   "meaning": {
+    "text": "blast radius beyond the project",
+    "source": "docs/cops/cops_topology.json edges[cop=risk_mitigation,metric=insights.outside].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "missing": "no rule in collector/cops/runtime/rules.py reads this metric for this COP; the metric is given to the model"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 3,
+    "decision_ids": [
+     "3110cd0e-4a58-55db-b011-9c14016c8c54",
+     "bench:risk_mitigation:normal",
+     "ec706f85-e319-5950-9b2e-f129a6f870f7"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.reverted",
+   "cop_id": "risk_mitigation",
+   "meaning": {
+    "missing": "no documented meaning in docs/cops/cops_topology.json"
+   },
+   "interpretation": {
+    "missing": "no rule in collector/cops/runtime/rules.py reads this metric for this COP; the metric is given to the model"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 3,
+    "decision_ids": [
+     "3110cd0e-4a58-55db-b011-9c14016c8c54",
+     "bench:risk_mitigation:normal",
+     "ec706f85-e319-5950-9b2e-f129a6f870f7"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.token_outlier",
+   "cop_id": "risk_mitigation",
+   "meaning": {
+    "text": "a contributor to compound risk, not a risk alone",
+    "source": "docs/cops/cops_topology.json edges[cop=risk_mitigation,metric=insights.token_outlier].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "missing": "no rule in collector/cops/runtime/rules.py reads this metric for this COP; the metric is given to the model"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 3,
+    "decision_ids": [
+     "3110cd0e-4a58-55db-b011-9c14016c8c54",
+     "bench:risk_mitigation:normal",
+     "ec706f85-e319-5950-9b2e-f129a6f870f7"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.token_outlier",
+   "cop_id": "resource_management",
+   "meaning": {
+    "text": "consumption far above the estate norm",
+    "source": "docs/cops/cops_topology.json edges[cop=resource_management,metric=insights.token_outlier].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": [
+     {
+      "when": "session delegated to subagents",
+      "meaning": "fan-out explains part of it; judge per lane, not per session"
+     },
+     {
+      "when": "session seen only through its transcript",
+      "meaning": "token counts are the only evidence of how much work was done"
+     }
+    ]
+   },
+   "interpretation": {
+    "rule": "EXCEPTION/CRITICAL -> EXCESSIVE, adds risk_mitigation",
+    "where": "interpret.RuleInterpreter.resource_management",
+    "role": "driver (burn)"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 3,
+    "decision_ids": [
+     "48811c7d-a3da-5010-be98-c5bc75d677d6",
+     "bench:resource_management:normal",
+     "f946132f-08e1-5596-9318-23d71eea492a"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.duration_outlier",
+   "cop_id": "resource_management",
+   "meaning": {
+    "text": "a step held resources far longer than usual",
+    "source": "docs/cops/cops_topology.json edges[cop=resource_management,metric=insights.duration_outlier].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "rule": "EXCEPTION/CRITICAL -> INEFFICIENT, adds workload_optimization",
+    "where": "interpret.RuleInterpreter.resource_management",
+    "role": "driver (waste)"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 3,
+    "decision_ids": [
+     "48811c7d-a3da-5010-be98-c5bc75d677d6",
+     "bench:resource_management:normal",
+     "f946132f-08e1-5596-9318-23d71eea492a"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.stalled",
+   "cop_id": "resource_management",
+   "meaning": {
+    "text": "a hung process holding a terminal and its resources",
+    "source": "docs/cops/cops_topology.json edges[cop=resource_management,metric=insights.stalled].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "rule": "EXCEPTION/CRITICAL -> INEFFICIENT, adds workload_optimization; WARNING alone -> INEFFICIENT (WATCH)",
+    "where": "interpret.RuleInterpreter.resource_management",
+    "role": "driver (waste)"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 3,
+    "decision_ids": [
+     "48811c7d-a3da-5010-be98-c5bc75d677d6",
+     "bench:resource_management:normal",
+     "f946132f-08e1-5596-9318-23d71eea492a"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "activity.action_rate_ratio",
+   "cop_id": "resource_management",
+   "meaning": {
+    "text": "load generated per minute",
+    "source": "docs/cops/cops_topology.json edges[cop=resource_management,metric=activity.action_rate_ratio].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "rule": "EXCEPTION/CRITICAL -> EXCESSIVE, adds risk_mitigation",
+    "where": "interpret.RuleInterpreter.resource_management",
+    "role": "driver (burn)"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 3,
+    "decision_ids": [
+     "48811c7d-a3da-5010-be98-c5bc75d677d6",
+     "bench:resource_management:normal",
+     "f946132f-08e1-5596-9318-23d71eea492a"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "metric_state_trends_from_metric_events",
+   "cop_id": "governance_intelligence",
+   "meaning": {
+    "missing": "no meaning recorded under this name"
+   },
+   "interpretation": {
+    "missing": "no calculation recorded in tests"
+   },
+   "implemented": {
+    "missing": "no calculation recorded in tests"
+   },
+   "used": {
+    "missing": "no calculation recorded in tests"
+   }
+  },
+  {
+   "metric_id": "decision_trends_from_cop_decisions",
+   "cop_id": "governance_intelligence",
+   "meaning": {
+    "missing": "no meaning recorded under this name"
+   },
+   "interpretation": {
+    "missing": "no calculation recorded in tests"
+   },
+   "implemented": {
+    "missing": "no calculation recorded in tests"
+   },
+   "used": {
+    "missing": "no calculation recorded in tests"
+   }
+  },
+  {
+   "metric_id": "repeat_actor_concentration",
+   "cop_id": "governance_intelligence",
+   "meaning": {
+    "missing": "no meaning recorded under this name"
+   },
+   "interpretation": {
+    "missing": "no calculation recorded in tests"
+   },
+   "implemented": {
+    "missing": "no calculation recorded in tests"
+   },
+   "used": {
+    "missing": "no calculation recorded in tests"
+   }
+  },
+  {
+   "metric_id": "insights.repetition",
+   "cop_id": "behavior_analytics",
+   "meaning": {
+    "text": "the agent is looping: same call, same arguments, same turn",
+    "source": "docs/cops/cops_topology.json edges[cop=behavior_analytics,metric=insights.repetition].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": [
+     {
+      "when": "the hit sits in a subagent lane, not the main one",
+      "meaning": "a subagent stuck without progress, invisible from the main lane"
+     },
+     {
+      "when": "the commands involved are test runs",
+      "meaning": "re-running the same check after edits; often verification, not a loop"
+     }
+    ]
+   },
+   "interpretation": {
+    "rule": "read by the deterministic rule; see the function for the exact condition",
+    "where": "collector/cops/runtime/rules.py:behavior_analytics",
+    "role": "rule_input"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 17,
+    "decision_ids": [
+     "15077ed3-b89b-521c-8a6d-af9892502244",
+     "1bacfea1-9667-54c2-b2f9-0c227559d9a6",
+     "1c386248-27c9-522d-971b-09733f762ce8",
+     "22e9c366-93ad-5505-a2db-67048ac7ed3f",
+     "4e0d8a48-b11e-523c-8430-eb7b10b77039",
+     "56c52070-d10f-5296-b85a-4d6168a1f25e",
+     "67c70000-dc80-5a2d-a394-064e39630bd2",
+     "6ac23185-608e-52c1-9ccc-24e435a5e919",
+     "6c4d4a8e-c75d-558f-acea-9265a433a6c1",
+     "70ea458c-c080-52d2-99ea-dead0b59de91",
+     "73c04c13-510e-58f3-a150-14f9eaca964a",
+     "826daa6a-f5b3-53c3-a697-9ca35923bef0",
+     "83bff8d5-d8aa-529b-badc-d511ccb8841c",
+     "b5249e5b-f944-5b2d-a834-8a2bdb95aa26",
+     "b5d01742-ed6c-522d-9065-12a4ddb783dd",
+     "b807d5bb-aa50-5854-b24a-b72877a71363",
+     "bench:behavior_analytics:normal"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.retry",
+   "cop_id": "behavior_analytics",
+   "meaning": {
+    "text": "retry pressure: a failed command reissued unchanged",
+    "source": "docs/cops/cops_topology.json edges[cop=behavior_analytics,metric=insights.retry].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": [
+     {
+      "when": "the commands involved are test runs",
+      "meaning": "the normal red-green loop of test-driven work"
+     },
+     {
+      "when": "the commands involved install dependencies",
+      "meaning": "an environment problem the agent cannot fix by retrying"
+     },
+     {
+      "when": "the commands involved deploy, push or publish",
+      "meaning": "repeated attempts against an external system"
+     }
+    ]
+   },
+   "interpretation": {
+    "rule": "read by the deterministic rule; see the function for the exact condition",
+    "where": "collector/cops/runtime/rules.py:behavior_analytics",
+    "role": "rule_input"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 13,
+    "decision_ids": [
+     "15077ed3-b89b-521c-8a6d-af9892502244",
+     "1bacfea1-9667-54c2-b2f9-0c227559d9a6",
+     "1c386248-27c9-522d-971b-09733f762ce8",
+     "56c52070-d10f-5296-b85a-4d6168a1f25e",
+     "67c70000-dc80-5a2d-a394-064e39630bd2",
+     "6ac23185-608e-52c1-9ccc-24e435a5e919",
+     "6c4d4a8e-c75d-558f-acea-9265a433a6c1",
+     "70ea458c-c080-52d2-99ea-dead0b59de91",
+     "73c04c13-510e-58f3-a150-14f9eaca964a",
+     "826daa6a-f5b3-53c3-a697-9ca35923bef0",
+     "83bff8d5-d8aa-529b-badc-d511ccb8841c",
+     "b5d01742-ed6c-522d-9065-12a4ddb783dd",
+     "b807d5bb-aa50-5854-b24a-b72877a71363"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.stalled",
+   "cop_id": "behavior_analytics",
+   "meaning": {
+    "missing": "no documented meaning in docs/cops/cops_topology.json"
+   },
+   "interpretation": {
+    "rule": "read by the deterministic rule; see the function for the exact condition",
+    "where": "collector/cops/runtime/rules.py:behavior_analytics",
+    "role": "rule_input"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 5,
+    "decision_ids": [
+     "22e9c366-93ad-5505-a2db-67048ac7ed3f",
+     "56c52070-d10f-5296-b85a-4d6168a1f25e",
+     "6c4d4a8e-c75d-558f-acea-9265a433a6c1",
+     "b5d01742-ed6c-522d-9065-12a4ddb783dd",
+     "bench:behavior_analytics:normal"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.failed",
+   "cop_id": "behavior_analytics",
+   "meaning": {
+    "text": "a failure pattern",
+    "source": "docs/cops/cops_topology.json edges[cop=behavior_analytics,metric=insights.failed].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": [
+     {
+      "when": "the commands involved are test runs",
+      "meaning": "failing tests mid-task are expected; failing at the end is not"
+     }
+    ]
+   },
+   "interpretation": {
+    "rule": "read by the deterministic rule; see the function for the exact condition",
+    "where": "collector/cops/runtime/rules.py:behavior_analytics",
+    "role": "rule_input"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 17,
+    "decision_ids": [
+     "15077ed3-b89b-521c-8a6d-af9892502244",
+     "1bacfea1-9667-54c2-b2f9-0c227559d9a6",
+     "1c386248-27c9-522d-971b-09733f762ce8",
+     "22e9c366-93ad-5505-a2db-67048ac7ed3f",
+     "4e0d8a48-b11e-523c-8430-eb7b10b77039",
+     "56c52070-d10f-5296-b85a-4d6168a1f25e",
+     "67c70000-dc80-5a2d-a394-064e39630bd2",
+     "6ac23185-608e-52c1-9ccc-24e435a5e919",
+     "6c4d4a8e-c75d-558f-acea-9265a433a6c1",
+     "70ea458c-c080-52d2-99ea-dead0b59de91",
+     "73c04c13-510e-58f3-a150-14f9eaca964a",
+     "826daa6a-f5b3-53c3-a697-9ca35923bef0",
+     "83bff8d5-d8aa-529b-badc-d511ccb8841c",
+     "b5249e5b-f944-5b2d-a834-8a2bdb95aa26",
+     "b5d01742-ed6c-522d-9065-12a4ddb783dd",
+     "b807d5bb-aa50-5854-b24a-b72877a71363",
+     "bench:behavior_analytics:normal"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "oversight.fast_approvals",
+   "cop_id": "behavior_analytics",
+   "meaning": {
+    "missing": "no documented meaning in docs/cops/cops_topology.json"
+   },
+   "interpretation": {
+    "rule": "read by the deterministic rule; see the function for the exact condition",
+    "where": "collector/cops/runtime/rules.py:behavior_analytics",
+    "role": "rule_input"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 0,
+    "decision_ids": [],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.reverted",
+   "cop_id": "recovery_resilience",
+   "meaning": {
+    "text": "a rollback: did the state return to good",
+    "source": "docs/cops/cops_topology.json edges[cop=recovery_resilience,metric=insights.reverted].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "rule": "read by the deterministic rule; see the function for the exact condition",
+    "where": "collector/cops/runtime/rules.py:recovery_resilience",
+    "role": "rule_input"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 6,
+    "decision_ids": [
+     "263ce4b0-eb0d-570f-96b2-e2f8632003d3",
+     "79979231-aef3-528a-9dcf-4ab2a47aa2b4",
+     "a858063c-b4f2-58bf-85c1-3d8ca65144d8",
+     "bench:recovery_resilience:normal",
+     "c4fa06b2-b47f-5e0c-be53-173ba5ed7fa0",
+     "ff685234-91fc-5ed0-83c2-ecc253a39687"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.retry",
+   "cop_id": "recovery_resilience",
+   "meaning": {
+    "text": "an attempt to recover; whether it worked is the question",
+    "source": "docs/cops/cops_topology.json edges[cop=recovery_resilience,metric=insights.retry].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": [
+     {
+      "when": "the commands involved deploy, push or publish",
+      "meaning": "partial side effects may compound with each attempt"
+     }
+    ]
+   },
+   "interpretation": {
+    "rule": "read by the deterministic rule; see the function for the exact condition",
+    "where": "collector/cops/runtime/rules.py:recovery_resilience",
+    "role": "rule_input"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 6,
+    "decision_ids": [
+     "263ce4b0-eb0d-570f-96b2-e2f8632003d3",
+     "79979231-aef3-528a-9dcf-4ab2a47aa2b4",
+     "a858063c-b4f2-58bf-85c1-3d8ca65144d8",
+     "bench:recovery_resilience:normal",
+     "c4fa06b2-b47f-5e0c-be53-173ba5ed7fa0",
+     "ff685234-91fc-5ed0-83c2-ecc253a39687"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.failed",
+   "cop_id": "recovery_resilience",
+   "meaning": {
+    "text": "something to recover from",
+    "source": "docs/cops/cops_topology.json edges[cop=recovery_resilience,metric=insights.failed].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "rule": "read by the deterministic rule; see the function for the exact condition",
+    "where": "collector/cops/runtime/rules.py:recovery_resilience",
+    "role": "rule_input"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 6,
+    "decision_ids": [
+     "263ce4b0-eb0d-570f-96b2-e2f8632003d3",
+     "79979231-aef3-528a-9dcf-4ab2a47aa2b4",
+     "a858063c-b4f2-58bf-85c1-3d8ca65144d8",
+     "bench:recovery_resilience:normal",
+     "c4fa06b2-b47f-5e0c-be53-173ba5ed7fa0",
+     "ff685234-91fc-5ed0-83c2-ecc253a39687"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.repetition",
+   "cop_id": "workload_optimization",
+   "meaning": {
+    "text": "redundant work: the result was already in hand",
+    "source": "docs/cops/cops_topology.json edges[cop=workload_optimization,metric=insights.repetition].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": [
+     {
+      "when": "the hit sits in a subagent lane, not the main one",
+      "meaning": "redundancy multiplied across parallel subagents"
+     }
+    ]
+   },
+   "interpretation": {
+    "rule": "read by the deterministic rule; see the function for the exact condition",
+    "where": "collector/cops/runtime/rules.py:workload_optimization",
+    "role": "rule_input"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 3,
+    "decision_ids": [
+     "9049c8bf-0502-561a-a4a0-6ec1475b5d48",
+     "bench:workload_optimization:normal",
+     "c9f658cc-a1bf-578b-b8a8-1a20c6a40d23"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.duration_outlier",
+   "cop_id": "workload_optimization",
+   "meaning": {
+    "text": "a bottleneck step",
+    "source": "docs/cops/cops_topology.json edges[cop=workload_optimization,metric=insights.duration_outlier].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "rule": "read by the deterministic rule; see the function for the exact condition",
+    "where": "collector/cops/runtime/rules.py:workload_optimization",
+    "role": "rule_input"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 2,
+    "decision_ids": [
+     "bench:workload_optimization:normal",
+     "c9f658cc-a1bf-578b-b8a8-1a20c6a40d23"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.token_outlier",
+   "cop_id": "workload_optimization",
+   "meaning": {
+    "text": "inefficiency when tokens are high but actions are few",
+    "source": "docs/cops/cops_topology.json edges[cop=workload_optimization,metric=insights.token_outlier].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "missing": "no rule in collector/cops/runtime/rules.py reads this metric for this COP; the metric is given to the model"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 3,
+    "decision_ids": [
+     "9049c8bf-0502-561a-a4a0-6ec1475b5d48",
+     "bench:workload_optimization:normal",
+     "c9f658cc-a1bf-578b-b8a8-1a20c6a40d23"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "activity.action_rate_ratio",
+   "cop_id": "workload_optimization",
+   "meaning": {
+    "text": "throughput relative to peers",
+    "source": "docs/cops/cops_topology.json edges[cop=workload_optimization,metric=activity.action_rate_ratio].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "missing": "no rule in collector/cops/runtime/rules.py reads this metric for this COP; the metric is given to the model"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 3,
+    "decision_ids": [
+     "9049c8bf-0502-561a-a4a0-6ec1475b5d48",
+     "bench:workload_optimization:normal",
+     "c9f658cc-a1bf-578b-b8a8-1a20c6a40d23"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "insights.unattributed",
+   "cop_id": "audit_traceability",
+   "meaning": {
+    "text": "a change on disk no actor can be tied to",
+    "source": "docs/cops/cops_topology.json edges[cop=audit_traceability,metric=insights.unattributed].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "rule": "CRITICAL -> UNATTRIBUTABLE; EXCEPTION -> BROKEN_TRACE; WARNING -> PARTIAL",
+    "where": "interpret._audit_traceability",
+    "role": "driver"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 2,
+    "decision_ids": [
+     "87b613c1-dfe1-5aec-a62e-eb55a8012694",
+     "bench:audit_traceability:normal"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "telemetry.turn_linkage",
+   "cop_id": "audit_traceability",
+   "meaning": {
+    "text": "decisions can be traced to the prompt that caused them",
+    "source": "docs/cops/cops_topology.json edges[cop=audit_traceability,metric=telemetry.turn_linkage].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "rule": "same severity ladder; generic: any hot state counts alike, no metric-specific rule",
+    "where": "interpret._audit_traceability",
+    "role": "driver"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 3,
+    "decision_ids": [
+     "120eeec4-6756-597d-9df9-7d6bbe5fe0a9",
+     "87b613c1-dfe1-5aec-a62e-eb55a8012694",
+     "bench:audit_traceability:normal"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "telemetry.lane_linkage",
+   "cop_id": "audit_traceability",
+   "meaning": {
+    "text": "subagent work can be traced to who started it",
+    "source": "docs/cops/cops_topology.json edges[cop=audit_traceability,metric=telemetry.lane_linkage].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "rule": "same severity ladder; generic: any hot state counts alike, no metric-specific rule",
+    "where": "interpret._audit_traceability",
+    "role": "driver"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 0,
+    "decision_ids": [],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "telemetry.source_agreement",
+   "cop_id": "audit_traceability",
+   "meaning": {
+    "text": "conflicting accounts of the same event",
+    "source": "docs/cops/cops_topology.json edges[cop=audit_traceability,metric=telemetry.source_agreement].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "rule": "same severity ladder; generic: any hot state counts alike, no metric-specific rule",
+    "where": "interpret._audit_traceability",
+    "role": "driver"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 2,
+    "decision_ids": [
+     "87b613c1-dfe1-5aec-a62e-eb55a8012694",
+     "bench:audit_traceability:normal"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "policy_store",
+   "cop_id": "knowledge_policy_management",
+   "meaning": {
+    "missing": "no meaning recorded under this name"
+   },
+   "interpretation": {
+    "missing": "no calculation recorded in tests"
+   },
+   "implemented": {
+    "missing": "no calculation recorded in tests"
+   },
+   "used": {
+    "missing": "no calculation recorded in tests"
+   }
+  },
+  {
+   "metric_id": "policy_version",
+   "cop_id": "knowledge_policy_management",
+   "meaning": {
+    "missing": "no meaning recorded under this name"
+   },
+   "interpretation": {
+    "missing": "no calculation recorded in tests"
+   },
+   "implemented": {
+    "missing": "no calculation recorded in tests"
+   },
+   "used": {
+    "missing": "no calculation recorded in tests"
+   }
+  },
+  {
+   "metric_id": "rule_conflicts",
+   "cop_id": "knowledge_policy_management",
+   "meaning": {
+    "missing": "no meaning recorded under this name"
+   },
+   "interpretation": {
+    "missing": "no calculation recorded in tests"
+   },
+   "implemented": {
+    "missing": "no calculation recorded in tests"
+   },
+   "used": {
+    "missing": "no calculation recorded in tests"
+   }
+  },
+  {
+   "metric_id": "rule_hit_rate",
+   "cop_id": "knowledge_policy_management",
+   "meaning": {
+    "missing": "no meaning recorded under this name"
+   },
+   "interpretation": {
+    "missing": "no calculation recorded in tests"
+   },
+   "implemented": {
+    "missing": "no calculation recorded in tests"
+   },
+   "used": {
+    "missing": "no calculation recorded in tests"
+   }
+  },
+  {
+   "metric_id": "override_rate",
+   "cop_id": "knowledge_policy_management",
+   "meaning": {
+    "missing": "no meaning recorded under this name"
+   },
+   "interpretation": {
+    "missing": "no calculation recorded in tests"
+   },
+   "implemented": {
+    "missing": "no calculation recorded in tests"
+   },
+   "used": {
+    "missing": "no calculation recorded in tests"
+   }
+  },
+  {
+   "metric_id": "access.first_seen_mcp",
+   "cop_id": "agent_lifecycle_management",
+   "meaning": {
+    "text": "the agent's connectivity changed",
+    "source": "docs/cops/cops_topology.json edges[cop=agent_lifecycle_management,metric=access.first_seen_mcp].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "rule": "read by the deterministic rule; see the function for the exact condition",
+    "where": "collector/cops/runtime/rules.py:agent_lifecycle_management",
+    "role": "rule_input"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 2,
+    "decision_ids": [
+     "5a066f8d-ce05-5a2a-a046-78062facb353",
+     "bench:agent_lifecycle_management:normal"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  },
+  {
+   "metric_id": "telemetry.unknown_share",
+   "cop_id": "governance_architecture",
+   "meaning": {
+    "text": "where the architecture is blind",
+    "source": "docs/cops/cops_topology.json edges[cop=governance_architecture,metric=telemetry.unknown_share].means",
+    "status": "documented (target-state doc, not code)",
+    "context_changes": []
+   },
+   "interpretation": {
+    "missing": "no rule in collector/cops/runtime/rules.py reads this metric for this COP; the metric is given to the model"
+   },
+   "implemented": {
+    "value": "yes",
+    "basis": "listed in specs.py metric_keys, so the COP receives it",
+    "source": "collector/cops/specs.py"
+   },
+   "used": {
+    "count": 3,
+    "decision_ids": [
+     "3694cd47-88f6-522b-8217-d84636a41e3a",
+     "718a3ed5-40ea-509c-a50b-8f79111d6773",
+     "cb9f19a4-29eb-5d26-ae93-d33e53392030"
+    ],
+    "rule": "a metric edge is exercised when a recorded decision of that COP read the metric with evidence OBSERVED or sufficiency RETRIEVED_AND_VALIDATED / PRESENT_BUT_UNVERIFIED"
+   }
+  }
+ ],
+ "families": [
+  "insights",
+  "telemetry",
+  "path",
+  "activity",
+  "access",
+  "oversight",
+  "interaction",
+  "Context & Memory",
+  "Governance Intelligence",
+  "Knowledge & Policy Management"
+ ],
+ "counts": {
+  "cops": 18,
+  "metrics": 39,
+  "edges": 73,
+  "calculated_metrics": 26
+ },
+ "meta": {
+  "git_commit": "b921ed5",
+  "generated_by": "collector/cops/dashboard_export.py",
+  "sources": [
+   {
+    "file": "docs/cops/metric_cop_mappings.json",
+    "sha256": "9fd22bd04c3467f5318d90f03594cafb4be50f4fd8333ba8cde6046005f89fbd"
+   },
+   {
+    "file": "docs/cops/cops_topology.json",
+    "sha256": "6754a6297a5f452889250d126788285e69d1cb7dfc680f9798d125167a4350d0"
+   },
+   {
+    "file": "collector/metrics_config.json",
+    "sha256": "d17f50e5ff339184b7cd24b00f6ed5b094b834145f77413c6a46257605cb0b73"
+   }
+  ]
+ }
+}

@@ -154,6 +154,7 @@ class Router:
         self.max_parallel, self.max_runs, self.timeout_s = max_parallel, max_runs, timeout_s
         self.run_hook = run_hook
         self.done = {}                     # dedupe key -> record_id of the activation it duplicates
+        self.states = {}                   # (case_id, cop) -> final COP run state, for decision_record.run_detail
 
     # ------------------------------------------------------------------ public
     def route(self, events, estate_rows=()):
@@ -280,9 +281,11 @@ class Router:
         else:
             from .graph import run_cop
             out = run_cop(rt, cop, upstream=upstream, thread_id=f"{rt.run_id}:{cop}")
-            consult, run_id = None, out["result"].get("run_id")
+            consult, run_id, inv = None, out["result"].get("run_id"), None
         res = dict(out["result"])
         res["_decision_id"] = decision_id(run_id, rt.case.session_id, cop)
+        roots = [k for k in (inv["states"] if consult else {}) if str(k).startswith("root:")]
+        self.states[(rt.case.case_id, cop)] = inv["states"][roots[-1]] if roots else out
         return res, out["published"], consult
 
     def _run_wave(self, rt, cops, published):
