@@ -156,6 +156,9 @@ def test_record_integrity_rates():
     ev = run(rows)
     assert ev[(sid, "audit_timestamp_integrity")]["value"] == 0.5
     assert ev[(sid, "audit_unverifiable_record_rate")]["value"] == 0.5
+    mixed = rows + [row(sid, 12, 6, captured_at="2026-10-09T10:06:00", ingested_at="not a time")]
+    f = one(mixed, sid, "audit_timestamp_integrity")
+    assert f["value"] == 0.5 and f["features"]["unreadable"] == 1 and f["error"] is None
 
 
 def test_changes_since_the_previous_session():

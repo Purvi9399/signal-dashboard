@@ -1339,9 +1339,18 @@ def m_audit_timestamp_integrity(s, e, cfg):
     rows = [r for r in unique_rows(s) if r.get("occurred_at") and r.get("captured_at") and r.get("ingested_at")]
     if not rows:
         return missing("no row carries occurred_at, captured_at and ingested_at", "captured_at", "ingested_at")
-    t = signal_traces.ts
-    bad = [r for r in rows if not (t(r["occurred_at"]) <= t(r["captured_at"]) <= t(r["ingested_at"]))]
-    return round(1 - len(bad) / len(rows), 3), {"rows": len(rows), "violations": len(bad)}, refs("observable", bad, "observable_id"), None
+    read, bad = [], []
+    for r in rows:
+        a, b, c = (signal_traces.ts(r[k]) for k in ("occurred_at", "captured_at", "ingested_at"))
+        if not (a and b and c) or len({x.tzinfo is None for x in (a, b, c)}) > 1:
+            continue
+        read.append(r)
+        if not a <= b <= c:
+            bad.append(r)
+    if not read:
+        return missing("timestamps could not be read or mix zoned and unzoned values", "captured_at", "ingested_at")
+    return round(1 - len(bad) / len(read), 3), {"rows": len(read), "violations": len(bad), "unreadable": len(rows) - len(read)}, \
+        refs("observable", bad, "observable_id"), None
 
 def m_audit_source_provenance_completeness(s, e, cfg):
     if not fetched(s, "raw_ref"):
