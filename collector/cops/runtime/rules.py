@@ -25,6 +25,7 @@ Existing interpreters in cops/interpret.py are reused for the eight COPs that
 have them, so their tested behaviour carries over unchanged.
 """
 
+import functools
 import types
 
 from ..interpret import RuleInterpreter, SEV, RANK
@@ -33,6 +34,7 @@ from .contracts import (Claim, CLAIM_METRIC_STATE, CLAIM_TOOL_OBSERVATION, CLAIM
                         CLAIM_MEMORY_PRECEDENT, CLAIM_ABSENCE, ORIGIN_RULES,
                         SUBSTANTIVE, MISSING_DEPENDENCY, ATTENTION_STATES)
 from ..interpret import EVIDENCE_LEVEL
+from ..specs import BY_KEY
 
 _RI = RuleInterpreter()
 HOT = ("EXCEPTION", "CRITICAL")
@@ -305,9 +307,118 @@ def resource_management(ctx):
     f = _from_legacy(ctx, out, extra)
     f["missing_dependencies"] = miss
     f["cop_specific"]["consumption"] = use
+    _attribute_consumption(ctx, f)
+    adv = ctx.get("feedback", {}).get("workload_optimization")
+    if adv:
+        f["cop_specific"]["advisory"] = {
+            "from": "workload_optimization", "finding_id": adv.get("finding_id"), "run_id": adv.get("run_id"),
+            "label": adv.get("label"), "verified": bool(adv.get("verified")),
+            "recommendation": (adv.get("proposed_action") or {}).get("action"), "applied": False,
+            "note": "earlier-cycle recommendation, advisory only: no budget, quota, permission or "
+                    "allocation is changed by it"}
     return f
 
 
+CONSUMPTION_READINGS = ("EXCESSIVE", "INEFFICIENT", "UNAUTHORIZED")
+
+
+def _lane_spans(session):
+    spans = {}
+    for lane, steps in session.trace["lanes"].items():
+        t = [x for st in steps for x in (st.get("started_at"), st.get("ended_at")) if x]
+        if t:
+            spans[lane] = (min(t), max(t))
+    return spans
+
+
+def _attribute_consumption(ctx, f):
+    """Where the session's consumption sits, from Interaction Discovery's verified graph.
+
+    Consumption metrics are session totals. When the session has subagent lanes or MCP
+    servers, a reading above bounds is attributable only through a verified, complete
+    interaction graph; without one the reading stands but its confidence is discounted
+    as for degraded evidence and the attribution is UNATTRIBUTED."""
+    s = ctx["case"].session
+    lanes = sorted(l for l in (s.trace["lanes"] if s else {}) if l != "main")
+    servers = sorted({r["mcp_server"] for r in (s.rows if s else []) if r.get("mcp_server")})
+    cs = f["cop_specific"]
+    if not lanes and not servers:
+        cs["attribution"] = {"status": "NOT_NEEDED", "reason": "one lane and no MCP server"}
+        return
+    if f["label"] not in CONSUMPTION_READINGS:
+        cs["attribution"] = {"status": "NOT_NEEDED", "reason": f"{f['label']}: nothing above bounds to attribute"}
+        return
+    idf = verified(ctx["upstream"], "interaction_discovery")
+    if idf is None or idf["label"] == "PATH_PARTIAL":
+        why = ("Interaction Discovery reports the interaction path as partial" if idf else
+               "no verified Interaction Discovery finding")
+        f["confidence"] = round(f["confidence"] * EVIDENCE_LEVEL["DEGRADED"] / EVIDENCE_LEVEL["SUFFICIENT"], 3)
+        cs["attribution"] = {"status": "UNATTRIBUTED", "reason": why, "subagent_lanes": len(lanes),
+                             "mcp_servers": len(servers)}
+        f["rationale"] += (f"; consumption spans {len(lanes)} subagent lane(s) and {len(servers)} MCP "
+                           f"server(s) and cannot be attributed: {why}")
+        return
+    edges = (idf.get("cop_specific") or {}).get("edges") or []
+    agents = sorted(e["to"][len("agent:"):] for e in edges if e["to"].startswith("agent:"))
+    work = [e for e in edges if not e["to"].startswith("agent:")]
+    by_actor = {}
+    for e in work:
+        by_actor[e["from"]] = by_actor.get(e["from"], 0) + e["count"]
+    mcp = {e["to"][len("mcp:"):]: e["count"] for e in work if e["to"].startswith("mcp:")}
+    total = sum(e["count"] for e in work)
+    spans = _lane_spans(s)
+    overlapping = sorted(a for a in agents if a in spans and any(
+        b not in (a, "main") and spans[b][0] <= spans[a][1] and spans[a][0] <= spans[b][1] for b in spans))
+    cs["attribution"] = {
+        "status": "ATTRIBUTED", "source_finding": idf.get("finding_id"), "interaction": idf["label"],
+        "subagent_lanes": agents, "parallel_lanes": overlapping, "calls_by_actor": by_actor,
+        "mcp_calls": mcp, "mcp_call_share": round(sum(mcp.values()) / total, 3) if total else None,
+        "subagent_call_share": round(sum(n for a, n in by_actor.items() if a != "main") / total, 3)
+        if total else None}
+    f["claims"].append(uclaim("interaction_discovery", idf).to_dict())
+    f["upstream_used"] = list(f.get("upstream_used") or []) + [
+        {"cop": "interaction_discovery", "label": idf["label"], "finding_id": idf.get("finding_id"),
+         "counted_as": "attribution of consumption"}]
+    f["rationale"] += (f"; attributed through Interaction Discovery ({idf['label']}): "
+                       f"{len(agents)} subagent lane(s), {len(overlapping)} running alongside another subagent, "
+                       f"{sum(mcp.values())} of {total} calls to MCP servers")
+
+
+def _with_pattern_persistence(rule):
+    """Behaviour Analytics' reading, then whether a deviation Anomaly Detection verified in
+    an earlier cycle recurs in it. The earlier finding is evidence about persistence only:
+    it changes no label, confidence or baseline."""
+    @functools.wraps(rule)
+    def wrapped(ctx):
+        return _pattern_persistence(ctx, rule(ctx))
+    return wrapped
+
+
+def _pattern_persistence(ctx, f):
+    prior = verified(ctx.get("feedback"), "anomaly_detection")
+    cs = f["cop_specific"]
+    if prior is None:
+        cs["pattern_persistence"] = {"status": "NO_VERIFIED_HISTORY"}
+        return f
+    ref = {"finding_id": prior.get("finding_id"), "run_id": prior.get("run_id"),
+           "decided_at": prior.get("decided_at"), "label": prior["label"]}
+    if prior["label"] != "ANOMALOUS":
+        st = "NO_EARLIER_DEVIATION"
+    elif f["label"] in ("LOOPING", "POOR_RECOVERY", "DRIFTING", "OVER_EXPLORING"):
+        st = "RECURRING"
+        f["rationale"] += (f"; Anomaly Detection verified a deviation in an earlier cycle "
+                           f"({prior.get('run_id')}) and the pattern is present again")
+    elif f["label"] == "STABLE":
+        st = "NOT_RECURRING"
+        f["rationale"] += f"; the deviation verified in an earlier cycle ({prior.get('run_id')}) is not present now"
+    else:
+        st = "UNDETERMINED"
+    cs["pattern_persistence"] = {"status": st, "earlier_finding": ref,
+                                 "baseline_updated": False}
+    return f
+
+
+@_with_pattern_persistence
 def behavior_analytics(ctx):
     m = {e.metric_id: e for e in ctx["events"]}
     up = ctx["upstream"]
@@ -589,12 +700,14 @@ def incident_response(ctx):
     out = _RI.incident_response(ctx["events"], _legacy_up(up), {}, evidence_conf(up))
     used, claims = [], []
     for cop in ("anomaly_detection", "policy_enforcement", "runtime_monitoring", "recovery_resilience",
-                "workflow_orchestration", "interaction_discovery"):
+                "workflow_orchestration", "interaction_discovery", "classification_tagging",
+                "resource_management"):
         f = verified(up, cop)
         if f:
             used.append({"cop": cop, "label": f["label"], "finding_id": f.get("finding_id"),
                          "counted_as": "input"})
-            if f["label"] not in ("NORMAL", "SUFFICIENT", "ALLOWED", "CONTAINED", "RECOVERED"):
+            if f["label"] not in ("NORMAL", "SUFFICIENT", "ALLOWED", "CONTAINED", "RECOVERED",
+                                  BY_KEY[cop].interpretations[0]):
                 claims.append(uclaim(cop, f))
     rr = verified(up, "recovery_resilience", "FAILED_RECOVERY", "IRREVERSIBLE")
     if rr and out["interpretation"] != "INCIDENT":
@@ -612,6 +725,10 @@ def incident_response(ctx):
     f = _from_legacy(ctx, out, claims)
     f["upstream_used"] = used
     f["cop_specific"]["independence"] = ind
+    risk = verified(ctx.get("feedback"), "risk_mitigation")
+    f["cop_specific"]["earlier_risk_assessment"] = {
+        "finding_id": risk.get("finding_id"), "run_id": risk.get("run_id"),
+        "decided_at": risk.get("decided_at"), "label": risk["label"]} if risk else None
     return f
 
 

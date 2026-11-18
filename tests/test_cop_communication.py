@@ -123,7 +123,7 @@ def test_feedback_reaches_only_its_consumer_and_stays_out_of_the_cycle(first):
     ba = out["results"]["behavior_analytics"]
     assert {u["cop"] for u in ba["upstream"]} == set(specs.CONSUMES["behavior_analytics"])
     assert [r["cop"] for r in ba["feedback"] if r["delivered"]] == ["anomaly_detection"]
-    assert out["results"]["incident_response"]["feedback"] == []
+    assert out["results"]["policy_enforcement"]["feedback"] == []
 
 
 def test_feedback_without_cycle_provenance_is_refused(first):
@@ -165,3 +165,12 @@ def test_unverified_feedback(first):
     rt = E.make_runtime("comm-unverified-cop", "c01", ROWS, {}, None)
     r = run_cop(rt, "behavior_analytics", history=history)["result"]
     assert not any(x["delivered"] for x in r["feedback"])
+
+
+def test_edge_report_keeps_spec_rows_in_place_and_lists_topology_edges_last():
+    rows = specs.edge_report()
+    added = [{"from": u, "to": c, "issue": "consumed_not_declared"}
+             for c, ups in specs.TOPOLOGY_CONSUMES.items() for u in ups]
+    assert rows[-len(added):] == added
+    assert {"from": "risk_mitigation", "to": "incident_response", "issue": "declared_not_consumed"} \
+        == rows[14]

@@ -269,13 +269,17 @@ CONSUMES = {k: v + tuple(u for u in TOPOLOGY_CONSUMES.get(k, ()) if u not in v)
 # Previous-cycle feedback: the topology's reverse edges of AD <-> BA and
 # ResM <-> WkO. The consumer receives the producer's finding from an earlier
 # evaluation cycle only; neither COP is invoked again in the current cycle.
+# Risk Mitigation -> Incident Response is the reverse of the current-cycle
+# IR -> RiskM edge, so it is feedback too.
 FEEDBACK = {
     "behavior_analytics":  ("anomaly_detection",),
     "resource_management": ("workload_optimization",),
+    "incident_response":   ("risk_mitigation",),
 }
 # Feedback edges on which an unverified finding is withheld rather than delivered
 # as context.
-FEEDBACK_VERIFIED_ONLY = {("anomaly_detection", "behavior_analytics")}
+FEEDBACK_VERIFIED_ONLY = {("anomaly_detection", "behavior_analytics"),
+                          ("risk_mitigation", "incident_response")}
 for _c, _ps in FEEDBACK.items():
     for _p in _ps:
         assert _p in CONSUMES and _p != _c and _p not in CONSUMES[_c], (_p, _c)
@@ -324,12 +328,17 @@ def edge_report():
     """Hand-written hand-offs that the consumption list does not carry, and the reverse."""
     rows = []
     for key, declared in DECLARED_DOWNSTREAM.items():
-        derived = set(_consumers(key))
+        derived = set(_consumers(key, SPEC_CONSUMES))
         for d in declared:
             if d not in derived:
                 rows.append({"from": key, "to": d, "issue": "declared_not_consumed"})
         for d in sorted(derived - set(declared)):
             rows.append({"from": key, "to": d, "issue": "consumed_not_declared"})
+    # topology edges last, so the rows above keep their positions
+    for key, ups in TOPOLOGY_CONSUMES.items():
+        for u in ups:
+            if key not in DECLARED_DOWNSTREAM[u] and u not in SPEC_CONSUMES[key]:
+                rows.append({"from": u, "to": key, "issue": "consumed_not_declared"})
     return rows
 
 

@@ -282,6 +282,7 @@ def _rule_ctx(rt, state, calls):
                                      "result": c.get("result")})
     return {"spec": spec, "events": _events(rt, state["cop"], state["picture"]),
             "picture": state["picture"], "upstream": state.get("upstream") or {},
+            "feedback": state.get("feedback") or {},
             "tools": tools, "memory": state.get("memory_view") or {}, "case": rt.case}
 
 
@@ -464,6 +465,10 @@ def _payload(rt, state, purpose):
         "upstream": [{"cop": k, "label": f["label"], "status": f["status"], "verified": f["verified"],
                       "finding_id": f.get("finding_id"), "lineage": f.get("lineage", [])}
                      for k, f in sorted(up.items())],
+        **({"earlier_cycle_findings": [
+            {"cop": k, "label": f["label"], "status": f["status"], "verified": f["verified"],
+             "finding_id": f.get("finding_id"), "run_id": f.get("run_id"), "decided_at": f.get("decided_at")}
+            for k, f in sorted((state.get("feedback") or {}).items())]} if FEEDBACK.get(cop) else {}),
         "memory": {"established": mem.get("established", []),
                    "verified_pending": mem.get("verified_pending", []),
                    "unverified_count": len(mem.get("unverified", []))},
