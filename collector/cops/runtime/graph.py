@@ -39,7 +39,7 @@ from langgraph.graph import StateGraph, START, END
 from langgraph.types import interrupt, Command
 from pydantic import ValidationError
 
-from ..specs import BY_KEY, CONSUMES, topological_order
+from ..specs import BY_KEY, CONSUMES, FEEDBACK, FEEDBACK_VERIFIED_ONLY, consumers, topological_order
 from ..authority import (check as authority_check_fn, check_typed, TIER, HUMAN_APPROVED_ONLY, TAXONOMY,
                          typed, legacy, needs_approval)
 from ..models import INCONCLUSIVE as INCONCLUSIVE_LABEL
@@ -141,6 +141,8 @@ class COPState(TypedDict, total=False):
     mode: str
     upstream: dict              # {cop: published finding}, supplied by the case graph
     upstream_view: list         # [{cop, present, verified, label, finding_id}]
+    feedback: dict              # {cop: finding from an earlier cycle}, FEEDBACK edges only
+    feedback_view: list         # what was offered on each FEEDBACK edge and why it was or was not delivered
     picture: dict
     memory_view: dict
     tool_calls: list            # every call record, with result
@@ -1081,7 +1083,8 @@ def record_decision(state):
         "behavioural_question": BY_KEY[cop].behavioural_question,
         "finding": f, "proposed_action": state["proposed_action"],
         "evidence": state["picture"], "upstream": state["upstream_view"],
-        "downstream_cops": list(BY_KEY[cop].downstream_cops),
+        "feedback": state.get("feedback_view") or [],
+        "downstream_cops": list(consumers(cop)),
         "tool_calls": [{k: v for k, v in c.items() if k != "result"} for c in state["tool_calls"]],
         "llm_invocations": state["llm_invocations"],
         "verifier_results": state["verifier_results"],
@@ -1158,6 +1161,8 @@ def persist_and_publish(state):
                                                  "verified", "lineage", "claims", "rationale",
                                                  "severity", "cop_specific", "upstream_used")}
     pub["proposed_action"] = state["proposed_action"]
+    pub.update(case_id=rt.case.case_id, session_id=rt.case.session_id, run_id=rt.run_id,
+               decided_at=rt.case.computed_at)
     # VS-01's record travels with the finding, so a downstream COP in the case graph weighs it
     # exactly as a referral receiver would (support._upstream reads the decision)
     vs = state["finding"].get("verification_support") or {}
@@ -1269,6 +1274,7 @@ class CaseState(TypedDict, total=False):
     findings: dict              # {cop: published finding}
     results: dict               # {cop: full result}
     consumption: list           # [{consumer, producer, finding_id, verified, label}]
+    history: dict               # {cop: finding from an earlier cycle}, read only through FEEDBACK
 
 
 _COP_GRAPH = None
@@ -1281,20 +1287,55 @@ def cop_graph():
     return _COP_GRAPH
 
 
+def prior_feedback(cop, history, run_id):
+    """Findings from earlier cycles that cop may read on its FEEDBACK edges.
+
+    A finding qualifies only if it names the cycle (run_id) it came from and that
+    cycle is not the current one. On a FEEDBACK_VERIFIED_ONLY edge an unverified
+    finding is withheld; elsewhere it is delivered as context only."""
+    delivered, view = {}, []
+    for p in FEEDBACK.get(cop, ()):
+        f = (history or {}).get(p)
+        row = {"cop": p, "present": f is not None, "delivered": False,
+               "finding_id": (f or {}).get("finding_id"), "run_id": (f or {}).get("run_id"),
+               "decided_at": (f or {}).get("decided_at"), "label": (f or {}).get("label"),
+               "status": (f or {}).get("status"), "verified": bool(f and f.get("verified"))}
+        if f is None:
+            row["reason"] = "no finding from an earlier cycle"
+        elif not f.get("run_id"):
+            row["reason"] = "finding does not name the cycle it came from"
+        elif f["run_id"] == run_id:
+            row["reason"] = "finding is from the current cycle"
+        elif not f.get("verified") and (p, cop) in FEEDBACK_VERIFIED_ONLY:
+            row["reason"] = "unverified; this edge delivers verified findings only"
+        else:
+            delivered[p] = f
+            row.update(delivered=True, consumed_as="evidence" if f.get("verified") else "context_only_unverified",
+                       reason="earlier-cycle finding")
+        view.append(row)
+    return delivered, view
+
+
 def _cop_node(cop):
     def node(state, config):
         found = state.get("findings") or {}
         up = {k: found[k] for k in CONSUMES[cop] if k in found}
-        out = cop_graph().invoke({"case_id": state["case_id"], "cop": cop, "upstream": up}, config)
+        fb, fb_view = prior_feedback(cop, state.get("history"), _rt(state).run_id)
+        out = cop_graph().invoke({"case_id": state["case_id"], "cop": cop, "upstream": up,
+                                  "feedback": fb, "feedback_view": fb_view}, config)
         cons = [{"consumer": cop, "producer": k, "finding_id": f.get("finding_id"),
                  "label": f.get("label"), "verified": f.get("verified"),
                  "consumed_as": "evidence" if f.get("verified") else "context_only_unverified"}
                 for k, f in sorted(up.items())]
         missing = [{"consumer": cop, "producer": k, "finding_id": None, "label": None,
                     "verified": False, "consumed_as": "absent"} for k in CONSUMES[cop] if k not in found]
+        fed = [{"consumer": cop, "producer": r["cop"], "finding_id": r["finding_id"], "label": r["label"],
+                "verified": r["verified"], "cycle": "previous", "source_run_id": r["run_id"],
+                "consumed_as": r["consumed_as"] if r["delivered"] else "not_delivered", "reason": r["reason"]}
+               for r in fb_view]
         return {"findings": {**found, cop: out["published"]},
                 "results": {**(state.get("results") or {}), cop: out["result"]},
-                "consumption": (state.get("consumption") or []) + cons + missing}
+                "consumption": (state.get("consumption") or []) + cons + missing + fed}
     node.__name__ = f"cop_{cop}"
     return node
 
@@ -1311,14 +1352,17 @@ def build_case_graph(cops=None, checkpointer=None):
     return g.compile(checkpointer=checkpointer), order
 
 
-def run_case(rt, cops=None, checkpointer=None, thread_id=None):
+def run_case(rt, cops=None, checkpointer=None, thread_id=None, history=None):
     """Run a case. Returns the final state, or {"interrupted": [...], ...} when an
-    approval is pending (resume with resume_case)."""
+    approval is pending (resume with resume_case).
+
+    history: {cop: published finding} from an earlier cycle. It is read only on
+    FEEDBACK edges and never enters the current cycle's findings."""
     register(rt)
     graph, order = build_case_graph(cops, checkpointer)
     cfg = {"configurable": {"thread_id": thread_id or rt.case.case_id}, "recursion_limit": 200}
     out = graph.invoke({"case_id": rt.case.case_id, "order": order, "findings": {}, "results": {},
-                        "consumption": []}, cfg)
+                        "consumption": [], "history": dict(history or {})}, cfg)
     return _shape(out)
 
 
@@ -1345,12 +1389,14 @@ def _shape(out):
     return res
 
 
-def run_cop(rt, cop, upstream=None, checkpointer=None, thread_id=None):
+def run_cop(rt, cop, upstream=None, checkpointer=None, thread_id=None, history=None):
     """One COP on its own (tests, and the per-COP evaluation cases)."""
     register(rt)
     g = build_cop_graph(checkpointer)
     cfg = {"configurable": {"thread_id": thread_id or f"{rt.case.case_id}:{cop}"}, "recursion_limit": 100}
-    out = g.invoke({"case_id": rt.case.case_id, "cop": cop, "upstream": upstream or {}}, cfg)
+    fb, fb_view = prior_feedback(cop, history, rt.run_id)
+    out = g.invoke({"case_id": rt.case.case_id, "cop": cop, "upstream": upstream or {},
+                    "feedback": fb, "feedback_view": fb_view}, cfg)
     if out.get("__interrupt__"):
         return {"interrupted": [i.value for i in out["__interrupt__"]], **out}
     return out

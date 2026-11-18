@@ -30,8 +30,10 @@ def pub(out):
 
 def test_downstream_lists_are_derived_from_consumes():
     for s in SPECS:
-        assert tuple(s.consumes_decisions_from) == tuple(CONSUMES[s.key])
-        assert set(s.downstream_cops) == {k for k, v in CONSUMES.items() if s.key in v}
+        assert tuple(s.consumes_decisions_from) == tuple(specs_mod.SPEC_CONSUMES[s.key])
+        assert set(s.downstream_cops) == {k for k, v in specs_mod.SPEC_CONSUMES.items() if s.key in v}
+        assert set(CONSUMES[s.key]) == set(specs_mod.SPEC_CONSUMES[s.key]) | set(
+            specs_mod.TOPOLOGY_CONSUMES.get(s.key, ()))
 
 
 def test_topological_order_respects_every_edge_and_rejects_cycles(monkeypatch):
@@ -48,9 +50,10 @@ def test_topological_order_respects_every_edge_and_rejects_cycles(monkeypatch):
 def test_case_graph_delivers_every_declared_edge():
     rt = E.make_runtime("g-edges", "c01", E._estate(S.normal_session("c01", 9)), {}, None)
     out = run_case(rt)
-    seen = {(x["producer"], x["consumer"]) for x in out["consumption"]}
+    current = [x for x in out["consumption"] if x.get("cycle") != "previous"]
+    seen = {(x["producer"], x["consumer"]) for x in current}
     assert seen == {(p, c) for c, ps in CONSUMES.items() for p in ps}
-    assert all(x["consumed_as"] != "absent" for x in out["consumption"])
+    assert all(x["consumed_as"] != "absent" for x in current)
 
 
 # ---------------------------------------------------------------- B7 deterministic branches

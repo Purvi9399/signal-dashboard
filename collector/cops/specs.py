@@ -226,7 +226,7 @@ SPECS = [
 # Workload and Incident -> Risk ("verified incident outcomes support Risk
 # Mitigation"). Both are spec changes that need agreement before they are
 # ported to project-signal.
-CONSUMES = {
+SPEC_CONSUMES = {
     "runtime_monitoring":          (),
     "interaction_discovery":       ("runtime_monitoring",),
     "agent_lifecycle_management":  ("runtime_monitoring", "interaction_discovery"),
@@ -252,15 +252,49 @@ CONSUMES = {
                                     "audit_traceability"),
 }
 
+# Current-cycle edges from the 18 COPS communication topology (2026-11-18) that
+# SPEC_CONSUMES does not carry. They run in the LangGraph runtime only: the specs'
+# consumes_decisions_from and downstream_cops, which the legacy COPRunner reads,
+# stay on SPEC_CONSUMES so its four active COPs see the same upstream as before.
+TOPOLOGY_CONSUMES = {
+    "resource_management": ("interaction_discovery",),
+    "incident_response":   ("classification_tagging", "resource_management"),
+}
+
+# The runtime's current-cycle graph: a COP runs after these and reads their
+# findings from the same evaluation cycle.
+CONSUMES = {k: v + tuple(u for u in TOPOLOGY_CONSUMES.get(k, ()) if u not in v)
+            for k, v in SPEC_CONSUMES.items()}
+
+# Previous-cycle feedback: the topology's reverse edges of AD <-> BA and
+# ResM <-> WkO. The consumer receives the producer's finding from an earlier
+# evaluation cycle only; neither COP is invoked again in the current cycle.
+FEEDBACK = {
+    "behavior_analytics":  ("anomaly_detection",),
+    "resource_management": ("workload_optimization",),
+}
+# Feedback edges on which an unverified finding is withheld rather than delivered
+# as context.
+FEEDBACK_VERIFIED_ONLY = {("anomaly_detection", "behavior_analytics")}
+for _c, _ps in FEEDBACK.items():
+    for _p in _ps:
+        assert _p in CONSUMES and _p != _c and _p not in CONSUMES[_c], (_p, _c)
+
 DECLARED_DOWNSTREAM = {s.key: tuple(s.downstream_cops) for s in SPECS}
 
 
-def _consumers(key):
-    return tuple(k for k, ups in CONSUMES.items() if key in ups)
+def _consumers(key, edges=None):
+    return tuple(k for k, ups in (edges or CONSUMES).items() if key in ups)
+
+
+def consumers(key):
+    """COPs that read key's finding in the current cycle (runtime graph)."""
+    return _consumers(key)
 
 
 import dataclasses as _dc
-SPECS = [_dc.replace(s, consumes_decisions_from=CONSUMES[s.key], downstream_cops=_consumers(s.key))
+SPECS = [_dc.replace(s, consumes_decisions_from=SPEC_CONSUMES[s.key],
+                     downstream_cops=_consumers(s.key, SPEC_CONSUMES))
          for s in SPECS]
 
 
