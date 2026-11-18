@@ -1,0 +1,5422 @@
+{
+ "contract": "metric_registry/1",
+ "source_document": {
+  "path": "docs/cops/architecture/COPS_METRIC_MAPPING.md (purvi's working copy)",
+  "bytes": 13389,
+  "sha256": "5bd3c16f1ba26b297644259faaedfe75c1f219980e5c046a9bb56308c38e951e",
+  "entries_as_written": 493,
+  "distinct_pairs": 487,
+  "distinct_metrics": 244,
+  "note": "Workflow Orchestration lists 21 entries over five questions; 6 repeat a name already listed for it"
+ },
+ "code_only_pairs": [
+  {
+   "cop": "interaction_discovery",
+   "metric": "insights.outside",
+   "source": "collector/cops/specs.py metric_keys",
+   "status": "kept separately; not in the mapping document and not promoted into it"
+  },
+  {
+   "cop": "workflow_orchestration",
+   "metric": "insights.repetition",
+   "source": "collector/cops/specs.py metric_keys",
+   "status": "kept separately; not in the mapping document and not promoted into it"
+  },
+  {
+   "cop": "workflow_orchestration",
+   "metric": "oversight.declined_inferred",
+   "source": "collector/cops/specs.py metric_keys",
+   "status": "kept separately; not in the mapping document and not promoted into it"
+  }
+ ],
+ "states": {
+  "NO_THRESHOLD": "a value was calculated; no threshold is approved, so it is not judged",
+  "UNKNOWN": "not calculated; features.availability says why",
+  "NOT_APPLICABLE": "the condition never arose"
+ },
+ "availability": [
+  "CALCULATED",
+  "MISSING_DATA",
+  "MISSING_REFERENCE",
+  "INSUFFICIENT_HISTORY",
+  "NOT_OBSERVED",
+  "NOT_APPLICABLE",
+  "ERROR"
+ ],
+ "reference_data_contracts": {
+  "policy_registry": {
+   "fields": [
+    "policy_id",
+    "version",
+    "effective_from",
+    "scope",
+    "rule",
+    "precedents"
+   ],
+   "metrics": [
+    "policy_applicability_coverage",
+    "policy_effectiveness_score",
+    "governance_knowledge_completeness",
+    "policy_precedent_match",
+    "audit_policy_version_traceability"
+   ]
+  },
+  "entitlements": {
+   "fields": [
+    "principal (operator or agent)",
+    "resource or action",
+    "allowed",
+    "requires_approval_by"
+   ],
+   "metrics": [
+    "entitlement_mismatch_rate",
+    "approval_requirement_compliance",
+    "agent_authorization_validity"
+   ]
+  },
+  "policy_exceptions": {
+   "fields": [
+    "exception_id",
+    "policy_id",
+    "principal",
+    "granted_by",
+    "valid_from",
+    "valid_to"
+   ],
+   "metrics": [
+    "policy_exception_rate"
+   ]
+  },
+  "allowlists": {
+   "fields": [
+    "kind (tool, mcp_server, interaction_route, model, tool_version)",
+    "value",
+    "scope",
+    "approved_by",
+    "version"
+   ],
+   "metrics": [
+    "unapproved_tool_usage",
+    "unapproved_mcp_access",
+    "unauthorized_interaction_route_count",
+    "agent_unapproved_tool_count",
+    "model_selection_compliance",
+    "agent_model_compliance",
+    "agent_version_compliance"
+   ]
+  },
+  "budgets_and_quotas": {
+   "fields": [
+    "scope (operator, team, agent, org)",
+    "measure (tokens, cost_usd, calls)",
+    "period",
+    "limit"
+   ],
+   "metrics": [
+    "token_budget_utilization",
+    "cost_budget_utilization",
+    "resource_quota_compliance",
+    "resource_limit_proximity"
+   ]
+  },
+  "agent_capacity": {
+   "fields": [
+    "agent or lane class",
+    "capacity measure",
+    "limit",
+    "scheduling priority"
+   ],
+   "metrics": [
+    "agent_overload_rate",
+    "agent_underutilization_rate",
+    "workload_scheduling_efficiency"
+   ]
+  },
+  "asset_inventory": {
+   "fields": [
+    "asset (repo, path pattern, service)",
+    "criticality",
+    "owner",
+    "impact criteria",
+    "likelihood criteria",
+    "playbook and cost"
+   ],
+   "metrics": [
+    "incident_impact_score",
+    "risk_asset_criticality",
+    "risk_exposure_score",
+    "risk_impact_score",
+    "risk_likelihood_score",
+    "risk_intervention_cost"
+   ]
+  },
+  "agent_registry": {
+   "fields": [
+    "agent identity",
+    "owner",
+    "registered_at",
+    "lifecycle_state",
+    "authentication method",
+    "last_review",
+    "review_interval",
+    "approved devices"
+   ],
+   "metrics": [
+    "agent_registration_coverage",
+    "agent_identity_verification_rate",
+    "agent_lifecycle_state_compliance",
+    "agent_review_overdue_rate",
+    "agent_device_compliance"
+   ]
+  },
+  "retention_policy": {
+   "fields": [
+    "evidence class",
+    "retention period"
+   ],
+   "metrics": [
+    "audit_evidence_retention_coverage"
+   ]
+  }
+ },
+ "metrics": [
+  {
+   "id": "task_progress",
+   "consumers": [
+    "workflow_orchestration"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Plan items completed / created",
+   "required_fields": [
+    "plan_item",
+    "plan_status",
+    "observable_type"
+   ],
+   "formula": "distinct plan_item completed and created / distinct plan_item created",
+   "denominator": "distinct plan_item with a plan_created row",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "plans",
+   "applies_when": "plans",
+   "missing_data": [
+    "basis plans absent: UNKNOWN, value None",
+    "condition plans did not arise: NOT_APPLICABLE",
+    "plan events carry no plan_item: UNKNOWN, value None"
+   ],
+   "evidence_refs": [
+    "observable"
+   ],
+   "computed_by": "collector/signal_metrics.py:m_task_progress",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:task_progress@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "dependency_violation_count",
+   "consumers": [
+    "workflow_orchestration"
+   ],
+   "category": "M",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "task dependencies would have to be read from plan_item / prompt_text by a model; no dependency field exists",
+   "input_contract": {
+    "inputs": "observables text fields named in proposal, with observable_ids",
+    "output": {
+     "judgement": "label from a set to be approved",
+     "confidence": "0..1",
+     "evidence_refs": "observable:<id> cited",
+     "rationale": "short, no hidden reasoning"
+    },
+    "verification": "an independent check that is not the same model response",
+    "cost": "paid model calls; none without explicit approval"
+   }
+  },
+  {
+   "id": "workflow_rework_rate",
+   "consumers": [
+    "workflow_orchestration"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Files changed again in a later turn",
+   "required_fields": [
+    "file_path",
+    "turn_id",
+    "tool_name"
+   ],
+   "formula": "files changed (CHANGE/CREATE/DELETE steps) in two or more turns / files changed in a step with a turn_id",
+   "denominator": "distinct file_path changed in a step with turn_id",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "changes",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition changes did not arise: NOT_APPLICABLE",
+    "no file change carries a turn_id: UNKNOWN, value None"
+   ],
+   "evidence_refs": [
+    "step"
+   ],
+   "computed_by": "collector/signal_metrics.py:m_workflow_rework_rate",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:workflow_rework_rate@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "path.transition_novelty",
+   "consumers": [
+    "workflow_orchestration",
+    "anomaly_detection",
+    "interaction_discovery",
+    "classification_tagging",
+    "policy_enforcement",
+    "risk_mitigation",
+    "governance_intelligence",
+    "behavior_analytics",
+    "workload_optimization",
+    "audit_traceability",
+    "governance_architecture"
+   ],
+   "category": "E",
+   "status": "IMPLEMENTED_EXISTING",
+   "meaning": "Step transitions unseen for this tool",
+   "required_fields": [
+    "tool_name",
+    "command",
+    "observable_type"
+   ],
+   "scope": "session",
+   "window": "the session",
+   "basis": "always",
+   "applies_when": "always",
+   "threshold": {
+    "direction": "above",
+    "warning": 0.25,
+    "exception": 0.5,
+    "critical": 0.8
+   },
+   "computed_by": "collector/signal_metrics.py:m_transition_novelty",
+   "definition_source": "signal_metrics.py (existing, unchanged)",
+   "missing_data": [
+    "basis absent and value zero: state UNKNOWN (value may still be 0; existing behaviour)",
+    "condition always did not arise: NOT_APPLICABLE"
+   ],
+   "provenance": "metric_events.source = signal_metrics.py:path.transition_novelty@<metric_version>"
+  },
+  {
+   "id": "task_drift",
+   "consumers": [
+    "workflow_orchestration"
+   ],
+   "category": "M",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "compare prompt_text and plan_item with the actions taken; needs a model judgement",
+   "input_contract": {
+    "inputs": "observables text fields named in proposal, with observable_ids",
+    "output": {
+     "judgement": "label from a set to be approved",
+     "confidence": "0..1",
+     "evidence_refs": "observable:<id> cited",
+     "rationale": "short, no hidden reasoning"
+    },
+    "verification": "an independent check that is not the same model response",
+    "cost": "paid model calls; none without explicit approval"
+   }
+  },
+  {
+   "id": "unexpected_branch_rate",
+   "consumers": [
+    "workflow_orchestration"
+   ],
+   "category": "Q",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "no expected path is recorded; say whether \"unexpected\" means unseen transitions (same data as path.transition_novelty)",
+   "question": "no expected path is recorded; say whether \"unexpected\" means unseen transitions (same data as path.transition_novelty)"
+  },
+  {
+   "id": "insights.outside",
+   "consumers": [
+    "workflow_orchestration",
+    "incident_response",
+    "classification_tagging",
+    "policy_enforcement",
+    "risk_mitigation",
+    "governance_intelligence",
+    "behavior_analytics",
+    "recovery_resilience",
+    "knowledge_policy_management",
+    "agent_lifecycle_management",
+    "governance_architecture"
+   ],
+   "category": "E",
+   "status": "IMPLEMENTED_EXISTING",
+   "meaning": "Work outside the workspace",
+   "required_fields": [
+    "file_path",
+    "outside_workspace"
+   ],
+   "scope": "session",
+   "window": "the session",
+   "basis": "paths",
+   "applies_when": "always",
+   "threshold": {
+    "direction": "above",
+    "warning": 1,
+    "exception": 1,
+    "critical": 10
+   },
+   "computed_by": "collector/signal_metrics.py:m_outside",
+   "definition_source": "signal_metrics.py (existing, unchanged)",
+   "missing_data": [
+    "basis absent and value zero: state UNKNOWN (value may still be 0; existing behaviour)",
+    "condition always did not arise: NOT_APPLICABLE"
+   ],
+   "provenance": "metric_events.source = signal_metrics.py:insights.outside@<metric_version>"
+  },
+  {
+   "id": "insights.stalled",
+   "consumers": [
+    "workflow_orchestration",
+    "incident_response",
+    "classification_tagging",
+    "risk_mitigation",
+    "resource_management",
+    "governance_intelligence",
+    "behavior_analytics",
+    "recovery_resilience",
+    "workload_optimization",
+    "governance_architecture"
+   ],
+   "category": "E",
+   "status": "IMPLEMENTED_EXISTING",
+   "meaning": "Execution left hanging",
+   "required_fields": [
+    "hung_seconds"
+   ],
+   "scope": "session",
+   "window": "the session",
+   "basis": "wrapper",
+   "applies_when": "always",
+   "threshold": {
+    "direction": "above",
+    "warning": 1,
+    "exception": 1,
+    "critical": 3
+   },
+   "computed_by": "collector/signal_metrics.py:m_stalled",
+   "definition_source": "signal_metrics.py (existing, unchanged)",
+   "missing_data": [
+    "basis absent and value zero: state UNKNOWN (value may still be 0; existing behaviour)",
+    "condition always did not arise: NOT_APPLICABLE"
+   ],
+   "provenance": "metric_events.source = signal_metrics.py:insights.stalled@<metric_version>"
+  },
+  {
+   "id": "stalled_duration_per_turn",
+   "consumers": [
+    "workflow_orchestration"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Longest hung time in one turn (s)",
+   "required_fields": [
+    "hung_seconds",
+    "turn_id"
+   ],
+   "formula": "max over turns of the sum of hung_seconds; rows without turn_id summed separately and compared",
+   "scope": "turn",
+   "aggregation": "turn values aggregated to the session as stated in the formula",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "wrapper",
+   "applies_when": "always",
+   "missing_data": [
+    "basis wrapper absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE"
+   ],
+   "evidence_refs": [
+    "observable"
+   ],
+   "computed_by": "collector/signal_metrics.py:m_stalled_duration_per_turn",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:stalled_duration_per_turn@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "unresolved_items",
+   "consumers": [
+    "workflow_orchestration"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Plan items created and not completed",
+   "required_fields": [
+    "plan_item",
+    "plan_status",
+    "observable_type"
+   ],
+   "formula": "count of distinct plan_item created with no plan_completed row in the session",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "plans",
+   "applies_when": "plans",
+   "missing_data": [
+    "basis plans absent: UNKNOWN, value None",
+    "condition plans did not arise: NOT_APPLICABLE",
+    "plan events carry no plan_item: UNKNOWN, value None"
+   ],
+   "evidence_refs": [
+    "observable"
+   ],
+   "computed_by": "collector/signal_metrics.py:m_unresolved_items",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:unresolved_items@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "insights.retry",
+   "consumers": [
+    "workflow_orchestration",
+    "anomaly_detection",
+    "context_memory",
+    "incident_response",
+    "classification_tagging",
+    "risk_mitigation",
+    "resource_management",
+    "governance_intelligence",
+    "behavior_analytics",
+    "recovery_resilience",
+    "workload_optimization",
+    "governance_architecture"
+   ],
+   "category": "E",
+   "status": "IMPLEMENTED_EXISTING",
+   "meaning": "Failed command reissued unchanged",
+   "required_fields": [
+    "command",
+    "exit_code"
+   ],
+   "scope": "session",
+   "window": "the session",
+   "basis": "commands",
+   "applies_when": "commands",
+   "threshold": {
+    "direction": "above",
+    "warning": 1,
+    "exception": 2,
+    "critical": 5
+   },
+   "computed_by": "collector/signal_metrics.py:m_retry",
+   "definition_source": "signal_metrics.py (existing, unchanged)",
+   "missing_data": [
+    "basis absent and value zero: state UNKNOWN (value may still be 0; existing behaviour)",
+    "condition commands did not arise: NOT_APPLICABLE"
+   ],
+   "provenance": "metric_events.source = signal_metrics.py:insights.retry@<metric_version>"
+  },
+  {
+   "id": "insights.failed",
+   "consumers": [
+    "workflow_orchestration",
+    "anomaly_detection",
+    "context_memory",
+    "incident_response",
+    "classification_tagging",
+    "risk_mitigation",
+    "resource_management",
+    "governance_intelligence",
+    "behavior_analytics",
+    "recovery_resilience",
+    "workload_optimization",
+    "agent_lifecycle_management",
+    "governance_architecture"
+   ],
+   "category": "E",
+   "status": "IMPLEMENTED_EXISTING",
+   "meaning": "Actions that failed",
+   "required_fields": [
+    "success",
+    "exit_code"
+   ],
+   "scope": "session",
+   "window": "the session",
+   "basis": "outcomes",
+   "applies_when": "actions",
+   "threshold": {
+    "direction": "above",
+    "warning": 1,
+    "exception": 5,
+    "critical": 20
+   },
+   "computed_by": "collector/signal_metrics.py:m_failed",
+   "definition_source": "signal_metrics.py (existing, unchanged)",
+   "missing_data": [
+    "basis absent and value zero: state UNKNOWN (value may still be 0; existing behaviour)",
+    "condition actions did not arise: NOT_APPLICABLE"
+   ],
+   "provenance": "metric_events.source = signal_metrics.py:insights.failed@<metric_version>"
+  },
+  {
+   "id": "interaction.subagent_lanes",
+   "consumers": [
+    "workflow_orchestration",
+    "anomaly_detection",
+    "interaction_discovery",
+    "incident_response",
+    "classification_tagging",
+    "policy_enforcement",
+    "risk_mitigation",
+    "resource_management",
+    "governance_intelligence",
+    "behavior_analytics",
+    "workload_optimization",
+    "audit_traceability",
+    "agent_lifecycle_management",
+    "governance_architecture"
+   ],
+   "category": "E",
+   "status": "IMPLEMENTED_EXISTING",
+   "meaning": "Subagent lanes in session",
+   "required_fields": [
+    "agent_id"
+   ],
+   "scope": "session",
+   "window": "the session",
+   "basis": "always",
+   "applies_when": "always",
+   "threshold": {
+    "direction": "above",
+    "warning": 5,
+    "exception": 15,
+    "critical": 50
+   },
+   "computed_by": "collector/signal_metrics.py:m_subagent_lanes",
+   "definition_source": "signal_metrics.py (existing, unchanged)",
+   "missing_data": [
+    "basis absent and value zero: state UNKNOWN (value may still be 0; existing behaviour)",
+    "condition always did not arise: NOT_APPLICABLE"
+   ],
+   "provenance": "metric_events.source = signal_metrics.py:interaction.subagent_lanes@<metric_version>"
+  },
+  {
+   "id": "excessive_delegation_ratio",
+   "consumers": [
+    "workflow_orchestration"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Delegations per action",
+   "required_fields": [
+    "observable_type",
+    "tool_name"
+   ],
+   "formula": "DELEGATE steps in the main lane / actions",
+   "denominator": "actions (one per call, tool_use_id de-duplicated)",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "actions",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition actions did not arise: NOT_APPLICABLE"
+   ],
+   "evidence_refs": [
+    "step"
+   ],
+   "computed_by": "collector/signal_metrics.py:m_excessive_delegation_ratio",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:excessive_delegation_ratio@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "telemetry.lane_linkage",
+   "consumers": [
+    "workflow_orchestration",
+    "runtime_monitoring",
+    "anomaly_detection",
+    "interaction_discovery",
+    "incident_response",
+    "classification_tagging",
+    "policy_enforcement",
+    "risk_mitigation",
+    "governance_intelligence",
+    "behavior_analytics",
+    "recovery_resilience",
+    "workload_optimization",
+    "audit_traceability",
+    "knowledge_policy_management",
+    "agent_lifecycle_management",
+    "governance_architecture"
+   ],
+   "category": "E",
+   "status": "IMPLEMENTED_EXISTING",
+   "meaning": "Subagent lanes linked to a handoff",
+   "required_fields": [
+    "agent_id",
+    "observable_type"
+   ],
+   "scope": "session",
+   "window": "the session",
+   "basis": "always",
+   "applies_when": "subagents",
+   "threshold": {
+    "direction": "below",
+    "warning": 0.99,
+    "exception": 0.5,
+    "critical": 0.0
+   },
+   "computed_by": "collector/signal_metrics.py:m_lane_linkage",
+   "definition_source": "signal_metrics.py (existing, unchanged)",
+   "missing_data": [
+    "basis absent and value zero: state UNKNOWN (value may still be 0; existing behaviour)",
+    "condition subagents did not arise: NOT_APPLICABLE"
+   ],
+   "provenance": "metric_events.source = signal_metrics.py:telemetry.lane_linkage@<metric_version>"
+  },
+  {
+   "id": "telemetry.collector_coverage",
+   "consumers": [
+    "runtime_monitoring",
+    "interaction_discovery",
+    "incident_response",
+    "classification_tagging",
+    "policy_enforcement",
+    "risk_mitigation",
+    "resource_management",
+    "governance_intelligence",
+    "recovery_resilience",
+    "workload_optimization",
+    "audit_traceability",
+    "knowledge_policy_management",
+    "agent_lifecycle_management",
+    "governance_architecture"
+   ],
+   "category": "E",
+   "status": "IMPLEMENTED_EXISTING",
+   "meaning": "Expected collectors present",
+   "required_fields": [
+    "collector",
+    "contributing"
+   ],
+   "scope": "session",
+   "window": "the session",
+   "basis": "always",
+   "applies_when": "always",
+   "threshold": {
+    "direction": "below",
+    "warning": 0.99,
+    "exception": 0.5,
+    "critical": 0.0
+   },
+   "computed_by": "collector/signal_metrics.py:m_collector_coverage",
+   "definition_source": "signal_metrics.py (existing, unchanged)",
+   "missing_data": [
+    "basis absent and value zero: state UNKNOWN (value may still be 0; existing behaviour)",
+    "condition always did not arise: NOT_APPLICABLE"
+   ],
+   "provenance": "metric_events.source = signal_metrics.py:telemetry.collector_coverage@<metric_version>"
+  },
+  {
+   "id": "telemetry.source_agreement",
+   "consumers": [
+    "runtime_monitoring",
+    "interaction_discovery",
+    "incident_response",
+    "classification_tagging",
+    "policy_enforcement",
+    "risk_mitigation",
+    "governance_intelligence",
+    "recovery_resilience",
+    "audit_traceability",
+    "knowledge_policy_management",
+    "agent_lifecycle_management",
+    "governance_architecture"
+   ],
+   "category": "E",
+   "status": "IMPLEMENTED_EXISTING",
+   "meaning": "Cross-collector agreement",
+   "required_fields": [
+    "collectors_agree"
+   ],
+   "scope": "session",
+   "window": "the session",
+   "basis": "always",
+   "applies_when": "multi",
+   "threshold": {
+    "direction": "below",
+    "warning": 0.99,
+    "exception": 0.9,
+    "critical": 0.5
+   },
+   "computed_by": "collector/signal_metrics.py:m_source_agreement",
+   "definition_source": "signal_metrics.py (existing, unchanged)",
+   "missing_data": [
+    "basis absent and value zero: state UNKNOWN (value may still be 0; existing behaviour)",
+    "condition multi did not arise: NOT_APPLICABLE"
+   ],
+   "provenance": "metric_events.source = signal_metrics.py:telemetry.source_agreement@<metric_version>"
+  },
+  {
+   "id": "telemetry.turn_linkage",
+   "consumers": [
+    "runtime_monitoring",
+    "anomaly_detection",
+    "context_memory",
+    "interaction_discovery",
+    "incident_response",
+    "classification_tagging",
+    "policy_enforcement",
+    "risk_mitigation",
+    "governance_intelligence",
+    "behavior_analytics",
+    "recovery_resilience",
+    "workload_optimization",
+    "audit_traceability",
+    "knowledge_policy_management",
+    "agent_lifecycle_management",
+    "governance_architecture"
+   ],
+   "category": "E",
+   "status": "IMPLEMENTED_EXISTING",
+   "meaning": "Steps carrying a turn id",
+   "required_fields": [
+    "turn_id"
+   ],
+   "scope": "session",
+   "window": "the session",
+   "basis": "always",
+   "applies_when": "steps",
+   "threshold": {
+    "direction": "below",
+    "warning": 0.9,
+    "exception": 0.6,
+    "critical": 0.2
+   },
+   "computed_by": "collector/signal_metrics.py:m_turn_linkage",
+   "definition_source": "signal_metrics.py (existing, unchanged)",
+   "missing_data": [
+    "basis absent and value zero: state UNKNOWN (value may still be 0; existing behaviour)",
+    "condition steps did not arise: NOT_APPLICABLE"
+   ],
+   "provenance": "metric_events.source = signal_metrics.py:telemetry.turn_linkage@<metric_version>"
+  },
+  {
+   "id": "telemetry.unknown_share",
+   "consumers": [
+    "runtime_monitoring",
+    "context_memory",
+    "interaction_discovery",
+    "incident_response",
+    "classification_tagging",
+    "risk_mitigation",
+    "resource_management",
+    "governance_intelligence",
+    "behavior_analytics",
+    "recovery_resilience",
+    "workload_optimization",
+    "audit_traceability",
+    "knowledge_policy_management",
+    "agent_lifecycle_management",
+    "governance_architecture"
+   ],
+   "category": "E",
+   "status": "IMPLEMENTED_EXISTING",
+   "meaning": "Share of metrics that could not be judged",
+   "required_fields": [],
+   "scope": "session",
+   "window": "the session",
+   "basis": "always",
+   "applies_when": "always",
+   "threshold": {
+    "direction": "above",
+    "warning": 0.25,
+    "exception": 0.5,
+    "critical": 0.75
+   },
+   "computed_by": "collector/signal_metrics.py:compute",
+   "definition_source": "signal_metrics.py (existing, unchanged)",
+   "missing_data": [
+    "basis absent and value zero: state UNKNOWN (value may still be 0; existing behaviour)",
+    "condition always did not arise: NOT_APPLICABLE"
+   ],
+   "provenance": "metric_events.source = signal_metrics.py:telemetry.unknown_share@<metric_version>"
+  },
+  {
+   "id": "collector_heartbeat",
+   "consumers": [
+    "runtime_monitoring"
+   ],
+   "category": "S",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "collector_capability.last_seen and observed_state per (tool, collector)",
+   "why_not_built": "needs the collector_capability table as an input to compute(); it reads observables only"
+  },
+  {
+   "id": "collector_errors",
+   "consumers": [
+    "runtime_monitoring"
+   ],
+   "category": "C",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "collectors would have to report their own errors (e.g. into source_events)",
+   "note": "no collector captures this today"
+  },
+  {
+   "id": "event_freshness_live",
+   "consumers": [
+    "runtime_monitoring"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Median ingest lag (s)",
+   "required_fields": [
+    "occurred_at",
+    "ingested_at"
+   ],
+   "formula": "median of ingested_at - occurred_at over rows, seconds",
+   "denominator": "rows with both timestamps",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "ingest",
+   "applies_when": "always",
+   "missing_data": [
+    "basis ingest absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE",
+    "no row carries both occurred_at and ingested_at: UNKNOWN, value None"
+   ],
+   "evidence_refs": [
+    "observable"
+   ],
+   "computed_by": "collector/signal_metrics.py:m_event_freshness_live",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:event_freshness_live@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "missing_event_rate",
+   "consumers": [
+    "runtime_monitoring"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Call requests with no result",
+   "required_fields": [
+    "tool_use_id",
+    "observable_type"
+   ],
+   "formula": "call requests whose tool_use_id has no result row / call requests with a tool_use_id",
+   "denominator": "tool_request, mcp_request, shell_request with tool_use_id",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "results",
+   "applies_when": "actions",
+   "missing_data": [
+    "basis results absent: UNKNOWN, value None",
+    "condition actions did not arise: NOT_APPLICABLE",
+    "no call request carries a tool_use_id: UNKNOWN, value None"
+   ],
+   "evidence_refs": [
+    "observable"
+   ],
+   "computed_by": "collector/signal_metrics.py:m_missing_event_rate",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:missing_event_rate@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "evidence_sufficiency_score",
+   "consumers": [
+    "runtime_monitoring"
+   ],
+   "category": "Q",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "composite of the 5 telemetry.* metrics; weights or rule not defined",
+   "question": "composite of the 5 telemetry.* metrics; weights or rule not defined"
+  },
+  {
+   "id": "insights.repetition",
+   "consumers": [
+    "anomaly_detection",
+    "context_memory",
+    "classification_tagging",
+    "risk_mitigation",
+    "resource_management",
+    "governance_intelligence",
+    "behavior_analytics",
+    "recovery_resilience",
+    "workload_optimization",
+    "governance_architecture"
+   ],
+   "category": "E",
+   "status": "IMPLEMENTED_EXISTING",
+   "meaning": "Identical call repeated within a turn",
+   "required_fields": [
+    "tool_name",
+    "tool_arguments",
+    "turn_id"
+   ],
+   "scope": "session",
+   "window": "the session",
+   "basis": "args",
+   "applies_when": "actions",
+   "threshold": {
+    "direction": "above",
+    "warning": 1,
+    "exception": 3,
+    "critical": 10
+   },
+   "computed_by": "collector/signal_metrics.py:m_repetition",
+   "definition_source": "signal_metrics.py (existing, unchanged)",
+   "missing_data": [
+    "basis absent and value zero: state UNKNOWN (value may still be 0; existing behaviour)",
+    "condition actions did not arise: NOT_APPLICABLE"
+   ],
+   "provenance": "metric_events.source = signal_metrics.py:insights.repetition@<metric_version>"
+  },
+  {
+   "id": "insights.token_outlier",
+   "consumers": [
+    "anomaly_detection",
+    "classification_tagging",
+    "risk_mitigation",
+    "resource_management",
+    "governance_intelligence",
+    "behavior_analytics",
+    "recovery_resilience",
+    "workload_optimization"
+   ],
+   "category": "E",
+   "status": "IMPLEMENTED_EXISTING",
+   "meaning": "Session tokens / estate median",
+   "required_fields": [
+    "total_tokens"
+   ],
+   "scope": "session",
+   "window": "the session",
+   "basis": "tokens",
+   "applies_when": "always",
+   "threshold": {
+    "direction": "above",
+    "warning": 3,
+    "exception": 5,
+    "critical": 15
+   },
+   "computed_by": "collector/signal_metrics.py:m_token_outlier",
+   "definition_source": "signal_metrics.py (existing, unchanged)",
+   "missing_data": [
+    "basis absent and value zero: state UNKNOWN (value may still be 0; existing behaviour)",
+    "condition always did not arise: NOT_APPLICABLE"
+   ],
+   "provenance": "metric_events.source = signal_metrics.py:insights.token_outlier@<metric_version>"
+  },
+  {
+   "id": "insights.duration_outlier",
+   "consumers": [
+    "anomaly_detection",
+    "classification_tagging",
+    "risk_mitigation",
+    "resource_management",
+    "governance_intelligence",
+    "behavior_analytics",
+    "recovery_resilience",
+    "workload_optimization"
+   ],
+   "category": "E",
+   "status": "IMPLEMENTED_EXISTING",
+   "meaning": "Steps beyond 10x median duration",
+   "required_fields": [
+    "tool_duration_ms"
+   ],
+   "scope": "session",
+   "window": "the session",
+   "basis": "durations",
+   "applies_when": "steps",
+   "threshold": {
+    "direction": "above",
+    "warning": 1,
+    "exception": 1,
+    "critical": 5
+   },
+   "computed_by": "collector/signal_metrics.py:m_duration_outlier",
+   "definition_source": "signal_metrics.py (existing, unchanged)",
+   "missing_data": [
+    "basis absent and value zero: state UNKNOWN (value may still be 0; existing behaviour)",
+    "condition steps did not arise: NOT_APPLICABLE"
+   ],
+   "provenance": "metric_events.source = signal_metrics.py:insights.duration_outlier@<metric_version>"
+  },
+  {
+   "id": "activity.action_rate_ratio",
+   "consumers": [
+    "anomaly_detection",
+    "classification_tagging",
+    "risk_mitigation",
+    "resource_management",
+    "governance_intelligence",
+    "behavior_analytics",
+    "recovery_resilience",
+    "workload_optimization"
+   ],
+   "category": "E",
+   "status": "IMPLEMENTED_EXISTING",
+   "meaning": "Actions/min vs tool median",
+   "required_fields": [
+    "tool_name",
+    "occurred_at"
+   ],
+   "scope": "session",
+   "window": "the session",
+   "basis": "always",
+   "applies_when": "always",
+   "threshold": {
+    "direction": "above",
+    "warning": 3,
+    "exception": 5,
+    "critical": 15
+   },
+   "computed_by": "collector/signal_metrics.py:m_action_rate",
+   "definition_source": "signal_metrics.py (existing, unchanged)",
+   "missing_data": [
+    "basis absent and value zero: state UNKNOWN (value may still be 0; existing behaviour)",
+    "condition always did not arise: NOT_APPLICABLE"
+   ],
+   "provenance": "metric_events.source = signal_metrics.py:activity.action_rate_ratio@<metric_version>"
+  },
+  {
+   "id": "access.first_seen_mcp",
+   "consumers": [
+    "anomaly_detection",
+    "interaction_discovery",
+    "incident_response",
+    "classification_tagging",
+    "policy_enforcement",
+    "risk_mitigation",
+    "governance_intelligence",
+    "behavior_analytics",
+    "knowledge_policy_management",
+    "agent_lifecycle_management",
+    "governance_architecture"
+   ],
+   "category": "E",
+   "status": "IMPLEMENTED_EXISTING",
+   "meaning": "MCP server new for this operator",
+   "required_fields": [
+    "mcp_server"
+   ],
+   "scope": "session",
+   "window": "the session",
+   "basis": "mcp",
+   "applies_when": "always",
+   "threshold": {
+    "direction": "above",
+    "warning": 1,
+    "exception": 1,
+    "critical": 3
+   },
+   "computed_by": "collector/signal_metrics.py:m_first_seen_mcp",
+   "definition_source": "signal_metrics.py (existing, unchanged)",
+   "missing_data": [
+    "basis absent and value zero: state UNKNOWN (value may still be 0; existing behaviour)",
+    "condition always did not arise: NOT_APPLICABLE"
+   ],
+   "provenance": "metric_events.source = signal_metrics.py:access.first_seen_mcp@<metric_version>"
+  },
+  {
+   "id": "interaction.mcp_servers",
+   "consumers": [
+    "anomaly_detection",
+    "interaction_discovery",
+    "incident_response",
+    "classification_tagging",
+    "policy_enforcement",
+    "risk_mitigation",
+    "resource_management",
+    "governance_intelligence",
+    "behavior_analytics",
+    "workload_optimization",
+    "audit_traceability",
+    "agent_lifecycle_management",
+    "governance_architecture"
+   ],
+   "category": "E",
+   "status": "IMPLEMENTED_EXISTING",
+   "meaning": "Distinct MCP servers used",
+   "required_fields": [
+    "mcp_server"
+   ],
+   "scope": "session",
+   "window": "the session",
+   "basis": "mcp",
+   "applies_when": "always",
+   "threshold": {
+    "direction": "above",
+    "warning": 3,
+    "exception": 6,
+    "critical": 12
+   },
+   "computed_by": "collector/signal_metrics.py:m_mcp_servers",
+   "definition_source": "signal_metrics.py (existing, unchanged)",
+   "missing_data": [
+    "basis absent and value zero: state UNKNOWN (value may still be 0; existing behaviour)",
+    "condition always did not arise: NOT_APPLICABLE"
+   ],
+   "provenance": "metric_events.source = signal_metrics.py:interaction.mcp_servers@<metric_version>"
+  },
+  {
+   "id": "resource_access_novelty_files",
+   "consumers": [
+    "anomaly_detection"
+   ],
+   "category": "H",
+   "status": "IMPLEMENTED",
+   "meaning": "Files new for this operator and workspace",
+   "required_fields": [
+    "file_path",
+    "operator_email",
+    "workspace"
+   ],
+   "formula": "files not touched in earlier sessions of this operator and workspace / files touched",
+   "denominator": "files touched",
+   "scope": "session, compared with earlier sessions",
+   "window": "all earlier sessions of the same operator in the fetched estate; at least 5 needed",
+   "baseline": "earlier sessions of this operator",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "paths",
+   "applies_when": "always",
+   "missing_data": [
+    "basis paths absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE",
+    "session touched no file path: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_resource_access_novelty_files",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:resource_access_novelty_files@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "token_expansion_per_turn",
+   "consumers": [
+    "anomaly_detection"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Largest turn-on-turn token ratio",
+   "required_fields": [
+    "total_tokens",
+    "turn_id"
+   ],
+   "formula": "max over consecutive turns of tokens(turn n) / tokens(turn n-1)",
+   "denominator": "tokens of the previous turn",
+   "scope": "turn",
+   "aggregation": "turn values aggregated to the session as stated in the formula",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "tokens",
+   "applies_when": "always",
+   "missing_data": [
+    "basis tokens absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE",
+    "fewer than two turns carry token counts: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_token_expansion_per_turn",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:token_expansion_per_turn@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "task_adjusted_anomaly_score",
+   "consumers": [
+    "anomaly_detection"
+   ],
+   "category": "M",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "needs a task classification from prompt_text, then a baseline per task class",
+   "input_contract": {
+    "inputs": "observables text fields named in proposal, with observable_ids",
+    "output": {
+     "judgement": "label from a set to be approved",
+     "confidence": "0..1",
+     "evidence_refs": "observable:<id> cited",
+     "rationale": "short, no hidden reasoning"
+    },
+    "verification": "an independent check that is not the same model response",
+    "cost": "paid model calls; none without explicit approval"
+   }
+  },
+  {
+   "id": "tool_use_deviation_per_agent",
+   "consumers": [
+    "anomaly_detection"
+   ],
+   "category": "H",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "tool_name distribution per agent_id vs that agent's history",
+   "why_not_built": "method to confirm: which distance between tool distributions, and per which agent identity"
+  },
+  {
+   "id": "compaction_count",
+   "consumers": [
+    "context_memory"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Context compactions",
+   "required_fields": [
+    "observable_type",
+    "compaction_reason"
+   ],
+   "formula": "count of compaction rows",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "compactions",
+   "applies_when": "always",
+   "missing_data": [
+    "basis compactions absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE"
+   ],
+   "evidence_refs": [
+    "observable"
+   ],
+   "computed_by": "collector/signal_metrics.py:m_compaction_count",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:compaction_count@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "context_loss_after_compaction",
+   "consumers": [
+    "context_memory"
+   ],
+   "category": "M",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "compare turns before and after a compaction row (compaction_reason, prompt_text, response_text)",
+   "input_contract": {
+    "inputs": "observables text fields named in proposal, with observable_ids",
+    "output": {
+     "judgement": "label from a set to be approved",
+     "confidence": "0..1",
+     "evidence_refs": "observable:<id> cited",
+     "rationale": "short, no hidden reasoning"
+    },
+    "verification": "an independent check that is not the same model response",
+    "cost": "paid model calls; none without explicit approval"
+   }
+  },
+  {
+   "id": "session_reset",
+   "consumers": [
+    "context_memory"
+   ],
+   "category": "S",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "session_start rows sharing a conversation_id, or session_end followed by session_start for the same operator/workspace; definition to confirm",
+   "why_not_built": "definition to confirm: which events mark a reset"
+  },
+  {
+   "id": "precedent_match",
+   "consumers": [
+    "context_memory"
+   ],
+   "category": "Q",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "same question as above",
+   "question": "same question as above"
+  },
+  {
+   "id": "context_consistency",
+   "consumers": [
+    "context_memory"
+   ],
+   "category": "M",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "judge response_text/reasoning_text against instructions_loaded and earlier turns",
+   "input_contract": {
+    "inputs": "observables text fields named in proposal, with observable_ids",
+    "output": {
+     "judgement": "label from a set to be approved",
+     "confidence": "0..1",
+     "evidence_refs": "observable:<id> cited",
+     "rationale": "short, no hidden reasoning"
+    },
+    "verification": "an independent check that is not the same model response",
+    "cost": "paid model calls; none without explicit approval"
+   }
+  },
+  {
+   "id": "context_relevance_score",
+   "consumers": [
+    "context_memory"
+   ],
+   "category": "M",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "relevance judgement over prompt_text and loaded context",
+   "input_contract": {
+    "inputs": "observables text fields named in proposal, with observable_ids",
+    "output": {
+     "judgement": "label from a set to be approved",
+     "confidence": "0..1",
+     "evidence_refs": "observable:<id> cited",
+     "rationale": "short, no hidden reasoning"
+    },
+    "verification": "an independent check that is not the same model response",
+    "cost": "paid model calls; none without explicit approval"
+   }
+  },
+  {
+   "id": "memory_retrieval_success_rate",
+   "consumers": [
+    "context_memory"
+   ],
+   "category": "Q",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "same question: agent memory (not collected) or COPS memory (cop_memory_access_log)",
+   "question": "same question: agent memory (not collected) or COPS memory (cop_memory_access_log)"
+  },
+  {
+   "id": "memory_staleness_rate",
+   "consumers": [
+    "context_memory"
+   ],
+   "category": "Q",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "same question as above",
+   "question": "same question as above"
+  },
+  {
+   "id": "memory_decision_consistency",
+   "consumers": [
+    "context_memory"
+   ],
+   "category": "Q",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "agent memory is not collected; COPS memory is (cop_memory_records). Which one is meant?",
+   "question": "agent memory is not collected; COPS memory is (cop_memory_records). Which one is meant?"
+  },
+  {
+   "id": "context_completeness_score",
+   "consumers": [
+    "context_memory"
+   ],
+   "category": "M",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "judge prompt_text, instructions_loaded, response_text, reasoning_text",
+   "input_contract": {
+    "inputs": "observables text fields named in proposal, with observable_ids",
+    "output": {
+     "judgement": "label from a set to be approved",
+     "confidence": "0..1",
+     "evidence_refs": "observable:<id> cited",
+     "rationale": "short, no hidden reasoning"
+    },
+    "verification": "an independent check that is not the same model response",
+    "cost": "paid model calls; none without explicit approval"
+   }
+  },
+  {
+   "id": "interaction_graph_completeness",
+   "consumers": [
+    "interaction_discovery"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Subagent rows with a resolvable parent",
+   "required_fields": [
+    "agent_id",
+    "parent_agent_id",
+    "observable_type"
+   ],
+   "formula": "subagent-lane rows whose lane is linked to a delegation or whose parent_agent_id is a lane of the session / subagent-lane rows",
+   "denominator": "rows in subagent lanes",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "subagents",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition subagents did not arise: NOT_APPLICABLE",
+    "subagent lanes have no rows carrying agent_id: UNKNOWN, value None"
+   ],
+   "evidence_refs": [
+    "observable"
+   ],
+   "computed_by": "collector/signal_metrics.py:m_interaction_graph_completeness",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:interaction_graph_completeness@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "interaction_edge_count",
+   "consumers": [
+    "interaction_discovery"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Distinct delegation and MCP edges",
+   "required_fields": [
+    "agent_id",
+    "parent_agent_id",
+    "mcp_server"
+   ],
+   "formula": "distinct (parent -> subagent) and (lane -> MCP server) edges; parent from parent_agent_id, else main for a lane linked to a delegation",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "always",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_interaction_edge_count",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:interaction_edge_count@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "interaction_unique_entities",
+   "consumers": [
+    "interaction_discovery"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Distinct agents, MCP servers and tools",
+   "required_fields": [
+    "agent_id",
+    "mcp_server",
+    "tool_name"
+   ],
+   "formula": "lanes acting + distinct MCP servers + distinct tool names",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "actions",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition actions did not arise: NOT_APPLICABLE"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_interaction_unique_entities",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:interaction_unique_entities@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "interaction_route_novelty",
+   "consumers": [
+    "interaction_discovery"
+   ],
+   "category": "H",
+   "status": "IMPLEMENTED",
+   "meaning": "Interaction edges new for this operator",
+   "required_fields": [
+    "agent_id",
+    "parent_agent_id",
+    "mcp_server",
+    "operator_email"
+   ],
+   "formula": "interaction edges not seen in earlier sessions of this operator with this tool / edges",
+   "denominator": "edges",
+   "scope": "session, compared with earlier sessions",
+   "window": "all earlier sessions of the same operator in the fetched estate; at least 5 needed",
+   "baseline": "earlier sessions of this operator",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "always",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE",
+    "session has no interaction edges: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_interaction_route_novelty",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:interaction_route_novelty@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "interaction_propagation_depth",
+   "consumers": [
+    "interaction_discovery"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Deepest delegation level",
+   "required_fields": [
+    "agent_id",
+    "parent_agent_id",
+    "delegation_depth"
+   ],
+   "formula": "max(depth from the lane parent chain, max reported delegation_depth); disagreement recorded as a conflict",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "always",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE",
+    "subagent lanes are not linked and carry no delegation_depth: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_interaction_propagation_depth",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:interaction_propagation_depth@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "interaction_propagation_breadth",
+   "consumers": [
+    "interaction_discovery"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Most subagents under one parent",
+   "required_fields": [
+    "agent_id",
+    "parent_agent_id"
+   ],
+   "formula": "max number of subagent lanes under one parent",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "subagents",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition subagents did not arise: NOT_APPLICABLE",
+    "no subagent lane has a known parent: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_interaction_propagation_breadth",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:interaction_propagation_breadth@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "interaction_orphaned_events",
+   "consumers": [
+    "interaction_discovery"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Subagent rows with no known parent",
+   "required_fields": [
+    "agent_id",
+    "parent_agent_id",
+    "observable_type"
+   ],
+   "formula": "rows in subagent lanes that are neither linked to a delegation nor carry parent_agent_id",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "subagents",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition subagents did not arise: NOT_APPLICABLE"
+   ],
+   "evidence_refs": [
+    "observable"
+   ],
+   "computed_by": "collector/signal_metrics.py:m_interaction_orphaned_events",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:interaction_orphaned_events@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "interaction_unattributed_edges",
+   "consumers": [
+    "interaction_discovery"
+   ],
+   "category": "S",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "edges with attribution = unknown",
+   "why_not_built": "definition to confirm: the attribution column describes file effects, not interaction edges"
+  },
+  {
+   "id": "insights.sensitive_unasked",
+   "consumers": [
+    "incident_response",
+    "classification_tagging",
+    "policy_enforcement",
+    "risk_mitigation",
+    "governance_intelligence",
+    "knowledge_policy_management",
+    "governance_architecture"
+   ],
+   "category": "E",
+   "status": "IMPLEMENTED_EXISTING",
+   "meaning": "Sensitive path, no approval in session",
+   "required_fields": [
+    "sensitivity_tier",
+    "permission_decision"
+   ],
+   "scope": "session",
+   "window": "the session",
+   "basis": "approvals",
+   "applies_when": "always",
+   "threshold": {
+    "direction": "above",
+    "warning": 1,
+    "exception": 1,
+    "critical": 5
+   },
+   "computed_by": "collector/signal_metrics.py:m_sensitive_unasked",
+   "definition_source": "signal_metrics.py (existing, unchanged)",
+   "missing_data": [
+    "basis absent and value zero: state UNKNOWN (value may still be 0; existing behaviour)",
+    "condition always did not arise: NOT_APPLICABLE"
+   ],
+   "provenance": "metric_events.source = signal_metrics.py:insights.sensitive_unasked@<metric_version>"
+  },
+  {
+   "id": "insights.secrets",
+   "consumers": [
+    "incident_response",
+    "classification_tagging",
+    "policy_enforcement",
+    "risk_mitigation",
+    "governance_intelligence",
+    "knowledge_policy_management",
+    "agent_lifecycle_management",
+    "governance_architecture"
+   ],
+   "category": "E",
+   "status": "IMPLEMENTED_EXISTING",
+   "meaning": "Secret-shaped content handled",
+   "required_fields": [
+    "secret_detected"
+   ],
+   "scope": "session",
+   "window": "the session",
+   "basis": "content",
+   "applies_when": "always",
+   "threshold": {
+    "direction": "above",
+    "warning": 1,
+    "exception": 1,
+    "critical": 3
+   },
+   "computed_by": "collector/signal_metrics.py:m_secrets",
+   "definition_source": "signal_metrics.py (existing, unchanged)",
+   "missing_data": [
+    "basis absent and value zero: state UNKNOWN (value may still be 0; existing behaviour)",
+    "condition always did not arise: NOT_APPLICABLE"
+   ],
+   "provenance": "metric_events.source = signal_metrics.py:insights.secrets@<metric_version>"
+  },
+  {
+   "id": "insights.blocked",
+   "consumers": [
+    "incident_response",
+    "classification_tagging",
+    "policy_enforcement",
+    "risk_mitigation",
+    "governance_intelligence",
+    "behavior_analytics",
+    "recovery_resilience",
+    "knowledge_policy_management",
+    "agent_lifecycle_management",
+    "governance_architecture"
+   ],
+   "category": "E",
+   "status": "IMPLEMENTED_EXISTING",
+   "meaning": "Action stopped by our deny rules",
+   "required_fields": [
+    "policy_rule_matched"
+   ],
+   "scope": "session",
+   "window": "the session",
+   "basis": "our_rules",
+   "applies_when": "always",
+   "threshold": {
+    "direction": "above",
+    "warning": 1,
+    "exception": 1,
+    "critical": 5
+   },
+   "computed_by": "collector/signal_metrics.py:m_blocked",
+   "definition_source": "signal_metrics.py (existing, unchanged)",
+   "missing_data": [
+    "basis absent and value zero: state UNKNOWN (value may still be 0; existing behaviour)",
+    "condition always did not arise: NOT_APPLICABLE"
+   ],
+   "provenance": "metric_events.source = signal_metrics.py:insights.blocked@<metric_version>"
+  },
+  {
+   "id": "insights.no_oversight",
+   "consumers": [
+    "incident_response",
+    "classification_tagging",
+    "policy_enforcement",
+    "risk_mitigation",
+    "governance_intelligence",
+    "behavior_analytics",
+    "knowledge_policy_management",
+    "agent_lifecycle_management",
+    "governance_architecture"
+   ],
+   "category": "E",
+   "status": "IMPLEMENTED_EXISTING",
+   "meaning": "Long session, nobody asked",
+   "required_fields": [
+    "tool_name",
+    "permission_decision"
+   ],
+   "scope": "session",
+   "window": "the session",
+   "basis": "approvals",
+   "applies_when": "always",
+   "threshold": {
+    "direction": "above",
+    "warning": 41,
+    "exception": 41,
+    "critical": 200
+   },
+   "computed_by": "collector/signal_metrics.py:m_no_oversight",
+   "definition_source": "signal_metrics.py (existing, unchanged)",
+   "missing_data": [
+    "basis absent and value zero: state UNKNOWN (value may still be 0; existing behaviour)",
+    "condition always did not arise: NOT_APPLICABLE"
+   ],
+   "provenance": "metric_events.source = signal_metrics.py:insights.no_oversight@<metric_version>"
+  },
+  {
+   "id": "insights.reverted",
+   "consumers": [
+    "incident_response",
+    "classification_tagging",
+    "risk_mitigation",
+    "governance_intelligence",
+    "behavior_analytics",
+    "recovery_resilience"
+   ],
+   "category": "E",
+   "status": "IMPLEMENTED_EXISTING",
+   "meaning": "Agent work put back",
+   "required_fields": [
+    "content_hash",
+    "reverted_to_earlier"
+   ],
+   "scope": "session",
+   "window": "the session",
+   "basis": "hashes",
+   "applies_when": "effects",
+   "threshold": {
+    "direction": "above",
+    "warning": 1,
+    "exception": 3,
+    "critical": 10
+   },
+   "computed_by": "collector/signal_metrics.py:m_reverted",
+   "definition_source": "signal_metrics.py (existing, unchanged)",
+   "missing_data": [
+    "basis absent and value zero: state UNKNOWN (value may still be 0; existing behaviour)",
+    "condition effects did not arise: NOT_APPLICABLE"
+   ],
+   "provenance": "metric_events.source = signal_metrics.py:insights.reverted@<metric_version>"
+  },
+  {
+   "id": "insights.unattributed",
+   "consumers": [
+    "incident_response",
+    "classification_tagging",
+    "policy_enforcement",
+    "risk_mitigation",
+    "governance_intelligence",
+    "audit_traceability",
+    "knowledge_policy_management",
+    "agent_lifecycle_management",
+    "governance_architecture"
+   ],
+   "category": "E",
+   "status": "IMPLEMENTED_EXISTING",
+   "meaning": "Disk change no agent accounts for",
+   "required_fields": [
+    "file_path",
+    "attribution"
+   ],
+   "scope": "session",
+   "window": "the session",
+   "basis": "fs",
+   "applies_when": "always",
+   "threshold": {
+    "direction": "above",
+    "warning": 1,
+    "exception": 5,
+    "critical": 25
+   },
+   "computed_by": "collector/signal_metrics.py:m_unattributed",
+   "definition_source": "signal_metrics.py (existing, unchanged)",
+   "missing_data": [
+    "basis absent and value zero: state UNKNOWN (value may still be 0; existing behaviour)",
+    "condition always did not arise: NOT_APPLICABLE"
+   ],
+   "provenance": "metric_events.source = signal_metrics.py:insights.unattributed@<metric_version>"
+  },
+  {
+   "id": "oversight.fast_approvals",
+   "consumers": [
+    "incident_response",
+    "classification_tagging",
+    "policy_enforcement",
+    "risk_mitigation",
+    "governance_intelligence",
+    "behavior_analytics",
+    "knowledge_policy_management",
+    "governance_architecture"
+   ],
+   "category": "E",
+   "status": "IMPLEMENTED_EXISTING",
+   "meaning": "Approvals returned in under a second",
+   "required_fields": [
+    "observable_type",
+    "occurred_at"
+   ],
+   "scope": "session",
+   "window": "the session",
+   "basis": "approvals",
+   "applies_when": "asked",
+   "threshold": {
+    "direction": "above",
+    "warning": 1,
+    "exception": 3,
+    "critical": 10
+   },
+   "computed_by": "collector/signal_metrics.py:m_fast_approvals",
+   "definition_source": "signal_metrics.py (existing, unchanged)",
+   "missing_data": [
+    "basis absent and value zero: state UNKNOWN (value may still be 0; existing behaviour)",
+    "condition asked did not arise: NOT_APPLICABLE"
+   ],
+   "provenance": "metric_events.source = signal_metrics.py:oversight.fast_approvals@<metric_version>"
+  },
+  {
+   "id": "oversight.declined_inferred",
+   "consumers": [
+    "incident_response",
+    "classification_tagging",
+    "policy_enforcement",
+    "risk_mitigation",
+    "governance_intelligence",
+    "behavior_analytics",
+    "knowledge_policy_management",
+    "governance_architecture"
+   ],
+   "category": "E",
+   "status": "IMPLEMENTED_EXISTING",
+   "meaning": "Approval requests apparently declined",
+   "required_fields": [
+    "observable_type",
+    "turn_id"
+   ],
+   "scope": "session",
+   "window": "the session",
+   "basis": "approvals",
+   "applies_when": "asked",
+   "threshold": {
+    "direction": "above",
+    "warning": 1,
+    "exception": 3,
+    "critical": 10
+   },
+   "computed_by": "collector/signal_metrics.py:m_declined_inferred",
+   "definition_source": "signal_metrics.py (existing, unchanged)",
+   "missing_data": [
+    "basis absent and value zero: state UNKNOWN (value may still be 0; existing behaviour)",
+    "condition asked did not arise: NOT_APPLICABLE"
+   ],
+   "provenance": "metric_events.source = signal_metrics.py:oversight.declined_inferred@<metric_version>"
+  },
+  {
+   "id": "incident_trigger_score",
+   "consumers": [
+    "incident_response"
+   ],
+   "category": "D",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "from upstream cop_decisions severity/action",
+   "note": "read from upstream COP findings along the Block 1 edges, computed in the COPS runtime (Block 2.4)"
+  },
+  {
+   "id": "incident_severity_score",
+   "consumers": [
+    "incident_response"
+   ],
+   "category": "O",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "IR's own decision",
+   "note": "a decision field of the consuming COP, not a calculated metric"
+  },
+  {
+   "id": "incident_scope",
+   "consumers": [
+    "incident_response"
+   ],
+   "category": "D",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "entities touched by the steps cited in upstream decisions' evidence_refs",
+   "note": "read from upstream COP findings along the Block 1 edges, computed in the COPS runtime (Block 2.4)"
+  },
+  {
+   "id": "incident_impact_score",
+   "consumers": [
+    "incident_response"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "asset inventory and criticality, business impact criteria",
+   "input_contract": {
+    "reference": "asset_inventory",
+    "fields": [
+     "asset (repo, path pattern, service)",
+     "criticality",
+     "owner",
+     "impact criteria",
+     "likelihood criteria",
+     "playbook and cost"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "incident_evidence_sufficiency",
+   "consumers": [
+    "incident_response"
+   ],
+   "category": "D",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "evidence_confidence of the upstream cop_decisions IR consumes",
+   "note": "read from upstream COP findings along the Block 1 edges, computed in the COPS runtime (Block 2.4)"
+  },
+  {
+   "id": "incident_upstream_agreement",
+   "consumers": [
+    "incident_response"
+   ],
+   "category": "D",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "agreement between the upstream cop_decisions IR consumes",
+   "note": "read from upstream COP findings along the Block 1 edges, computed in the COPS runtime (Block 2.4)"
+  },
+  {
+   "id": "incident_active_duration",
+   "consumers": [
+    "incident_response"
+   ],
+   "category": "A",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "open/close times of IR findings and the actions taken",
+   "note": "needs records of COPS actions and their outcomes; none are stored yet"
+  },
+  {
+   "id": "incident_containment_status",
+   "consumers": [
+    "incident_response"
+   ],
+   "category": "A",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "COPS action records plus later observables",
+   "note": "needs records of COPS actions and their outcomes; none are stored yet"
+  },
+  {
+   "id": "incident_resolution_status",
+   "consumers": [
+    "incident_response"
+   ],
+   "category": "A",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "resolution records",
+   "note": "needs records of COPS actions and their outcomes; none are stored yet"
+  },
+  {
+   "id": "incident_response_urgency",
+   "consumers": [
+    "incident_response"
+   ],
+   "category": "O",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "IR's own decision",
+   "note": "a decision field of the consuming COP, not a calculated metric"
+  },
+  {
+   "id": "incident_escalation_required",
+   "consumers": [
+    "incident_response"
+   ],
+   "category": "O",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "this is IR's own decision",
+   "note": "a decision field of the consuming COP, not a calculated metric"
+  },
+  {
+   "id": "incident_human_approval_required",
+   "consumers": [
+    "incident_response"
+   ],
+   "category": "O",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "this is IR's own decision",
+   "note": "a decision field of the consuming COP, not a calculated metric"
+  },
+  {
+   "id": "incident_intervention_success",
+   "consumers": [
+    "incident_response"
+   ],
+   "category": "A",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "intervention records and post-intervention observables",
+   "note": "needs records of COPS actions and their outcomes; none are stored yet"
+  },
+  {
+   "id": "incident_residual_risk",
+   "consumers": [
+    "incident_response"
+   ],
+   "category": "O",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "IR's own assessment",
+   "note": "a decision field of the consuming COP, not a calculated metric"
+  },
+  {
+   "id": "insights.lockfile",
+   "consumers": [
+    "classification_tagging",
+    "governance_intelligence"
+   ],
+   "category": "E",
+   "status": "IMPLEMENTED_EXISTING",
+   "meaning": "Manifest changed without lockfile",
+   "required_fields": [
+    "is_dependency_manifest",
+    "is_lockfile"
+   ],
+   "scope": "session",
+   "window": "the session",
+   "basis": "fs",
+   "applies_when": "always",
+   "threshold": {
+    "direction": "above",
+    "warning": 1,
+    "exception": 1,
+    "critical": 5
+   },
+   "computed_by": "collector/signal_metrics.py:m_lockfile",
+   "definition_source": "signal_metrics.py (existing, unchanged)",
+   "missing_data": [
+    "basis absent and value zero: state UNKNOWN (value may still be 0; existing behaviour)",
+    "condition always did not arise: NOT_APPLICABLE"
+   ],
+   "provenance": "metric_events.source = signal_metrics.py:insights.lockfile@<metric_version>"
+  },
+  {
+   "id": "telemetry.unknown_shared",
+   "consumers": [
+    "policy_enforcement"
+   ],
+   "category": "Q",
+   "suspected_typo_of": "telemetry.unknown_share",
+   "confirmation": "suspected typo; awaiting purvi's confirmation; kept as written",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "not a metric id; probably telemetry.unknown_share",
+   "question": "not a metric id; probably telemetry.unknown_share"
+  },
+  {
+   "id": "policy_applicability_coverage",
+   "consumers": [
+    "policy_enforcement"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "enterprise policy registry",
+   "input_contract": {
+    "reference": "policy_registry",
+    "fields": [
+     "policy_id",
+     "version",
+     "effective_from",
+     "scope",
+     "rule",
+     "precedents"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "entitlement_mismatch_rate",
+   "consumers": [
+    "policy_enforcement"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "role-based entitlements and agent permissions",
+   "input_contract": {
+    "reference": "entitlements",
+    "fields": [
+     "principal (operator or agent)",
+     "resource or action",
+     "allowed",
+     "requires_approval_by"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "unauthorized_action_attempts",
+   "consumers": [
+    "policy_enforcement"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Denied or blocked actions",
+   "required_fields": [
+    "observable_type",
+    "status",
+    "tool_use_id"
+   ],
+   "formula": "permission_denied and mcp_blocked rows, and rows with status denied or blocked, de-duplicated by tool_use_id",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "denials",
+   "applies_when": "always",
+   "missing_data": [
+    "basis denials absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE"
+   ],
+   "evidence_refs": [
+    "observable"
+   ],
+   "computed_by": "collector/signal_metrics.py:m_unauthorized_action_attempts",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:unauthorized_action_attempts@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "boundary_violation_count",
+   "consumers": [
+    "policy_enforcement"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Outside-workspace or policy-violating rows",
+   "required_fields": [
+    "outside_workspace",
+    "violation_count"
+   ],
+   "formula": "rows and effects with outside_workspace or violation_count > 0, de-duplicated by observable_id",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "paths",
+   "applies_when": "always",
+   "missing_data": [
+    "basis paths absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE"
+   ],
+   "evidence_refs": [
+    "observable"
+   ],
+   "computed_by": "collector/signal_metrics.py:m_boundary_violation_count",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:boundary_violation_count@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "restricted_resource_access_rate",
+   "consumers": [
+    "policy_enforcement"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Tool and file rows at sensitivity tier 3+",
+   "required_fields": [
+    "sensitivity_tier",
+    "file_path",
+    "tool_name"
+   ],
+   "formula": "rows with sensitivity_tier >= 3 / call and file rows that carry sensitivity_tier (tier 3 as in insights.sensitive_unasked)",
+   "denominator": "call and file rows with sensitivity_tier",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "paths",
+   "applies_when": "file_rows",
+   "missing_data": [
+    "basis paths absent: UNKNOWN, value None",
+    "condition file_rows did not arise: NOT_APPLICABLE",
+    "no file or tool row carries sensitivity_tier: UNKNOWN, value None"
+   ],
+   "evidence_refs": [
+    "observable"
+   ],
+   "computed_by": "collector/signal_metrics.py:m_restricted_resource_access_rate",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:restricted_resource_access_rate@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "approval_requirement_compliance",
+   "consumers": [
+    "policy_enforcement"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "approval requirements per action/resource",
+   "input_contract": {
+    "reference": "entitlements",
+    "fields": [
+     "principal (operator or agent)",
+     "resource or action",
+     "allowed",
+     "requires_approval_by"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "approval_action_linkage",
+   "consumers": [
+    "policy_enforcement"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Grants followed by their action",
+   "required_fields": [
+    "observable_type",
+    "tool_use_id"
+   ],
+   "formula": "permission_granted rows followed by an action with the same tool_use_id / permission_granted rows with tool_use_id",
+   "denominator": "permission_granted rows with tool_use_id",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "grants",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition grants did not arise: NOT_APPLICABLE",
+    "no permission_granted row carries a tool_use_id: UNKNOWN, value None"
+   ],
+   "evidence_refs": [
+    "observable"
+   ],
+   "computed_by": "collector/signal_metrics.py:m_approval_action_linkage",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:approval_action_linkage@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "policy_violation_rate",
+   "consumers": [
+    "policy_enforcement"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Actions with violation_count > 0",
+   "required_fields": [
+    "violation_count"
+   ],
+   "formula": "actions with violation_count > 0 / actions",
+   "denominator": "actions",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "our_rules",
+   "applies_when": "actions",
+   "missing_data": [
+    "basis our_rules absent: UNKNOWN, value None",
+    "condition actions did not arise: NOT_APPLICABLE",
+    "violation_count was not read for this session: UNKNOWN, value None"
+   ],
+   "evidence_refs": [
+    "observable"
+   ],
+   "computed_by": "collector/signal_metrics.py:m_policy_violation_rate",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:policy_violation_rate@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "unapproved_tool_usage",
+   "consumers": [
+    "policy_enforcement"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "approved tool registry",
+   "input_contract": {
+    "reference": "allowlists",
+    "fields": [
+     "kind (tool, mcp_server, interaction_route, model, tool_version)",
+     "value",
+     "scope",
+     "approved_by",
+     "version"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "unapproved_mcp_access",
+   "consumers": [
+    "policy_enforcement"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "MCP server allowlist",
+   "input_contract": {
+    "reference": "allowlists",
+    "fields": [
+     "kind (tool, mcp_server, interaction_route, model, tool_version)",
+     "value",
+     "scope",
+     "approved_by",
+     "version"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "unauthorized_interaction_route_count",
+   "consumers": [
+    "policy_enforcement"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "authorized interaction routes",
+   "input_contract": {
+    "reference": "allowlists",
+    "fields": [
+     "kind (tool, mcp_server, interaction_route, model, tool_version)",
+     "value",
+     "scope",
+     "approved_by",
+     "version"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "policy_evidence_sufficiency",
+   "consumers": [
+    "policy_enforcement"
+   ],
+   "category": "D",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "evidence_confidence of upstream decisions PE consumes",
+   "note": "read from upstream COP findings along the Block 1 edges, computed in the COPS runtime (Block 2.4)"
+  },
+  {
+   "id": "policy_decision_confidence",
+   "consumers": [
+    "policy_enforcement"
+   ],
+   "category": "O",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "PE's own decision",
+   "note": "a decision field of the consuming COP, not a calculated metric"
+  },
+  {
+   "id": "policy_exception_rate",
+   "consumers": [
+    "policy_enforcement"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "approved exception records",
+   "input_contract": {
+    "reference": "policy_exceptions",
+    "fields": [
+     "exception_id",
+     "policy_id",
+     "principal",
+     "granted_by",
+     "valid_from",
+     "valid_to"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "risk_likelihood_score",
+   "consumers": [
+    "risk_mitigation"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "threat likelihood criteria; historical frequency can come from cop_decisions",
+   "input_contract": {
+    "reference": "asset_inventory",
+    "fields": [
+     "asset (repo, path pattern, service)",
+     "criticality",
+     "owner",
+     "impact criteria",
+     "likelihood criteria",
+     "playbook and cost"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "risk_severity_score",
+   "consumers": [
+    "risk_mitigation"
+   ],
+   "category": "O",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "RiskM's own decision",
+   "note": "a decision field of the consuming COP, not a calculated metric"
+  },
+  {
+   "id": "risk_exposure_score",
+   "consumers": [
+    "risk_mitigation"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "asset inventory plus upstream findings",
+   "input_contract": {
+    "reference": "asset_inventory",
+    "fields": [
+     "asset (repo, path pattern, service)",
+     "criticality",
+     "owner",
+     "impact criteria",
+     "likelihood criteria",
+     "playbook and cost"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "risk_impact_score",
+   "consumers": [
+    "risk_mitigation"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "business impact criteria, risk tolerance",
+   "input_contract": {
+    "reference": "asset_inventory",
+    "fields": [
+     "asset (repo, path pattern, service)",
+     "criticality",
+     "owner",
+     "impact criteria",
+     "likelihood criteria",
+     "playbook and cost"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "risk_asset_criticality",
+   "consumers": [
+    "risk_mitigation"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "asset inventory and criticality",
+   "input_contract": {
+    "reference": "asset_inventory",
+    "fields": [
+     "asset (repo, path pattern, service)",
+     "criticality",
+     "owner",
+     "impact criteria",
+     "likelihood criteria",
+     "playbook and cost"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "risk_affected_entity_count",
+   "consumers": [
+    "risk_mitigation"
+   ],
+   "category": "D",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "entities cited in upstream decisions' evidence_refs",
+   "note": "read from upstream COP findings along the Block 1 edges, computed in the COPS runtime (Block 2.4)"
+  },
+  {
+   "id": "risk_propagation_potential",
+   "consumers": [
+    "risk_mitigation"
+   ],
+   "category": "D",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "from ID's decision (route graph)",
+   "note": "read from upstream COP findings along the Block 1 edges, computed in the COPS runtime (Block 2.4)"
+  },
+  {
+   "id": "risk_evidence_sufficiency",
+   "consumers": [
+    "risk_mitigation"
+   ],
+   "category": "D",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "evidence_confidence of upstream decisions",
+   "note": "read from upstream COP findings along the Block 1 edges, computed in the COPS runtime (Block 2.4)"
+  },
+  {
+   "id": "risk_mitigation_effectiveness",
+   "consumers": [
+    "risk_mitigation"
+   ],
+   "category": "A",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "mitigation outcome records",
+   "note": "needs records of COPS actions and their outcomes; none are stored yet"
+  },
+  {
+   "id": "risk_intervention_cost",
+   "consumers": [
+    "risk_mitigation"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "response playbooks with intervention cost",
+   "input_contract": {
+    "reference": "asset_inventory",
+    "fields": [
+     "asset (repo, path pattern, service)",
+     "criticality",
+     "owner",
+     "impact criteria",
+     "likelihood criteria",
+     "playbook and cost"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "risk_response_proportionality",
+   "consumers": [
+    "risk_mitigation"
+   ],
+   "category": "O",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "judges RiskM's own response",
+   "note": "a decision field of the consuming COP, not a calculated metric"
+  },
+  {
+   "id": "risk_mitigation_completion",
+   "consumers": [
+    "risk_mitigation"
+   ],
+   "category": "A",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "mitigation action records",
+   "note": "needs records of COPS actions and their outcomes; none are stored yet"
+  },
+  {
+   "id": "risk_residual_score",
+   "consumers": [
+    "risk_mitigation"
+   ],
+   "category": "O",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "RiskM's own assessment",
+   "note": "a decision field of the consuming COP, not a calculated metric"
+  },
+  {
+   "id": "risk_recurrence_rate",
+   "consumers": [
+    "risk_mitigation"
+   ],
+   "category": "D",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "repeat of same risk label in cop_decisions history",
+   "note": "read from upstream COP findings along the Block 1 edges, computed in the COPS runtime (Block 2.4)"
+  },
+  {
+   "id": "risk_escalation_required",
+   "consumers": [
+    "risk_mitigation"
+   ],
+   "category": "O",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "RiskM's own decision",
+   "note": "a decision field of the consuming COP, not a calculated metric"
+  },
+  {
+   "id": "token_consumption_per_session",
+   "consumers": [
+    "resource_management"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Session tokens",
+   "required_fields": [
+    "total_tokens"
+   ],
+   "formula": "sum of total_tokens over de-duplicated rows",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "tokens",
+   "applies_when": "always",
+   "missing_data": [
+    "basis tokens absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_token_consumption_per_session",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:token_consumption_per_session@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "token_consumption_per_turn",
+   "consumers": [
+    "resource_management"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Most tokens in one turn",
+   "required_fields": [
+    "total_tokens",
+    "turn_id"
+   ],
+   "formula": "max over turns of the sum of total_tokens; median and tokens without turn in features",
+   "scope": "turn",
+   "aggregation": "turn values aggregated to the session as stated in the formula",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "tokens",
+   "applies_when": "always",
+   "missing_data": [
+    "basis tokens absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE",
+    "no token count carries a turn_id: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_token_consumption_per_turn",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:token_consumption_per_turn@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "token_budget_utilization",
+   "consumers": [
+    "resource_management"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "token budgets",
+   "input_contract": {
+    "reference": "budgets_and_quotas",
+    "fields": [
+     "scope (operator, team, agent, org)",
+     "measure (tokens, cost_usd, calls)",
+     "period",
+     "limit"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "token_quota_exceeded",
+   "consumers": [
+    "resource_management"
+   ],
+   "category": "Q",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "no quota is stored; only possible as rate-limit errors in error_type/stop_reason; is that what you mean?",
+   "question": "no quota is stored; only possible as rate-limit errors in error_type/stop_reason; is that what you mean?"
+  },
+  {
+   "id": "cost_per_session",
+   "consumers": [
+    "resource_management"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Session cost (USD)",
+   "required_fields": [
+    "cost_usd",
+    "cost_is_estimated"
+   ],
+   "formula": "sum of cost_usd over rows that carry it; cost_is_estimated reported",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "always",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE",
+    "no row carries cost_usd: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_cost_per_session",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:cost_per_session@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "cost_budget_utilization",
+   "consumers": [
+    "resource_management"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "cost budgets",
+   "input_contract": {
+    "reference": "budgets_and_quotas",
+    "fields": [
+     "scope (operator, team, agent, org)",
+     "measure (tokens, cost_usd, calls)",
+     "period",
+     "limit"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "execution_duration_per_session",
+   "consumers": [
+    "resource_management"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Session duration (s)",
+   "required_fields": [
+    "occurred_at"
+   ],
+   "formula": "last occurred_at - first occurred_at, seconds",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "always",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE",
+    "fewer than two timestamped rows: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_execution_duration_per_session",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:execution_duration_per_session@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "execution_duration_threshold_breach",
+   "consumers": [
+    "resource_management"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Session duration against its threshold",
+   "required_fields": [
+    "occurred_at"
+   ],
+   "formula": "execution_duration_per_session judged against an approved threshold",
+   "scope": "session",
+   "window": "the session",
+   "reference_data": "thresholds.execution_duration_threshold_breach in metrics_config.json",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "always",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE",
+    "no approved session duration threshold in metrics_config.json: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_execution_duration_threshold_breach",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:execution_duration_threshold_breach@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "tool_timeout_rate",
+   "consumers": [
+    "resource_management"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Actions that timed out",
+   "required_fields": [
+    "status"
+   ],
+   "formula": "actions with status = timeout / actions",
+   "denominator": "actions",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "status",
+   "applies_when": "actions",
+   "missing_data": [
+    "basis status absent: UNKNOWN, value None",
+    "condition actions did not arise: NOT_APPLICABLE"
+   ],
+   "evidence_refs": [
+    "observable"
+   ],
+   "computed_by": "collector/signal_metrics.py:m_tool_timeout_rate",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:tool_timeout_rate@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "resource_consumption_rate",
+   "consumers": [
+    "resource_management"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Tokens per minute",
+   "required_fields": [
+    "total_tokens",
+    "occurred_at"
+   ],
+   "formula": "session tokens / session minutes",
+   "denominator": "session minutes",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "tokens",
+   "applies_when": "always",
+   "missing_data": [
+    "basis tokens absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE",
+    "session has no measurable duration: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_resource_consumption_rate",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:resource_consumption_rate@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "resource_capacity_utilization",
+   "consumers": [
+    "resource_management"
+   ],
+   "category": "C",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "CPU/memory/capacity is not captured by any collector",
+   "note": "no collector captures this today"
+  },
+  {
+   "id": "resource_concurrency_level",
+   "consumers": [
+    "resource_management"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Most steps running at once",
+   "required_fields": [
+    "occurred_at",
+    "tool_duration_ms",
+    "tool_use_id"
+   ],
+   "formula": "max number of steps whose [started_at, ended_at] intervals overlap",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "durations",
+   "applies_when": "steps",
+   "missing_data": [
+    "basis durations absent: UNKNOWN, value None",
+    "condition steps did not arise: NOT_APPLICABLE",
+    "no step has a start and an end time: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_resource_concurrency_level",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:resource_concurrency_level@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "resource_stall_rate",
+   "consumers": [
+    "resource_management"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Steps that stalled",
+   "required_fields": [
+    "hung_seconds"
+   ],
+   "formula": "STALL steps / steps",
+   "denominator": "steps other than START and END",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "wrapper",
+   "applies_when": "steps",
+   "missing_data": [
+    "basis wrapper absent: UNKNOWN, value None",
+    "condition steps did not arise: NOT_APPLICABLE"
+   ],
+   "evidence_refs": [
+    "step"
+   ],
+   "computed_by": "collector/signal_metrics.py:m_resource_stall_rate",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:resource_stall_rate@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "resource_redundant_execution_cost",
+   "consumers": [
+    "resource_management"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Time spent on repeated calls (ms)",
+   "required_fields": [
+    "tool_name",
+    "tool_arguments",
+    "turn_id",
+    "tool_duration_ms"
+   ],
+   "formula": "sum of tool_duration_ms of the calls insights.repetition flags (reuses m_repetition's evidence)",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "args",
+   "applies_when": "actions",
+   "missing_data": [
+    "basis args absent: UNKNOWN, value None",
+    "condition actions did not arise: NOT_APPLICABLE",
+    "repeated calls carry no tool_duration_ms: UNKNOWN, value None"
+   ],
+   "evidence_refs": [
+    "observable"
+   ],
+   "computed_by": "collector/signal_metrics.py:m_resource_redundant_execution_cost",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:resource_redundant_execution_cost@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "model_selection_compliance",
+   "consumers": [
+    "resource_management"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "approved model registry",
+   "input_contract": {
+    "reference": "allowlists",
+    "fields": [
+     "kind (tool, mcp_server, interaction_route, model, tool_version)",
+     "value",
+     "scope",
+     "approved_by",
+     "version"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "subagent_resource_consumption",
+   "consumers": [
+    "resource_management"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Tokens attributed to subagents",
+   "required_fields": [
+    "total_tokens",
+    "agent_id"
+   ],
+   "formula": "sum of total_tokens on rows in subagent lanes",
+   "scope": "agent",
+   "aggregation": "per-agent values in features, session value as stated in the formula",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "tokens",
+   "applies_when": "subagents",
+   "missing_data": [
+    "basis tokens absent: UNKNOWN, value None",
+    "condition subagents did not arise: NOT_APPLICABLE",
+    "no token count is attributed to a subagent: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_subagent_resource_consumption",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:subagent_resource_consumption@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "resource_quota_compliance",
+   "consumers": [
+    "resource_management"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "per-agent quotas",
+   "input_contract": {
+    "reference": "budgets_and_quotas",
+    "fields": [
+     "scope (operator, team, agent, org)",
+     "measure (tokens, cost_usd, calls)",
+     "period",
+     "limit"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "resource_limit_proximity",
+   "consumers": [
+    "resource_management"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "resource limits",
+   "input_contract": {
+    "reference": "budgets_and_quotas",
+    "fields": [
+     "scope (operator, team, agent, org)",
+     "measure (tokens, cost_usd, calls)",
+     "period",
+     "limit"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "resource_threshold_breach_count",
+   "consumers": [
+    "resource_management"
+   ],
+   "category": "Q",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "which thresholds: count of ResM metric_events in EXCEPTION or CRITICAL?",
+   "question": "which thresholds: count of ResM metric_events in EXCEPTION or CRITICAL?"
+  },
+  {
+   "id": "resource_intervention_required",
+   "consumers": [
+    "resource_management"
+   ],
+   "category": "O",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "ResM's own decision",
+   "note": "a decision field of the consuming COP, not a calculated metric"
+  },
+  {
+   "id": "metric_state_trends_from_metric_events",
+   "consumers": [
+    "governance_intelligence"
+   ],
+   "category": "H",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "metric_events.state over time",
+   "why_not_built": "needs metric_events history as an input; compute() produces it"
+  },
+  {
+   "id": "decision_trends_from_cop_decisions",
+   "consumers": [
+    "governance_intelligence"
+   ],
+   "category": "D",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "cop_decisions over time",
+   "note": "read from upstream COP findings along the Block 1 edges, computed in the COPS runtime (Block 2.4)"
+  },
+  {
+   "id": "repeat_actor_concentration",
+   "consumers": [
+    "governance_intelligence"
+   ],
+   "category": "H",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "metric_events in EXCEPTION/CRITICAL grouped by operator",
+   "why_not_built": "organisation scope over metric_events history; needs that history as an input"
+  },
+  {
+   "id": "governance_incident_frequency",
+   "consumers": [
+    "governance_intelligence"
+   ],
+   "category": "D",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "IR decisions over time",
+   "note": "read from upstream COP findings along the Block 1 edges, computed in the COPS runtime (Block 2.4)"
+  },
+  {
+   "id": "governance_failure_recurrence_rate",
+   "consumers": [
+    "governance_intelligence"
+   ],
+   "category": "D",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "repeat labels in cop_decisions",
+   "note": "read from upstream COP findings along the Block 1 edges, computed in the COPS runtime (Block 2.4)"
+  },
+  {
+   "id": "governance_risk_trend",
+   "consumers": [
+    "governance_intelligence"
+   ],
+   "category": "D",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "RiskM decisions over time",
+   "note": "read from upstream COP findings along the Block 1 edges, computed in the COPS runtime (Block 2.4)"
+  },
+  {
+   "id": "governance_incident_severity_trend",
+   "consumers": [
+    "governance_intelligence"
+   ],
+   "category": "D",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "IR severity over time",
+   "note": "read from upstream COP findings along the Block 1 edges, computed in the COPS runtime (Block 2.4)"
+  },
+  {
+   "id": "governance_evidence_quality_trend",
+   "consumers": [
+    "governance_intelligence"
+   ],
+   "category": "D",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "evidence_confidence over time in cop_decisions",
+   "note": "read from upstream COP findings along the Block 1 edges, computed in the COPS runtime (Block 2.4)"
+  },
+  {
+   "id": "governance_unknown_decision_rate",
+   "consumers": [
+    "governance_intelligence"
+   ],
+   "category": "D",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "UNKNOWN decisions / decisions",
+   "note": "read from upstream COP findings along the Block 1 edges, computed in the COPS runtime (Block 2.4)"
+  },
+  {
+   "id": "governance_blind_spot_frequency",
+   "consumers": [
+    "governance_intelligence"
+   ],
+   "category": "D",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "UNKNOWN or INCONCLUSIVE decisions over time",
+   "note": "read from upstream COP findings along the Block 1 edges, computed in the COPS runtime (Block 2.4)"
+  },
+  {
+   "id": "governance_coverage_gap_rate",
+   "consumers": [
+    "governance_intelligence"
+   ],
+   "category": "H",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "collector_capability silent rows + UNKNOWN metric_events",
+   "why_not_built": "needs collector_capability and metric_events history as inputs"
+  },
+  {
+   "id": "governance_policy_failure_rate",
+   "consumers": [
+    "governance_intelligence"
+   ],
+   "category": "D",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "PE decisions over time",
+   "note": "read from upstream COP findings along the Block 1 edges, computed in the COPS runtime (Block 2.4)"
+  },
+  {
+   "id": "governance_intervention_effectiveness",
+   "consumers": [
+    "governance_intelligence"
+   ],
+   "category": "A",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "intervention outcome records",
+   "note": "needs records of COPS actions and their outcomes; none are stored yet"
+  },
+  {
+   "id": "governance_systemic_risk_concentration",
+   "consumers": [
+    "governance_intelligence"
+   ],
+   "category": "D",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "RiskM decisions grouped by operator/team",
+   "note": "read from upstream COP findings along the Block 1 edges, computed in the COPS runtime (Block 2.4)"
+  },
+  {
+   "id": "governance_improvement_priority_score",
+   "consumers": [
+    "governance_intelligence"
+   ],
+   "category": "O",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "GI's own output",
+   "note": "a decision field of the consuming COP, not a calculated metric"
+  },
+  {
+   "id": "behavior_action_sequence_frequency",
+   "consumers": [
+    "behavior_analytics"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Distinct three-step sequences",
+   "required_fields": [
+    "observable_type",
+    "tool_name",
+    "command"
+   ],
+   "formula": "distinct three-step sequences of step kinds per lane; counts in features",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "steps",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition steps did not arise: NOT_APPLICABLE",
+    "no lane has three or more steps: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_behavior_action_sequence_frequency",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:behavior_action_sequence_frequency@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "behavior_tool_usage_distribution",
+   "consumers": [
+    "behavior_analytics"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Share of the most used tool",
+   "required_fields": [
+    "tool_name"
+   ],
+   "formula": "share of actions by the most used tool; all shares in features",
+   "denominator": "actions",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "actions",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition actions did not arise: NOT_APPLICABLE"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_behavior_tool_usage_distribution",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:behavior_tool_usage_distribution@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "behavior_tool_transition_frequency",
+   "consumers": [
+    "behavior_analytics"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Distinct tool-to-tool transitions",
+   "required_fields": [
+    "tool_name"
+   ],
+   "formula": "distinct tool_name -> next tool_name pairs per lane; counts in features",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "actions",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition actions did not arise: NOT_APPLICABLE",
+    "no lane has two consecutive tool calls: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_behavior_tool_transition_frequency",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:behavior_tool_transition_frequency@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "behavior_execution_pattern_frequency",
+   "consumers": [
+    "behavior_analytics"
+   ],
+   "category": "S",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "counts of step patterns per session",
+   "why_not_built": "definition to confirm: not distinguished from behavior_action_sequence_frequency"
+  },
+  {
+   "id": "behavior_historical_deviation_score",
+   "consumers": [
+    "behavior_analytics"
+   ],
+   "category": "H",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "session metrics vs this operator's history",
+   "why_not_built": "method to confirm: which session metrics and which deviation measure"
+  },
+  {
+   "id": "behavior_peer_deviation_score",
+   "consumers": [
+    "behavior_analytics"
+   ],
+   "category": "H",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "vs peers; \"peer\" group (team_id? tool?) to define",
+   "why_not_built": "definition to confirm: the peer group (team_id, tool or other)"
+  },
+  {
+   "id": "behavior_repetition_trend",
+   "consumers": [
+    "behavior_analytics"
+   ],
+   "category": "H",
+   "status": "IMPLEMENTED",
+   "meaning": "Slope of insights.repetition",
+   "required_fields": [
+    "operator_email"
+   ],
+   "formula": "least-squares slope of insights.repetition over this operator's sessions with this tool, up to this one",
+   "scope": "session, compared with earlier sessions",
+   "window": "all earlier sessions of the same operator in the fetched estate; at least 5 needed",
+   "baseline": "earlier sessions of this operator",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "always",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE",
+    "{base} has a value in {len(pts)} of these sessions: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:trend",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:behavior_repetition_trend@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "behavior_retry_trend",
+   "consumers": [
+    "behavior_analytics"
+   ],
+   "category": "H",
+   "status": "IMPLEMENTED",
+   "meaning": "Slope of insights.retry",
+   "required_fields": [
+    "operator_email"
+   ],
+   "formula": "least-squares slope of insights.retry, as above",
+   "scope": "session, compared with earlier sessions",
+   "window": "all earlier sessions of the same operator in the fetched estate; at least 5 needed",
+   "baseline": "earlier sessions of this operator",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "always",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE",
+    "{base} has a value in {len(pts)} of these sessions: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:trend",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:behavior_retry_trend@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "behavior_failure_trend",
+   "consumers": [
+    "behavior_analytics"
+   ],
+   "category": "H",
+   "status": "IMPLEMENTED",
+   "meaning": "Slope of insights.failed",
+   "required_fields": [
+    "operator_email"
+   ],
+   "formula": "least-squares slope of insights.failed, as above",
+   "scope": "session, compared with earlier sessions",
+   "window": "all earlier sessions of the same operator in the fetched estate; at least 5 needed",
+   "baseline": "earlier sessions of this operator",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "always",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE",
+    "{base} has a value in {len(pts)} of these sessions: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:trend",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:behavior_failure_trend@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "behavior_approval_pattern_trend",
+   "consumers": [
+    "behavior_analytics"
+   ],
+   "category": "H",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "approval timing/decisions across sessions",
+   "why_not_built": "definition to confirm: approval timing, decisions or both"
+  },
+  {
+   "id": "behavior_task_variation",
+   "consumers": [
+    "behavior_analytics"
+   ],
+   "category": "M",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "task classification from prompt_text",
+   "input_contract": {
+    "inputs": "observables text fields named in proposal, with observable_ids",
+    "output": {
+     "judgement": "label from a set to be approved",
+     "confidence": "0..1",
+     "evidence_refs": "observable:<id> cited",
+     "rationale": "short, no hidden reasoning"
+    },
+    "verification": "an independent check that is not the same model response",
+    "cost": "paid model calls; none without explicit approval"
+   }
+  },
+  {
+   "id": "behavior_model_variation",
+   "consumers": [
+    "behavior_analytics"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Distinct models in session",
+   "required_fields": [
+    "model"
+   ],
+   "formula": "distinct model values in the session",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "always",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE",
+    "no row carries model: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_behavior_model_variation",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:behavior_model_variation@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "behavior_context_variation",
+   "consumers": [
+    "behavior_analytics"
+   ],
+   "category": "Q",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "what \"context\" means here is not defined",
+   "question": "what \"context\" means here is not defined"
+  },
+  {
+   "id": "behavior_pattern_persistence",
+   "consumers": [
+    "behavior_analytics"
+   ],
+   "category": "H",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "same pattern across sessions",
+   "why_not_built": "definition to confirm: which pattern"
+  },
+  {
+   "id": "behavior_change_point_score",
+   "consumers": [
+    "behavior_analytics"
+   ],
+   "category": "H",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "change-point over per-session metric history; method to choose",
+   "why_not_built": "method to confirm: the change-point method"
+  },
+  {
+   "id": "behavior_pattern_stability",
+   "consumers": [
+    "behavior_analytics"
+   ],
+   "category": "H",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "pattern distribution change across sessions",
+   "why_not_built": "definition to confirm: which pattern distribution"
+  },
+  {
+   "id": "behavior_investigation_prioritya",
+   "consumers": [
+    "behavior_analytics"
+   ],
+   "category": "O",
+   "suspected_typo_of": "behavior_investigation_priority",
+   "confirmation": "suspected typo; awaiting purvi's confirmation; kept as written",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "BA's own output; also looks like a typo",
+   "note": "a decision field of the consuming COP, not a calculated metric"
+  },
+  {
+   "id": "recovery_disruption_count",
+   "consumers": [
+    "recovery_resilience"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Failed, stalled or interrupted steps",
+   "required_fields": [
+    "success",
+    "exit_code",
+    "hung_seconds",
+    "tool_interrupted"
+   ],
+   "formula": "failed steps + STALL steps + tool_interrupted rows not already counted",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "outcomes",
+   "applies_when": "steps",
+   "missing_data": [
+    "basis outcomes absent: UNKNOWN, value None",
+    "condition steps did not arise: NOT_APPLICABLE"
+   ],
+   "evidence_refs": [
+    "step"
+   ],
+   "computed_by": "collector/signal_metrics.py:m_recovery_disruption_count",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:recovery_disruption_count@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "recovery_failure_rate",
+   "consumers": [
+    "recovery_resilience"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Re-run failures that failed again",
+   "required_fields": [
+    "command",
+    "exit_code",
+    "success"
+   ],
+   "formula": "failed commands whose next run of the same command also fails / failed commands that were run again",
+   "denominator": "failed commands run again",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "commands",
+   "applies_when": "failures",
+   "missing_data": [
+    "basis commands absent: UNKNOWN, value None",
+    "condition failures did not arise: NOT_APPLICABLE",
+    "no failed command was run again: UNKNOWN, value None"
+   ],
+   "evidence_refs": [
+    "observable"
+   ],
+   "computed_by": "collector/signal_metrics.py:m_recovery_failure_rate",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:recovery_failure_rate@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "recovery_action_success_rate",
+   "consumers": [
+    "recovery_resilience"
+   ],
+   "category": "A",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "recovery action records and outcomes",
+   "note": "needs records of COPS actions and their outcomes; none are stored yet"
+  },
+  {
+   "id": "recovery_action_completion",
+   "consumers": [
+    "recovery_resilience"
+   ],
+   "category": "A",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "recovery action records",
+   "note": "needs records of COPS actions and their outcomes; none are stored yet"
+  },
+  {
+   "id": "recovery_time",
+   "consumers": [
+    "recovery_resilience"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Median time to a successful re-run (s)",
+   "required_fields": [
+    "command",
+    "exit_code",
+    "occurred_at"
+   ],
+   "formula": "median seconds from a failed command to the next successful run of the same command",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "commands",
+   "applies_when": "failures",
+   "missing_data": [
+    "basis commands absent: UNKNOWN, value None",
+    "condition failures did not arise: NOT_APPLICABLE",
+    "no failed command was later run successfully: UNKNOWN, value None"
+   ],
+   "evidence_refs": [
+    "observable"
+   ],
+   "computed_by": "collector/signal_metrics.py:m_recovery_time",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:recovery_time@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "recovery_state_restoration",
+   "consumers": [
+    "recovery_resilience"
+   ],
+   "category": "S",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "file_modify rows with reverted_to_earlier = true / failures that touched files",
+   "why_not_built": "definition to confirm: what counts as a failure that touched files"
+  },
+  {
+   "id": "recovery_workflow_resumption_rate",
+   "consumers": [
+    "recovery_resilience"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Failures followed by successful work",
+   "required_fields": [
+    "success",
+    "exit_code",
+    "occurred_at"
+   ],
+   "formula": "failed steps followed later by a successful step / failed steps",
+   "denominator": "failed steps",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "outcomes",
+   "applies_when": "failures",
+   "missing_data": [
+    "basis outcomes absent: UNKNOWN, value None",
+    "condition failures did not arise: NOT_APPLICABLE"
+   ],
+   "evidence_refs": [
+    "step"
+   ],
+   "computed_by": "collector/signal_metrics.py:m_recovery_workflow_resumption_rate",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:recovery_workflow_resumption_rate@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "recovery_verification_success_rate",
+   "consumers": [
+    "recovery_resilience"
+   ],
+   "category": "A",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "recovery verification results",
+   "note": "needs records of COPS actions and their outcomes; none are stored yet"
+  },
+  {
+   "id": "recovery_post_intervention_failure_rate",
+   "consumers": [
+    "recovery_resilience"
+   ],
+   "category": "A",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "intervention records plus later observables",
+   "note": "needs records of COPS actions and their outcomes; none are stored yet"
+  },
+  {
+   "id": "recovery_retry_recurrence",
+   "consumers": [
+    "recovery_resilience"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Commands re-run after they succeeded",
+   "required_fields": [
+    "command",
+    "exit_code"
+   ],
+   "formula": "runs of a command after it had already succeeded",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "commands",
+   "applies_when": "commands",
+   "missing_data": [
+    "basis commands absent: UNKNOWN, value None",
+    "condition commands did not arise: NOT_APPLICABLE"
+   ],
+   "evidence_refs": [
+    "observable"
+   ],
+   "computed_by": "collector/signal_metrics.py:m_recovery_retry_recurrence",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:recovery_retry_recurrence@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "recovery_incident_recurrence_rate",
+   "consumers": [
+    "recovery_resilience"
+   ],
+   "category": "D",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "repeat IR decisions for the same session/operator",
+   "note": "read from upstream COP findings along the Block 1 edges, computed in the COPS runtime (Block 2.4)"
+  },
+  {
+   "id": "recovery_stability_duration",
+   "consumers": [
+    "recovery_resilience"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Median time from recovery to next failure (s)",
+   "required_fields": [
+    "command",
+    "exit_code",
+    "occurred_at"
+   ],
+   "formula": "median seconds from a successful re-run to the next failure or session end",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "commands",
+   "applies_when": "failures",
+   "missing_data": [
+    "basis commands absent: UNKNOWN, value None",
+    "condition failures did not arise: NOT_APPLICABLE",
+    "no failed command was later run successfully: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_recovery_stability_duration",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:recovery_stability_duration@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "recovery_evidence_sufficiency",
+   "consumers": [
+    "recovery_resilience"
+   ],
+   "category": "D",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "evidence_confidence of BA decision RR consumes",
+   "note": "read from upstream COP findings along the Block 1 edges, computed in the COPS runtime (Block 2.4)"
+  },
+  {
+   "id": "recovery_post_recovery_health_score",
+   "consumers": [
+    "recovery_resilience"
+   ],
+   "category": "Q",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "composite; definition needed",
+   "question": "composite; definition needed"
+  },
+  {
+   "id": "recovery_residual_failure_risk",
+   "consumers": [
+    "recovery_resilience"
+   ],
+   "category": "O",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "RR's own assessment",
+   "note": "a decision field of the consuming COP, not a calculated metric"
+  },
+  {
+   "id": "recovery_additional_intervention_required",
+   "consumers": [
+    "recovery_resilience"
+   ],
+   "category": "O",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "RR's own decision",
+   "note": "a decision field of the consuming COP, not a calculated metric"
+  },
+  {
+   "id": "workload_distribution_balance",
+   "consumers": [
+    "workload_optimization"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Share of steps in the busiest lane",
+   "required_fields": [
+    "agent_id"
+   ],
+   "formula": "steps in the busiest lane / steps",
+   "denominator": "steps",
+   "scope": "agent",
+   "aggregation": "per-agent values in features, session value as stated in the formula",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "multilane",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition multilane did not arise: NOT_APPLICABLE"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_workload_distribution_balance",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:workload_distribution_balance@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "workload_per_agent",
+   "consumers": [
+    "workload_optimization"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Steps in the busiest lane",
+   "required_fields": [
+    "agent_id",
+    "total_tokens"
+   ],
+   "formula": "steps in the busiest lane; steps and tokens per lane in features",
+   "scope": "agent",
+   "aggregation": "per-agent values in features, session value as stated in the formula",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "lanes",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition lanes did not arise: NOT_APPLICABLE"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_workload_per_agent",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:workload_per_agent@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "workload_per_model",
+   "consumers": [
+    "workload_optimization"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Models with token use",
+   "required_fields": [
+    "model",
+    "total_tokens"
+   ],
+   "formula": "models with token use; tokens per model in features",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "tokens",
+   "applies_when": "always",
+   "missing_data": [
+    "basis tokens absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE",
+    "no token count carries model: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_workload_per_model",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:workload_per_model@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "agent_utilization_rate",
+   "consumers": [
+    "workload_optimization"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Mean busy share of each lane",
+   "required_fields": [
+    "agent_id",
+    "tool_duration_ms",
+    "occurred_at"
+   ],
+   "formula": "mean over lanes of (sum of step durations / lane span), capped at 1",
+   "denominator": "lane span",
+   "scope": "agent",
+   "aggregation": "per-agent values in features, session value as stated in the formula",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "durations",
+   "applies_when": "lanes",
+   "missing_data": [
+    "basis durations absent: UNKNOWN, value None",
+    "condition lanes did not arise: NOT_APPLICABLE",
+    "no lane has step durations and a measurable span: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_agent_utilization_rate",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:agent_utilization_rate@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "agent_idle_time",
+   "consumers": [
+    "workload_optimization"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Longest gap between steps in a lane (s)",
+   "required_fields": [
+    "agent_id",
+    "occurred_at"
+   ],
+   "formula": "max over lanes of the longest gap between one step's end and the next step's start, seconds",
+   "scope": "agent",
+   "aggregation": "per-agent values in features, session value as stated in the formula",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "lanes",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition lanes did not arise: NOT_APPLICABLE",
+    "no lane has two timed steps: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_agent_idle_time",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:agent_idle_time@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "agent_overload_rate",
+   "consumers": [
+    "workload_optimization"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "agent capacity limits",
+   "input_contract": {
+    "reference": "agent_capacity",
+    "fields": [
+     "agent or lane class",
+     "capacity measure",
+     "limit",
+     "scheduling priority"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "agent_underutilization_rate",
+   "consumers": [
+    "workload_optimization"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "agent capacity limits",
+   "input_contract": {
+    "reference": "agent_capacity",
+    "fields": [
+     "agent or lane class",
+     "capacity measure",
+     "limit",
+     "scheduling priority"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "task_execution_duration",
+   "consumers": [
+    "workload_optimization"
+   ],
+   "category": "Q",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "is a task a turn, a plan item or a session?",
+   "question": "is a task a turn, a plan item or a session?"
+  },
+  {
+   "id": "task_resource_efficiency",
+   "consumers": [
+    "workload_optimization"
+   ],
+   "category": "M",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "task-quality outcome judgement",
+   "input_contract": {
+    "inputs": "observables text fields named in proposal, with observable_ids",
+    "output": {
+     "judgement": "label from a set to be approved",
+     "confidence": "0..1",
+     "evidence_refs": "observable:<id> cited",
+     "rationale": "short, no hidden reasoning"
+    },
+    "verification": "an independent check that is not the same model response",
+    "cost": "paid model calls; none without explicit approval"
+   }
+  },
+  {
+   "id": "task_cost_efficiency",
+   "consumers": [
+    "workload_optimization"
+   ],
+   "category": "M",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "task-quality outcome judgement",
+   "input_contract": {
+    "inputs": "observables text fields named in proposal, with observable_ids",
+    "output": {
+     "judgement": "label from a set to be approved",
+     "confidence": "0..1",
+     "evidence_refs": "observable:<id> cited",
+     "rationale": "short, no hidden reasoning"
+    },
+    "verification": "an independent check that is not the same model response",
+    "cost": "paid model calls; none without explicit approval"
+   }
+  },
+  {
+   "id": "task_duration_deviation",
+   "consumers": [
+    "workload_optimization"
+   ],
+   "category": "M",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "task classification, then history per class",
+   "input_contract": {
+    "inputs": "observables text fields named in proposal, with observable_ids",
+    "output": {
+     "judgement": "label from a set to be approved",
+     "confidence": "0..1",
+     "evidence_refs": "observable:<id> cited",
+     "rationale": "short, no hidden reasoning"
+    },
+    "verification": "an independent check that is not the same model response",
+    "cost": "paid model calls; none without explicit approval"
+   }
+  },
+  {
+   "id": "task_complexity_adjusted_cost",
+   "consumers": [
+    "workload_optimization"
+   ],
+   "category": "M",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "task complexity from prompt_text",
+   "input_contract": {
+    "inputs": "observables text fields named in proposal, with observable_ids",
+    "output": {
+     "judgement": "label from a set to be approved",
+     "confidence": "0..1",
+     "evidence_refs": "observable:<id> cited",
+     "rationale": "short, no hidden reasoning"
+    },
+    "verification": "an independent check that is not the same model response",
+    "cost": "paid model calls; none without explicit approval"
+   }
+  },
+  {
+   "id": "parallel_execution_efficiency",
+   "consumers": [
+    "workload_optimization"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Step time / wall time",
+   "required_fields": [
+    "tool_duration_ms",
+    "occurred_at"
+   ],
+   "formula": "sum of step durations / session wall time",
+   "denominator": "session wall time",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "durations",
+   "applies_when": "steps",
+   "missing_data": [
+    "basis durations absent: UNKNOWN, value None",
+    "condition steps did not arise: NOT_APPLICABLE",
+    "steps carry no durations or the session has no span: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_parallel_execution_efficiency",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:parallel_execution_efficiency@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "parallel_execution_speedup",
+   "consumers": [
+    "workload_optimization"
+   ],
+   "category": "S",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "same inputs as above, as a speedup ratio",
+   "why_not_built": "definition to confirm: the proposed inputs are the same as parallel_execution_efficiency"
+  },
+  {
+   "id": "delegation_overhead_ratio",
+   "consumers": [
+    "workload_optimization"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Lane lead time / lane time",
+   "required_fields": [
+    "agent_id",
+    "observable_type",
+    "occurred_at"
+   ],
+   "formula": "mean over linked lanes of (first lane step - handoff) / (lane end - handoff); time only",
+   "denominator": "lane time from handoff",
+   "scope": "agent",
+   "aggregation": "per-agent values in features, session value as stated in the formula",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "subagents",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition subagents did not arise: NOT_APPLICABLE",
+    "no linked subagent lane has timed work: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_delegation_overhead_ratio",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:delegation_overhead_ratio@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "delegation_efficiency",
+   "consumers": [
+    "workload_optimization"
+   ],
+   "category": "Q",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "efficiency measured as what (tokens, time, outcome)?",
+   "question": "efficiency measured as what (tokens, time, outcome)?"
+  },
+  {
+   "id": "subagent_resource_overhead",
+   "consumers": [
+    "workload_optimization"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Subagent tokens / session tokens",
+   "required_fields": [
+    "total_tokens",
+    "agent_id"
+   ],
+   "formula": "tokens in subagent lanes / session tokens",
+   "denominator": "session tokens",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "tokens",
+   "applies_when": "subagents",
+   "missing_data": [
+    "basis tokens absent: UNKNOWN, value None",
+    "condition subagents did not arise: NOT_APPLICABLE",
+    "no token count is attributed to a subagent: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_subagent_resource_overhead",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:subagent_resource_overhead@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "workload_concurrency_level",
+   "consumers": [
+    "workload_optimization"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Most lanes active at once",
+   "required_fields": [
+    "agent_id",
+    "occurred_at"
+   ],
+   "formula": "max number of lanes whose spans overlap",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "lanes",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition lanes did not arise: NOT_APPLICABLE",
+    "no lane has timed steps: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_workload_concurrency_level",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:workload_concurrency_level@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "workload_queue_wait_time",
+   "consumers": [
+    "workload_optimization"
+   ],
+   "category": "C",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "no queue events are captured; approval_wait_ms is not queue wait",
+   "note": "no collector captures this today"
+  },
+  {
+   "id": "workload_scheduling_efficiency",
+   "consumers": [
+    "workload_optimization"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "scheduling constraints and priorities",
+   "input_contract": {
+    "reference": "agent_capacity",
+    "fields": [
+     "agent or lane class",
+     "capacity measure",
+     "limit",
+     "scheduling priority"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "model_selection_efficiency",
+   "consumers": [
+    "workload_optimization"
+   ],
+   "category": "M",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "task-quality judgement per model, plus approved model registry",
+   "input_contract": {
+    "inputs": "observables text fields named in proposal, with observable_ids",
+    "output": {
+     "judgement": "label from a set to be approved",
+     "confidence": "0..1",
+     "evidence_refs": "observable:<id> cited",
+     "rationale": "short, no hidden reasoning"
+    },
+    "verification": "an independent check that is not the same model response",
+    "cost": "paid model calls; none without explicit approval"
+   }
+  },
+  {
+   "id": "workload_reallocation_potential",
+   "consumers": [
+    "workload_optimization"
+   ],
+   "category": "O",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "WkO's own output",
+   "note": "a decision field of the consuming COP, not a calculated metric"
+  },
+  {
+   "id": "workload_optimization_gain",
+   "consumers": [
+    "workload_optimization"
+   ],
+   "category": "O",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "WkO's own output",
+   "note": "a decision field of the consuming COP, not a calculated metric"
+  },
+  {
+   "id": "task_quality_preservation",
+   "consumers": [
+    "workload_optimization"
+   ],
+   "category": "M",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "task-quality outcome judgement",
+   "input_contract": {
+    "inputs": "observables text fields named in proposal, with observable_ids",
+    "output": {
+     "judgement": "label from a set to be approved",
+     "confidence": "0..1",
+     "evidence_refs": "observable:<id> cited",
+     "rationale": "short, no hidden reasoning"
+    },
+    "verification": "an independent check that is not the same model response",
+    "cost": "paid model calls; none without explicit approval"
+   }
+  },
+  {
+   "id": "governance_constraint_compliance",
+   "consumers": [
+    "workload_optimization"
+   ],
+   "category": "D",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "PE decisions for the session",
+   "note": "read from upstream COP findings along the Block 1 edges, computed in the COPS runtime (Block 2.4)"
+  },
+  {
+   "id": "audit_actor_attribution_rate",
+   "consumers": [
+    "audit_traceability"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Rows naming an operator",
+   "required_fields": [
+    "operator_id",
+    "operator_email",
+    "operator_username"
+   ],
+   "formula": "rows with operator_id, operator_email or operator_username / rows",
+   "denominator": "rows",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "always",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_audit_actor_attribution_rate",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:audit_actor_attribution_rate@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "audit_action_attribution_rate",
+   "consumers": [
+    "audit_traceability"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Rows with a known attribution",
+   "required_fields": [
+    "attribution"
+   ],
+   "formula": "rows with attribution other than unknown / rows",
+   "denominator": "rows",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "always",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE",
+    "no row carries attribution: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_audit_action_attribution_rate",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:audit_action_attribution_rate@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "audit_trace_completeness",
+   "consumers": [
+    "audit_traceability"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Steps citing their observable",
+   "required_fields": [
+    "observable_id"
+   ],
+   "formula": "steps with observable_id / steps",
+   "denominator": "steps",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "steps",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition steps did not arise: NOT_APPLICABLE"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_audit_trace_completeness",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:audit_trace_completeness@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "audit_execution_reconstruction_rate",
+   "consumers": [
+    "audit_traceability"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Steps placed in a turn and a lane",
+   "required_fields": [
+    "turn_id",
+    "observable_id",
+    "agent_id"
+   ],
+   "formula": "steps with turn_id and observable_id, in the main lane or a linked lane / steps",
+   "denominator": "steps",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "steps",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition steps did not arise: NOT_APPLICABLE"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_audit_execution_reconstruction_rate",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:audit_execution_reconstruction_rate@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "audit_event_ordering_consistency",
+   "consumers": [
+    "audit_traceability"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Sequence order agrees with time order",
+   "required_fields": [
+    "sequence_num",
+    "occurred_at",
+    "turn_id"
+   ],
+   "formula": "1 - (adjacent pairs in sequence_num order whose occurred_at goes backwards / adjacent pairs), within each turn",
+   "denominator": "adjacent pairs with sequence_num",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "always",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE",
+    "no turn has two rows with sequence_num: UNKNOWN, value None"
+   ],
+   "evidence_refs": [
+    "observable"
+   ],
+   "computed_by": "collector/signal_metrics.py:m_audit_event_ordering_consistency",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:audit_event_ordering_consistency@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "audit_timestamp_integrity",
+   "consumers": [
+    "audit_traceability"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "occurred <= captured <= ingested",
+   "required_fields": [
+    "occurred_at",
+    "captured_at",
+    "ingested_at"
+   ],
+   "formula": "rows with occurred_at <= captured_at <= ingested_at / rows with all three",
+   "denominator": "rows with all three timestamps",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "always",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE",
+    "no row carries occurred_at, captured_at and ingested_at: UNKNOWN, value None"
+   ],
+   "evidence_refs": [
+    "observable"
+   ],
+   "computed_by": "collector/signal_metrics.py:m_audit_timestamp_integrity",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:audit_timestamp_integrity@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "audit_source_provenance_completeness",
+   "consumers": [
+    "audit_traceability"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Rows naming collector and raw_ref",
+   "required_fields": [
+    "collector",
+    "raw_ref"
+   ],
+   "formula": "rows with collector and raw_ref / rows",
+   "denominator": "rows",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "always",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE",
+    "raw_ref was not read for this session: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_audit_source_provenance_completeness",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:audit_source_provenance_completeness@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "audit_raw_reference_resolution_rate",
+   "consumers": [
+    "audit_traceability"
+   ],
+   "category": "S",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "raw_ref that resolves to source_events / raw_ref",
+   "why_not_built": "needs the source_events table as an input to compute()"
+  },
+  {
+   "id": "audit_evidence_integrity",
+   "consumers": [
+    "audit_traceability"
+   ],
+   "category": "Q",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "content_hash exists for files only; integrity of what?",
+   "question": "content_hash exists for files only; integrity of what?"
+  },
+  {
+   "id": "audit_evidence_retention_coverage",
+   "consumers": [
+    "audit_traceability"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "retention policy",
+   "input_contract": {
+    "reference": "retention_policy",
+    "fields": [
+     "evidence class",
+     "retention period"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "audit_missing_event_rate",
+   "consumers": [
+    "audit_traceability"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Call requests with no result",
+   "required_fields": [
+    "tool_use_id",
+    "observable_type"
+   ],
+   "formula": "same calculation as missing_event_rate",
+   "denominator": "same as missing_event_rate",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "results",
+   "applies_when": "actions",
+   "missing_data": [
+    "basis results absent: UNKNOWN, value None",
+    "condition actions did not arise: NOT_APPLICABLE",
+    "no call request carries a tool_use_id: UNKNOWN, value None"
+   ],
+   "evidence_refs": [
+    "observable"
+   ],
+   "computed_by": "collector/signal_metrics.py:m_missing_event_rate",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:audit_missing_event_rate@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "audit_conflicting_record_rate",
+   "consumers": [
+    "audit_traceability"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Cross-checked rows that disagree",
+   "required_fields": [
+    "collectors_agree"
+   ],
+   "formula": "rows with collectors_agree = false / rows with collectors_agree set (complement of telemetry.source_agreement)",
+   "denominator": "rows cross-checked",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "multi",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition multi did not arise: NOT_APPLICABLE",
+    "no row was seen by more than one collector: UNKNOWN, value None"
+   ],
+   "evidence_refs": [
+    "observable"
+   ],
+   "computed_by": "collector/signal_metrics.py:m_audit_conflicting_record_rate",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:audit_conflicting_record_rate@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "audit_unverifiable_record_rate",
+   "consumers": [
+    "audit_traceability"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Inferred rows with no source",
+   "required_fields": [
+    "confidence",
+    "derived_from"
+   ],
+   "formula": "rows with confidence = inferred and no derived_from / rows with confidence",
+   "denominator": "rows with confidence",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "always",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE",
+    "no row carries confidence: UNKNOWN, value None"
+   ],
+   "evidence_refs": [
+    "observable"
+   ],
+   "computed_by": "collector/signal_metrics.py:m_audit_unverifiable_record_rate",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:audit_unverifiable_record_rate@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "audit_decision_evidence_linkage",
+   "consumers": [
+    "audit_traceability"
+   ],
+   "category": "D",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "cop_decisions.evidence_refs that resolve / refs",
+   "note": "read from upstream COP findings along the Block 1 edges, computed in the COPS runtime (Block 2.4)"
+  },
+  {
+   "id": "audit_metric_evidence_linkage",
+   "consumers": [
+    "audit_traceability"
+   ],
+   "category": "H",
+   "status": "IMPLEMENTED",
+   "meaning": "Metric evidence refs that resolve",
+   "required_fields": [
+    "observable_id"
+   ],
+   "formula": "evidence_refs of this session's metric events that resolve to its rows, effects or steps / refs",
+   "denominator": "refs cited",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "always",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE",
+    "no metric event of this session cites evidence: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_audit_metric_evidence_linkage",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:audit_metric_evidence_linkage@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "audit_intervention_traceability",
+   "consumers": [
+    "audit_traceability"
+   ],
+   "category": "A",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "intervention records linked to decisions",
+   "note": "needs records of COPS actions and their outcomes; none are stored yet"
+  },
+  {
+   "id": "audit_policy_version_traceability",
+   "consumers": [
+    "audit_traceability"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "policy versions recorded with each decision",
+   "input_contract": {
+    "reference": "policy_registry",
+    "fields": [
+     "policy_id",
+     "version",
+     "effective_from",
+     "scope",
+     "rule",
+     "precedents"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "audit_verifier_coverage",
+   "consumers": [
+    "audit_traceability"
+   ],
+   "category": "D",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "COPS decisions with a verifier result / decisions",
+   "note": "read from upstream COP findings along the Block 1 edges, computed in the COPS runtime (Block 2.4)"
+  },
+  {
+   "id": "audit_evidence_sufficiency",
+   "consumers": [
+    "audit_traceability"
+   ],
+   "category": "D",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "evidence_confidence of upstream decisions",
+   "note": "read from upstream COP findings along the Block 1 edges, computed in the COPS runtime (Block 2.4)"
+  },
+  {
+   "id": "audit_reconstruction_confidence",
+   "consumers": [
+    "audit_traceability"
+   ],
+   "category": "O",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "AT's own assessment",
+   "note": "a decision field of the consuming COP, not a calculated metric"
+  },
+  {
+   "id": "policy_effectiveness_score",
+   "consumers": [
+    "knowledge_policy_management"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "policy registry plus outcomes from cop_decisions",
+   "input_contract": {
+    "reference": "policy_registry",
+    "fields": [
+     "policy_id",
+     "version",
+     "effective_from",
+     "scope",
+     "rule",
+     "precedents"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "governance_knowledge_completeness",
+   "consumers": [
+    "knowledge_policy_management"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "policy registry and governance knowledge store",
+   "input_contract": {
+    "reference": "policy_registry",
+    "fields": [
+     "policy_id",
+     "version",
+     "effective_from",
+     "scope",
+     "rule",
+     "precedents"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "policy_precedent_match",
+   "consumers": [
+    "knowledge_policy_management"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "governance precedents and policy versions",
+   "input_contract": {
+    "reference": "policy_registry",
+    "fields": [
+     "policy_id",
+     "version",
+     "effective_from",
+     "scope",
+     "rule",
+     "precedents"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "agent_identity_verification_rate",
+   "consumers": [
+    "agent_lifecycle_management"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "authentication records",
+   "input_contract": {
+    "reference": "agent_registry",
+    "fields": [
+     "agent identity",
+     "owner",
+     "registered_at",
+     "lifecycle_state",
+     "authentication method",
+     "last_review",
+     "review_interval",
+     "approved devices"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "agent_registration_coverage",
+   "consumers": [
+    "agent_lifecycle_management"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "enterprise agent registry",
+   "input_contract": {
+    "reference": "agent_registry",
+    "fields": [
+     "agent identity",
+     "owner",
+     "registered_at",
+     "lifecycle_state",
+     "authentication method",
+     "last_review",
+     "review_interval",
+     "approved devices"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "agent_ownership_attribution",
+   "consumers": [
+    "agent_lifecycle_management"
+   ],
+   "category": "S",
+   "status": "IMPLEMENTED",
+   "meaning": "Session has an operator",
+   "required_fields": [
+    "operator_email",
+    "operator_username"
+   ],
+   "formula": "1 if the session names an operator, else 0",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "always",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_agent_ownership_attribution",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:agent_ownership_attribution@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "agent_organizational_mapping_consistency",
+   "consumers": [
+    "agent_lifecycle_management"
+   ],
+   "category": "H",
+   "status": "IMPLEMENTED",
+   "meaning": "Distinct org/team mappings for operator",
+   "required_fields": [
+    "org_id",
+    "team_id"
+   ],
+   "formula": "distinct (org_id, team_id) mappings across this operator's sessions",
+   "scope": "session, compared with earlier sessions",
+   "window": "all earlier sessions of the same operator in the fetched estate; the most recent one is compared",
+   "baseline": "earlier sessions of this operator",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "always",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE",
+    "no session of this operator carries org_id or team_id: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_agent_organizational_mapping_consistency",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:agent_organizational_mapping_consistency@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "agent_model_compliance",
+   "consumers": [
+    "agent_lifecycle_management"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "approved model registry",
+   "input_contract": {
+    "reference": "allowlists",
+    "fields": [
+     "kind (tool, mcp_server, interaction_route, model, tool_version)",
+     "value",
+     "scope",
+     "approved_by",
+     "version"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "agent_version_compliance",
+   "consumers": [
+    "agent_lifecycle_management"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "approved version list (tool_version is captured)",
+   "input_contract": {
+    "reference": "allowlists",
+    "fields": [
+     "kind (tool, mcp_server, interaction_route, model, tool_version)",
+     "value",
+     "scope",
+     "approved_by",
+     "version"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "agent_configuration_drift",
+   "consumers": [
+    "agent_lifecycle_management"
+   ],
+   "category": "H",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "same inputs vs first-seen configuration",
+   "why_not_built": "definition to confirm: which fields make up the configuration baseline"
+  },
+  {
+   "id": "agent_configuration_change_rate",
+   "consumers": [
+    "agent_lifecycle_management"
+   ],
+   "category": "H",
+   "status": "IMPLEMENTED",
+   "meaning": "Config and permission-mode changes",
+   "required_fields": [
+    "observable_type"
+   ],
+   "formula": "collector_config_changed and permission_mode_change rows in the session",
+   "scope": "session",
+   "window": "the session",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "config_events",
+   "applies_when": "always",
+   "missing_data": [
+    "basis config_events absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE"
+   ],
+   "evidence_refs": [
+    "observable"
+   ],
+   "computed_by": "collector/signal_metrics.py:m_agent_configuration_change_rate",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:agent_configuration_change_rate@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "agent_capability_change_count",
+   "consumers": [
+    "agent_lifecycle_management"
+   ],
+   "category": "H",
+   "status": "IMPLEMENTED",
+   "meaning": "MCP tools added or removed",
+   "required_fields": [
+    "mcp_tools_available"
+   ],
+   "formula": "size of the symmetric difference of mcp_tools_available with the previous session",
+   "scope": "session, compared with earlier sessions",
+   "window": "all earlier sessions of the same operator in the fetched estate; the most recent one is compared",
+   "baseline": "earlier sessions of this operator",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "mcp",
+   "applies_when": "always",
+   "missing_data": [
+    "basis mcp absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE",
+    "this or the previous session carries no mcp_tools_available: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_agent_capability_change_count",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:agent_capability_change_count@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "agent_permission_drift",
+   "consumers": [
+    "agent_lifecycle_management"
+   ],
+   "category": "H",
+   "status": "IMPLEMENTED",
+   "meaning": "Permission mode changed since last session",
+   "required_fields": [
+    "permission_mode"
+   ],
+   "formula": "1 if permission_mode differs from the previous session of this operator and tool",
+   "scope": "session, compared with earlier sessions",
+   "window": "all earlier sessions of the same operator in the fetched estate; the most recent one is compared",
+   "baseline": "earlier sessions of this operator",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "always",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE",
+    "session carries none of the compared fields: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:changed_from_previous",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:agent_permission_drift@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "agent_tool_inventory_change",
+   "consumers": [
+    "agent_lifecycle_management"
+   ],
+   "category": "H",
+   "status": "IMPLEMENTED",
+   "meaning": "Tool version changed since last session",
+   "required_fields": [
+    "tool_version"
+   ],
+   "formula": "1 if tool_version differs from the previous session of this operator and tool",
+   "scope": "session, compared with earlier sessions",
+   "window": "all earlier sessions of the same operator in the fetched estate; the most recent one is compared",
+   "baseline": "earlier sessions of this operator",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "always",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE",
+    "session carries none of the compared fields: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:changed_from_previous",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:agent_tool_inventory_change@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "agent_unapproved_tool_count",
+   "consumers": [
+    "agent_lifecycle_management"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "approved tool registry",
+   "input_contract": {
+    "reference": "allowlists",
+    "fields": [
+     "kind (tool, mcp_server, interaction_route, model, tool_version)",
+     "value",
+     "scope",
+     "approved_by",
+     "version"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "agent_mcp_configuration_drift",
+   "consumers": [
+    "agent_lifecycle_management"
+   ],
+   "category": "H",
+   "status": "IMPLEMENTED",
+   "meaning": "MCP servers whose version or tools changed",
+   "required_fields": [
+    "mcp_server",
+    "mcp_server_version",
+    "mcp_tools_available"
+   ],
+   "formula": "MCP servers whose mcp_server_version or tool list differs from the previous session",
+   "scope": "session, compared with earlier sessions",
+   "window": "all earlier sessions of the same operator in the fetched estate; the most recent one is compared",
+   "baseline": "earlier sessions of this operator",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "mcp",
+   "applies_when": "always",
+   "missing_data": [
+    "basis mcp absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE",
+    "no MCP server reports a version in both sessions: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_agent_mcp_configuration_drift",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:agent_mcp_configuration_drift@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "agent_machine_change_frequency",
+   "consumers": [
+    "agent_lifecycle_management"
+   ],
+   "category": "H",
+   "status": "IMPLEMENTED",
+   "meaning": "Machine changes across sessions",
+   "required_fields": [
+    "machine_id",
+    "hostname"
+   ],
+   "formula": "machine changes (machine_id, else hostname) across this operator's sessions with this tool",
+   "scope": "session, compared with earlier sessions",
+   "window": "all earlier sessions of the same operator in the fetched estate; the most recent one is compared",
+   "baseline": "earlier sessions of this operator",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "always",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE",
+    "fewer than two sessions carry machine_id or hostname: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_agent_machine_change_frequency",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:agent_machine_change_frequency@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "agent_runtime_environment_drift",
+   "consumers": [
+    "agent_lifecycle_management"
+   ],
+   "category": "H",
+   "status": "IMPLEMENTED",
+   "meaning": "Tool version or host changed",
+   "required_fields": [
+    "tool_version",
+    "hostname"
+   ],
+   "formula": "number of tool_version and hostname that differ from the previous session",
+   "scope": "session, compared with earlier sessions",
+   "window": "all earlier sessions of the same operator in the fetched estate; the most recent one is compared",
+   "baseline": "earlier sessions of this operator",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "always",
+   "applies_when": "always",
+   "missing_data": [
+    "basis always absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE",
+    "session carries none of the compared fields: UNKNOWN, value None"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:changed_from_previous",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:agent_runtime_environment_drift@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "agent_connectivity_change_rate",
+   "consumers": [
+    "agent_lifecycle_management"
+   ],
+   "category": "H",
+   "status": "IMPLEMENTED",
+   "meaning": "MCP servers added or removed",
+   "required_fields": [
+    "mcp_server"
+   ],
+   "formula": "size of the symmetric difference of MCP servers used with the previous session",
+   "scope": "session, compared with earlier sessions",
+   "window": "all earlier sessions of the same operator in the fetched estate; the most recent one is compared",
+   "baseline": "earlier sessions of this operator",
+   "threshold": "none approved: value reported with state NO_THRESHOLD",
+   "basis": "mcp",
+   "applies_when": "always",
+   "missing_data": [
+    "basis mcp absent: UNKNOWN, value None",
+    "condition always did not arise: NOT_APPLICABLE"
+   ],
+   "evidence_refs": [],
+   "computed_by": "collector/signal_metrics.py:m_agent_connectivity_change_rate",
+   "definition_source": "proposed in Block 2.1; the mapping document gives the name only",
+   "provenance": "signal_metrics.py:agent_connectivity_change_rate@2026-10-05.1 (compute(..., catalogue=True); not written to metric_events)"
+  },
+  {
+   "id": "agent_device_compliance",
+   "consumers": [
+    "agent_lifecycle_management"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "device policy",
+   "input_contract": {
+    "reference": "agent_registry",
+    "fields": [
+     "agent identity",
+     "owner",
+     "registered_at",
+     "lifecycle_state",
+     "authentication method",
+     "last_review",
+     "review_interval",
+     "approved devices"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "agent_lifecycle_state_compliance",
+   "consumers": [
+    "agent_lifecycle_management"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "agent lifecycle registry",
+   "input_contract": {
+    "reference": "agent_registry",
+    "fields": [
+     "agent identity",
+     "owner",
+     "registered_at",
+     "lifecycle_state",
+     "authentication method",
+     "last_review",
+     "review_interval",
+     "approved devices"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "agent_authorization_validity",
+   "consumers": [
+    "agent_lifecycle_management"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "authorization records",
+   "input_contract": {
+    "reference": "entitlements",
+    "fields": [
+     "principal (operator or agent)",
+     "resource or action",
+     "allowed",
+     "requires_approval_by"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "agent_review_overdue_rate",
+   "consumers": [
+    "agent_lifecycle_management"
+   ],
+   "category": "R",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "review history and schedule",
+   "input_contract": {
+    "reference": "agent_registry",
+    "fields": [
+     "agent identity",
+     "owner",
+     "registered_at",
+     "lifecycle_state",
+     "authentication method",
+     "last_review",
+     "review_interval",
+     "approved devices"
+    ],
+    "supplied_by": "enterprise administrator",
+    "location": "not chosen (Supabase table or versioned file in the repo)",
+    "when_absent": "UNKNOWN with availability MISSING_REFERENCE naming the reference; no default value"
+   }
+  },
+  {
+   "id": "agent_update_required",
+   "consumers": [
+    "agent_lifecycle_management"
+   ],
+   "category": "O",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "ALM's own decision",
+   "note": "a decision field of the consuming COP, not a calculated metric"
+  },
+  {
+   "id": "agent_retirement_eligibility",
+   "consumers": [
+    "agent_lifecycle_management"
+   ],
+   "category": "O",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "ALM's own decision",
+   "note": "a decision field of the consuming COP, not a calculated metric"
+  },
+  {
+   "id": "agent_lifecycle_evidence_sufficiency",
+   "consumers": [
+    "agent_lifecycle_management"
+   ],
+   "category": "D",
+   "status": "NOT_IMPLEMENTED",
+   "proposal": "evidence_confidence of upstream decisions",
+   "note": "read from upstream COP findings along the Block 1 edges, computed in the COPS runtime (Block 2.4)"
+  }
+ ]
+}
