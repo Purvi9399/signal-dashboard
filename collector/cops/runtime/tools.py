@@ -920,8 +920,10 @@ def t_assess_runtime_evidence(case, a, ctx):
     if not case.session:
         return missing("session", "runtime evidence assessment", "the case session")
     q = cop_package.assess_runtime_monitoring(case.rows, case.session_id, case.cfg, case.computed_at,
-                                              case.artifact("source_events"), case.artifact("collector_capability"))
+                                              case.artifact("source_events"), case.artifact("collector_capability"),
+                                              case.artifact("native_transcripts"))
     return {"questions": q, "raw_store_supplied": case.artifact("source_events") is not None,
+            "native_store_supplied": case.artifact("native_transcripts") is not None,
             "capability_supplied": case.artifact("collector_capability") is not None,
             "evaluated_at": case.computed_at}
 

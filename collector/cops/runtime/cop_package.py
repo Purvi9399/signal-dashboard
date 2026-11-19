@@ -220,14 +220,16 @@ def observe_runtime_monitoring(assessments, operation=None):
     return out
 
 
-def assess_runtime_monitoring(rows, session_id, cfg=None, computed_at=None, raw_events=None, capability=None):
+def assess_runtime_monitoring(rows, session_id, cfg=None, computed_at=None, raw_events=None, capability=None,
+                              native=None):
     """The five questions for one session: each assessment with its answer.
 
-    raw_events: stored source events, to resolve raw_ref. capability: collector_capability rows
-    for the session's tool. Either may be None, and the checks that need it say so."""
+    raw_events: stored source events the rows link to. capability: collector_capability rows for the
+    session's tool. native: an index of the native transcripts raw_ref names. Any may be None, and the
+    checks that need it say so."""
     cfg = cfg or EA.signal_metrics.load_config()
     events, srows = EA.session_inputs(rows, session_id, cfg, computed_at)
-    assessments = {qid: EA.assess("runtime_monitoring", qid, events, srows, cfg, computed_at, raw_events)
+    assessments = {qid: EA.assess("runtime_monitoring", qid, events, srows, cfg, computed_at, raw_events, native)
                    for qid in EA.QUESTIONS["runtime_monitoring"]}
     tool = next((r.get("tool") for r in srows if r.get("tool")), None)
     expected = cfg["expected_collectors"].get(tool or "", [])

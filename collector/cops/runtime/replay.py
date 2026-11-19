@@ -35,9 +35,11 @@ from .verifiers import REGISTRY_VERSION
 signal_metrics, signal_traces = EA.signal_metrics, EA.signal_traces
 
 SUPPORTED = ("runtime_monitoring", "interaction_discovery")
-SELECT = signal_metrics.COLS + "," + signal_metrics.CATALOGUE_COLS
+SELECT = signal_metrics.COLS + "," + signal_metrics.CATALOGUE_COLS + ",dedup_key"
 # source_events without payload: content is never read for provenance.
-RAW_COLS = "source_id,session_id,source_ref,file_origin,collector,tool,received_at"
+RAW_COLS = "source_id,session_id,source_ref,file_origin,collector,tool,received_at,payload"
+KEYED = ("tooluse", "user_prompt", "agent_response", "model_request", "session_start", "session_end",
+         "plan_created", "plan_completed")
 CAP_COLS = "tool,collector,declared,configured,first_seen,last_seen,rows_seen,observed_state"
 READ_APPROVAL = "COPS_REPLAY_READ_APPROVED"
 TENANT = "replay"
@@ -54,11 +56,18 @@ def _content(obj):
 
 # ---------------------------------------------------------------- snapshot
 
-def snapshot(rows, source, raw_events=None, capability=None):
-    """Rows and the stores provenance is resolved against, with how they were obtained."""
+def _stores(snap):
+    return [snap["rows"], snap.get("raw_events"), snap.get("capability")] + \
+        ([snap["native"]] if snap.get("native") is not None else [])
+
+
+def snapshot(rows, source, raw_events=None, capability=None, native=None):
+    """Rows and the stores provenance is resolved against, with how they were obtained. native: an index
+    of the native transcripts raw_ref names, built where they live."""
     rows = sorted(rows, key=lambda r: (str(r.get("occurred_at") or ""), str(r.get("observable_id") or "")))
-    return {"source": source, "rows": rows, "raw_events": raw_events, "capability": capability,
-            "row_count": len(rows), "digest": _content([rows, raw_events, capability])}
+    snap = {"source": source, "rows": rows, "raw_events": raw_events, "capability": capability,
+            "row_count": len(rows), **({"native": native} if native is not None else {})}
+    return dict(snap, digest=_content(_stores(snap)))
 
 
 def save_snapshot(snap, path):
@@ -69,9 +78,69 @@ def save_snapshot(snap, path):
 def load_snapshot(path):
     with open(path) as f:
         snap = json.load(f)
-    if _content([snap["rows"], snap.get("raw_events"), snap.get("capability")]) != snap["digest"]:
+    if _content(_stores(snap)) != snap["digest"]:
         raise ValueError(f"{path}: content does not match its recorded digest")
     return snap
+
+
+def reconstruct_keys(raw_events):
+    """Rebuild each stored source event's observable dedup_key from its payload with signal_curate's own
+    extractors and merge_key, then drop the payload. A key that depends on the time the collector wrote
+    the event (not stored in source_events) is not rebuilt: the event says why instead."""
+    import signal_curate as C
+    out = []
+    for e in raw_events:
+        e = dict(e)
+        p, coll = e.pop("payload", None), e.get("collector")
+        f, why = None, None
+        try:
+            if not isinstance(p, dict):
+                why = "no payload"
+            elif coll == C.H:
+                cursor = "cursor" in os.path.basename(str(e.get("file_origin") or "")).lower() or "cursor_version" in p
+                f = (C.extract_cursor_hook if cursor else C.extract_claude_hook)(p, None)
+                if p.get("transcript_path"):
+                    e["transcript_path"] = p["transcript_path"]
+            elif coll in (C.W, C.P, C.F) and "observable_id" in p:
+                f = C.extract_row(p)
+            else:
+                why = f"{coll} payloads do not keep what the curator merged on"
+        except Exception as x:                                    # noqa: BLE001
+            why = f"payload not readable by the curator: {type(x).__name__}"
+        if f is not None:
+            if not f.get("observable_type") or f["observable_type"] == "other":
+                why = "the curator does not build an observable from this event"
+            else:
+                key = C.merge_key(coll, f)
+                if coll == C.H and key[2] not in KEYED:
+                    why = "the merge key depends on the collector's write time, which source_events does not keep"
+                else:
+                    e["dedup_key"] = hashlib.sha256(repr(key).encode()).hexdigest()
+        if why:
+            e["dedup_key_unavailable"] = why
+        out.append(e)
+    return out
+
+
+def native_index(paths, host):
+    """Which native transcripts exist on this host and which session ids they contain. Reads only the
+    session id fields of each JSON line; a file whose lines carry none is recorded with session_ids None."""
+    out = {}
+    for path in sorted(set(p for p in paths if p)):
+        if not os.path.isfile(path):
+            out[path] = {"exists": False, "session_ids": []}
+            continue
+        ids = set()
+        with open(path, errors="replace") as f:
+            for line in f:
+                try:
+                    rec = json.loads(line)
+                except ValueError:
+                    continue
+                if isinstance(rec, dict):
+                    ids |= {str(rec[k]) for k in ("sessionId", "session_id", "conversation_id") if rec.get(k)}
+        out[path] = {"exists": True, "session_ids": sorted(ids) if ids else None}
+    return {"host": host, "paths": out}
 
 
 def fetch_supabase(since, until, approved=False, getter=None, batch=50):
@@ -91,7 +160,7 @@ def fetch_supabase(since, until, approved=False, getter=None, batch=50):
     for i in range(0, len(sids), batch):
         q = f"select={RAW_COLS}&session_id=in.({','.join(quote(s) for s in sids[i:i + batch])})"
         raw_q.append(q)
-        raw += get("source_events", q)
+        raw += reconstruct_keys(get("source_events", q))
     cap_q = f"select={CAP_COLS}"
     cap = get("collector_capability", cap_q)
     source = {"kind": "supabase", "since": since, "until": until,
@@ -132,8 +201,13 @@ def available_at(rows, at):
 
 # ---------------------------------------------------------------- replay
 
-def _summary(cop, out):
+def _chain(c):
+    return dict(c, nodes=[{k: n[k] for k in ("ref", "kind", "status", "method")} for n in c["nodes"]])
+
+
+def _summary(cop, out, events, rows, raw_events, native):
     f, r = out["findings"][cop], out["results"][cop]
+    refs = sorted({x for c in f.get("claims", []) for x in c.get("evidence_refs", [])})
     ea = (f.get("cop_specific") or {}).get("evidence_assessment") or {}
     logical = {"label": f["label"], "status": f["status"], "verified": f["verified"],
                "claims": sorted(c.get("statement") or "" for c in f.get("claims", [])),
@@ -142,7 +216,8 @@ def _summary(cop, out):
             "not_passed": sorted({v["check_id"] for v in r["verifier_results"] if v["result"] in ("FAIL", "WARN")}),
             "action": (r.get("proposed_action") or {}).get("action"),
             "execution_status": (r.get("proposed_action") or {}).get("execution_status"),
-            "evidence_refs": sorted({x for c in f.get("claims", []) for x in c.get("evidence_refs", [])})[:20],
+            "evidence_refs": refs[:20],
+            "provenance_chain": _chain(EA.resolve_chain(refs, events, rows, raw_events, native)),
             "question_classes": ea.get("classes"), "qualifications": ea.get("qualifications"),
             "memory_write": {k: (r.get("memory_write") or {}).get(k) for k in ("written", "record_id", "status")},
             "logical_digest": digest(logical)}
@@ -163,7 +238,8 @@ def replay(snap, at, cops=SUPPORTED, sessions=None, cfg=None, tenant=TENANT, sto
     events, built = signal_metrics.compute(rows, cfg, computed_at=at)
     sids = sorted(s.id for s in built if sessions is None or s.id in sessions)
     artifacts = {k: v for k, v in (("source_events", snap.get("raw_events")),
-                                   ("collector_capability", snap.get("capability"))) if v is not None}
+                                   ("collector_capability", snap.get("capability")),
+                                   ("native_transcripts", snap.get("native"))) if v is not None}
     store = store if store is not None else SQLiteStore()
     t = signal_traces.ts(at)
     results = {}
@@ -172,16 +248,20 @@ def replay(snap, at, cops=SUPPORTED, sessions=None, cfg=None, tenant=TENANT, sto
                           computed_at=at, synthetic=snap["source"].get("kind") == "synthetic",
                           run_id=f"replay-{replay_id}", clock=lambda: t, events=events, sessions=built)
         out = run_case(rt, cops)
-        results[sid] = {cop: _summary(cop, out) for cop in cops}
+        sev = {e["metric_id"]: e for e in events if e["session_id"] == sid}
+        srows = signal_metrics.unique_rows(next(x for x in built if x.id == sid))
+        results[sid] = {cop: _summary(cop, out, sev, srows, snap.get("raw_events"), snap.get("native"))
+                        for cop in cops}
     manifest = {"replay_id": replay_id, "evaluated_at": at, "cops": cops, "tenant": tenant,
                 "source": snap["source"], "snapshot_digest": snap["digest"], "rows_in_snapshot": snap["row_count"],
                 "rows_used": len(rows), "excluded": excluded, "sessions": sids,
                 "raw_store_supplied": snap.get("raw_events") is not None,
-                "capability_supplied": snap.get("capability") is not None, "versions": ver,
+                "capability_supplied": snap.get("capability") is not None,
+                "native_store_supplied": snap.get("native") is not None, "versions": ver,
                 "results_digest": digest({s: {c: v["logical_digest"] for c, v in r.items()}
                                           for s, r in results.items()})}
     return {"manifest": manifest, "results": results, "rows": rows, "cfg": cfg, "store": store,
-            "raw_events": snap.get("raw_events")}
+            "raw_events": snap.get("raw_events"), "native": snap.get("native")}
 
 
 # ---------------------------------------------------------------- evidence availability profile
@@ -283,14 +363,18 @@ def evidence_profile(rep):
             earlier = [x for x in built if x.tool == s.tool and x.operator == s.operator
                        and (x.start or "") < (s.start or "")]
             hist["sufficient" if len(earlier) >= min_hist else "insufficient"] += 1
-        prov = Counter()
+        prov = {"source": Counter(), "native": Counter(), "derived": Counter(), "methods": Counter()}
         for sid in sids:
             srows = signal_metrics.unique_rows(by_sid[sid])
             if snapshot_raw is None:
-                prov["NOT_EXECUTED (raw store not supplied)"] += 1
+                prov["source"]["NOT_EXECUTED (raw store not supplied)"] += len(srows)
                 continue
-            checked, bad = EA.resolve_raw_refs(srows, snapshot_raw)
-            prov["no raw_ref" if not checked else "unresolved" if bad else "resolved"] += 1
+            for link in EA.resolve_provenance(srows, snapshot_raw, rep.get("native")):
+                prov["source"][link["source"]["status"]] += 1
+                prov["methods"][link["source"]["method"]] += 1
+                for part in ("native", "derived"):
+                    if link[part]:
+                        prov[part][link[part]["status"]] += 1
         q = defaultdict(Counter)
         concluded = defaultdict(Counter)
         for sid in sids:
@@ -311,7 +395,7 @@ def evidence_profile(rep):
                                    "disagreeing_rows": sum(1 for r in crossed if r["collectors_agree"] is False),
                                    "multi_collector_sessions": sum(1 for s in sids if len(by_sid[s].collectors) > 1)},
             "history": {"min_sessions_for_baseline": min_hist, **hist},
-            "provenance": dict(prov),
+            "provenance": {k: dict(v) for k, v in prov.items()},
             "question_usability": {k: dict(v) for k, v in q.items()},
             "findings": {k: dict(v) for k, v in concluded.items()},
         }
@@ -352,6 +436,8 @@ def main():
     ap.add_argument("--at", required=True, help="evaluation time")
     ap.add_argument("--save", help="write the snapshot here")
     ap.add_argument("--out", help="write manifest, results, profile and proposals to this directory")
+    ap.add_argument("--native-index", action="store_true",
+                    help="index the native transcripts raw_ref names on this host (reads session ids only)")
     a = ap.parse_args()
     if a.supabase:
         snap = fetch_supabase(a.since, a.until, approved=a.approved_read_only)
@@ -359,6 +445,10 @@ def main():
         snap = load_snapshot(a.snapshot)
     else:
         sys.exit("give --snapshot FILE or --supabase")
+    if a.native_index:
+        import socket
+        snap = snapshot(snap["rows"], snap["source"], snap.get("raw_events"), snap.get("capability"),
+                        native_index([r.get("raw_ref") for r in snap["rows"]], socket.gethostname()))
     if a.save:
         save_snapshot(snap, a.save)
     from . import evolution

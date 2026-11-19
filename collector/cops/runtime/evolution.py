@@ -216,20 +216,35 @@ def proposals_from(profile, rep):
                 APPROVER[COLLECTOR_CONFIG],
                 {"target": f"{c} configuration for {tool}", "from": "missing in some sessions", "to": "configured",
                  "rollback": "restore the previous collector configuration"}))
-        unresolved = t["provenance"].get("unresolved", 0)
-        if unresolved:
+        src = t["provenance"].get("source", {})
+        broken = src.get("UNRESOLVED", 0) + src.get("MISMATCHED", 0)
+        affected = {"metrics": ["audit_source_provenance_completeness"],
+                    "questions": ["runtime_monitoring:RM-3", "runtime_monitoring:RM-5"], "cops": ["runtime_monitoring"]}
+        if broken:
             out.append(Proposal(
-                OBSERVABLE_DEFINITION, {"code": "UNRESOLVED_RAW_REF", "tool": tool, "sessions": unresolved,
+                OBSERVABLE_DEFINITION, {"code": "SOURCE_LINK_UNRESOLVED", "tool": tool, "rows": broken,
+                                        "unresolved": src.get("UNRESOLVED", 0), "mismatched": src.get("MISMATCHED", 0),
                                         "replay_id": rid},
-                {"metrics": ["audit_source_provenance_completeness"],
-                 "questions": ["runtime_monitoring:RM-3", "runtime_monitoring:RM-5"], "cops": ["runtime_monitoring"]},
-                "make observables.raw_ref name the source_events.source_ref it came from",
-                "provenance resolves to the event, not only to a file",
-                "changes what raw_ref holds for new rows; old rows keep the transcript path",
-                "resolution outcome in the profile becomes resolved for new sessions",
+                affected, f"trace why {tool} rows name source events that are missing or belong elsewhere",
+                "the cause of the broken links is known before any change is made",
+                "investigation only; nothing changes", "the replay's unresolved list is explained row by row",
                 APPROVER[OBSERVABLE_DEFINITION],
-                {"target": "observables.raw_ref", "from": "transcript path", "to": "source_ref",
-                 "rollback": "write the transcript path again; resolution falls back to file level"}))
+                {"target": "none until the cause is known", "from": "unexplained", "to": "explained",
+                 "rollback": "not applicable"}))
+        if src.get("UNAVAILABLE"):
+            out.append(Proposal(
+                OBSERVABLE_DEFINITION, {"code": "SOURCE_JOIN_UNAVAILABLE", "tool": tool, "rows": src["UNAVAILABLE"],
+                                        "replay_id": rid},
+                affected, "signal_curate.curate writes observables.source_refs (text[], nullable): the "
+                "source_events.source_ref of every merged member; raw_ref keeps the native transcript path",
+                "each new observable links to the exact source events it was built from",
+                "new nullable column; existing rows and readers unchanged; old rows stay UNAVAILABLE unless "
+                "reconstructed from stored payloads",
+                "replay of sessions curated after the change shows VERIFIED rows to source events; harness provenance "
+                "worlds still pass", APPROVER[OBSERVABLE_DEFINITION],
+                {"target": "observables.source_refs, signal_curate.curate", "from": "absent",
+                 "to": "source_ref list per row", "rollback": "stop writing the column; the resolver falls back to "
+                 "reconstructed dedup keys or UNAVAILABLE"}))
         if t["history"].get("insufficient"):
             out.append(Proposal(
                 HISTORICAL_BASELINE, {"code": "INSUFFICIENT_HISTORY", "tool": tool,
@@ -304,3 +319,32 @@ def _unique(props):
             seen.add(p.proposal_id)
             out.append(p)
     return out
+
+
+SUBJECT = ("field", "collector", "metric", "question")
+
+
+def group(proposals):
+    """Proposals that ask for the same change for different tools, as one group. Every member keeps its own
+    trigger evidence; nothing is merged away and nothing is applied."""
+    out = {}
+    for p in proposals:
+        d = p if isinstance(p, dict) else p.to_dict()
+        t = d["trigger"]
+        subject = next((f"{k}={t[k]}" for k in SUBJECT if k in t), None)
+        key = (d["kind"], t.get("code"), subject)
+        g = out.setdefault(key, {"kind": d["kind"], "code": t.get("code"), "subject": subject, "members": [],
+                                 "affected": {"metrics": set(), "questions": set(), "cops": set()},
+                                 "changes": set(), "approval": set(), "verification": set(), "rollback": set()})
+        g["members"].append({"proposal_id": d["proposal_id"], "status": d["status"], "tool": t.get("tool"),
+                             "trigger": t})
+        for k in g["affected"]:
+            g["affected"][k] |= set(d["affected"].get(k) or [])
+        g["changes"].add(d["change"])
+        g["approval"].add(d["approval"])
+        g["verification"].add(d["verification"])
+        g["rollback"].add(d["versioning"]["rollback"])
+    return [dict(g, affected={k: sorted(v) for k, v in g["affected"].items()},
+                 **{k: sorted(g[k]) for k in ("changes", "approval", "verification", "rollback")},
+                 tools=sorted(m["tool"] for m in g["members"] if m["tool"]))
+            for _, g in sorted(out.items(), key=lambda kv: [str(x) for x in kv[0]])]

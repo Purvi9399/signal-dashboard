@@ -28,7 +28,7 @@ These are maintenance instructions for Claude Code. They are not the runtime's s
    - Leave `evidence_limits` absent unless the owner approves values.
    - Harness limits are test values and are labelled as such.
 4. Keep presence, reliability and sufficiency separate. Never add a combined score.
-5. A check that cannot run is NOT_EXECUTED or EVIDENCE_MISSING. It is never passed. A raw_ref is authentic only if it resolves in the supplied `source_events`.
+5. A check that cannot run is NOT_EXECUTED or EVIDENCE_MISSING. It is never passed. raw_ref names native tool evidence, never a source event. A row is linked only when `evidence_assessment.resolve_provenance` returns VERIFIED (source_refs or a dedup_key reconstructed by `replay.reconstruct_keys`); UNRESOLVED, UNAVAILABLE and MISMATCHED stay distinct.
 6. Do not change the aggregation classes or ceilings, the action, or memory behaviour without the owner's approval (DECISIONS.md M10, D1). A question never raises the label to INSUFFICIENT.
 7. No paid model calls. Every operation is deterministic. A model operation needs approval and may never verify itself.
 8. Signal metric functions in `collector/signal_metrics.py` must not move. The activation mapping hashes their line numbers. Add code at the end of the file.

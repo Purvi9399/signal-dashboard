@@ -114,7 +114,7 @@ Shared rules apply to every question:
 10. **INCONCLUSIVE when:**
     - no action was observed (INSUFFICIENT);
     - action rows from two sources disagree (CONFLICTING_ACTION_SOURCES);
-    - provenance cannot be verified (a row without raw_ref, or a raw_ref or derived_from that does not resolve in the raw store), the raw store was not supplied, or provenance was never read.
+    - provenance cannot be verified: a row's link to its source events (source_refs, or a dedup_key reconstructed from stored payloads) is UNRESOLVED or MISMATCHED, a derived_from parent is not a row of the session, a native transcript contradicts the row, no record-level join exists (SOURCE_JOIN_UNAVAILABLE), the raw store was not supplied, or provenance was never read. raw_ref names native tool evidence; a populated raw_ref is never verification.
 11. **Authority:** none of its own.
 12. **Verification:** negative_finding_complete_evidence (UNLINKED is a supported answer), partially_linked, unreliable_provenance and contradictory_evidence.
 
@@ -152,7 +152,7 @@ Shared rules apply to every question:
 
 1. **What it asks:** the overall evidence verdict, drawn from the session's own unknowns and from RM-1 to RM-4.
 2. **Metrics:** `telemetry.unknown_share` (required), `telemetry.source_agreement` and `missing_event_rate` (required when applicable), and `collector_errors` (optional, NOT_CALCULATED).
-3. **Raw evidence:** as for RM-1 to RM-4, plus `raw_ref` and `confidence` for provenance.
+3. **Raw evidence:** as for RM-1 to RM-4, plus `source_refs` or `dedup_key`, `derived_from`, `raw_ref` (native transcript) and `confidence` for provenance.
 4. **Observation:** the unknown share with its approved-threshold state, the metrics that could not be judged, and the answers to RM-1 to RM-4.
 5. **Interpretation:**
    - MUST_REMAIN_UNCERTAIN when any of these hold: the unknown share is not NORMAL; any earlier question is INCONCLUSIVE; or an earlier answer is EXPECTED_COLLECTORS_MISSING, PARTIALLY_LINKED, UNLINKED or NOT_CURRENT_OR_CONTINUOUS.

@@ -68,8 +68,8 @@ scenarios:
 
   unreliable_provenance:
     world: >-
-      Two rows arrived without raw_ref, so they cannot be traced to a raw event, and one row is
-      marked inferred with no source rows. Everything else is as in normal.
+      Two rows arrived without source_refs while the rest of the session links to its source
+      events, so those two cannot be traced, and one row is marked inferred with no source rows. Everything else is as in normal.
     questions:
       RM-1: {sufficiency: SUFFICIENT, outcome: ALL_EXPECTED_COLLECTORS_CONTRIBUTED}
       RM-2: {sufficiency: SUFFICIENT, outcome: SOURCES_AGREE}
@@ -173,8 +173,8 @@ scenarios:
 
   adversarial_fabricated_raw_ref:
     world: >-
-      Every row carries a raw_ref, but two of them name raw events that do not exist. Provenance
-      is therefore unverifiable for those rows.
+      Every row carries source_refs, but two of them name source events that do not exist.
+      Provenance is therefore unverifiable for those rows.
     questions:
       RM-3: {sufficiency: INCONCLUSIVE, outcome: INCONCLUSIVE}
       RM-5: {sufficiency: INCONCLUSIVE, outcome: INCONCLUSIVE}

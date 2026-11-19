@@ -145,40 +145,188 @@ def _limited(check, value, limit_key, cfg, unit, what):
     return dict(base, outcome=VERIFIED_OK, detail=f"{what} {value}{unit} is within the approved {limit}{unit}")
 
 
-def resolve_raw_refs(rows, raw_events):
-    """Which rows' raw_ref and derived_from do not resolve to a stored source event of the same session.
+NATIVE, SOURCE, OBSERVABLE, METRIC, FINDING = "native", "source", "observable", "metric", "finding"
+REF_KINDS = (NATIVE, SOURCE, OBSERVABLE, METRIC, FINDING)
+VERIFIED, UNRESOLVED, UNAVAILABLE, MISMATCHED = "VERIFIED", "UNRESOLVED", "UNAVAILABLE", "MISMATCHED"
+RESOLUTIONS = (VERIFIED, UNRESOLVED, UNAVAILABLE, MISMATCHED)
+SOURCE_JOIN_UNAVAILABLE = "SOURCE_JOIN_UNAVAILABLE"
+NATIVE_STORE_NOT_SUPPLIED = "NATIVE_STORE_NOT_SUPPLIED"
+NATIVE_TRANSCRIPT_MISSING = "NATIVE_TRANSCRIPT_MISSING"
 
-    raw_events are source_events rows (source_id, session_id, source_ref, file_origin). A raw_ref
-    resolves when it is a source_ref of the session, the file a source_ref points into, or the
-    file_origin of one; each derived_from id must be a source_id of the session.
-    """
+
+def ref(kind, ident):
+    return f"{kind}:{ident}"
+
+
+def _resolution(status, method, detail, refs=()):
+    return {"status": status, "method": method, "detail": detail, "refs": list(refs)}
+
+
+def resolve_source(row, raw_events, session_events, linked=False):
+    """Observable -> Signal source event. raw_ref is native tool evidence (signal_curate sets it to the
+    hook payload's transcript_path), so it is never used here. A row links to source events through
+    source_refs (source_events.source_ref) or through a dedup_key reconstructed from the stored payload
+    with signal_curate's own merge_key; a populated field alone is never VERIFIED. linked: other rows of
+    the session carry source_refs, so a row without them is missing its link rather than unlinkable."""
+    sid, tool = row.get("session_id"), row.get("tool")
+    if row.get("source_refs"):
+        by_ref = {e.get("source_ref"): e for e in raw_events if e.get("source_ref")}
+        found = [by_ref.get(x) for x in row["source_refs"]]
+        refs = [ref(SOURCE, x) for x in row["source_refs"]]
+        if not all(found):
+            return _resolution(UNRESOLVED, "source_refs", f"{found.count(None)} of {len(found)} source_refs are not "
+                               "in the raw store", refs)
+        if any(e.get("session_id") != sid or (e.get("tool") and tool and e["tool"] != tool) for e in found):
+            return _resolution(MISMATCHED, "source_refs", "a source event belongs to another session or tool", refs)
+        return _resolution(VERIFIED, "source_refs", f"{len(found)} source events of this session", refs)
+    keyed = [e for e in session_events if e.get("dedup_key")]
+    if row.get("dedup_key") and keyed:
+        match = [e for e in keyed if e["dedup_key"] == row["dedup_key"]]
+        refs = [ref(SOURCE, e.get("source_id")) for e in match]
+        if match:
+            if any(e.get("tool") and tool and e["tool"] != tool for e in match):
+                return _resolution(MISMATCHED, "reconstructed_dedup_key", "the matching source event names another "
+                                   "tool", refs)
+            return _resolution(VERIFIED, "reconstructed_dedup_key", f"{len(match)} source events reproduce this "
+                               "row's dedup_key", refs)
+        if any(e.get("dedup_key_unavailable") for e in session_events):
+            return _resolution(UNAVAILABLE, "reconstructed_dedup_key", "no reconstructed key matches, and some "
+                               "source events of this session cannot be reconstructed")
+        return _resolution(UNRESOLVED, "reconstructed_dedup_key", "no source event of this session reproduces "
+                           "this row's dedup_key")
+    if linked or keyed:
+        return _resolution(UNRESOLVED, "none", "the row carries no link to a source event")
+    return _resolution(UNAVAILABLE, "none", "neither source_refs nor a reconstructable dedup_key exists for "
+                       "this session")
+
+
+def resolve_native(row, matched, native):
+    """Observable -> native tool transcript, where raw_ref names one. native is an index built where the
+    transcripts live: {"host": ..., "paths": {path: {"exists": bool, "session_ids": [...]}}}."""
+    path = row.get("raw_ref")
+    if not path:
+        return None
+    refs = [ref(NATIVE, path)]
+    named = {e.get("transcript_path") for e in matched if e.get("transcript_path")}
+    if named and path not in named:
+        return _resolution(MISMATCHED, "source_payload", "the source event names a different transcript", refs)
+    if native is None:
+        return _resolution(UNAVAILABLE, "native_index", "native transcripts were not available to this run", refs)
+    short = lambda h: str(h).lower().split(".")[0]                                  # noqa: E731
+    if row.get("hostname") and native.get("host") and short(row["hostname"]) != short(native["host"]):
+        return _resolution(UNAVAILABLE, "native_index", f"the transcript is on {row['hostname']}, not on the "
+                           "indexed host", refs)
+    entry = (native.get("paths") or {}).get(path)
+    if not entry or not entry.get("exists"):
+        return _resolution(UNRESOLVED, "native_index", "the transcript is not present on the indexed host", refs)
+    if entry.get("session_ids") is None:
+        return _resolution(UNAVAILABLE, "native_index", "the transcript exists but its format names no session",
+                           refs)
+    if row.get("session_id") not in entry["session_ids"]:
+        return _resolution(MISMATCHED, "native_index", "the transcript does not contain this session", refs)
+    return _resolution(VERIFIED, "native_index", "the transcript exists and contains this session", refs)
+
+
+def resolve_derived(row, ids):
+    """Derived row -> the observables it was derived from (observables.derived_from)."""
+    parents = [str(x) for x in row.get("derived_from") or []]
+    if not parents:
+        return None
+    missing = [x for x in parents if (row.get("session_id"), x) not in ids]
+    refs = [ref(OBSERVABLE, x) for x in parents]
+    if missing:
+        return _resolution(UNRESOLVED, "derived_from", f"{len(missing)} of {len(parents)} parent observables are not "
+                           "rows of this session", [ref(OBSERVABLE, x) for x in missing])
+    return _resolution(VERIFIED, "derived_from", f"{len(parents)} parent observables of this session", refs)
+
+
+def resolve_provenance(rows, raw_events, native=None):
+    """Per row: observable -> source event -> native transcript, each VERIFIED, UNRESOLVED, UNAVAILABLE
+    or MISMATCHED."""
     by_session = {}
     for e in raw_events:
         by_session.setdefault(e.get("session_id"), []).append(e)
-    unresolved, checked = [], 0
+    linked = {r.get("session_id") for r in rows if r.get("source_refs")}
+    ids = {(r.get("session_id"), str(r.get("observable_id"))) for r in rows}
+    out = []
     for r in rows:
         mine = by_session.get(r.get("session_id"), [])
-        refs = {e.get("source_ref") for e in mine} | {e.get("file_origin") for e in mine}
-        files = {str(e.get("source_ref") or "").rsplit(":", 1)[0] for e in mine}
-        ids = {str(e.get("source_id")) for e in mine}
-        ref, derived = r.get("raw_ref"), [str(x) for x in (r.get("derived_from") or [])]
-        if not ref and not derived:
-            continue
-        checked += 1
-        bad = []
-        if ref and ref not in refs and ref not in files:
-            bad.append(f"raw_ref {ref}")
-        bad += [f"derived_from {x}" for x in derived if x not in ids]
-        if bad:
-            unresolved.append({"observable_id": r.get("observable_id"), "unresolved": bad})
-    return checked, unresolved
+        src = resolve_source(r, raw_events, mine, r.get("session_id") in linked)
+        keys = set(src["refs"])
+        matched = [e for e in mine if ref(SOURCE, e.get("source_id")) in keys or ref(SOURCE, e.get("source_ref")) in keys]
+        out.append({"observable": ref(OBSERVABLE, r.get("observable_id")), "source": src,
+                    "native": resolve_native(r, matched, native), "derived": resolve_derived(r, ids)})
+    return out
 
 
-def reliability_checks(events, rows, cfg, computed_at=None, raw_events=None):
+def tally(links, part):
+    counts = {}
+    for x in links:
+        if x[part]:
+            counts[x[part]["status"]] = counts.get(x[part]["status"], 0) + 1
+    return counts
+
+
+def resolve_chain(evidence_refs, events, rows, raw_events, native=None):
+    """COP finding -> metric -> observable -> source event -> native transcript."""
+    links = {x["observable"]: x for x in resolve_provenance(rows, raw_events or [], native)}
+    ids = {ref(OBSERVABLE, r.get("observable_id")) for r in rows}
+    chain = []
+    for x in evidence_refs:
+        kind, _, ident = str(x).partition(":")
+        if kind == METRIC:
+            ev = events.get(ident)
+            cited = [c for c in (ev or {}).get("evidence_refs", []) if str(c).startswith(OBSERVABLE + ":")]
+            node = {"ref": x, "kind": METRIC,
+                    **(_resolution(UNRESOLVED, "metric_event", "no metric event for this session") if ev is None else
+                       _resolution(UNAVAILABLE, "metric_event", "the metric has no value", cited) if ev.get("value") is None
+                       else _resolution(VERIFIED, "observable_refs" if cited else "session_scope",
+                                        "the event cites its rows" if cited else "the event covers this session's "
+                                        "rows; it cites no individual row", cited or sorted(ids)))}
+            chain.append(node)
+        elif kind == OBSERVABLE:
+            chain.append({"ref": x, "kind": OBSERVABLE, **(_resolution(VERIFIED, "row", "row present") if x in ids
+                                                           else _resolution(UNRESOLVED, "row", "no such row"))})
+        else:
+            chain.append({"ref": x, "kind": kind, **_resolution(UNAVAILABLE, "none", "not a resolvable reference")})
+    observed = {o for n in chain if n["kind"] == METRIC and n["status"] == VERIFIED for o in n["refs"]} | \
+               {n["ref"] for n in chain if n["kind"] == OBSERVABLE and n["status"] == VERIFIED}
+    reached = [links[o] for o in sorted(observed) if o in links]
+    return {"nodes": chain, "observables": len(reached), "source": tally(reached, "source"),
+            "native": tally(reached, "native"), "raw_store_supplied": raw_events is not None,
+            "native_store_supplied": native is not None}
+
+
+def _provenance(add, rows, raw_events, native):
+    links = resolve_provenance(rows, raw_events, native)
+    src, nat = tally(links, "source"), tally(links, "native")
+    counts = ", ".join(f"{v} {k}" for k, v in sorted(src.items()))
+    bad = [x for x in links if x["source"]["status"] in (UNRESOLVED, MISMATCHED)
+           or (x["derived"] or {}).get("status") == UNRESOLVED]
+    if bad:
+        add(UNVERIFIABLE_PROVENANCE, VERIFIED_FAILED, f"rows to source events: {counts}", "source_events",
+            [x["observable"] for x in bad], resolution=src, unresolved=bad)
+    elif src.get(UNAVAILABLE):
+        add(UNVERIFIABLE_PROVENANCE, NOT_EXECUTED, f"rows to source events: {counts}; no record-level join exists "
+            "for these rows", "source_events", not_executed_because=SOURCE_JOIN_UNAVAILABLE, resolution=src)
+    elif links:
+        add(UNVERIFIABLE_PROVENANCE, VERIFIED_OK, f"all {len(links)} rows link to source events of this session",
+            "source_events", resolution=src)
+    mism = [x for x in links if (x["native"] or {}).get("status") == MISMATCHED]
+    if mism:
+        add(UNVERIFIABLE_PROVENANCE, VERIFIED_FAILED, f"{len(mism)} rows name a native transcript that contradicts "
+            "their source event or session", "native_transcripts", [x["observable"] for x in mism], resolution=nat)
+    return {"resolution": nat, "native_store_supplied": native is not None,
+            "limitation": None if not nat or set(nat) == {VERIFIED} else
+            NATIVE_STORE_NOT_SUPPLIED if native is None else NATIVE_TRANSCRIPT_MISSING}
+
+
+def reliability_checks(events, rows, cfg, computed_at=None, raw_events=None, native=None):
     """Each reliability check for the session, from its metric events and rows.
 
-    raw_events: the stored source events the rows' raw_ref point to. Without them provenance
-    cannot be resolved and that part of UNVERIFIABLE_PROVENANCE is NOT_EXECUTED."""
+    raw_events: the stored source events the rows link to. Without them provenance cannot be
+    resolved and that part of UNVERIFIABLE_PROVENANCE is NOT_EXECUTED. native: an index of the native
+    transcripts that raw_ref names, where they are available."""
     ev = lambda m: events.get(m) or {}                                       # noqa: E731
     feats = lambda m: ev(m).get("features") or {}                            # noqa: E731
     out = []
@@ -203,31 +351,26 @@ def reliability_checks(events, rows, cfg, computed_at=None, raw_events=None):
     pv = ev("audit_source_provenance_completeness")
     if pv.get("value") is None:
         metric_missing(UNVERIFIABLE_PROVENANCE, "audit_source_provenance_completeness")
-    elif pv["value"] < 1:
-        f = pv["features"]
-        add(UNVERIFIABLE_PROVENANCE, VERIFIED_FAILED, f"{f['rows'] - f['with_raw_ref']} of {f['rows']} rows have no "
-            f"raw_ref, {f['rows'] - f['with_collector']} no collector", "audit_source_provenance_completeness")
     else:
-        add(UNVERIFIABLE_PROVENANCE, VERIFIED_OK, "every row names its collector and raw event",
-            "audit_source_provenance_completeness")
+        f = pv["features"]
+        if f["with_collector"] < f["rows"]:
+            add(UNVERIFIABLE_PROVENANCE, VERIFIED_FAILED, f"{f['rows'] - f['with_collector']} of {f['rows']} rows "
+                "name no collector", "audit_source_provenance_completeness")
+        else:
+            add(UNVERIFIABLE_PROVENANCE, VERIFIED_OK, f"every row names its collector; {f['with_raw_ref']} of "
+                f"{f['rows']} name native tool evidence", "audit_source_provenance_completeness")
     un = ev("audit_unverifiable_record_rate")
     if un.get("value"):
         add(UNVERIFIABLE_PROVENANCE, VERIFIED_FAILED, f"{un['value']:.1%} of rows marked inferred name no source rows",
             "audit_unverifiable_record_rate", un.get("evidence_refs", []))
     if raw_events is None:
-        add(UNVERIFIABLE_PROVENANCE, NOT_EXECUTED, "the raw event store was not supplied, so no raw_ref was resolved",
-            "source_events", not_executed_because=RAW_STORE_NOT_SUPPLIED)
+        add(UNVERIFIABLE_PROVENANCE, NOT_EXECUTED, "the raw event store was not supplied, so no row was linked to "
+            "a source event", "source_events", not_executed_because=RAW_STORE_NOT_SUPPLIED)
     else:
-        checked, bad = resolve_raw_refs(rows, raw_events)
-        if not checked:
-            pass                                 # nothing names a raw event: the completeness check reports it
-        elif bad:
-            add(UNVERIFIABLE_PROVENANCE, VERIFIED_FAILED, f"{len(bad)} of {checked} rows name raw events that are not "
-                "in the raw store for this session", "source_events",
-                [f"observable:{x['observable_id']}" for x in bad], unresolved=bad)
-        else:
-            add(UNVERIFIABLE_PROVENANCE, VERIFIED_OK, f"all {checked} rows resolve to stored source events of this "
-                "session", "source_events")
+        native_evidence = _provenance(add, rows, raw_events, native)
+        for c in out:
+            if c["source"] == "source_events":
+                c["native"] = native_evidence
 
     ti, tf = ev("audit_timestamp_integrity"), feats("audit_timestamp_integrity")
     if ti.get("value") is None:
@@ -313,7 +456,7 @@ def not_supplied(rows, fields):
     return [f for f in fields if rows and not any(f in r for r in rows)]
 
 
-def assess(cop, question_id, events, rows, cfg=None, computed_at=None, raw_events=None):
+def assess(cop, question_id, events, rows, cfg=None, computed_at=None, raw_events=None, native=None):
     """One question: presence, reliability and sufficiency, with the evidence behind each."""
     cfg = cfg or signal_metrics.load_config()
     q = QUESTIONS[cop][question_id]
@@ -329,7 +472,7 @@ def assess(cop, question_id, events, rows, cfg=None, computed_at=None, raw_event
     missing = [x for x in needed if not (x["state"] == PRESENT or
                (x["kind"] == WHEN_APPLICABLE and x["state"] in (NOT_APPLICABLE, NOT_OBSERVED)))]
 
-    checks = reliability_checks(events, rows, cfg, computed_at, raw_events)
+    checks = reliability_checks(events, rows, cfg, computed_at, raw_events, native)
     asked = [c for c in checks if c["check"] in q["verified"]]
     lacking = [c for c in asked if c["outcome"] in (EVIDENCE_MISSING, COMPARISON_NOT_POSSIBLE)]
     blocking = [c for c in checks if c["check"] in q["blocking"]]
@@ -402,8 +545,8 @@ def session_inputs(rows, session_id, cfg, computed_at=None):
     return events, signal_metrics.unique_rows(session)
 
 
-def assess_session(cop, rows, session_id, cfg=None, computed_at=None, raw_events=None):
+def assess_session(cop, rows, session_id, cfg=None, computed_at=None, raw_events=None, native=None):
     """All questions of one COP for one session, from raw observables."""
     cfg = cfg or signal_metrics.load_config()
     events, srows = session_inputs(rows, session_id, cfg, computed_at)
-    return {qid: assess(cop, qid, events, srows, cfg, computed_at, raw_events) for qid in QUESTIONS[cop]}
+    return {qid: assess(cop, qid, events, srows, cfg, computed_at, raw_events, native) for qid in QUESTIONS[cop]}

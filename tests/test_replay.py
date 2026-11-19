@@ -142,14 +142,14 @@ def test_unresolvable_raw_refs_are_profiled_and_proposed():
     rows = H.estate(H._fabricated())
     rep = run(R.snapshot(rows, {"kind": "synthetic"}, H.raw_store(rows)))
     prof = R.evidence_profile(rep)
-    assert prof["tools"]["claude-code"]["provenance"]["unresolved"] == 1
+    assert prof["tools"]["claude-code"]["provenance"]["source"]["UNRESOLVED"] == 2
     assert rep["results"]["s1"]["runtime_monitoring"]["label"] == "DEGRADED"
     assert any(p.kind == V.OBSERVABLE_DEFINITION for p in V.proposals_from(prof, rep))
 
 
 def test_without_the_raw_store_provenance_is_not_executed():
     prof = R.evidence_profile(run(snap(H.session(), raw=False)))
-    assert set(prof["tools"]["claude-code"]["provenance"]) == {"NOT_EXECUTED (raw store not supplied)"}
+    assert set(prof["tools"]["claude-code"]["provenance"]["source"]) == {"NOT_EXECUTED (raw store not supplied)"}
 
 
 def test_insufficient_history_is_profiled_and_a_baseline_needs_validated_support():
@@ -219,12 +219,13 @@ def test_different_metric_versions_are_kept_apart():
     c2 = H.cfg()
     c2["metric_version"] = "2026-10-05.1-test"
     a = run(snap(H.thin_session("s1")), store=store)
+    first = len(store.select("cop_memory_records"))
     b = run(snap(H.thin_session("s1")), cfg=c2, store=store)
     assert a["manifest"]["replay_id"] != b["manifest"]["replay_id"]
     assert a["results"]["s1"]["runtime_monitoring"]["finding_id"] != b["results"]["s1"]["runtime_monitoring"][
         "finding_id"]
     assert a["results"]["s1"]["runtime_monitoring"]["label"] == b["results"]["s1"]["runtime_monitoring"]["label"]
-    assert len(store.select("cop_memory_records")) == 2
+    assert first and len(store.select("cop_memory_records")) == 2 * first
 
 
 def test_a_tampered_snapshot_file_is_refused(tmp_path):
@@ -249,17 +250,19 @@ def test_supabase_read_is_refused_without_explicit_approval(monkeypatch):
         R.fetch_supabase("2026-10-01T00:00:00Z", "2026-10-02T00:00:00Z", approved=False, getter=lambda *a: [])
 
 
-def test_supabase_read_is_get_only_and_never_reads_raw_payload(monkeypatch):
+def test_supabase_read_is_get_only_and_never_stores_raw_payload(monkeypatch):
     monkeypatch.setenv(R.READ_APPROVAL, "1")
     calls = []
     rows = H.session()
+    raw = [{"source_id": "e1", "session_id": "s1", "collector": "otel", "payload": {"prompt": "zq-private-prompt"}}]
 
     def getter(table, params):
         calls.append((table, params))
-        return {"observables": rows, "source_events": [], "collector_capability": []}[table]
+        return {"observables": rows, "source_events": raw, "collector_capability": []}[table]
     s = R.fetch_supabase("2026-10-09T00:00:00+00:00", "2026-10-10T00:00:00+00:00", approved=True, getter=getter)
     assert [c[0] for c in calls] == ["observables", "source_events", "collector_capability"]
-    assert "payload" not in calls[1][1] and "raw_ref" in calls[0][1]
+    assert "payload" in calls[1][1] and "raw_ref" in calls[0][1] and "dedup_key" in calls[0][1]
+    assert "zq-private-prompt" not in json.dumps(s, default=str) and "payload" not in s["raw_events"][0]
     assert "%2B00%3A00" in calls[0][1]
     assert s["source"]["kind"] == "supabase" and s["source"]["queries"]["observables"] == calls[0][1]
     assert not hasattr(R, "post")
@@ -367,3 +370,94 @@ def test_memory_layers_are_counted_apart():
     assert lay["historical_observations"][VERIFIED] >= 1 and lay["verified_outcomes"]["VALIDATED"] == 0
     assert lay["proposed_improvements"] == len(reg.items) and lay["approved_changes"] == 0
     assert not any("proposal" in r["record_type"] for r in rep["store"].select("cop_memory_records"))
+
+
+# ---------------------------------------------------------------- typed provenance on curated rows
+
+def _curated():
+    import signal_curate as C
+    from datetime import datetime, timezone
+    w = datetime(2026, 10, 1, tzinfo=timezone.utc)
+    base = {"session_id": "c1", "cwd": "/ws", "transcript_path": "/h/.claude/projects/x/c1.jsonl"}
+    pay = [dict(base, hook_event_name="PreToolUse", tool_use_id="u1", tool_name="Read", tool_input={"file_path": "/a"}),
+           dict(base, hook_event_name="PostToolUse", tool_use_id="u1", tool_name="Read", tool_response={"ok": 1}),
+           dict(base, hook_event_name="Notification", message="waiting")]
+    recs, _, _ = C.curate([(C.H, C.extract_claude_hook(p, w), p) for p in pay])
+    raw = [{"source_id": f"e{i}", "session_id": "c1", "tool": "claude-code", "collector": C.H,
+            "file_origin": "/h/.signal/sessions/c-RAW.jsonl", "payload": p} for i, p in enumerate(pay)]
+    return recs, raw
+
+
+def test_curated_rows_link_to_their_source_events_through_the_curators_own_key():
+    from cops.runtime import evidence_assessment as EA
+    recs, raw = _curated()
+    keyed = R.reconstruct_keys(raw)
+    assert all("payload" not in e for e in keyed)
+    assert keyed[0]["dedup_key"] == keyed[1]["dedup_key"] and keyed[0]["transcript_path"].endswith("c1.jsonl")
+    links = {x["observable"]: x for x in EA.resolve_provenance(recs, keyed)}
+    call = next(r for r in recs if r["observable_type"] == "tool_request")
+    link = links[f"observable:{call['observable_id']}"]
+    assert link["source"]["status"] == EA.VERIFIED and link["source"]["method"] == "reconstructed_dedup_key"
+    assert link["source"]["refs"] == ["source:e0", "source:e1"]
+    assert link["native"]["status"] == EA.UNAVAILABLE
+
+
+def test_a_time_bucketed_hook_event_is_never_reconstructed_by_guessing():
+    recs, raw = _curated()
+    keyed = R.reconstruct_keys(raw)
+    assert "dedup_key" not in keyed[2] and "write time" in keyed[2]["dedup_key_unavailable"]
+    other = R.reconstruct_keys([{"source_id": "o", "session_id": "c1", "collector": "otel", "payload": {"a": 1}}])
+    assert "dedup_key" not in other[0] and other[0]["dedup_key_unavailable"]
+
+
+def test_the_stored_replay_shape_without_a_join_is_unavailable_not_verified():
+    from cops.runtime import evidence_assessment as EA
+    recs, raw = _curated()
+    stored = [{k: v for k, v in e.items() if k != "payload"} for e in raw]
+    for r in recs:
+        r.pop("dedup_key")
+    assert {x["source"]["status"] for x in EA.resolve_provenance(recs, stored)} == {EA.UNAVAILABLE}
+
+
+def test_native_index_reads_only_session_ids(tmp_path):
+    from cops.runtime import evidence_assessment as EA
+    t = tmp_path / "c1.jsonl"
+    t.write_text('{"sessionId": "c1", "message": "secret text"}\n{"type": "summary"}\n')
+    u = tmp_path / "plain.jsonl"
+    u.write_text('{"type": "x"}\n')
+    idx = R.native_index([str(t), str(u), str(tmp_path / "gone.jsonl")], "host-a")
+    assert idx["paths"][str(t)] == {"exists": True, "session_ids": ["c1"]}
+    assert idx["paths"][str(u)] == {"exists": True, "session_ids": None}
+    assert idx["paths"][str(tmp_path / "gone.jsonl")]["exists"] is False
+    assert "secret" not in json.dumps(idx)
+    row = {"session_id": "c1", "raw_ref": str(u)}
+    assert EA.resolve_native(row, [], idx)["status"] == EA.UNAVAILABLE
+    assert EA.resolve_native(dict(row, raw_ref=str(t)), [], idx)["status"] == EA.VERIFIED
+    assert EA.resolve_native(dict(row, raw_ref=str(t), hostname="host-b"), [], idx)["status"] == EA.UNAVAILABLE
+
+
+def test_a_native_index_is_part_of_the_snapshot_digest():
+    rows = H.estate(H.session())
+    a = R.snapshot(rows, {"kind": "synthetic"}, H.raw_store(rows))
+    b = R.snapshot(rows, {"kind": "synthetic"}, H.raw_store(rows), native={"host": "h", "paths": {}})
+    assert a["digest"] != b["digest"] and "native" not in a
+
+
+def test_each_finding_carries_its_resolution_chain():
+    rep = run(snap(H.session()))
+    chain = rep["results"]["s1"]["runtime_monitoring"]["provenance_chain"]
+    assert chain["raw_store_supplied"] and not chain["native_store_supplied"]
+    assert {n["kind"] for n in chain["nodes"]} <= set(__import__("cops.runtime.evidence_assessment",
+                                                                 fromlist=["x"]).REF_KINDS) | {"tool"}
+    assert set(chain["source"]) <= {"VERIFIED", "UNRESOLVED", "UNAVAILABLE", "MISMATCHED"}
+
+
+def test_grouping_keeps_every_members_evidence_and_applies_nothing():
+    rows = H.estate(H.session(otel=False), H.session("s2", otel=False))
+    rep = run(R.snapshot(rows, {"kind": "synthetic"}, H.raw_store(rows)))
+    props = V.proposals_from(R.evidence_profile(rep), rep)
+    groups = V.group(props)
+    assert sum(len(g["members"]) for g in groups) == len(props)
+    assert {m["proposal_id"] for g in groups for m in g["members"]} == {p.proposal_id for p in props}
+    assert all(m["status"] == V.PROPOSED and m["trigger"]["replay_id"] for g in groups for m in g["members"])
+    assert all(g["approval"] and g["verification"] and g["rollback"] for g in groups)

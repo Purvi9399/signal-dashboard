@@ -42,7 +42,8 @@ def obs(sid, n, minute, kind, collector="local_hooks", **k):
     r = {"observable_id": f"{sid}-{n}", "session_id": sid, "tool": "claude-code", "collector": collector,
          "contributing": [collector], "operator_email": S.OPS, "workspace": "/ws", "turn_id": f"{sid}-t1",
          "agent_id": "main", "observable_type": kind, "occurred_at": at, "captured_at": at,
-         "ingested_at": f"2026-10-09T10:{minute:02d}:30Z", "raw_ref": f"raw/{sid}/{n}", "collectors_agree": None}
+         "ingested_at": f"2026-10-09T10:{minute:02d}:30Z", "raw_ref": f"native/{sid}.jsonl",
+         "source_refs": [f"raw/{sid}/{n}"], "collectors_agree": None}
     r.update(k)
     return r
 
@@ -72,14 +73,15 @@ def session(sid="s1", lost_result=False, otel=True, otel_until=None):
 def raw_store(rows):
     """The raw events the collectors wrote: one per observable built by obs(), at raw/<session>/<n>.
 
-    Built from observable ids, not from the rows' raw_ref, so a row whose raw_ref was altered
-    names an event that is not in the store."""
+    Built from observable ids, not from the rows' source_refs, so a row whose source_refs were altered
+    names an event that is not in the store. raw_ref is the native transcript the hook payload named."""
     out = []
     for r in rows:
         sid, _, n = str(r.get("observable_id")).rpartition("-")
         if sid == r.get("session_id") and n.isdigit():
             out.append({"source_id": f"src-{sid}-{n}", "session_id": sid, "collector": r.get("collector"),
-                        "source_ref": f"raw/{sid}/{n}", "file_origin": f"raw/{sid}"})
+                        "source_ref": f"raw/{sid}/{n}", "file_origin": f"raw/{sid}", "tool": r.get("tool"),
+                        "transcript_path": r.get("raw_ref")})
     return out
 
 
@@ -105,8 +107,8 @@ def _contradictory(sid="s1"):
 
 def _provenance():
     rows = session()
-    rows[3].pop("raw_ref")
-    rows[6].pop("raw_ref")
+    rows[3].pop("source_refs")
+    rows[6].pop("source_refs")
     rows[1].update(confidence="inferred")
     return rows
 
@@ -135,8 +137,8 @@ def _instruction(text=True):
 
 def _fabricated():
     rows = session()
-    rows[3]["raw_ref"] = "raw/does-not-exist/1"
-    rows[6]["raw_ref"] = "raw/does-not-exist/2"
+    rows[3]["source_refs"] = ["raw/does-not-exist/1"]
+    rows[6]["source_refs"] = ["raw/does-not-exist/2"]
     return rows
 
 

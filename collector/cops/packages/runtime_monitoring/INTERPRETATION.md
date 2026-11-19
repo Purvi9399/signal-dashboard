@@ -8,7 +8,7 @@ All steps are deterministic. Runtime Monitoring makes no model call today.
 |---|---|---|
 | Compute metrics | `signal_metrics.compute(rows, cfg, computed_at, catalogue=True)` | deterministic |
 | Assess evidence per question | `evidence_assessment.assess` | deterministic |
-| Resolve raw_ref against the raw store | `evidence_assessment.resolve_raw_refs` | deterministic |
+| Resolve each row to its source events (source_refs or reconstructed dedup_key) and, where indexed, its native transcript | `evidence_assessment.resolve_provenance` | deterministic |
 | Observe collector operation | `cop_package.collector_operation` | deterministic |
 | Observe and answer each question | `cop_package.observe_runtime_monitoring`, run as the tool `assess_runtime_evidence` | deterministic |
 | Threshold label | `rules.runtime_monitoring`, which calls `interpret.RuleInterpreter.runtime_monitoring` | deterministic |

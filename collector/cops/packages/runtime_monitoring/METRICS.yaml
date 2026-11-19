@@ -102,7 +102,7 @@ questions:
 operations:
   compute_metrics: {by: deterministic, code: collector/signal_metrics.py:compute}
   assess_evidence: {by: deterministic, code: collector/cops/runtime/evidence_assessment.py:assess}
-  resolve_raw_refs: {by: deterministic, code: collector/cops/runtime/evidence_assessment.py:resolve_raw_refs}
+  resolve_provenance: {by: deterministic, code: collector/cops/runtime/evidence_assessment.py:resolve_provenance}
   collector_operation: {by: deterministic, code: collector/cops/runtime/cop_package.py:collector_operation}
   observe_questions: {by: deterministic, code: collector/cops/runtime/cop_package.py:observe_runtime_monitoring}
   threshold_label: {by: deterministic, code: collector/cops/runtime/rules.py:runtime_monitoring}

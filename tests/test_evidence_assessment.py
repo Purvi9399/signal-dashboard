@@ -24,8 +24,8 @@ def obs(sid, n, minute, kind, collector="local_hooks", lag_s=30, **k):
     r = {"observable_id": f"{sid}-{n}", "session_id": sid, "tool": "claude-code", "collector": collector,
          "contributing": [collector], "operator_email": "dev1@tenant-a.example", "workspace": "/ws",
          "turn_id": f"{sid}-t1", "agent_id": "main", "observable_type": kind, "occurred_at": at,
-         "captured_at": at, "ingested_at": f"2026-10-09T10:{minute:02d}:{lag_s:02d}Z", "raw_ref": f"raw/{sid}/{n}",
-         "collectors_agree": None}
+         "captured_at": at, "ingested_at": f"2026-10-09T10:{minute:02d}:{lag_s:02d}Z",
+         "raw_ref": f"native/{sid}.jsonl", "source_refs": [f"raw/{sid}/{n}"], "collectors_agree": None}
     r.update(k)
     return r
 
@@ -201,9 +201,10 @@ def test_zero_observed_actions_is_insufficient():
 
 def test_unverifiable_action_evidence_makes_rm3_inconclusive():
     rows = session()
-    rows[2].pop("raw_ref")
+    rows[2].pop("source_refs")
     a = assess(rows)["RM-3"]
-    assert outcome(a, EA.UNVERIFIABLE_PROVENANCE) == EA.VERIFIED_FAILED
+    assert outcome(a, EA.UNVERIFIABLE_PROVENANCE) == EA.VERIFIED_OK
+    assert provenance(a)[0]["outcome"] == EA.VERIFIED_FAILED and provenance(a)[0]["resolution"][EA.UNRESOLVED] == 1
     assert status(a) == ("PRESENT", "UNRELIABLE", "INCONCLUSIVE")
 
 
@@ -391,38 +392,106 @@ def test_without_the_raw_store_provenance_is_not_executed_never_passed():
     assert a["sufficiency"]["status"] == "INCONCLUSIVE"
 
 
-def test_a_raw_ref_that_names_no_stored_event_fails_provenance():
+def test_a_source_ref_that_names_no_stored_event_fails_provenance():
     rows = session()
     store = raw_store(rows)
-    rows[3]["raw_ref"] = "raw/s1/999"
+    rows[3]["source_refs"] = ["raw/s1/999"]
     a = assess_with(rows, store)["RM-3"]
     p = provenance(a)
     assert [x["outcome"] for x in p] == [EA.VERIFIED_FAILED] and p[0]["evidence_refs"] == ["observable:s1-4"]
+    assert p[0]["resolution"] == {EA.VERIFIED: len(rows) - 1, EA.UNRESOLVED: 1}
     assert a["sufficiency"]["status"] == "INCONCLUSIVE" and a["reliability"]["status"] == "UNRELIABLE"
 
 
-def test_a_raw_ref_of_another_session_does_not_resolve():
+def test_a_source_event_of_another_session_is_mismatched():
     rows = session()
     store = raw_store(rows) + [{"source_id": "x", "session_id": "s2", "source_ref": "raw/s2/1"}]
-    rows[1]["raw_ref"] = "raw/s2/1"
-    assert [x["outcome"] for x in provenance(assess_with(rows, store)["RM-3"])] == [EA.VERIFIED_FAILED]
+    rows[1]["source_refs"] = ["raw/s2/1"]
+    p = provenance(assess_with(rows, store)["RM-3"])
+    assert [x["outcome"] for x in p] == [EA.VERIFIED_FAILED] and p[0]["resolution"][EA.MISMATCHED] == 1
 
 
-def test_a_transcript_path_resolves_to_the_events_read_from_it():
+def test_a_populated_raw_ref_alone_is_never_verified():
     rows = session()
     for r in rows:
+        r.pop("source_refs")
         r["raw_ref"] = "/home/dev/.claude/projects/p/s1.jsonl"
-    store = [{"source_id": "e1", "session_id": "s1", "source_ref": "/home/dev/.claude/projects/p/s1.jsonl:12"}]
+    store = [{"source_id": "e1", "session_id": "s1", "source_ref": "/home/dev/.signal/sessions/c-RAW.jsonl:12"}]
+    a = assess_with(rows, store)["RM-3"]
+    assert [(x["outcome"], x["not_executed_because"]) for x in provenance(a)] == \
+        [(EA.NOT_EXECUTED, EA.SOURCE_JOIN_UNAVAILABLE)]
+    assert a["reliability"]["status"] == "UNDETERMINED" and a["sufficiency"]["status"] == "INCONCLUSIVE"
+    assert provenance(a)[0]["native"] == {"resolution": {EA.UNAVAILABLE: len(rows)}, "native_store_supplied": False,
+                                          "limitation": EA.NATIVE_STORE_NOT_SUPPLIED}
+
+
+def test_a_reconstructed_dedup_key_links_a_row_to_its_source_event():
+    rows = session()
+    for i, r in enumerate(rows):
+        r.pop("source_refs")
+        r["dedup_key"] = f"k{i}"
+    store = [{"source_id": f"e{i}", "session_id": "s1", "tool": "claude-code", "dedup_key": f"k{i}"}
+             for i in range(len(rows))]
     assert [x["outcome"] for x in provenance(assess_with(rows, store)["RM-3"])] == [EA.VERIFIED_OK]
+    store[2]["tool"] = "cursor"
+    p = provenance(assess_with(rows, store)["RM-3"])
+    assert p[0]["outcome"] == EA.VERIFIED_FAILED and p[0]["resolution"][EA.MISMATCHED] == 1
 
 
-def test_derived_from_ids_must_be_stored_source_events():
+def test_an_unreconstructable_source_leaves_the_link_unavailable():
+    rows = session()
+    for i, r in enumerate(rows):
+        r.pop("source_refs")
+        r["dedup_key"] = f"k{i}"
+    store = [{"source_id": "e0", "session_id": "s1", "dedup_key": "k0"},
+             {"source_id": "e1", "session_id": "s1", "dedup_key_unavailable": "time-bucket key"}]
+    p = provenance(assess_with(rows, store)["RM-3"])
+    assert p[0]["outcome"] == EA.NOT_EXECUTED and p[0]["resolution"] == {EA.VERIFIED: 1, EA.UNAVAILABLE: len(rows) - 1}
+
+
+def test_native_transcripts_resolve_only_against_an_index():
     rows = session()
     store = raw_store(rows)
-    rows[2]["derived_from"] = ["src-s1-3", "missing-id"]
+    ok = {"host": None, "paths": {"native/s1.jsonl": {"exists": True, "session_ids": ["s1"]}}}
+    a = EA.assess_session(COP, rows, "s1", cfg(**LIMITS), computed_at=AT, raw_events=store, native=ok)["RM-3"]
+    assert provenance(a)[0]["native"]["resolution"] == {EA.VERIFIED: len(rows)}
+    assert provenance(a)[0]["native"]["limitation"] is None
+    gone = {"host": None, "paths": {}}
+    a = EA.assess_session(COP, rows, "s1", cfg(**LIMITS), computed_at=AT, raw_events=store, native=gone)["RM-3"]
+    assert provenance(a)[0]["native"]["limitation"] == EA.NATIVE_TRANSCRIPT_MISSING
+    assert provenance(a)[0]["outcome"] == EA.VERIFIED_OK
+    other = {"host": None, "paths": {"native/s1.jsonl": {"exists": True, "session_ids": ["s9"]}}}
+    a = EA.assess_session(COP, rows, "s1", cfg(**LIMITS), computed_at=AT, raw_events=store, native=other)["RM-3"]
+    assert EA.VERIFIED_FAILED in [x["outcome"] for x in check(a, EA.UNVERIFIABLE_PROVENANCE)]
+
+
+def test_a_source_event_naming_another_transcript_is_mismatched():
+    rows = session()
+    store = raw_store(rows)
+    store[0]["transcript_path"] = "native/other.jsonl"
+    a = assess_with(rows, store)["RM-3"]
+    assert [x["outcome"] for x in check(a, EA.UNVERIFIABLE_PROVENANCE) if x["source"] == "native_transcripts"] == \
+        [EA.VERIFIED_FAILED]
+    assert a["reliability"]["status"] == "UNRELIABLE"
+
+
+def test_derived_from_ids_must_be_observables_of_the_session():
+    rows = session()
+    store = raw_store(rows)
+    rows[2]["derived_from"] = ["s1-1", "missing-id"]
     p = provenance(assess_with(rows, store)["RM-3"])
-    assert p[0]["outcome"] == EA.VERIFIED_FAILED and p[0]["unresolved"] == \
-        [{"observable_id": "s1-3", "unresolved": ["derived_from missing-id"]}]
+    assert p[0]["outcome"] == EA.VERIFIED_FAILED
+    assert p[0]["unresolved"][0]["derived"]["refs"] == ["observable:missing-id"]
+
+
+def test_the_chain_runs_from_finding_to_native_transcript():
+    rows = session()
+    events, srows = EA.session_inputs(rows, "s1", cfg(**LIMITS), AT)
+    c = EA.resolve_chain(["metric:telemetry.collector_coverage", "metric:no_such_metric", "tool:abc"],
+                         events, srows, raw_store(rows))
+    assert [n["status"] for n in c["nodes"]] == [EA.VERIFIED, EA.UNRESOLVED, EA.UNAVAILABLE]
+    assert c["nodes"][0]["method"] == "session_scope"
+    assert c["source"] == {EA.VERIFIED: len(srows)} and c["native"] == {EA.UNAVAILABLE: len(srows)}
 
 
 def assess_with(rows, store):
