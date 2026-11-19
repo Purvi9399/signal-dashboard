@@ -1,0 +1,109 @@
+# Runtime Monitoring: machine-readable question contract.
+# Loaded by collector/cops/runtime/cop_package.py and validated by
+# tests/test_cop_package_runtime_monitoring.py. The Markdown files beside it
+# explain this file; where they differ, this file is what the runtime uses.
+
+cop: runtime_monitoring
+contract: cop_metrics/1
+version: 2026-11-19.1
+
+sources:
+  questions: >-
+    RM-1, RM-3, RM-4 and RM-5: COPS- implementation 1.xlsx, sheet
+    COMPLETE_DELEGATION_DATA, rows 26-29. RM-2: given by purvi on 2026-11-19.
+  metric_mapping: >-
+    COPS_METRIC_MAPPING.md, sha256 5bd3c16f1ba26b297644259faaedfe75c1f219980e5c046a9bb56308c38e951e
+    (collector/metric_registry.json, consumers = runtime_monitoring).
+
+# Every metric the mapping document assigns to Runtime Monitoring, and what
+# this package does with it. A metric not used by any question says why.
+mapping:
+  telemetry.collector_coverage: {used_by: [RM-1]}
+  telemetry.source_agreement: {used_by: [RM-2, RM-5]}
+  telemetry.turn_linkage: {used_by: [RM-3]}
+  telemetry.lane_linkage: {used_by: [RM-3]}
+  telemetry.unknown_share: {used_by: [RM-5]}
+  event_freshness_live: {used_by: [RM-4]}
+  missing_event_rate: {used_by: [RM-4, RM-5]}
+  collector_heartbeat: {used_by: [RM-1, RM-4], note: not built; reported NOT_CALCULATED}
+  collector_errors: {used_by: [RM-1, RM-5], note: not built; reported NOT_CALCULATED}
+  evidence_sufficiency_score:
+    used_by: []
+    note: not built; a single composite score is ruled out (Block 2.2, 2026-11-18)
+
+# Limits come from metrics_config.json "evidence_limits". None is approved.
+# An absent limit makes its check NOT_EXECUTED (LIMIT_NOT_APPROVED).
+limits:
+  max_ingest_lag_s: {check: INGEST_LATENCY, approved: null}
+  max_evidence_age_s: {check: STALE, approved: null}
+  max_missing_event_rate: {check: DISCONTINUITY, approved: null}
+
+questions:
+  RM-1:
+    question: Are the expected telemetry collectors operating and providing the required data?
+    fields: [collector, observable_id, observable_type, session_id, agent_id, raw_ref]
+    requires:
+      - {metric: telemetry.collector_coverage, kind: REQUIRED}
+      - {metric: collector_heartbeat, kind: OPTIONAL}
+      - {metric: collector_errors, kind: OPTIONAL}
+    verified: []
+    blocking: []
+    outcomes: [ALL_EXPECTED_COLLECTORS_CONTRIBUTED, EXPECTED_COLLECTORS_MISSING]
+
+  RM-2:
+    question: Do different telemetry sources agree about the same observed activity?
+    fields: [observable_id, observable_type, occurred_at, collector, contributing, collectors_agree, raw_ref]
+    requires:
+      - {metric: telemetry.source_agreement, kind: REQUIRED_WHEN_APPLICABLE}
+    verified: [CONFLICTING_SOURCES]
+    blocking: []
+    outcomes: [SOURCES_AGREE, SOURCES_DISAGREE]
+
+  RM-3:
+    question: Can observed actions be reliably linked to their originating turns, agents and execution lanes?
+    fields: [observable_id, observable_type, session_id, turn_id, agent_id, parent_agent_id, agent_type,
+             is_multi_agent, multi_agent_source, delegation_depth, tool_use_id, tool_name, raw_ref]
+    requires:
+      - {metric: telemetry.turn_linkage, kind: REQUIRED}
+      - {metric: telemetry.lane_linkage, kind: REQUIRED_WHEN_APPLICABLE}
+    verified: []
+    blocking: [CONFLICTING_ACTION_SOURCES, UNVERIFIABLE_PROVENANCE]
+    outcomes: [ALL_ACTIONS_LINKED, PARTIALLY_LINKED, UNLINKED]
+
+  RM-4:
+    question: Is the telemetry sufficiently fresh and continuous to support a current governance decision?
+    fields: [observable_id, observable_type, session_id, collector, status, turn_id, turn_count, tool_use_id,
+             tool_duration_ms, hung_seconds, background_tasks, scheduled_jobs, raw_ref]
+    requires:
+      - {metric: event_freshness_live, kind: REQUIRED}
+      - {metric: missing_event_rate, kind: REQUIRED_WHEN_APPLICABLE}
+      - {metric: collector_heartbeat, kind: OPTIONAL}
+    verified: [INGEST_LATENCY, STALE, DISCONTINUITY]
+    blocking: [INCOMPARABLE_TIMESTAMPS, TIMESTAMP_ORDER]
+    outcomes: [CURRENT_AND_CONTINUOUS, NOT_CURRENT_OR_CONTINUOUS]
+
+  RM-5:
+    question: >-
+      Is the available evidence sufficiently complete and trustworthy, or must the finding remain
+      uncertain because of missing or unknown data?
+    fields: [observable_id, observable_type, collector, session_id, turn_id, agent_id, parent_agent_id,
+             tool_use_id, tool_name, tool_arguments, tool_result, success, status, error_type, raw_ref]
+    requires:
+      - {metric: telemetry.unknown_share, kind: REQUIRED}
+      - {metric: telemetry.source_agreement, kind: REQUIRED_WHEN_APPLICABLE}
+      - {metric: missing_event_rate, kind: REQUIRED_WHEN_APPLICABLE}
+      - {metric: collector_errors, kind: OPTIONAL}
+    verified: []
+    blocking: [CONFLICTING_SOURCES, UNVERIFIABLE_PROVENANCE]
+    depends_on: [RM-1, RM-2, RM-3, RM-4]
+    outcomes: [COMPLETE_AND_TRUSTWORTHY, MUST_REMAIN_UNCERTAIN]
+
+# Every operation of this COP, and whether rules or a model performs it.
+operations:
+  compute_metrics: {by: deterministic, code: collector/signal_metrics.py:compute}
+  assess_evidence: {by: deterministic, code: collector/cops/runtime/evidence_assessment.py:assess}
+  observe_questions: {by: deterministic, code: collector/cops/runtime/cop_package.py:observe_runtime_monitoring}
+  cop_label: {by: deterministic, code: collector/cops/runtime/rules.py:runtime_monitoring}
+  verify_finding: {by: deterministic, code: collector/cops/runtime/verifiers.py}
+  select_action: {by: deterministic, code: collector/cops/runtime/triage.py}
+  memory_write: {by: deterministic, code: collector/cops/runtime/graph.py:validate_memory_update}

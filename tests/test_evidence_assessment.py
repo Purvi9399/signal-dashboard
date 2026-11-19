@@ -367,6 +367,7 @@ def test_not_applicable_satisfies_only_a_conditional_requirement(monkeypatch):
 def test_no_existing_cop_imports_the_assessment():
     import glob
     here = os.path.join(os.path.dirname(__file__), "..", "collector")
-    users = [p for p in glob.glob(os.path.join(here, "**", "*.py"), recursive=True)
-             if "evidence_assessment" in open(p).read() and not p.endswith("evidence_assessment.py")]
-    assert users == []
+    users = [os.path.relpath(p, here) for p in glob.glob(os.path.join(here, "**", "*.py"), recursive=True)
+             if any(m in open(p).read() for m in ("evidence_assessment", "cop_package"))
+             and not p.endswith(("evidence_assessment.py", "cop_package.py"))]
+    assert users == [os.path.join("cops", "packages", "runtime_monitoring", "harness.py")]

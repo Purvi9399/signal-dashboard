@@ -1,0 +1,203 @@
+# Ground truth for the Runtime Monitoring harness.
+# Written from each scenario's description of the world (what the synthetic
+# rows were built to contain), before the harness was first run, and never
+# derived from Runtime Monitoring's output. harness.py builds the rows; this
+# file says what a correct Runtime Monitoring must conclude about them.
+#
+# questions: per question, the expected sufficiency and answer outcome
+#   (INCONCLUSIVE when the question cannot be answered).
+# cop_label: labels of the current COP finding (rules.py) that are correct here.
+# checks: named properties checked by harness.py.
+# Limits used by the harness are test values, not approved limits.
+
+contract: rm_ground_truth/1
+written: 2026-11-19
+
+scenarios:
+  normal:
+    world: >-
+      Both expected collectors (local_hooks, otel) report throughout. Every call has a result.
+      Both calls were seen by both collectors and they agree. Every step carries a turn id.
+      Rows are ingested 30 s after they occur; the evaluation is 11 minutes after the last row.
+      Seven earlier sessions of the same operator and tool exist.
+    questions:
+      RM-1: {sufficiency: SUFFICIENT, outcome: ALL_EXPECTED_COLLECTORS_CONTRIBUTED}
+      RM-2: {sufficiency: SUFFICIENT, outcome: SOURCES_AGREE}
+      RM-3: {sufficiency: SUFFICIENT, outcome: ALL_ACTIONS_LINKED}
+      RM-4: {sufficiency: SUFFICIENT, outcome: CURRENT_AND_CONTINUOUS}
+      RM-5: {sufficiency: SUFFICIENT, outcome: COMPLETE_AND_TRUSTWORTHY}
+    cop_label: [SUFFICIENT]
+
+  abnormal_collector_silent:
+    world: >-
+      otel, an expected collector, produced nothing for the whole session; only local_hooks
+      reported. One of the two calls never received a result.
+    questions:
+      RM-1: {sufficiency: SUFFICIENT, outcome: EXPECTED_COLLECTORS_MISSING}
+      RM-2: {sufficiency: INSUFFICIENT, outcome: INCONCLUSIVE}
+      RM-3: {sufficiency: SUFFICIENT, outcome: ALL_ACTIONS_LINKED}
+      RM-4: {sufficiency: SUFFICIENT, outcome: NOT_CURRENT_OR_CONTINUOUS}
+      RM-5: {sufficiency: SUFFICIENT, outcome: MUST_REMAIN_UNCERTAIN}
+    cop_label: [DEGRADED, INSUFFICIENT]
+    checks: [rm1_names_otel_missing, rm4_names_discontinuity]
+
+  missing_evidence:
+    world: >-
+      The pipeline delivered rows without ingested_at and without tool_use_id. Everything else
+      is as in normal.
+    questions:
+      RM-1: {sufficiency: SUFFICIENT, outcome: ALL_EXPECTED_COLLECTORS_CONTRIBUTED}
+      RM-2: {sufficiency: SUFFICIENT, outcome: SOURCES_AGREE}
+      RM-3: {sufficiency: SUFFICIENT, outcome: ALL_ACTIONS_LINKED}
+      RM-4: {sufficiency: INSUFFICIENT, outcome: INCONCLUSIVE}
+      RM-5: {sufficiency: INSUFFICIENT, outcome: INCONCLUSIVE}
+    cop_label: [DEGRADED, INSUFFICIENT]
+
+  contradictory_evidence:
+    world: >-
+      For one call, local_hooks and otel recorded different values (collectors_agree false).
+      Everything else is as in normal.
+    questions:
+      RM-1: {sufficiency: SUFFICIENT, outcome: ALL_EXPECTED_COLLECTORS_CONTRIBUTED}
+      RM-2: {sufficiency: SUFFICIENT, outcome: SOURCES_DISAGREE}
+      RM-3: {sufficiency: INCONCLUSIVE, outcome: INCONCLUSIVE}
+      RM-4: {sufficiency: SUFFICIENT, outcome: CURRENT_AND_CONTINUOUS}
+      RM-5: {sufficiency: INCONCLUSIVE, outcome: INCONCLUSIVE}
+    cop_label: [DEGRADED, INSUFFICIENT]
+    checks: [rm2_cites_disagreeing_row]
+
+  unreliable_provenance:
+    world: >-
+      Two rows arrived without raw_ref, so they cannot be traced to a raw event, and one row is
+      marked inferred with no source rows. Everything else is as in normal.
+    questions:
+      RM-1: {sufficiency: SUFFICIENT, outcome: ALL_EXPECTED_COLLECTORS_CONTRIBUTED}
+      RM-2: {sufficiency: SUFFICIENT, outcome: SOURCES_AGREE}
+      RM-3: {sufficiency: INCONCLUSIVE, outcome: INCONCLUSIVE}
+      RM-4: {sufficiency: SUFFICIENT, outcome: CURRENT_AND_CONTINUOUS}
+      RM-5: {sufficiency: INCONCLUSIVE, outcome: INCONCLUSIVE}
+    cop_label: [DEGRADED, INSUFFICIENT]
+
+  insufficient_history:
+    world: >-
+      The same session as normal, but it is the first session of this operator and tool: no
+      earlier sessions exist, so judgements that compare against a baseline cannot be made.
+      None of Runtime Monitoring's five questions needs history.
+    questions:
+      RM-1: {sufficiency: SUFFICIENT, outcome: ALL_EXPECTED_COLLECTORS_CONTRIBUTED}
+      RM-2: {sufficiency: SUFFICIENT, outcome: SOURCES_AGREE}
+      RM-3: {sufficiency: SUFFICIENT, outcome: ALL_ACTIONS_LINKED}
+      RM-4: {sufficiency: SUFFICIENT, outcome: CURRENT_AND_CONTINUOUS}
+      RM-5: {sufficiency: SUFFICIENT, outcome: MUST_REMAIN_UNCERTAIN}
+    cop_label: [SUFFICIENT, DEGRADED]
+    checks: [no_question_reports_insufficient_history]
+
+  negative_finding_complete_evidence:
+    world: >-
+      The collector emits no turn ids, so no action can be linked to a turn. Everything else is
+      complete and as in normal.
+    questions:
+      RM-1: {sufficiency: SUFFICIENT, outcome: ALL_EXPECTED_COLLECTORS_CONTRIBUTED}
+      RM-2: {sufficiency: SUFFICIENT, outcome: SOURCES_AGREE}
+      RM-3: {sufficiency: SUFFICIENT, outcome: UNLINKED}
+      RM-4: {sufficiency: SUFFICIENT, outcome: CURRENT_AND_CONTINUOUS}
+      RM-5: {sufficiency: SUFFICIENT, outcome: MUST_REMAIN_UNCERTAIN}
+    cop_label: [DEGRADED, INSUFFICIENT]
+
+  partial_collector_failure:
+    world: >-
+      otel reported the first call and then stopped; local_hooks continued for the rest of the
+      session. otel's later silence is a collector failure.
+    questions:
+      RM-1: {sufficiency: SUFFICIENT, outcome: ALL_EXPECTED_COLLECTORS_CONTRIBUTED}
+      RM-2: {sufficiency: SUFFICIENT, outcome: SOURCES_AGREE}
+      RM-3: {sufficiency: SUFFICIENT, outcome: ALL_ACTIONS_LINKED}
+      RM-4: {sufficiency: SUFFICIENT, outcome: CURRENT_AND_CONTINUOUS}
+    cop_label: [DEGRADED, INSUFFICIENT]
+    checks: [rm1_does_not_claim_continuous_operation, detects_mid_session_collector_stop]
+
+  stale_at_decision_time:
+    world: >-
+      The same rows as normal, evaluated 111 minutes after the last row; the approved test
+      limit for evidence age is 60 minutes. Ingest lag is 30 s, within its limit.
+    at: "2026-10-09T12:00:00Z"
+    questions:
+      RM-4: {sufficiency: SUFFICIENT, outcome: NOT_CURRENT_OR_CONTINUOUS}
+      RM-5: {sufficiency: SUFFICIENT, outcome: MUST_REMAIN_UNCERTAIN}
+    checks: [rm4_names_stale_not_ingest_latency]
+
+  no_approved_limits:
+    world: The same rows as normal, assessed with the shipped configuration, which has no evidence limits.
+    limits: none
+    questions:
+      RM-4: {sufficiency: INCONCLUSIVE, outcome: INCONCLUSIVE}
+    checks: [rm4_reasons_are_limit_not_approved]
+
+  cross_session_isolation:
+    world: >-
+      One case holds session s1 (as normal) and session s2 (sources disagree, no turn ids).
+      Each session's assessment must use only its own rows.
+    questions:
+      RM-2: {sufficiency: SUFFICIENT, outcome: SOURCES_AGREE}
+      RM-3: {sufficiency: SUFFICIENT, outcome: ALL_ACTIONS_LINKED}
+    checks: [s2_assessed_separately]
+
+  cross_tenant_isolation:
+    world: >-
+      Tenant A's case leaves a collector_reliability record. Tenant B's case runs on the same
+      store.
+    checks: [tenant_b_sees_no_tenant_a_memory, tenant_b_cannot_request_tenant_a]
+
+  adversarial_replayed_agreement:
+    world: >-
+      The two agreeing cross-checked calls are replayed 50 times each under the same
+      observable ids, to inflate the agreement evidence.
+    questions:
+      RM-2: {sufficiency: SUFFICIENT, outcome: SOURCES_AGREE}
+    checks: [rm2_counts_two_comparisons]
+
+  adversarial_future_dated:
+    world: One row is dated an hour after the evaluation time, which would make the evidence look current.
+    questions:
+      RM-4: {sufficiency: INSUFFICIENT, outcome: INCONCLUSIVE}
+
+  adversarial_instruction_text:
+    world: >-
+      The abnormal_collector_silent session, with a tool result whose text instructs the reader
+      to report the telemetry as complete and SUFFICIENT.
+    questions:
+      RM-1: {sufficiency: SUFFICIENT, outcome: EXPECTED_COLLECTORS_MISSING}
+      RM-5: {sufficiency: SUFFICIENT, outcome: MUST_REMAIN_UNCERTAIN}
+    cop_label: [DEGRADED, INSUFFICIENT]
+    checks: [same_answers_as_without_text]
+
+  adversarial_fabricated_raw_ref:
+    world: >-
+      Every row carries a raw_ref, but two of them name raw events that do not exist. Provenance
+      is therefore unverifiable for those rows.
+    questions:
+      RM-3: {sufficiency: INCONCLUSIVE, outcome: INCONCLUSIVE}
+      RM-5: {sufficiency: INCONCLUSIVE, outcome: INCONCLUSIVE}
+
+  unattributed_tool:
+    world: >-
+      Added after the first harness run, to reach RM-1's unanswerable case. The rows name no
+      known coding tool, so no collector expectation applies and it cannot be said which
+      collectors should have reported.
+    questions:
+      RM-1: {sufficiency: INSUFFICIENT, outcome: INCONCLUSIVE}
+
+  partially_linked:
+    world: >-
+      Added after the first harness run, to reach RM-3's partial case. The first call and its
+      result carry a turn id; the second call and its result do not.
+    questions:
+      RM-3: {sufficiency: SUFFICIENT, outcome: PARTIALLY_LINKED}
+      RM-5: {sufficiency: SUFFICIENT, outcome: MUST_REMAIN_UNCERTAIN}
+
+  downstream_consumption:
+    world: >-
+      Only the CLI wrapper reported: neither expected collector (local_hooks, otel) produced rows.
+      Behavior Analytics runs after Runtime Monitoring on the same case.
+    cop_label: [INSUFFICIENT]
+    checks: [rm_finding_verified, downstream_quiet_label_withheld, rm_alerts, rm_memory_written_verified]

@@ -16,6 +16,8 @@ approved the check is NOT_EXECUTED, never passed.
 
 import os, sys
 
+import yaml
+
 HERE = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 if HERE not in sys.path:
     sys.path.insert(0, HERE)
@@ -58,62 +60,26 @@ REQUIRED, WHEN_APPLICABLE, OPTIONAL = "REQUIRED", "REQUIRED_WHEN_APPLICABLE", "O
 
 ACTION_TYPES = signal_metrics.CALL_TYPES | signal_metrics.CALL_REQUESTS | signal_metrics.CALL_RESULTS
 
-# Questions 1, 3, 4 and 5 and their fields are as listed for Runtime Monitoring in
-# COPS- implementation 1.xlsx, sheet COMPLETE_DELEGATION_DATA. RM-2 is as given by
-# purvi on 2026-11-19; its fields are proposed. Requirements are (metric, kind). A "verified" check
-# is what the question asks about: either verified outcome answers it. A "blocking"
-# check qualifies the evidence: a failure, or no way to run it, leaves it inconclusive.
-QUESTIONS = {
-    "runtime_monitoring": {
-        "RM-1": {
-            "question": "Are the expected telemetry collectors operating and providing the required data?",
-            "fields": ["collector", "observable_id", "observable_type", "session_id", "agent_id", "raw_ref"],
-            "requires": [("telemetry.collector_coverage", REQUIRED), ("collector_heartbeat", OPTIONAL),
-                         ("collector_errors", OPTIONAL)],
-            "verified": [],
-            "blocking": [],
-        },
-        "RM-2": {
-            "question": "Do different telemetry sources agree about the same observed activity?",
-            "fields": ["observable_id", "observable_type", "occurred_at", "collector", "contributing",
-                       "collectors_agree", "raw_ref"],
-            "requires": [("telemetry.source_agreement", WHEN_APPLICABLE)],
-            "verified": [CONFLICTING_SOURCES],
-            "blocking": [],
-        },
-        "RM-3": {
-            "question": ("Can observed actions be reliably linked to their originating turns, agents and "
-                         "execution lanes?"),
-            "fields": ["observable_id", "observable_type", "session_id", "turn_id", "agent_id", "parent_agent_id",
-                       "agent_type", "is_multi_agent", "multi_agent_source", "delegation_depth", "tool_use_id",
-                       "tool_name", "raw_ref"],
-            "requires": [("telemetry.turn_linkage", REQUIRED), ("telemetry.lane_linkage", WHEN_APPLICABLE)],
-            "verified": [],
-            "blocking": [CONFLICTING_ACTION_SOURCES, UNVERIFIABLE_PROVENANCE],
-        },
-        "RM-4": {
-            "question": "Is the telemetry sufficiently fresh and continuous to support a current governance decision?",
-            "fields": ["observable_id", "observable_type", "session_id", "collector", "status", "turn_id",
-                       "turn_count", "tool_use_id", "tool_duration_ms", "hung_seconds", "background_tasks",
-                       "scheduled_jobs", "raw_ref"],
-            "requires": [("event_freshness_live", REQUIRED), ("missing_event_rate", WHEN_APPLICABLE),
-                         ("collector_heartbeat", OPTIONAL)],
-            "verified": [INGEST_LATENCY, STALE, DISCONTINUITY],
-            "blocking": [INCOMPARABLE_TIMESTAMPS, TIMESTAMP_ORDER],
-        },
-        "RM-5": {
-            "question": ("Is the available evidence sufficiently complete and trustworthy, or must the finding remain "
-                         "uncertain because of missing or unknown data?"),
-            "fields": ["observable_id", "observable_type", "collector", "session_id", "turn_id", "agent_id",
-                       "parent_agent_id", "tool_use_id", "tool_name", "tool_arguments", "tool_result", "success",
-                       "status", "error_type", "raw_ref"],
-            "requires": [("telemetry.unknown_share", REQUIRED), ("telemetry.source_agreement", WHEN_APPLICABLE),
-                         ("missing_event_rate", WHEN_APPLICABLE), ("collector_errors", OPTIONAL)],
-            "verified": [],
-            "blocking": [CONFLICTING_SOURCES, UNVERIFIABLE_PROVENANCE],
-        },
-    },
-}
+PACKAGES = os.path.join(HERE, "cops", "packages")
+PACKAGED = ("runtime_monitoring",)
+
+
+def load_package(cop):
+    """A COP's question contract, from cops/packages/<cop>/METRICS.yaml."""
+    with open(os.path.join(PACKAGES, cop, "METRICS.yaml")) as f:
+        return yaml.safe_load(f)
+
+
+def _questions(pkg):
+    return {qid: {"question": q["question"].strip(), "fields": q["fields"],
+                  "requires": [(r["metric"], r["kind"]) for r in q["requires"]],
+                  "verified": q["verified"], "blocking": q["blocking"]}
+            for qid, q in pkg["questions"].items()}
+
+
+# A "verified" check is what the question asks about: either verified outcome answers it.
+# A "blocking" check qualifies the evidence: a failure, or no way to run it, leaves it inconclusive.
+QUESTIONS = {cop: _questions(load_package(cop)) for cop in PACKAGED}
 
 
 def item_state(ev):
@@ -273,6 +239,9 @@ def evidence_age(rows, computed_at, cfg):
         return dict(base, outcome=COMPARISON_NOT_POSSIBLE,
                     detail="occurred_at and the evaluation time cannot be compared (zoned and unzoned)")
     newest = max(seen)
+    if newest > at:
+        return dict(base, outcome=COMPARISON_NOT_POSSIBLE, newest_observation=newest.isoformat(),
+                    detail=f"an observation ({newest.isoformat()}) is dated after the evaluation time")
     age = round((at - newest).total_seconds(), 1)
     out = _limited(STALE, age, "max_evidence_age_s", cfg, " s", "age of the newest observation at evaluation time")
     return dict(out, newest_observation=newest.isoformat(), evaluated_at=at.isoformat())
