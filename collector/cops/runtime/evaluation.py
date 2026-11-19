@@ -42,10 +42,11 @@ QUIET = {k: s.interpretations[0] for k, s in BY_KEY.items()}
 
 def make_runtime(case_id, session_id, rows, artifacts=None, script=None, store=None, mode="dry_run",
                  live=False, tenant=TENANT, enforcement=None, provider=None, decision_store=None,
-                 budget=None):
+                 budget=None, cfg=None, computed_at=None):
     store = store or SQLiteStore()
     case = CaseData(case_id, tenant, session_id, rows, artifacts=artifacts or {},
-                    decision_store=decision_store, synthetic=True)
+                    decision_store=decision_store, synthetic=True, cfg=cfg,
+                    **({"computed_at": computed_at} if computed_at else {}))
     mem = MemoryGateway(store, clock=CLOCK)
     prof = build_profiles(budget)
     prov = provider or (FixtureProvider(script) if script is not None else UnavailableProvider())

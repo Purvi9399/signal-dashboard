@@ -1125,15 +1125,26 @@ def validate_memory_update(state):
     else:
         return {"memory_write": {"written": False, "reason": f"nothing to remember ({f['status']}, {f['label']})"}}
     rtype = POLICIES[cop]["writes"][0]
+    lineage = f.get("lineage", [])
+    tool_names = {c.get("tool_call_id"): c.get("tool") for c in state.get("tool_calls", [])}
+    # The payload is the logical finding, so its digest (and the record id) is the same when the
+    # case is processed again. This run's tool call ids go in the provenance, not the payload.
+    logical = sorted({f"tool:{tool_names.get(x.partition(':')[2]) or 'unknown'}" if x.startswith("tool_call:")
+                      else x for x in lineage})
     payload = {"label": label, "finding_status": f["status"], "confidence": f["confidence"],
-               "rationale": (f.get("rationale") or "")[:400], "lineage": f.get("lineage", []),
+               "rationale": (f.get("rationale") or "")[:400], "lineage": logical,
                "session_id": rt.case.session_id,
                "claims": [{"statement": c.get("statement"), "metric_id": c.get("metric_id"),
                            "asserted_state": c.get("asserted_state")} for c in f.get("claims", [])][:10]}
+    s = rt.case.session
     prov = {"case_id": rt.case.case_id, "finding_id": f["finding_id"], "tenant_id": rt.case.tenant_id,
             "session_id": rt.case.session_id, "verified": f["verified"],
             "verifier_registry": REGISTRY_VERSION, "contract_version": CONTRACT_VERSION,
-            "synthetic": rt.case.synthetic}
+            "synthetic": rt.case.synthetic, "run_id": rt.run_id, "evaluated_at": rt.case.computed_at,
+            "metric_version": rt.case.cfg.get("metric_version"), "lineage": lineage,
+            "sources": {"metrics": sorted(x for x in lineage if ":" not in x),
+                        "tools": sorted({t for t in tool_names.values() if t}),
+                        "collectors": sorted(s.collectors) if s else []}}
     checks = [r if isinstance(r, dict) else r.to_dict()
               for r in verify_memory_update(cop, rt.case, rtype, payload, prov, status, f["verified"])]
     vr = state["verifier_results"] + checks

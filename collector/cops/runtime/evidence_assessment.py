@@ -55,6 +55,7 @@ OUTCOMES = (VERIFIED_OK, VERIFIED_FAILED, COMPARISON_NOT_POSSIBLE, EVIDENCE_MISS
 
 LIMIT_NOT_APPROVED = "LIMIT_NOT_APPROVED"
 NO_EVALUATION_TIME = "NO_EVALUATION_TIME"
+RAW_STORE_NOT_SUPPLIED = "RAW_STORE_NOT_SUPPLIED"
 
 REQUIRED, WHEN_APPLICABLE, OPTIONAL = "REQUIRED", "REQUIRED_WHEN_APPLICABLE", "OPTIONAL"
 
@@ -144,8 +145,40 @@ def _limited(check, value, limit_key, cfg, unit, what):
     return dict(base, outcome=VERIFIED_OK, detail=f"{what} {value}{unit} is within the approved {limit}{unit}")
 
 
-def reliability_checks(events, rows, cfg, computed_at=None):
-    """Each reliability check for the session, from its metric events and rows."""
+def resolve_raw_refs(rows, raw_events):
+    """Which rows' raw_ref and derived_from do not resolve to a stored source event of the same session.
+
+    raw_events are source_events rows (source_id, session_id, source_ref, file_origin). A raw_ref
+    resolves when it is a source_ref of the session, the file a source_ref points into, or the
+    file_origin of one; each derived_from id must be a source_id of the session.
+    """
+    by_session = {}
+    for e in raw_events:
+        by_session.setdefault(e.get("session_id"), []).append(e)
+    unresolved, checked = [], 0
+    for r in rows:
+        mine = by_session.get(r.get("session_id"), [])
+        refs = {e.get("source_ref") for e in mine} | {e.get("file_origin") for e in mine}
+        files = {str(e.get("source_ref") or "").rsplit(":", 1)[0] for e in mine}
+        ids = {str(e.get("source_id")) for e in mine}
+        ref, derived = r.get("raw_ref"), [str(x) for x in (r.get("derived_from") or [])]
+        if not ref and not derived:
+            continue
+        checked += 1
+        bad = []
+        if ref and ref not in refs and ref not in files:
+            bad.append(f"raw_ref {ref}")
+        bad += [f"derived_from {x}" for x in derived if x not in ids]
+        if bad:
+            unresolved.append({"observable_id": r.get("observable_id"), "unresolved": bad})
+    return checked, unresolved
+
+
+def reliability_checks(events, rows, cfg, computed_at=None, raw_events=None):
+    """Each reliability check for the session, from its metric events and rows.
+
+    raw_events: the stored source events the rows' raw_ref point to. Without them provenance
+    cannot be resolved and that part of UNVERIFIABLE_PROVENANCE is NOT_EXECUTED."""
     ev = lambda m: events.get(m) or {}                                       # noqa: E731
     feats = lambda m: ev(m).get("features") or {}                            # noqa: E731
     out = []
@@ -181,6 +214,20 @@ def reliability_checks(events, rows, cfg, computed_at=None):
     if un.get("value"):
         add(UNVERIFIABLE_PROVENANCE, VERIFIED_FAILED, f"{un['value']:.1%} of rows marked inferred name no source rows",
             "audit_unverifiable_record_rate", un.get("evidence_refs", []))
+    if raw_events is None:
+        add(UNVERIFIABLE_PROVENANCE, NOT_EXECUTED, "the raw event store was not supplied, so no raw_ref was resolved",
+            "source_events", not_executed_because=RAW_STORE_NOT_SUPPLIED)
+    else:
+        checked, bad = resolve_raw_refs(rows, raw_events)
+        if not checked:
+            pass                                 # nothing names a raw event: the completeness check reports it
+        elif bad:
+            add(UNVERIFIABLE_PROVENANCE, VERIFIED_FAILED, f"{len(bad)} of {checked} rows name raw events that are not "
+                "in the raw store for this session", "source_events",
+                [f"observable:{x['observable_id']}" for x in bad], unresolved=bad)
+        else:
+            add(UNVERIFIABLE_PROVENANCE, VERIFIED_OK, f"all {checked} rows resolve to stored source events of this "
+                "session", "source_events")
 
     ti, tf = ev("audit_timestamp_integrity"), feats("audit_timestamp_integrity")
     if ti.get("value") is None:
@@ -241,13 +288,32 @@ def evidence_age(rows, computed_at, cfg):
     newest = max(seen)
     if newest > at:
         return dict(base, outcome=COMPARISON_NOT_POSSIBLE, newest_observation=newest.isoformat(),
+                    contradicts="evaluation time",
                     detail=f"an observation ({newest.isoformat()}) is dated after the evaluation time")
     age = round((at - newest).total_seconds(), 1)
     out = _limited(STALE, age, "max_evidence_age_s", cfg, " s", "age of the newest observation at evaluation time")
     return dict(out, newest_observation=newest.isoformat(), evaluated_at=at.isoformat())
 
 
-def assess(cop, question_id, events, rows, cfg=None, computed_at=None):
+# Inputs of the checks whose source is not a metric event.
+CHECK_INPUTS = {"telemetry.source_agreement": ["collectors_agree"],
+                "collectors_agree on action rows": ["collectors_agree"],
+                "occurred_at against the evaluation time": ["occurred_at"]}
+
+
+# signal_metrics bases that say whether a kind of event was delivered at all. When none was and the
+# tool declares no capability for it, the kind was not supplied. A value basis (ingest, status) that is
+# absent is evidence missing.
+EVENT_KIND_BASES = ("results", "plans", "compactions", "config_events", "approvals")
+
+
+def not_supplied(rows, fields):
+    """Fields no row carries at all: the loader or fixture never supplied them, which is not the same
+    as a collector leaving them empty."""
+    return [f for f in fields if rows and not any(f in r for r in rows)]
+
+
+def assess(cop, question_id, events, rows, cfg=None, computed_at=None, raw_events=None):
     """One question: presence, reliability and sufficiency, with the evidence behind each."""
     cfg = cfg or signal_metrics.load_config()
     q = QUESTIONS[cop][question_id]
@@ -263,7 +329,7 @@ def assess(cop, question_id, events, rows, cfg=None, computed_at=None):
     missing = [x for x in needed if not (x["state"] == PRESENT or
                (x["kind"] == WHEN_APPLICABLE and x["state"] in (NOT_APPLICABLE, NOT_OBSERVED)))]
 
-    checks = reliability_checks(events, rows, cfg, computed_at)
+    checks = reliability_checks(events, rows, cfg, computed_at, raw_events)
     asked = [c for c in checks if c["check"] in q["verified"]]
     lacking = [c for c in asked if c["outcome"] in (EVIDENCE_MISSING, COMPARISON_NOT_POSSIBLE)]
     blocking = [c for c in checks if c["check"] in q["blocking"]]
@@ -280,10 +346,20 @@ def assess(cop, question_id, events, rows, cfg=None, computed_at=None):
     def code(c):
         return c.get("not_executed_because") or c["outcome"]
 
-    reasons = [{"code": x["state"], "requirement": x["requirement"], "detail": x["reason"]} for x in missing] + \
-              [{"code": code(c), "check": c["check"], "detail": c["detail"]} for c in lacking] + \
+    def absent(source):
+        ev = events.get(source) or {}
+        out = not_supplied(rows, ev.get("required_fields") or CHECK_INPUTS.get(source, []))
+        if ev.get("basis_present") is False and ev.get("state") == "UNKNOWN" and ev.get("basis") in EVENT_KIND_BASES:
+            out.append(f"{ev['basis']} events")
+        return out
+
+    reasons = [{"code": x["state"], "requirement": x["requirement"], "detail": x["reason"],
+                "inputs_not_supplied": absent(x["requirement"])} for x in missing] + \
+              [{"code": code(c), "check": c["check"], "detail": c["detail"], "inputs_not_supplied": absent(c["source"]),
+                **({"contradicts": c["contradicts"]} if c.get("contradicts") else {})} for c in lacking] + \
               [{"code": c["check"], "check": c["check"], "detail": c["detail"]} for c in failed] + \
-              [{"code": code(c), "check": c["check"], "detail": c["detail"]} for c in unassessed]
+              [{"code": code(c), "check": c["check"], "detail": c["detail"],
+                "inputs_not_supplied": absent(c["source"])} for c in unassessed]
     sufficiency = "INSUFFICIENT" if missing or lacking else "INCONCLUSIVE" if failed or unassessed else "SUFFICIENT"
     not_assessed = [{"requirement": x["requirement"], "state": x["state"], "detail": x["reason"]}
                     for x in items if x["kind"] == OPTIONAL and x["state"] != PRESENT] + \
@@ -305,11 +381,16 @@ def assess(cop, question_id, events, rows, cfg=None, computed_at=None):
     }
 
 
-def assess_session(cop, rows, session_id, cfg=None, computed_at=None):
-    """All questions of one COP for one session, from raw observables."""
-    cfg = cfg or signal_metrics.load_config()
+def session_inputs(rows, session_id, cfg, computed_at=None):
+    """The session's catalogue metric events by id, and its de-duplicated rows."""
     all_events, sessions = signal_metrics.compute(rows, cfg, computed_at=computed_at, catalogue=True)
     events = {e["metric_id"]: e for e in all_events if e["session_id"] == session_id}
     session = next(s for s in sessions if s.id == session_id)
-    srows = signal_metrics.unique_rows(session)
-    return {qid: assess(cop, qid, events, srows, cfg, computed_at) for qid in QUESTIONS[cop]}
+    return events, signal_metrics.unique_rows(session)
+
+
+def assess_session(cop, rows, session_id, cfg=None, computed_at=None, raw_events=None):
+    """All questions of one COP for one session, from raw observables."""
+    cfg = cfg or signal_metrics.load_config()
+    events, srows = session_inputs(rows, session_id, cfg, computed_at)
+    return {qid: assess(cop, qid, events, srows, cfg, computed_at, raw_events) for qid in QUESTIONS[cop]}

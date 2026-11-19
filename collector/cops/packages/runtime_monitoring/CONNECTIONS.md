@@ -39,4 +39,13 @@ Only a **verified** Runtime Monitoring finding bounds anything. An unverified on
 
 In `tests/test_cop_package_runtime_monitoring.py` and the harness scenario downstream_consumption, thin telemetry gives a verified INSUFFICIENT reading. Behavior Analytics then withholds STABLE. With full telemetry, the same COP reports STABLE.
 
-The five question answers are not consumed by anyone yet (`DECISIONS.md` D1).
+## What a consumer receives
+
+The published finding carries `cop_specific.evidence_assessment`:
+- `label`, `threshold_label`, `question_label`;
+- `assessment_class` and `classes` (per question) and `by_class`;
+- `qualifications`;
+- `questions`: per question, the metrics and checks consumed, the raw evidence refs, presence, reliability, sufficiency and its reason codes, the answer, the class, the label ceiling and why;
+- `recipients` (the eleven consumers above), `raw_store_supplied`, `capability_supplied`, `evaluated_at`.
+
+`tests/test_cop_package_runtime_monitoring.py::test_the_downstream_cop_receives_the_structured_assessment` checks that Behavior Analytics receives it. No consumer's rule reads it yet: `_gate_required`, DS-01 and triage still read only the label and `verified`.

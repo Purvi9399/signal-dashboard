@@ -51,7 +51,7 @@ Action selection is `triage.LABEL_ACTIONS["runtime_monitoring"]`: DEGRADED gives
   - the assessment (presence, reliability, sufficiency, evidence used, reasons);
   - the answer (outcome, basis, findings, not-assessed items).
 
-  This output is not yet part of the published finding (`DECISIONS.md` D1).
+  It is published in the finding as `cop_specific.evidence_assessment` and bounds the label (INTERPRETATION.md).
 
 ## The five questions
 
@@ -69,7 +69,7 @@ Shared rules apply to every question:
 5. **Interpretation:**
    - ALL_EXPECTED_COLLECTORS_CONTRIBUTED when none are missing.
    - EXPECTED_COLLECTORS_MISSING otherwise, listing the missing collectors.
-   - "Contributed" means at least one row. Whether a collector kept running cannot be seen until `collector_heartbeat` exists, and the answer lists it under `not_assessed`.
+   - "Contributed" means at least one row. A collector that stopped part-way is in the basis (`stopped`), from the rows and, when supplied, `collector_capability`. `collector_heartbeat` is still not built and is listed under `not_assessed`.
 6. **Deterministic / LLM:** all deterministic.
 7. **Context and memory:** none.
 8. **Upstream:** none.
@@ -114,7 +114,7 @@ Shared rules apply to every question:
 10. **INCONCLUSIVE when:**
     - no action was observed (INSUFFICIENT);
     - action rows from two sources disagree (CONFLICTING_ACTION_SOURCES);
-    - provenance cannot be verified, or was never read.
+    - provenance cannot be verified (a row without raw_ref, or a raw_ref or derived_from that does not resolve in the raw store), the raw store was not supplied, or provenance was never read.
 11. **Authority:** none of its own.
 12. **Verification:** negative_finding_complete_evidence (UNLINKED is a supported answer), partially_linked, unreliable_provenance and contradictory_evidence.
 

@@ -69,6 +69,20 @@ def session(sid="s1", lost_result=False, otel=True, otel_until=None):
     return rows
 
 
+def raw_store(rows):
+    """The raw events the collectors wrote: one per observable built by obs(), at raw/<session>/<n>.
+
+    Built from observable ids, not from the rows' raw_ref, so a row whose raw_ref was altered
+    names an event that is not in the store."""
+    out = []
+    for r in rows:
+        sid, _, n = str(r.get("observable_id")).rpartition("-")
+        if sid == r.get("session_id") and n.isdigit():
+            out.append({"source_id": f"src-{sid}-{n}", "session_id": sid, "collector": r.get("collector"),
+                        "source_ref": f"raw/{sid}/{n}", "file_origin": f"raw/{sid}"})
+    return out
+
+
 def estate(*rows):
     out = S.baseline_estate(7)
     for r in rows:
@@ -171,21 +185,26 @@ def run_scenario(sid_name, t):
     at = t.get("at", AT)
     c = cfg(limits=t.get("limits") != "none")
     out = {"scenario": sid_name, "at": at, "limits": c.get("evidence_limits"), "rows": len(rows)}
+    raw = raw_store(rows)
     if sid_name != "cross_tenant_isolation":
-        out["questions"] = P.assess_runtime_monitoring(copy.deepcopy(rows), "s1", c, at)
+        out["questions"] = P.assess_runtime_monitoring(copy.deepcopy(rows), "s1", c, at, raw)
     if sid_name == "cross_session_isolation":
-        out["s2"] = P.assess_runtime_monitoring(copy.deepcopy(rows), "s2", c, at)
+        out["s2"] = P.assess_runtime_monitoring(copy.deepcopy(rows), "s2", c, at, raw)
     if sid_name == "adversarial_instruction_text":
-        out["without_text"] = P.assess_runtime_monitoring(estate(_instruction(text=False)), "s1", c, at)
+        clean = estate(_instruction(text=False))
+        out["without_text"] = P.assess_runtime_monitoring(clean, "s1", c, at, raw_store(clean))
     if "cop_label" in t or sid_name == "cross_tenant_isolation":
-        rt = E.make_runtime(f"rm-{sid_name}", "s1", copy.deepcopy(rows))
+        rt = E.make_runtime(f"rm-{sid_name}", "s1", copy.deepcopy(rows), artifacts={"source_events": raw},
+                            cfg=c, computed_at=at)
         cops = [COP, "behavior_analytics"] if sid_name in ("downstream_consumption", "cross_tenant_isolation") \
             else [COP]
         case = G.run_case(rt, cops=cops)
         out["cop"] = {k: case["findings"][k] for k in cops}
         out["cop_result"] = case["results"][COP]
         if sid_name == "cross_tenant_isolation":
-            other = E.make_runtime("rm-tenant-b", "s1", BUILD["normal"](), store=rt.store, tenant="tenant-b")
+            normal = BUILD["normal"]()
+            other = E.make_runtime("rm-tenant-b", "s1", normal, artifacts={"source_events": raw_store(normal)},
+                                   store=rt.store, tenant="tenant-b", cfg=c, computed_at=at)
             out["tenant_b_view"] = G.run_cop(other, COP)["memory_view"]
             try:
                 other.memory.read(COP, "rm-tenant-b", "tenant-b", requested_tenant=rt.case.tenant_id)

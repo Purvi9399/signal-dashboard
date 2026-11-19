@@ -27,6 +27,7 @@ from collections import Counter, defaultdict
 from ..specs import BY_KEY, SPECS, edge_report, CONSUMES
 from .contracts import stable_id
 from . import memory as M
+from . import cop_package
 
 # ---------------------------------------------------------------- injection scan
 
@@ -914,6 +915,17 @@ def t_check_collector_expectations(case, a, ctx):
             "missing": sorted(want - got)}
 
 
+def t_assess_runtime_evidence(case, a, ctx):
+    """The five Runtime Monitoring questions for the case session (cop_package)."""
+    if not case.session:
+        return missing("session", "runtime evidence assessment", "the case session")
+    q = cop_package.assess_runtime_monitoring(case.rows, case.session_id, case.cfg, case.computed_at,
+                                              case.artifact("source_events"), case.artifact("collector_capability"))
+    return {"questions": q, "raw_store_supplied": case.artifact("source_events") is not None,
+            "capability_supplied": case.artifact("collector_capability") is not None,
+            "evaluated_at": case.computed_at}
+
+
 def t_build_interaction_graph(case, a, ctx):
     s = case.session
     if not s:
@@ -1156,6 +1168,7 @@ TOOLS = {
     "get_confirmed_coverage_gaps": (t_get_confirmed_coverage_gaps, {}),
     "get_collector_breakdown": (t_get_collector_breakdown, {}),
     "check_collector_expectations": (t_check_collector_expectations, {}),
+    "assess_runtime_evidence": (t_assess_runtime_evidence, {}),
     "build_interaction_graph": (t_build_interaction_graph, {}),
     "compare_known_routes": (t_compare_known_routes, {}),
     "get_agent_registry": (t_get_agent_registry, {}),

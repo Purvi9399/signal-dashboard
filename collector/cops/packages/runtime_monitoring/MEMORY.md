@@ -15,8 +15,9 @@ The existing memory gateway is used unchanged (`collector/cops/runtime/memory.py
 - **Record type:** `collector_reliability` only, with tenant scope.
 - **When:** only for a substantive label other than SUFFICIENT. In practice that is DEGRADED or INSUFFICIENT.
 - **Status:** VERIFIED when the finding verified, UNVALIDATED otherwise. A COP cannot write VALIDATED or REJECTED.
-- **Payload:** label, finding status, confidence, rationale, lineage, session id and up to ten claims.
-- **Provenance:** `case_id`, `finding_id`, `tenant_id`, `session_id`, `verified`, `verifier_registry`, `contract_version` and `synthetic`.
+- **Payload:** label, finding status, confidence, rationale, lineage, session id and up to ten claims. The lineage names metrics and tools (`tool:<name>`), never this run's tool call ids, so the same logical finding has the same record id.
+- **Provenance:** `case_id`, `finding_id`, `tenant_id`, `session_id`, `verified`, `verifier_registry`, `contract_version`, `synthetic`, and the cycle and sources: `run_id`, `evaluated_at`, `metric_version`, the full `lineage` with tool call ids, and `sources` (metrics, tools, collectors).
+- **Re-run:** the gateway keeps the stored record (status, created_at and feedback stand) and appends the re-observation, with its `run_id`, to `provenance.re_observed`. A changed finding is a different record.
 - **Gate:** verifier MU-01 checks ownership, scope, provenance and instruction-shaped text before the write.
 
 ## What it reads
@@ -35,7 +36,10 @@ The existing memory gateway is used unchanged (`collector/cops/runtime/memory.py
 - Memory never changes a threshold, a limit, a question or the label rule.
 - `MemoryGateway.propose_baseline_update` returns a proposal with `applied: False`, which needs human approval. Runtime Monitoring does not call it.
 
-## Gaps (see DECISIONS.md)
+## Unverified memory
 
-- **D4:** the cycle (`run_id`) and the evidence sources (metric version, collectors) are not in memory provenance.
-- **D5:** a re-run of the same case writes a second record, because the payload's lineage carries that run's tool-call ids. The gateway's "re-run does not overwrite" path is never reached for this COP. A test records the current behaviour.
+A record Runtime Monitoring reads, UNVALIDATED or VERIFIED, never changes its label, thresholds, `expected_collectors` or limits (`test_unverified_memory_never_changes_the_rule_or_collector_expectations`).
+
+## Shared change (see DECISIONS.md D4, D5)
+
+The payload and provenance change is in `graph.validate_memory_update`, used by all 18 COPs. Every COP's record ids now differ from those written before.

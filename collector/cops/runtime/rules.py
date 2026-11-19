@@ -30,18 +30,19 @@ import types
 
 from ..interpret import RuleInterpreter, SEV, RANK
 from ..models import INCONCLUSIVE
-from .contracts import (Claim, CLAIM_METRIC_STATE, CLAIM_TOOL_OBSERVATION, CLAIM_UPSTREAM,
+from .contracts import (Claim, CLAIM_METRIC_STATE, CLAIM_METRIC_VALUE, CLAIM_TOOL_OBSERVATION, CLAIM_UPSTREAM,
                         CLAIM_MEMORY_PRECEDENT, CLAIM_ABSENCE, ORIGIN_RULES,
                         SUBSTANTIVE, MISSING_DEPENDENCY, ATTENTION_STATES)
 from ..interpret import EVIDENCE_LEVEL
-from ..specs import BY_KEY
+from ..specs import BY_KEY, SPEC_CONSUMES
+from .cop_package import aggregate_runtime_monitoring, CEILING
 
 _RI = RuleInterpreter()
 HOT = ("EXCEPTION", "CRITICAL")
 
 # Which tools each COP's deterministic path calls, in order.
 DETERMINISTIC_TOOLS = {
-    "runtime_monitoring": ("get_collector_breakdown", "check_collector_expectations"),
+    "runtime_monitoring": ("get_collector_breakdown", "check_collector_expectations", "assess_runtime_evidence"),
     "interaction_discovery": ("build_interaction_graph", "compare_known_routes"),
     "policy_enforcement": ("evaluate_session_operations", "check_entitlements"),
     "resource_management": ("compute_consumption", "get_quota"),
@@ -196,7 +197,47 @@ def runtime_monitoring(ctx):
                  rationale=f["rationale"] + "; no telemetry measure could be judged")
         f["cop_specific"]["evidence_confidence"] = EVIDENCE_LEVEL["INSUFFICIENT"]
     f["cop_specific"]["collectors"] = exp
+    for e in ctx["events"]:
+        if e.metric_id in ctx["spec"].metric_keys and e.value is not None:
+            f["claims"].append(Claim(f"{e.metric_id} is {e.value}", CLAIM_METRIC_VALUE, metric_id=e.metric_id,
+                                     asserted_value=e.value, evidence_refs=[f"metric:{e.metric_id}"],
+                                     origin=ORIGIN_RULES).to_dict())
+    _apply_questions(ctx, f)
     return f
+
+
+RM_RECIPIENTS = tuple(k for k, v in SPEC_CONSUMES.items() if "runtime_monitoring" in v)
+RM_AT = {"DEGRADED": ("WATCH", "LOW", "findings stand but carry reduced confidence")}
+
+
+def _apply_questions(ctx, f):
+    """Runtime Monitoring's five answers bound its label (cop_package.aggregate_runtime_monitoring)."""
+    got = ctx["tools"].get("assess_runtime_evidence") or {}
+    res = got.get("result") or {}
+    if not res.get("questions"):
+        why = res.get("missing_dependency") or got.get("status")
+        f["cop_specific"]["evidence_assessment"] = {
+            "assessment_class": "ASSESSMENT_INCONCLUSIVE", "recipients": list(RM_RECIPIENTS),
+            "qualifications": [f"question assessment unavailable: {why}"]}
+        return
+    agg = aggregate_runtime_monitoring(res["questions"], f["label"])
+    agg.update(recipients=list(RM_RECIPIENTS), raw_store_supplied=res["raw_store_supplied"],
+               capability_supplied=res["capability_supplied"], evaluated_at=res["evaluated_at"])
+    f["cop_specific"]["evidence_assessment"] = agg
+    for qid, t in agg["questions"].items():
+        if t["label_ceiling"] != "SUFFICIENT":
+            f["claims"].append(tclaim(ctx["tools"], "assess_runtime_evidence", f"questions.{qid}.answer.outcome",
+                                      t["answer"], f"{qid} answered {t['answer']} ({t['contribution']}): "
+                                      + "; ".join(t["because"])[:200]).to_dict())
+    if agg["label"] != f["label"]:
+        action, severity, reason = RM_AT[agg["label"]]
+        moved = ", ".join(f"{q} {c}" for q, c in agg["classes"].items() if CEILING[c] == agg["label"])
+        f.update(label=agg["label"], action=action, severity=severity, action_reason=reason,
+                 rationale=f"{f['rationale']}; questions set {agg['label']}: {moved}")
+        f["cop_specific"]["evidence_confidence"] = EVIDENCE_LEVEL[agg["label"]]
+    elif agg["qualifications"]:
+        f["rationale"] += "; not fully assessed: " + ", ".join(
+            q for q, c in agg["classes"].items() if c == "ASSESSMENT_INCONCLUSIVE")
 
 
 def interaction_discovery(ctx):

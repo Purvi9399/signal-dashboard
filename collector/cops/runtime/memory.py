@@ -162,7 +162,8 @@ class MemoryGateway:
             old = prior[0]
             prov = dict(old["provenance"] or {})
             seen = list(prov.get("re_observed") or [])
-            seen.append({"at": now.isoformat(), "case_id": case_id, "status_offered": status})
+            seen.append({"at": now.isoformat(), "case_id": case_id, "status_offered": status,
+                         "run_id": provenance.get("run_id")})
             prov["re_observed"] = seen[-20:]
             self.store.upsert("cop_memory_records", [{**old, "provenance": prov}])
             self._log(cop, case_id, tenant_id, "write", record_type, rec.record_id, "KEPT",

@@ -5,7 +5,7 @@
 
 cop: runtime_monitoring
 contract: cop_metrics/1
-version: 2026-11-19.1
+version: 2026-11-19.2
 
 sources:
   questions: >-
@@ -102,8 +102,11 @@ questions:
 operations:
   compute_metrics: {by: deterministic, code: collector/signal_metrics.py:compute}
   assess_evidence: {by: deterministic, code: collector/cops/runtime/evidence_assessment.py:assess}
+  resolve_raw_refs: {by: deterministic, code: collector/cops/runtime/evidence_assessment.py:resolve_raw_refs}
+  collector_operation: {by: deterministic, code: collector/cops/runtime/cop_package.py:collector_operation}
   observe_questions: {by: deterministic, code: collector/cops/runtime/cop_package.py:observe_runtime_monitoring}
-  cop_label: {by: deterministic, code: collector/cops/runtime/rules.py:runtime_monitoring}
+  threshold_label: {by: deterministic, code: collector/cops/runtime/rules.py:runtime_monitoring}
+  cop_label: {by: deterministic, code: collector/cops/runtime/cop_package.py:aggregate_runtime_monitoring}
   verify_finding: {by: deterministic, code: collector/cops/runtime/verifiers.py}
   select_action: {by: deterministic, code: collector/cops/runtime/triage.py}
   memory_write: {by: deterministic, code: collector/cops/runtime/graph.py:validate_memory_update}

@@ -225,6 +225,19 @@ def _raw(case, metric_id):
             if r.get("exit_code") not in (None, "", 0, "0", "0.0"):
                 failed.add(k)
         return float(hits)
+    if metric_id == "telemetry.collector_coverage":
+        want = set(case.cfg["expected_collectors"].get(s.tool or "", []))
+        if not want:
+            return None
+        seen = {c for r in rows for c in [r.get("collector")] + list(r.get("contributing") or []) if c}
+        if s.effects:
+            seen.add("fs_watcher")
+        return round(len(want & seen) / len(want), 3)
+    if metric_id == "telemetry.source_agreement":
+        crossed = [r["collectors_agree"] for r in rows if r.get("collectors_agree") is not None]
+        if not crossed:
+            return None
+        return round(1 - sum(1 for x in crossed if x is False) / len(crossed), 3)
     return None
 
 

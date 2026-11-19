@@ -5,6 +5,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "collector"))
 
 import signal_metrics as M
 from cops.runtime import evidence_assessment as EA
+from cops.packages.runtime_monitoring.harness import raw_store
 
 COP = "runtime_monitoring"
 AT = "2026-10-09T10:20:00Z"
@@ -51,7 +52,7 @@ def one_source(rows):
 
 
 def assess(rows, c=None, at=AT):
-    return EA.assess_session(COP, rows, "s1", c or cfg(**LIMITS), computed_at=at)
+    return EA.assess_session(COP, rows, "s1", c or cfg(**LIMITS), computed_at=at, raw_events=raw_store(rows))
 
 
 def check(a, name):
@@ -226,7 +227,8 @@ def test_stale_at_decision_time_is_answered_not_hidden():
 
 
 def test_no_evaluation_time_means_age_not_executed():
-    a = EA.assess_session(COP, session(), "s1", cfg(**LIMITS), computed_at=None)["RM-4"]
+    a = EA.assess_session(COP, session(), "s1", cfg(**LIMITS), computed_at=None,
+                          raw_events=raw_store(session()))["RM-4"]
     assert check(a, EA.STALE)[0]["not_executed_because"] == EA.NO_EVALUATION_TIME
     assert a["sufficiency"]["status"] == "INCONCLUSIVE"
 
@@ -350,7 +352,7 @@ def test_insufficient_history_is_reported_as_such(monkeypatch):
                                                   reason="2 earlier sessions, 5 needed")}, [], cfg(**LIMITS), AT)
     assert a["sufficiency"]["status"] == "INSUFFICIENT"
     assert a["sufficiency"]["reasons"] == [{"code": EA.INSUFFICIENT_HISTORY, "requirement": "trend",
-                                            "detail": "2 earlier sessions, 5 needed"}]
+                                            "detail": "2 earlier sessions, 5 needed", "inputs_not_supplied": []}]
 
 
 def test_not_applicable_satisfies_only_a_conditional_requirement(monkeypatch):
@@ -364,10 +366,78 @@ def test_not_applicable_satisfies_only_a_conditional_requirement(monkeypatch):
     assert a["presence"]["status"] == "ABSENT"
 
 
-def test_no_existing_cop_imports_the_assessment():
+def test_only_runtime_monitoring_uses_the_assessment():
     import glob
     here = os.path.join(os.path.dirname(__file__), "..", "collector")
-    users = [os.path.relpath(p, here) for p in glob.glob(os.path.join(here, "**", "*.py"), recursive=True)
-             if any(m in open(p).read() for m in ("evidence_assessment", "cop_package"))
-             and not p.endswith(("evidence_assessment.py", "cop_package.py"))]
-    assert users == [os.path.join("cops", "packages", "runtime_monitoring", "harness.py")]
+    users = sorted(os.path.relpath(p, here) for p in glob.glob(os.path.join(here, "**", "*.py"), recursive=True)
+                   if any(m in open(p).read() for m in ("evidence_assessment", "cop_package"))
+                   and not p.endswith(("evidence_assessment.py", "cop_package.py")))
+    assert users == [os.path.join("cops", "packages", "runtime_monitoring", "harness.py"),
+                     os.path.join("cops", "runtime", "rules.py"), os.path.join("cops", "runtime", "tools.py")]
+
+
+# ---------------------------------------------------------------- raw_ref resolution
+
+def provenance(a):
+    return [x for x in check(a, EA.UNVERIFIABLE_PROVENANCE) if x["source"] == "source_events"]
+
+
+def test_without_the_raw_store_provenance_is_not_executed_never_passed():
+    rows = session()
+    a = EA.assess_session(COP, rows, "s1", cfg(**LIMITS), computed_at=AT)["RM-3"]
+    assert [(x["outcome"], x["not_executed_because"]) for x in provenance(a)] == \
+        [(EA.NOT_EXECUTED, EA.RAW_STORE_NOT_SUPPLIED)]
+    assert a["sufficiency"]["status"] == "INCONCLUSIVE"
+
+
+def test_a_raw_ref_that_names_no_stored_event_fails_provenance():
+    rows = session()
+    store = raw_store(rows)
+    rows[3]["raw_ref"] = "raw/s1/999"
+    a = assess_with(rows, store)["RM-3"]
+    p = provenance(a)
+    assert [x["outcome"] for x in p] == [EA.VERIFIED_FAILED] and p[0]["evidence_refs"] == ["observable:s1-4"]
+    assert a["sufficiency"]["status"] == "INCONCLUSIVE" and a["reliability"]["status"] == "UNRELIABLE"
+
+
+def test_a_raw_ref_of_another_session_does_not_resolve():
+    rows = session()
+    store = raw_store(rows) + [{"source_id": "x", "session_id": "s2", "source_ref": "raw/s2/1"}]
+    rows[1]["raw_ref"] = "raw/s2/1"
+    assert [x["outcome"] for x in provenance(assess_with(rows, store)["RM-3"])] == [EA.VERIFIED_FAILED]
+
+
+def test_a_transcript_path_resolves_to_the_events_read_from_it():
+    rows = session()
+    for r in rows:
+        r["raw_ref"] = "/home/dev/.claude/projects/p/s1.jsonl"
+    store = [{"source_id": "e1", "session_id": "s1", "source_ref": "/home/dev/.claude/projects/p/s1.jsonl:12"}]
+    assert [x["outcome"] for x in provenance(assess_with(rows, store)["RM-3"])] == [EA.VERIFIED_OK]
+
+
+def test_derived_from_ids_must_be_stored_source_events():
+    rows = session()
+    store = raw_store(rows)
+    rows[2]["derived_from"] = ["src-s1-3", "missing-id"]
+    p = provenance(assess_with(rows, store)["RM-3"])
+    assert p[0]["outcome"] == EA.VERIFIED_FAILED and p[0]["unresolved"] == \
+        [{"observable_id": "s1-3", "unresolved": ["derived_from missing-id"]}]
+
+
+def assess_with(rows, store):
+    return EA.assess_session(COP, rows, "s1", cfg(**LIMITS), computed_at=AT, raw_events=store)
+
+
+def test_inputs_never_supplied_are_marked_so():
+    rows = session()
+    for r in rows:
+        r.pop("ingested_at")
+    a = assess(rows)["RM-4"]
+    fresh = next(x for x in a["sufficiency"]["reasons"] if x.get("requirement") == "event_freshness_live")
+    assert a["sufficiency"]["status"] == "INSUFFICIENT" and "ingested_at" in fresh["inputs_not_supplied"]
+    rows = session()
+    for r in rows:
+        r["ingested_at"] = None
+    fresh = next(x for x in assess(rows)["RM-4"]["sufficiency"]["reasons"]
+                 if x.get("requirement") == "event_freshness_live")
+    assert fresh["inputs_not_supplied"] == []
