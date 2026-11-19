@@ -35,7 +35,7 @@ from .contracts import (Claim, CLAIM_METRIC_STATE, CLAIM_METRIC_VALUE, CLAIM_TOO
                         SUBSTANTIVE, MISSING_DEPENDENCY, ATTENTION_STATES)
 from ..interpret import EVIDENCE_LEVEL
 from ..specs import BY_KEY, SPEC_CONSUMES
-from .cop_package import aggregate_runtime_monitoring, CEILING
+from .cop_package import aggregate_runtime_monitoring, decide_interaction_discovery, CEILING
 
 _RI = RuleInterpreter()
 HOT = ("EXCEPTION", "CRITICAL")
@@ -43,7 +43,7 @@ HOT = ("EXCEPTION", "CRITICAL")
 # Which tools each COP's deterministic path calls, in order.
 DETERMINISTIC_TOOLS = {
     "runtime_monitoring": ("get_collector_breakdown", "check_collector_expectations", "assess_runtime_evidence"),
-    "interaction_discovery": ("build_interaction_graph", "compare_known_routes"),
+    "interaction_discovery": ("build_interaction_graph", "compare_known_routes", "assess_interaction_questions"),
     "policy_enforcement": ("evaluate_session_operations", "check_entitlements"),
     "resource_management": ("compute_consumption", "get_quota"),
     "behavior_analytics": ("compute_sequence_statistics", "compare_behaviour_history"),
@@ -242,22 +242,43 @@ def _apply_questions(ctx, f):
 
 
 def interaction_discovery(ctx):
-    out = _RI.interaction_discovery(ctx["events"], _legacy_up(ctx["upstream"]), {},
-                                    evidence_conf(ctx["upstream"]))
+    """Interaction Discovery's five answers decide its label (cop_package.decide_interaction_discovery)."""
     known = result(ctx["tools"], "compare_known_routes")
     graph = result(ctx["tools"], "build_interaction_graph")
-    extra = []
-    if known.get("new_routes"):
-        extra.append(tclaim(ctx["tools"], "compare_known_routes", "new_routes", known["new_routes"],
-                            f"routes not seen for this operator before: {', '.join(known['new_routes'][:5])}"))
-        if out["interpretation"] == "CONTAINED" and any(r.startswith("mcp:") for r in known["new_routes"]):
-            out = {**out, "interpretation": "NEW_ROUTE", "action": "PASS_TO_COP",
-                   "action_reason": "a route that did not exist before now does; whether it is "
-                                    "permitted is Policy Enforcement's question",
-                   "severity": "LOW"}
-    f = _from_legacy(ctx, out, extra)
-    f["cop_specific"].update({"edges": graph.get("edges", []), "new_routes": known.get("new_routes", [])})
-    return f
+    res = result(ctx["tools"], "assess_interaction_questions")
+    if not res.get("questions"):
+        why = res.get("missing_dependency") or (ctx["tools"].get("assess_interaction_questions") or {}).get("status")
+        return F(INCONCLUSIVE, 0.0, "WATCH", "the interaction questions could not be assessed",
+                 f"question assessment unavailable: {why}", status=MISSING_DEPENDENCY,
+                 cop_specific={"edges": graph.get("edges", []), "new_routes": known.get("new_routes", [])})
+    d = decide_interaction_discovery(res["questions"], evidence_conf(ctx["upstream"]) / EVIDENCE_LEVEL["SUFFICIENT"])
+    claims = [tclaim(ctx["tools"], "assess_interaction_questions", f"questions.{qid}.answer.outcome", t["answer"],
+                     f"{qid} answered {t['answer']}: {t['explanation']}"[:240]) for qid, t in d["questions"].items()]
+    claims += [mclaim(e) for e in ctx["events"] if e.state in ATTENTION_STATES]
+    claims += [Claim(f"{e.metric_id} is {e.value}", CLAIM_METRIC_VALUE, metric_id=e.metric_id, asserted_value=e.value,
+                     evidence_refs=[f"metric:{e.metric_id}"], origin=ORIGIN_RULES)
+               for e in ctx["events"] if e.value is not None]
+    id3 = d["questions"]["ID-3"]["basis"]
+    for rid in id3.get("memory_records", []):
+        claims.append(Claim(f"route record {rid} establishes {', '.join(id3['known_from_memory'])}",
+                            CLAIM_MEMORY_PRECEDENT, record_id=rid, evidence_refs=[f"memory:{rid}"],
+                            origin=ORIGIN_RULES))
+    used = []
+    rm = verified(ctx["upstream"], "runtime_monitoring")
+    if rm:
+        claims.append(uclaim("runtime_monitoring", rm))
+        used.append({"cop": "runtime_monitoring", "label": rm["label"], "finding_id": rm.get("finding_id"),
+                     "counted_as": "evidence confidence and ID-5 linkage"})
+    why = "; ".join(f"{q} {d['questions'][q]['answer']}" for q in d["drivers"])
+    rationale = f"{d['label']} from {why}" + (f"; also {', '.join(d['also_held'])}" if d["also_held"] else "")
+    routes = sorted(set(d["questions"]["ID-2"]["basis"].get("edge_list", [])) | set(id3.get("new_routes", []))
+                    | {f"mcp:{s}" for s in id3.get("new_mcp_servers", [])})
+    return F(d["label"], d["confidence"], d["action"], d["action_reason"], rationale, claims, d["severity"],
+             cop_specific={"edges": graph.get("edges", []), "new_routes": known.get("new_routes", []),
+                           "questions": d["questions"], "drivers": d["drivers"], "also_held": d["also_held"],
+                           "contrary": d["contrary"],
+                           "recipients": d["recipients"], "memory_payload": {"routes": routes}},
+             upstream_used=used)
 
 
 def policy_enforcement(ctx):
@@ -391,9 +412,11 @@ def _attribute_consumption(ctx, f):
         cs["attribution"] = {"status": "NOT_NEEDED", "reason": f"{f['label']}: nothing above bounds to attribute"}
         return
     idf = verified(ctx["upstream"], "interaction_discovery")
-    if idf is None or idf["label"] == "PATH_PARTIAL":
-        why = ("Interaction Discovery reports the interaction path as partial" if idf else
-               "no verified Interaction Discovery finding")
+    id2 = (((idf or {}).get("cop_specific") or {}).get("questions") or {}).get("ID-2", {}).get("answer")
+    if idf is None or idf["label"] == "PATH_PARTIAL" or id2 not in (None, "FULLY_RECONSTRUCTED"):
+        why = ("no verified Interaction Discovery finding" if idf is None else
+               f"Interaction Discovery reports the interaction path as partial (ID-2 {id2})" if id2 else
+               "Interaction Discovery reports the interaction path as partial")
         f["confidence"] = round(f["confidence"] * EVIDENCE_LEVEL["DEGRADED"] / EVIDENCE_LEVEL["SUFFICIENT"], 3)
         cs["attribution"] = {"status": "UNATTRIBUTED", "reason": why, "subagent_lanes": len(lanes),
                              "mcp_servers": len(servers)}

@@ -73,16 +73,19 @@ def test_the_existing_dry_run_without_catalogue_would_not_supply_raw_ref():
 def test_every_question_requirement_is_built_or_reported_not_calculated():
     prof = R.evidence_profile(run(snap(H.session())))
     built = {k.split("|")[0] for k in prof["metrics"]}
-    for qid, q in R.EA.QUESTIONS["runtime_monitoring"].items():
-        for m, _ in q["requires"]:
-            assert m in built or m in prof["not_calculated"], (qid, m)
-    assert prof["not_calculated"] == ["collector_errors", "collector_heartbeat"]
+    for cop in ("runtime_monitoring", "interaction_discovery"):
+        for qid, q in R.EA.QUESTIONS[cop].items():
+            for m, _ in q["requires"]:
+                assert m in built or m in prof["not_calculated"], (qid, m)
+    assert prof["not_calculated"] == ["collector_errors", "collector_heartbeat", "interaction_unattributed_edges"]
 
 
-def test_interaction_discovery_has_no_question_contract_and_says_so():
+def test_interaction_discovery_answers_are_profiled_per_question():
     prof = R.evidence_profile(run(snap(H.session())))
-    assert prof["tools"]["claude-code"]["question_usability"]["interaction_discovery:*"] == {
-        "NO_QUESTION_CONTRACT": prof["tools"]["claude-code"]["sessions"]}
+    use = prof["tools"]["claude-code"]["question_usability"]
+    assert "interaction_discovery:*" not in use
+    assert {k for k in use if k.startswith("interaction_discovery:")} == {f"interaction_discovery:ID-{i}"
+                                                                         for i in range(1, 6)}
     assert set(BY_KEY["interaction_discovery"].metric_keys) <= set(R.relevant_metrics())
 
 
@@ -168,7 +171,7 @@ def test_the_manifest_pins_the_inputs_and_versions():
     v = m["versions"]
     assert v["metric_version"] and v["metrics_config_sha256"] and v["signal_metrics_sha256"]
     assert v["packages"]["runtime_monitoring"]["version"] == R.EA.load_package("runtime_monitoring")["version"]
-    assert v["packages"]["interaction_discovery"] == {"version": None, "note": "no COP package"}
+    assert v["packages"]["interaction_discovery"]["version"] == R.EA.load_package("interaction_discovery")["version"]
 
 
 def test_the_same_inputs_give_the_same_results():

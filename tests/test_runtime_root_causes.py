@@ -211,8 +211,7 @@ def test_classification_without_a_taxonomy_stops_before_any_model_call():
     assert {"MISSING_EVIDENCE", "PRECHECK_STOPPED"} <= set(f["reason_codes"])
 
 
-@pytest.mark.parametrize("cid", ["behavior_analytics:missing", "interaction_discovery:missing",
-                                 "audit_traceability:missing"])
+@pytest.mark.parametrize("cid", ["behavior_analytics:missing", "audit_traceability:missing"])
 def test_deterministic_quiet_label_on_insufficient_telemetry_is_withheld_by_the_cop_not_the_verifier(cid):
     """Before the fixes DS-01 had to reject these; now the COP holds back itself, and
     DS-01 still runs and agrees."""
@@ -505,12 +504,18 @@ def test_expectations_are_unchanged_and_independent_of_outputs(bench):
     assert all(exp[c["id"]] == c["expected"] for c in cases)
 
 
+# Interaction Discovery now answers thin telemetry with its own reading, PATH_PARTIAL, from its
+# questions (cops/packages/interaction_discovery/DECISIONS.md, D3), where the legacy rule's CONTAINED was
+# withheld as INCONCLUSIVE. Both are accepted by the case.
+RELABELLED = {"interaction_discovery:missing": "PATH_PARTIAL"}
+
+
 def test_legitimate_inconclusives_stay_inconclusive(bench):
     cases, before = bench
     for c in cases:
         o = before["cases"][c["id"]]
         if c["kind"] == "missing" and o["verdict"] == "PASS":
-            assert c["verdict"] == "PASS" and c["label"] == o["label"], c["id"]
+            assert c["verdict"] == "PASS" and c["label"] == RELABELLED.get(c["id"], o["label"]), c["id"]
 
 
 def test_no_case_that_passed_before_now_fails(bench):

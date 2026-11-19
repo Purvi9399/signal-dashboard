@@ -25,6 +25,11 @@ def _registry():
         return {m["id"]: m for m in json.load(f)["metrics"]}
 
 
+def _code_only():
+    with open(os.path.join(EA.HERE, "metric_registry.json")) as f:
+        return json.load(f).get("code_only_pairs", [])
+
+
 def validate(cop):
     """Problems with a COP's METRICS.yaml, as a list of strings. Empty when valid."""
     sm = EA.signal_metrics
@@ -36,6 +41,11 @@ def validate(cop):
     if pkg.get("cop") != cop:
         probs.append(f"cop is {pkg.get('cop')!r}, expected {cop!r}")
     mapped = {m for m, r in reg.items() if cop in r.get("consumers", [])}
+    code_only = {p["metric"] for p in _code_only() if p["cop"] == cop}
+    for m, entry in (pkg.get("mapping") or {}).items():
+        if (entry or {}).get("code_only") and m not in code_only:
+            probs.append(f"{m} is marked code_only but metric_registry.json has no such pair for {cop}")
+    mapped |= {m for m, e in (pkg.get("mapping") or {}).items() if (e or {}).get("code_only")} & code_only
     listed = set(pkg.get("mapping") or {})
     for m in sorted(mapped - listed):
         probs.append(f"mapping document assigns {m} but METRICS.yaml does not list it")
@@ -337,3 +347,317 @@ def aggregate_runtime_monitoring(questions, threshold_label):
             "by_class": {c: sorted(q for q, k in classes.items() if k == c) for c in CLASSES
                          if c in classes.values()},
             "qualifications": qualifications, "questions": trace}
+
+
+# ---------------------------------------------------------------- Interaction Discovery
+
+ID = "interaction_discovery"
+# Answers that leave part of the interaction network unknown.
+ID_PARTIAL = ("ENTITIES_PARTIALLY_IDENTIFIED", "PARTIALLY_RECONSTRUCTED", "NOT_RECONSTRUCTABLE",
+              "RECONSTRUCTION_IMPAIRED")
+# Runtime Monitoring answers that leave actions unattached to their turns and lanes.
+RM_UNLINKED = ("PARTIALLY_LINKED", "UNLINKED")
+
+
+def _present(a, metric):
+    x = _item(a, metric)
+    return x if x["state"] == EA.PRESENT else None
+
+
+def _unassessed(a, *metrics):
+    return [{"metric": m, "state": _item(a, m)["state"], "reason": _item(a, m)["reason"]}
+            for m in metrics if _item(a, m)["state"] != EA.PRESENT]
+
+
+def _id1(a, graph=None):
+    ent, lanes, mcp = (_item(a, m) for m in ("interaction_unique_entities", "interaction.subagent_lanes",
+                                             "interaction.mcp_servers"))
+    tools = sorted({e["to"][len("tool:"):] for e in (graph or {}).get("edges", []) if e["to"].startswith("tool:")})
+    basis = {"entities": ent["value"], "agents": ent["features"].get("agents"),
+             "tools": ent["features"].get("tools"), "tool_names": tools,
+             "subagent_lanes": lanes["features"].get("lanes", []),
+             "mcp_servers": (mcp["features"].get("servers") or {}) if mcp["state"] == EA.PRESENT else None,
+             "unidentified": _unassessed(a, "interaction.mcp_servers")}
+    return ("ENTITIES_PARTIALLY_IDENTIFIED" if basis["unidentified"] else "ENTITIES_IDENTIFIED"), basis
+
+
+def _id2(a):
+    edges = _item(a, "interaction_edge_count")
+    comp, orphan, lane, turn = (_present(a, m) for m in ("interaction_graph_completeness",
+                                                         "interaction_orphaned_events", "telemetry.lane_linkage",
+                                                         "telemetry.turn_linkage"))
+    gaps = []
+    if comp and comp["value"] < 1:
+        gaps.append(f"{comp['features'].get('unresolved')} of {comp['features'].get('rows')} subagent rows have "
+                    "no resolvable parent")
+    if orphan and orphan["value"] > 0:
+        gaps.append(f"{orphan['value']} subagent events belong to no known parent")
+    if lane and lane["value"] < 1:
+        gaps.append(f"subagent lanes {', '.join(lane['features'].get('unlinked', []))} are not linked to a handoff")
+    if turn and turn["value"] < 1:
+        gaps.append(f"{turn['features'].get('without_turn')} of {turn['features'].get('steps')} steps carry no turn")
+    basis = {"edges": edges["value"], "by_kind": edges["features"].get("by_kind", {}),
+             "edge_list": edges["features"].get("edges", []),
+             "graph_completeness": comp["value"] if comp else None,
+             "orphaned_events": orphan["value"] if orphan else None,
+             "lane_linkage": lane["value"] if lane else None, "turn_linkage": turn["value"] if turn else None,
+             "gaps": gaps, "orphan_refs": orphan["evidence_refs"] if orphan else []}
+    if comp and comp["value"] == 0:
+        return "NOT_RECONSTRUCTABLE", basis
+    return ("PARTIALLY_RECONSTRUCTED" if gaps else "FULLY_RECONSTRUCTED"), basis
+
+
+def _route_memory(memory):
+    """Routes a validated route_record establishes, and those only verified (not precedent)."""
+    def routes(bucket):
+        return {r: rec["record_id"] for rec in (memory or {}).get(bucket, [])
+                if rec.get("record_type", "route_record") == "route_record"
+                for r in (rec.get("payload") or {}).get("routes", [])}
+    return routes("established"), routes("verified_pending")
+
+
+def _no_route_to_judge(a):
+    """ID-3 is answered without history when the session has no interaction edge: no route exists to be new.
+    Only the history-dependent requirement may be what is missing."""
+    edges = _item(a, "interaction_edge_count")
+    missing = a["sufficiency"]["missing_requirements"]
+    return edges["state"] == EA.PRESENT and edges["value"] == 0 and missing == ["interaction_route_novelty"] \
+        and not [r for r in a["sufficiency"]["reasons"] if r.get("check")]
+
+
+def _id3(a, memory=None, known=None):
+    nov, fsm, tn = (_item(a, m) for m in ("interaction_route_novelty", "access.first_seen_mcp",
+                                          "path.transition_novelty"))
+    established, pending = _route_memory(memory)
+    listed = list(nov["features"].get("new", [])) if nov["state"] == EA.PRESENT else []
+    count = round(nov["value"] * nov["features"]["edges"]) if nov["state"] == EA.PRESENT else 0
+    servers = list(fsm["features"].get("new_servers", [])) if fsm["state"] == EA.PRESENT else []
+    candidates = listed + [f"mcp:{s}" for s in servers]
+    from_memory = sorted(r for r in candidates if r in established)
+    new = [r for r in listed if r not in established]
+    new_servers = [s for s in servers if f"mcp:{s}" not in established]
+    basis = {"new_routes": new, "new_route_count": count - (len(listed) - len(new)),
+             "new_mcp_servers": new_servers, "routes_in_session": nov["features"].get("edges"),
+             "earlier_sessions": nov["features"].get("earlier_sessions"),
+             "known_from_memory": from_memory, "memory_records": sorted({established[r] for r in from_memory}),
+             "pending_in_memory": sorted(r for r in candidates if r in pending and r not in established),
+             "transition_novelty": tn["value"] if tn["state"] == EA.PRESENT else None,
+             "transition_state": tn["metric_state"],
+             "new_tools": [r for r in (known or {}).get("new_routes", []) if r.startswith("tool:")],
+             "unassessed": _unassessed(a, "access.first_seen_mcp", "path.transition_novelty")}
+    if nov["state"] != EA.PRESENT:
+        basis["note"] = f"no interaction edge in the session ({nov['state']}: {nov['reason']})"
+    return ("NEW_ROUTES_APPEARED" if basis["new_route_count"] > 0 or new_servers else "NO_NEW_ROUTES"), basis
+
+
+def _id4(a, states):
+    depth = _item(a, "interaction_propagation_depth")
+    breadth = _present(a, "interaction_propagation_breadth")
+    judged = [_item(a, m) for m in ("interaction.subagent_lanes", "interaction.mcp_servers", "insights.outside")]
+    beyond = [x for x in judged if x["state"] == EA.PRESENT and x["metric_state"] in states]
+    basis = {"depth": depth["value"], "structural_depth": depth["features"].get("structural"),
+             "reported_depth": depth["features"].get("reported"),
+             "depth_conflict": depth["features"].get("conflict"),
+             "breadth": breadth["value"] if breadth else None,
+             "children": breadth["features"].get("children") if breadth else None,
+             "beyond": [{"metric": x["requirement"], "value": x["value"], "state": x["metric_state"]} for x in beyond],
+             "within": [{"metric": x["requirement"], "value": x["value"], "state": x["metric_state"]}
+                        for x in judged if x["state"] == EA.PRESENT and x not in beyond],
+             "not_judged": ["interaction_propagation_depth: no approved threshold",
+                            "interaction_propagation_breadth: no approved threshold"],
+             "unassessed": _unassessed(a, "interaction.mcp_servers", "insights.outside")}
+    return ("BEYOND_APPROVED_BOUNDS" if beyond else "WITHIN_APPROVED_BOUNDS"), basis
+
+
+def _rm_answers(rm):
+    qs = (((rm or {}).get("cop_specific") or {}).get("evidence_assessment") or {}).get("questions") or {}
+    return {q: t.get("answer") for q, t in qs.items()}   # outcome strings
+
+
+def _delegation_without_identity(rows, lanes):
+    """Rows that show delegation happened while no subagent lane carries an agent identity."""
+    has, num = EA.signal_metrics.has, EA.signal_metrics.num
+    hits = [r for r in rows if "subagent" in (r.get("observable_type") or "") or r.get("is_multi_agent") is True
+            or (has(r.get("delegation_depth")) and num(r.get("delegation_depth")) > 0)]
+    return [] if lanes else [f"observable:{r['observable_id']}" for r in hits]
+
+
+def _id5(a, earlier, rm=None, delegation=()):
+    cov, unk = _item(a, "telemetry.collector_coverage"), _item(a, "telemetry.unknown_share")
+    agr, orphan = _present(a, "telemetry.source_agreement"), _present(a, "interaction_orphaned_events")
+    causes = []
+    if cov["features"].get("missing"):
+        causes.append(f"expected collectors missing: {', '.join(cov['features']['missing'])}")
+    if unk["metric_state"] != "NORMAL":
+        causes.append(f"telemetry.unknown_share {unk['value']} is {unk['metric_state']}")
+    if agr and agr["metric_state"] != "NORMAL":
+        causes.append(f"telemetry.source_agreement {agr['value']} is {agr['metric_state']}")
+    if orphan and orphan["value"] > 0:
+        causes.append(f"{orphan['value']} subagent events have no known parent")
+    ids = a["presence"]["fields"].get("agent_id", {})
+    if delegation:
+        causes.append(f"{len(delegation)} row(s) show delegation but no subagent lane carries an agent_id")
+    for qid, ans in earlier.items():
+        if ans["outcome"] == INCONCLUSIVE:
+            causes.append(f"{qid} could not be answered ({ans['sufficiency']})")
+        elif ans["outcome"] in ID_PARTIAL:
+            causes.append(f"{qid}: {ans['outcome']}")
+        elif ans["basis"].get("depth_conflict"):
+            causes.append(f"{qid}: {ans['basis']['depth_conflict']} (reported {ans['basis']['reported_depth']}, "
+                          f"linked structure {ans['basis']['structural_depth']})")
+    rm_ans = _rm_answers(rm)
+    upstream = {"runtime_monitoring": None}
+    if rm:
+        upstream["runtime_monitoring"] = {"label": rm.get("label"), "verified": rm.get("verified"),
+                                          "finding_id": rm.get("finding_id"),
+                                          "RM-3": rm_ans.get("RM-3")}
+        if rm.get("verified") and rm.get("label") != "SUFFICIENT":
+            causes.append(f"Runtime Monitoring reads the telemetry {rm['label']}")
+        if rm_ans.get("RM-3") in RM_UNLINKED:
+            causes.append(f"Runtime Monitoring RM-3: {rm_ans['RM-3']}")
+    basis = {"causes": causes, "collector_coverage": cov["value"], "missing_collectors": cov["features"].get("missing"),
+             "unknown_share": unk["value"], "unknown_share_state": unk["metric_state"],
+             "source_agreement": agr["value"] if agr else None, "agent_id_presence": ids.get("status"),
+             "delegation_without_identity": list(delegation)[:20],
+             "upstream": upstream, "unassessed": _unassessed(a, "interaction_unattributed_edges")}
+    if not rm:
+        basis["limitation"] = "no Runtime Monitoring finding was available to this run"
+    return ("RECONSTRUCTION_IMPAIRED" if causes else "RECONSTRUCTION_RELIABLE"), basis
+
+
+def observe_interaction_discovery(assessments, graph=None, memory=None, known=None, upstream=None, delegation=()):
+    """{question_id: assessment} -> {question_id: answer}. memory: the route_record view (established,
+    verified_pending); upstream: {cop: published finding}; delegation: refs of rows that show delegation
+    with no subagent identity (_delegation_without_identity)."""
+    pkg = EA.load_package(ID)
+    states = tuple(pkg["propagation_states"])
+    rm = (upstream or {}).get("runtime_monitoring")
+    out = {}
+    for qid, q in pkg["questions"].items():
+        a = assessments[qid]
+        suf = a["sufficiency"]["status"]
+        if suf != "SUFFICIENT" and not (qid == "ID-3" and _no_route_to_judge(a)):
+            out[qid] = {"outcome": INCONCLUSIVE, "sufficiency": suf, "basis": {},
+                        "because": a["sufficiency"]["reasons"]}
+            continue
+        outcome, basis = {"ID-1": lambda: _id1(a, graph), "ID-2": lambda: _id2(a),
+                          "ID-3": lambda: _id3(a, memory, known), "ID-4": lambda: _id4(a, states),
+                          "ID-5": lambda: _id5(a, {k: out[k] for k in q.get("depends_on", [])}, rm,
+                                               delegation)}[qid]()
+        if outcome not in q["outcomes"]:
+            raise ValueError(f"{qid}: outcome {outcome} is not in METRICS.yaml")
+        out[qid] = {"outcome": outcome, "sufficiency": suf, "basis": basis,
+                    "findings": a["findings"], "not_assessed": a["sufficiency"]["not_assessed"]}
+    return out
+
+
+def assess_interaction_discovery(rows, session_id, cfg=None, computed_at=None, graph=None, memory=None,
+                                 known=None, upstream=None, raw_events=None, native=None):
+    """The five questions for one session: each assessment with its answer."""
+    cfg = cfg or EA.signal_metrics.load_config()
+    events, srows = EA.session_inputs(rows, session_id, cfg, computed_at)
+    assessments = {qid: EA.assess(ID, qid, events, srows, cfg, computed_at, raw_events, native)
+                   for qid in EA.QUESTIONS[ID]}
+    lanes = (events.get("interaction.subagent_lanes") or {}).get("value")
+    answers = observe_interaction_discovery(assessments, graph, memory, known, upstream,
+                                            _delegation_without_identity(srows, lanes))
+    return {qid: {"assessment": assessments[qid], "answer": answers[qid]} for qid in assessments}
+
+
+def _explain(qid, ans):
+    b = ans["basis"]
+    if ans["outcome"] == INCONCLUSIVE:
+        return "not answered: " + "; ".join(f"{r.get('requirement') or r.get('check')} {r['code']}"
+                                            f"{': ' + r['detail'] if r.get('detail') else ''}" for r in ans["because"])
+    if qid == "ID-1":
+        s = (f"{b['agents']} agent lane(s), {len(b['subagent_lanes'])} of them subagents, {b['tools']} tool(s)"
+             + (f", {len(b['mcp_servers'])} MCP server(s)" if b["mcp_servers"] is not None else ""))
+        return s + ("; not identified: " + ", ".join(f"{u['metric']} ({u['reason'] or u['state']})"
+                                                     for u in b["unidentified"]) if b["unidentified"] else "")
+    if qid == "ID-2":
+        return f"{b['edges']} delegation/MCP edge(s)" + ("; " + "; ".join(b["gaps"]) if b["gaps"] else
+                                                          "; every subagent lane and step is attached")
+    if qid == "ID-3":
+        if ans["outcome"] == "NEW_ROUTES_APPEARED":
+            return ("new for this operator: " + ", ".join(b["new_routes"] + [f"mcp:{s}" for s in b["new_mcp_servers"]
+                                                                            if f"mcp:{s}" not in b["new_routes"]])
+                    + f" (against {b['earlier_sessions']} earlier sessions)")
+        return (b.get("note") or f"every route was seen in {b['earlier_sessions']} earlier sessions") + \
+            (f"; known from validated memory: {', '.join(b['known_from_memory'])}" if b["known_from_memory"] else "")
+    if qid == "ID-4":
+        s = f"depth {b['depth']}, breadth {b['breadth']}"
+        if b["beyond"]:
+            return s + "; beyond approved bounds: " + ", ".join(f"{x['metric']}={x['value']} ({x['state']})"
+                                                               for x in b["beyond"])
+        return s + "; every judged measure is within its approved threshold"
+    return "; ".join(b["causes"]) if b["causes"] else "no missing identity, link or record affects the network"
+
+
+# What each label proposes, carried over from cops/interpret.py:_interaction_discovery: base confidence
+# before the evidence scale, action, why, and who is told.
+ID_LABELS = {
+    "NEW_ROUTE": (0.8, "PASS_TO_COP", "a route that did not exist before now does; whether it is permitted is "
+                  "Policy Enforcement's question", ("policy_enforcement", "audit_traceability")),
+    "PROPAGATING": (0.7, "PASS_TO_COP", "activity reached beyond where it started",
+                    ("policy_enforcement", "risk_mitigation")),
+    "PATH_PARTIAL": (0.6, "WATCH", "the interaction network cannot be fully reconstructed", ("audit_traceability",)),
+    "CONTAINED": (0.8, "NONE", "", ()),
+    INCONCLUSIVE: (0.0, "WATCH", "whether a route is new cannot be judged, so containment is not concluded", ()),
+}
+# Questions whose gaps mean the network itself is incomplete. ID-3 is not one: missing history leaves
+# route novelty undecided, not the graph partial.
+ID_GRAPH = ("ID-1", "ID-2", "ID-4", "ID-5")
+
+
+def decide_interaction_discovery(questions, evidence_scale=1.0):
+    """The COP decision from the five answers (INTERPRETATION.md).
+
+    A new route or propagation beyond approved bounds is positive evidence and stands on a partial
+    graph; an incomplete graph only stops the COP from concluding CONTAINED."""
+    from ..interpret import SEV, RANK
+    ans = {q: v["answer"] for q, v in questions.items()}
+    out = lambda q: ans[q]["outcome"]
+    new, spread = out("ID-3") == "NEW_ROUTES_APPEARED", out("ID-4") == "BEYOND_APPROVED_BOUNDS"
+    partial = [q for q in ID_GRAPH if out(q) == INCONCLUSIVE or out(q) in ID_PARTIAL]
+    undecided = [q for q in ("ID-3",) if out(q) == INCONCLUSIVE]
+    held = [l for l, on in (("NEW_ROUTE", new), ("PROPAGATING", spread), ("PATH_PARTIAL", bool(partial)),
+                            (INCONCLUSIVE, bool(undecided))) if on]
+    label = held[0] if held else "CONTAINED"
+    drivers = {"NEW_ROUTE": ["ID-3"], "PROPAGATING": ["ID-4"], "PATH_PARTIAL": partial, INCONCLUSIVE: undecided,
+               "CONTAINED": list(ans)}[label]
+    base, action, reason, recipients = ID_LABELS[label]
+    if label == "PATH_PARTIAL" and out("ID-1") == INCONCLUSIVE and out("ID-2") == INCONCLUSIVE:
+        base = 0.2
+    states = []
+    if label == "NEW_ROUTE":
+        fsm = _item(questions["ID-3"]["assessment"], "access.first_seen_mcp")
+        states = [fsm["metric_state"]] if ans["ID-3"]["basis"]["new_mcp_servers"] else []
+        sev = max([SEV.get(s, "NONE") for s in states] + ["LOW"], key=RANK.get)
+    elif label == "PROPAGATING":
+        sev = max((SEV[x["state"]] for x in ans["ID-4"]["basis"]["beyond"]), key=RANK.get)
+    elif label == "PATH_PARTIAL":
+        hot = [x["metric_state"] for q in partial for x in questions[q]["assessment"]["presence"]["items"]
+               if x["state"] == EA.PRESENT and x["metric_state"] in SEV]
+        sev = max([SEV[s] for s in hot] + ["NONE"], key=RANK.get)
+    else:
+        sev = "NONE"
+    trace = {}
+    for qid, q in questions.items():
+        a, an = q["assessment"], q["answer"]
+        trace[qid] = {
+            "question": a["question"], "answer": an["outcome"], "sufficiency": a["sufficiency"]["status"],
+            "explanation": _explain(qid, an), "basis": an["basis"],
+            "metrics": [{"metric": x["requirement"], "kind": x["kind"], "state": x["state"], "value": x["value"],
+                         "metric_state": x["metric_state"]} for x in a["presence"]["items"]],
+            "checks_consumed": a["reliability"]["verified_checks"] + a["reliability"]["blocking_checks"],
+            "raw_evidence_refs": _refs(a)[:20],
+            "sufficiency_reasons": [{k: r.get(k) for k in ("code", "requirement", "check", "detail")}
+                                    for r in a["sufficiency"]["reasons"]],
+            "not_assessed": an.get("not_assessed", []), "drives_label": qid in drivers}
+    contrary = [f"{q}: {x['check']} {x['detail']}" for q, v in questions.items() for x in v["answer"].get("findings", [])]
+    if ans["ID-4"].get("basis", {}).get("depth_conflict"):
+        contrary.append(f"ID-4: {ans['ID-4']['basis']['depth_conflict']}")
+    contrary += [f"{l} also holds" for l in held[1:]]
+    return {"label": label, "confidence": round(base * min(1.0, evidence_scale), 3), "severity": sev,
+            "action": action, "action_reason": reason, "recipients": list(recipients),
+            "drivers": drivers, "also_held": held[1:], "contrary": contrary, "questions": trace}

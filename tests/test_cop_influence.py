@@ -82,10 +82,14 @@ def test_unverified_interaction_finding_is_not_attribution(attributed):
 
 
 def test_partial_interaction_path_leaves_consumption_unattributed():
+    """The new jira route stands as the label; the unlinked lanes keep the graph partial (ID-2), and that
+    answer, not the label, is what stops attribution."""
     out, f = resm("inf-partial", E._estate(delegated_spike("dp", linked=False)), "dp")
-    assert out["findings"]["interaction_discovery"]["label"] == "PATH_PARTIAL"
+    idf = out["findings"]["interaction_discovery"]
+    assert idf["label"] == "NEW_ROUTE" and "PATH_PARTIAL" in idf["cop_specific"]["also_held"]
+    assert idf["cop_specific"]["questions"]["ID-2"]["answer"] != "FULLY_RECONSTRUCTED"
     a = f["cop_specific"]["attribution"]
-    assert a["status"] == "UNATTRIBUTED" and "partial" in a["reason"]
+    assert a["status"] == "UNATTRIBUTED" and "partial (ID-2" in a["reason"]
 
 
 def test_single_lane_session_is_not_affected_by_interaction_evidence():

@@ -963,6 +963,22 @@ def t_compare_known_routes(case, a, ctx):
             "history_sessions": len([x for x in case.earlier_sessions() if x.operator == s.operator])}
 
 
+def t_assess_interaction_questions(case, a, ctx):
+    """The five Interaction Discovery questions for the case session (cop_package), read against the
+    graph, the known routes, validated route memory and upstream Runtime Monitoring."""
+    if not case.session:
+        return missing("session", "interaction question assessment", "the case session")
+    mem = _memory_lookup(ctx, "route_record") if ctx.get("memory") else None
+    memory = None if mem is None or "missing_dependency" in mem else \
+        {k: [{**r, "record_type": "route_record"} for r in mem[k]] for k in ("established", "verified_pending")}
+    q = cop_package.assess_interaction_discovery(
+        case.rows, case.session_id, case.cfg, case.computed_at, t_build_interaction_graph(case, a, ctx),
+        memory, t_compare_known_routes(case, a, ctx), ctx.get("upstream"), case.artifact("source_events"),
+        case.artifact("native_transcripts"))
+    return {"questions": q, "memory_supplied": memory is not None,
+            "upstream_supplied": sorted((ctx.get("upstream") or {})), "evaluated_at": case.computed_at}
+
+
 def t_get_agent_registry(case, a, ctx):
     reg = case.artifact("agent_registry")
     if not reg:
@@ -1173,6 +1189,7 @@ TOOLS = {
     "assess_runtime_evidence": (t_assess_runtime_evidence, {}),
     "build_interaction_graph": (t_build_interaction_graph, {}),
     "compare_known_routes": (t_compare_known_routes, {}),
+    "assess_interaction_questions": (t_assess_interaction_questions, {}),
     "get_agent_registry": (t_get_agent_registry, {}),
     "detect_configuration_changes": (t_detect_configuration_changes, {}),
     "compute_consumption": (t_compute_consumption, {}),

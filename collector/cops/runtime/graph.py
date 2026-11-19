@@ -54,6 +54,7 @@ from .evidence import assess, usable
 from .requirements import assess_requirements, required_unavailable, precheck as evidence_precheck_fn
 from .memory import MemoryAccessDenied, POLICIES, VERIFIED
 from .rules import RULES, DETERMINISTIC_TOOLS, evidence_conf
+from . import decision
 from .tools import TOOLS, scan
 from .verifiers import (R, au01, verify_finding, verify_action, verify_memory_update, blocking,
                         REGISTRY_VERSION, RECOVERABLE)
@@ -1135,7 +1136,8 @@ def validate_memory_update(state):
                "rationale": (f.get("rationale") or "")[:400], "lineage": logical,
                "session_id": rt.case.session_id,
                "claims": [{"statement": c.get("statement"), "metric_id": c.get("metric_id"),
-                           "asserted_state": c.get("asserted_state")} for c in f.get("claims", [])][:10]}
+                           "asserted_state": c.get("asserted_state")} for c in f.get("claims", [])][:10],
+               **((f.get("cop_specific") or {}).get("memory_payload") or {})}
     s = rt.case.session
     prov = {"case_id": rt.case.case_id, "finding_id": f["finding_id"], "tenant_id": rt.case.tenant_id,
             "session_id": rt.case.session_id, "verified": f["verified"],
@@ -1171,6 +1173,8 @@ def persist_and_publish(state):
     r["finding"] = {**r["finding"], "memory_write": state.get("memory_write")}
     if state.get("triage"):
         r["finding"]["triage"] = state["triage"]
+    r["decision"] = decision.build({**state, "verifier_results": r["verifier_results"]}, rt)
+    r["decision_problems"] = decision.validate(r["decision"])
     if rt.store is not None:
         rt.store.save_result(r)
     pub = {k: state["finding"].get(k) for k in ("finding_id", "cop", "label", "status", "confidence",

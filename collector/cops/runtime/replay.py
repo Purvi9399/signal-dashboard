@@ -209,16 +209,18 @@ def _summary(cop, out, events, rows, raw_events, native):
     f, r = out["findings"][cop], out["results"][cop]
     refs = sorted({x for c in f.get("claims", []) for x in c.get("evidence_refs", [])})
     ea = (f.get("cop_specific") or {}).get("evidence_assessment") or {}
+    answers = {q: t["answer"] for q, t in ((f.get("cop_specific") or {}).get("questions") or {}).items()}
+    classes = ea.get("classes") or answers or None
     logical = {"label": f["label"], "status": f["status"], "verified": f["verified"],
                "claims": sorted(c.get("statement") or "" for c in f.get("claims", [])),
-               "classes": ea.get("classes")}
+               "classes": classes}
     return {"finding_id": f["finding_id"], "label": f["label"], "status": f["status"], "verified": f["verified"],
             "not_passed": sorted({v["check_id"] for v in r["verifier_results"] if v["result"] in ("FAIL", "WARN")}),
             "action": (r.get("proposed_action") or {}).get("action"),
             "execution_status": (r.get("proposed_action") or {}).get("execution_status"),
             "evidence_refs": refs[:20],
             "provenance_chain": _chain(EA.resolve_chain(refs, events, rows, raw_events, native)),
-            "question_classes": ea.get("classes"), "qualifications": ea.get("qualifications"),
+            "question_classes": classes, "qualifications": ea.get("qualifications"),
             "memory_write": {k: (r.get("memory_write") or {}).get(k) for k in ("written", "record_id", "status")},
             "logical_digest": digest(logical)}
 
