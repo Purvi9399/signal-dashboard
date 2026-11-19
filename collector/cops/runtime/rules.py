@@ -233,7 +233,8 @@ def _apply_questions(ctx, f):
         action, severity, reason = RM_AT[agg["label"]]
         moved = ", ".join(f"{q} {c}" for q, c in agg["classes"].items() if CEILING[c] == agg["label"])
         f.update(label=agg["label"], action=action, severity=severity, action_reason=reason,
-                 rationale=f"{f['rationale']}; questions set {agg['label']}: {moved}")
+                 rationale=f"evidence {agg['label'].lower()} on the questions ({moved}); "
+                           f"threshold reading: {f['rationale']}")
         f["cop_specific"]["evidence_confidence"] = EVIDENCE_LEVEL[agg["label"]]
     elif agg["qualifications"]:
         f["rationale"] += "; not fully assessed: " + ", ".join(
