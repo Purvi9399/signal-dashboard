@@ -14,7 +14,7 @@ read from metrics_config.json "evidence_limits"; when a limit has not been
 approved the check is NOT_EXECUTED, never passed.
 """
 
-import os, sys
+import hashlib, json, os, sys
 
 import yaml
 
@@ -381,9 +381,22 @@ def assess(cop, question_id, events, rows, cfg=None, computed_at=None, raw_event
     }
 
 
+_LAST = {}
+
+
+def _computed(rows, cfg, computed_at):
+    """signal_metrics.compute(..., catalogue=True), reused while the same rows, config and time are asked
+    again (a replay assesses every session of one estate)."""
+    key = hashlib.sha256(json.dumps([rows, cfg, computed_at], sort_keys=True, default=str).encode()).hexdigest()
+    if _LAST.get("key") != key:
+        _LAST.clear()
+        _LAST.update(key=key, out=signal_metrics.compute(rows, cfg, computed_at=computed_at, catalogue=True))
+    return _LAST["out"]
+
+
 def session_inputs(rows, session_id, cfg, computed_at=None):
     """The session's catalogue metric events by id, and its de-duplicated rows."""
-    all_events, sessions = signal_metrics.compute(rows, cfg, computed_at=computed_at, catalogue=True)
+    all_events, sessions = _computed(rows, cfg, computed_at)
     events = {e["metric_id"]: e for e in all_events if e["session_id"] == session_id}
     session = next(s for s in sessions if s.id == session_id)
     return events, signal_metrics.unique_rows(session)

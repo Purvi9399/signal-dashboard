@@ -373,6 +373,7 @@ def test_only_runtime_monitoring_uses_the_assessment():
                    if any(m in open(p).read() for m in ("evidence_assessment", "cop_package"))
                    and not p.endswith(("evidence_assessment.py", "cop_package.py")))
     assert users == [os.path.join("cops", "packages", "runtime_monitoring", "harness.py"),
+                     os.path.join("cops", "runtime", "evolution.py"), os.path.join("cops", "runtime", "replay.py"),
                      os.path.join("cops", "runtime", "rules.py"), os.path.join("cops", "runtime", "tools.py")]
 
 

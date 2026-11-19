@@ -42,17 +42,19 @@ QUIET = {k: s.interpretations[0] for k, s in BY_KEY.items()}
 
 def make_runtime(case_id, session_id, rows, artifacts=None, script=None, store=None, mode="dry_run",
                  live=False, tenant=TENANT, enforcement=None, provider=None, decision_store=None,
-                 budget=None, cfg=None, computed_at=None):
+                 budget=None, cfg=None, computed_at=None, synthetic=True, run_id=None, clock=None,
+                 events=None, sessions=None):
     store = store or SQLiteStore()
     case = CaseData(case_id, tenant, session_id, rows, artifacts=artifacts or {},
-                    decision_store=decision_store, synthetic=True, cfg=cfg,
+                    decision_store=decision_store, synthetic=synthetic, cfg=cfg,
+                    events=events or [], sessions=sessions or [],
                     **({"computed_at": computed_at} if computed_at else {}))
-    mem = MemoryGateway(store, clock=CLOCK)
+    mem = MemoryGateway(store, clock=clock or CLOCK)
     prof = build_profiles(budget)
     prov = provider or (FixtureProvider(script) if script is not None else UnavailableProvider())
     return Runtime(case, ToolGateway(case, allowlists(prof), mem), mem, LLMGateway(prov), store, prof,
                    mode=mode, enforcement=enforcement or MockEnforcementGateway(), live_session=live,
-                   run_id=f"eval-{case_id}")
+                   run_id=run_id or f"eval-{case_id}")
 
 
 def run(rt, cops, checkpointer=None):
