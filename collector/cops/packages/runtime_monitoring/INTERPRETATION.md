@@ -52,7 +52,7 @@ The COP label is the worse of the threshold label and the worst ceiling. Consequ
 
 **Observed condition and evidence quality stay apart.** DEGRADED_TELEMETRY is an observed condition of the telemetry. EVIDENCE_MISSING and CONTRADICTORY_OR_UNVERIFIABLE are about the quality of the evidence. ASSESSMENT_INCONCLUSIVE is neither. The three labels cannot say which, so the class is published beside the label in `cop_specific.evidence_assessment` (see CONNECTIONS.md).
 
-**Supplied versus missing.** A field that no row carries at all, or an event kind that never arrived for a tool that declares no capability for it (`EVENT_KIND_BASES`: results, plans, compactions, config events, approvals), was not supplied to the assessment. That makes the question ASSESSMENT_INCONCLUSIVE. A field that is present but empty is evidence missing. This keeps fixtures and loaders that never selected a column from being read as degraded telemetry (DECISIONS.md D10).
+**Supplied versus missing.** A field that no row carries at all, or an event kind that never arrived for a tool that declares no capability for it (`EVENT_KIND_BASES`: results, plans, compactions, config events, approvals), was not supplied to the assessment. That makes the question ASSESSMENT_INCONCLUSIVE. A field that is present but empty is evidence missing. This keeps fixtures and loaders that never selected a column from being read as degraded telemetry (DECISIONS.md M16).
 
 **RM-5 is not counted twice.** Its causes taken from RM-1 to RM-4 are already counted in those questions. RM-5's own contribution is the unknown share and its own blocking checks. When it is uncertain only because of an earlier question, its class is that question's (the label cannot change, since the label takes the worst class anyway).
 
