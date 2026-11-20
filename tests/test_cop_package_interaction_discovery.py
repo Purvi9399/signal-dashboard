@@ -281,7 +281,8 @@ def test_every_cop_publishes_a_valid_decision_record():
 def test_a_model_cop_records_its_calls_in_the_decision_provenance():
     from cops.runtime import fixtures as FX
     prov = FixtureProvider(lambda *a: FX.inconclusive("simulated: nothing to conclude", []))
-    rt = E.make_runtime("id-llm", "s1", E._estate(S.normal_session("s1", 9)), {}, provider=prov)
+    # a token spike: Anomaly Detection's package decides a session with no deviation without the model
+    rt = E.make_runtime("id-llm", "s1", E._estate(E.spike_session("s1", 9)), {}, provider=prov)
     r = G.run_cop(rt, "anomaly_detection")["result"]
     calls = r["decision"]["provenance"]["model_calls"]
     assert calls and all(c["simulated"] for c in calls)

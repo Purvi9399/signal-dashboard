@@ -22,7 +22,7 @@ from cops.runtime.verifiers import verify_finding, verify_action, verify_memory_
 from cops.specs import BY_KEY
 
 NORMAL = E._estate(S.normal_session("ep", 9))
-SPIKE = E._estate(E.spike_session("eps", 9))
+SPIKE = E._estate(E.spike_session("eps", 9))     # Anomaly Detection consults the model only over a deviation
 QUIET = {k: s.interpretations[0] for k, s in BY_KEY.items()}
 
 
@@ -170,7 +170,7 @@ def test_detail_that_fails_the_cop_schema_is_inconclusive():
 def test_conclude_without_a_finding_is_inconclusive():
     def assess_fn(p, n):
         return {"hypothesis": "h", "hypothesis_changed": False, "decision": "conclude", "tool_requests": []}
-    f = run_cop(rt(NORMAL, "ep", provider=scripted(lambda p: FX.plan("x", [], [], []), assess_fn)),
+    f = run_cop(rt(SPIKE, "eps", provider=scripted(lambda p: FX.plan("x", [], [], []), assess_fn)),
                 "anomaly_detection")["finding"]
     assert f["label"] == "INCONCLUSIVE" and f["cop_specific"]["stop_reason"] == "conclude_without_finding"
 
@@ -178,7 +178,7 @@ def test_conclude_without_a_finding_is_inconclusive():
 def test_provider_failure_at_the_assess_stage_is_recorded():
     def assess_fn(p, n):
         return ProviderUnavailable("provider went away mid-investigation")
-    out = run_cop(rt(NORMAL, "ep", provider=scripted(lambda p: FX.plan("x", [], [], []), assess_fn)),
+    out = run_cop(rt(SPIKE, "eps", provider=scripted(lambda p: FX.plan("x", [], [], []), assess_fn)),
                   "anomaly_detection")
     f = out["finding"]
     assert f["label"] == "INCONCLUSIVE" and f["cop_specific"]["stop_reason"] == "llm_unavailable"
@@ -189,7 +189,7 @@ def test_provider_failure_at_the_assess_stage_is_recorded():
 def test_asking_for_more_evidence_but_naming_none_stops_the_loop():
     def assess_fn(p, n):
         return FX.more("need more", False, "unsure")             # no tool requested
-    out = run_cop(rt(NORMAL, "ep", provider=scripted(lambda p: FX.plan("x", [], [], []), assess_fn)),
+    out = run_cop(rt(SPIKE, "eps", provider=scripted(lambda p: FX.plan("x", [], [], []), assess_fn)),
                   "anomaly_detection")
     assert out["finding"]["label"] == "INCONCLUSIVE"
     assert out["finding"]["cop_specific"]["stop_reason"] == "no_further_evidence_requested"

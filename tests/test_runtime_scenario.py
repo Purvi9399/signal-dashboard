@@ -61,19 +61,22 @@ def test_successful_alert_is_delivered_confirmed_and_feedback_validates_memory(r
         s["after_restart"]["ledger"] == [["execution_outcome", "VERIFIED"], ["review", "CONFIRMED"]]
 
 
-def test_contradictory_answer_revises_the_finding_and_nothing_is_delivered_on_it(runs):
+def test_contradictory_telemetry_is_undetermined_and_the_review_refutes_it(runs):
+    # Before the Anomaly Detection package the model read the ordinary-looking telemetry as NORMAL and the
+    # contradiction revised it. The package now decides it without the model: one collector, so Runtime
+    # Monitoring reads INSUFFICIENT and AD-5 is UNDETERMINED (packages/anomaly_detection/DECISIONS.md, D-AD1).
     r = runs["contradictory"]
     s = r["summary"]
     tel = first(r, "telemetry_ingested")
     assert len(tel["tool_calls_dropped_by_collector"]) == 5     # the agent failed 5 times; telemetry lost them
-    assert s["initial"]["label"] == "NORMAL" and s["revised"]["label"] == "INCONCLUSIVE"
-    assert s["resolution"] == "REVISED" and s["final_tier"] == "assisted"
-    assert s["revised"]["support"] < s["initial"]["support"]
+    assert s["initial"]["label"] == s["revised"]["label"] == "INDETERMINATE"
+    assert s["resolution"] == "UNRESOLVED" and s["final_tier"] == "assisted"
     assert first(r, "outcome_confirmation")["alerts_at_endpoint"] == []
     assert s["review_task"] and s["gateway_state"] == "VERIFIED"     # the review task row was read back
-    # the reviewer's verdict is kept but the finding did not verify: not eligible, memory unchanged
-    assert s["review"]["eligible_for_scoring"] is False and s["review"]["applied_to_memory"] is False
-    assert s["after_restart"]["scoring_history"] == []
+    # the finding verified, so the reviewer's REFUTED is scored and rejects its memory record
+    assert s["review"]["eligible_for_scoring"] is True and s["review"]["applied_to_memory"] is True
+    assert s["after_restart"]["memory_validation_status"] == "REJECTED"
+    assert len(s["after_restart"]["scoring_history"]) == 1
 
 
 def test_missing_evidence_stays_unresolved_and_goes_to_a_reviewer(runs):

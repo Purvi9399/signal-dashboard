@@ -89,7 +89,7 @@
  "trace": [
   {
    "seq": 1,
-   "at": "2026-11-12T15:27:23.003+00:00",
+   "at": "2026-11-20T12:00:14.205+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "session_start",
@@ -97,7 +97,7 @@
   },
   {
    "seq": 2,
-   "at": "2026-11-12T15:27:23.003+00:00",
+   "at": "2026-11-20T12:00:14.205+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "user_prompt",
@@ -105,7 +105,7 @@
   },
   {
    "seq": 3,
-   "at": "2026-11-12T15:27:23.003+00:00",
+   "at": "2026-11-20T12:00:14.205+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "model_usage",
@@ -113,7 +113,7 @@
   },
   {
    "seq": 4,
-   "at": "2026-11-12T15:27:23.003+00:00",
+   "at": "2026-11-20T12:00:14.205+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -121,7 +121,7 @@
   },
   {
    "seq": 5,
-   "at": "2026-11-12T15:27:23.003+00:00",
+   "at": "2026-11-20T12:00:14.205+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -129,7 +129,7 @@
   },
   {
    "seq": 6,
-   "at": "2026-11-12T15:27:23.003+00:00",
+   "at": "2026-11-20T12:00:14.205+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -142,7 +142,7 @@
   },
   {
    "seq": 7,
-   "at": "2026-11-12T15:27:23.003+00:00",
+   "at": "2026-11-20T12:00:14.205+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -155,7 +155,7 @@
   },
   {
    "seq": 8,
-   "at": "2026-11-12T15:27:23.003+00:00",
+   "at": "2026-11-20T12:00:14.205+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -168,7 +168,7 @@
   },
   {
    "seq": 9,
-   "at": "2026-11-12T15:27:23.003+00:00",
+   "at": "2026-11-20T12:00:14.205+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -181,7 +181,7 @@
   },
   {
    "seq": 10,
-   "at": "2026-11-12T15:27:23.003+00:00",
+   "at": "2026-11-20T12:00:14.205+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -194,14 +194,14 @@
   },
   {
    "seq": 11,
-   "at": "2026-11-12T15:27:23.003+00:00",
+   "at": "2026-11-20T12:00:14.205+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "session_end"
   },
   {
    "seq": 12,
-   "at": "2026-11-12T15:27:23.004+00:00",
+   "at": "2026-11-20T12:00:14.206+00:00",
    "stage": "telemetry_ingested",
    "collectors": [
     "otel"
@@ -213,7 +213,7 @@
   },
   {
    "seq": 13,
-   "at": "2026-11-12T15:27:23.059+00:00",
+   "at": "2026-11-20T12:00:14.337+00:00",
    "stage": "initial_finding",
    "cop": "anomaly_detection",
    "run_key": "root:anomaly_detection:dfed4c22-efc8:r0",
@@ -225,7 +225,7 @@
   },
   {
    "seq": 14,
-   "at": "2026-11-12T15:27:23.059+00:00",
+   "at": "2026-11-20T12:00:14.337+00:00",
    "stage": "vs01_initial",
    "decision": "SUPPORTED",
    "support": 0.6909,
@@ -270,7 +270,7 @@
   },
   {
    "seq": 15,
-   "at": "2026-11-12T15:27:23.059+00:00",
+   "at": "2026-11-20T12:00:14.337+00:00",
    "stage": "handling_quotient_initial",
    "quotient": 0.895,
    "tier": "autonomous",
@@ -279,11 +279,11 @@
   },
   {
    "seq": 16,
-   "at": "2026-11-12T15:27:23.059+00:00",
+   "at": "2026-11-20T12:00:14.337+00:00",
    "stage": "request_for_support",
    "investigation_event": {
     "seq": 3,
-    "at": "2026-11-12T15:27:23.059+00:00",
+    "at": "2026-11-20T12:00:14.337+00:00",
     "kind": "referral_requested",
     "cop": "anomaly_detection",
     "referral_id": "c3e0b49d-043e-54b7-bb83-002b3cb03618",
@@ -295,11 +295,11 @@
   },
   {
    "seq": 17,
-   "at": "2026-11-12T15:27:23.059+00:00",
+   "at": "2026-11-20T12:00:14.337+00:00",
    "stage": "request_for_support",
    "investigation_event": {
     "seq": 4,
-    "at": "2026-11-12T15:27:23.059+00:00",
+    "at": "2026-11-20T12:00:14.337+00:00",
     "kind": "referral_requested",
     "cop": "anomaly_detection",
     "referral_id": "4a01eef8-394b-595b-bd13-a09bbb6100d3",
@@ -311,11 +311,11 @@
   },
   {
    "seq": 18,
-   "at": "2026-11-12T15:27:23.060+00:00",
+   "at": "2026-11-20T12:00:14.337+00:00",
    "stage": "receiver_investigating",
    "investigation_event": {
     "seq": 5,
-    "at": "2026-11-12T15:27:23.060+00:00",
+    "at": "2026-11-20T12:00:14.337+00:00",
     "kind": "referral_dispatched",
     "cop": "anomaly_detection",
     "referral_id": "c3e0b49d-043e-54b7-bb83-002b3cb03618",
@@ -326,11 +326,11 @@
   },
   {
    "seq": 19,
-   "at": "2026-11-12T15:27:23.080+00:00",
+   "at": "2026-11-20T12:00:14.432+00:00",
    "stage": "receiver_answered",
    "investigation_event": {
     "seq": 9,
-    "at": "2026-11-12T15:27:23.080+00:00",
+    "at": "2026-11-20T12:00:14.432+00:00",
     "kind": "referral_answered",
     "cop": "runtime_monitoring",
     "referral_id": "c3e0b49d-043e-54b7-bb83-002b3cb03618",
@@ -352,7 +352,7 @@
   },
   {
    "seq": 20,
-   "at": "2026-11-12T15:27:23.080+00:00",
+   "at": "2026-11-20T12:00:14.432+00:00",
    "stage": "referral_response",
    "referral_id": "c3e0b49d-043e-54b7-bb83-002b3cb03618",
    "receiver": "runtime_monitoring",
@@ -388,11 +388,11 @@
   },
   {
    "seq": 21,
-   "at": "2026-11-12T15:27:23.080+00:00",
+   "at": "2026-11-20T12:00:14.432+00:00",
    "stage": "receiver_investigating",
    "investigation_event": {
     "seq": 10,
-    "at": "2026-11-12T15:27:23.080+00:00",
+    "at": "2026-11-20T12:00:14.432+00:00",
     "kind": "referral_dispatched",
     "cop": "anomaly_detection",
     "referral_id": "4a01eef8-394b-595b-bd13-a09bbb6100d3",
@@ -403,11 +403,11 @@
   },
   {
    "seq": 22,
-   "at": "2026-11-12T15:27:23.103+00:00",
+   "at": "2026-11-20T12:00:14.456+00:00",
    "stage": "request_for_support",
    "investigation_event": {
     "seq": 13,
-    "at": "2026-11-12T15:27:23.103+00:00",
+    "at": "2026-11-20T12:00:14.456+00:00",
     "kind": "referral_requested",
     "cop": "behavior_analytics",
     "referral_id": "f07eb10d-947c-51cb-8907-54c6b3957d5c",
@@ -419,11 +419,11 @@
   },
   {
    "seq": 23,
-   "at": "2026-11-12T15:27:23.103+00:00",
+   "at": "2026-11-20T12:00:14.456+00:00",
    "stage": "request_for_support",
    "investigation_event": {
     "seq": 14,
-    "at": "2026-11-12T15:27:23.103+00:00",
+    "at": "2026-11-20T12:00:14.456+00:00",
     "kind": "referral_requested",
     "cop": "behavior_analytics",
     "referral_id": "0af8a479-cbe0-5dc2-9e42-8e78d6b5cb52",
@@ -435,11 +435,11 @@
   },
   {
    "seq": 24,
-   "at": "2026-11-12T15:27:23.103+00:00",
+   "at": "2026-11-20T12:00:14.456+00:00",
    "stage": "referral_not_opened",
    "investigation_event": {
     "seq": 15,
-    "at": "2026-11-12T15:27:23.103+00:00",
+    "at": "2026-11-20T12:00:14.456+00:00",
     "kind": "referral_not_opened",
     "cop": "behavior_analytics",
     "receiver": "context_memory",
@@ -448,11 +448,11 @@
   },
   {
    "seq": 25,
-   "at": "2026-11-12T15:27:23.106+00:00",
+   "at": "2026-11-20T12:00:14.457+00:00",
    "stage": "referral_failure_reused",
    "investigation_event": {
     "seq": 16,
-    "at": "2026-11-12T15:27:23.106+00:00",
+    "at": "2026-11-20T12:00:14.457+00:00",
     "kind": "referral_failure_reused",
     "cop": "behavior_analytics",
     "referral_id": "f07eb10d-947c-51cb-8907-54c6b3957d5c",
@@ -463,11 +463,11 @@
   },
   {
    "seq": 26,
-   "at": "2026-11-12T15:27:23.106+00:00",
+   "at": "2026-11-20T12:00:14.457+00:00",
    "stage": "receiver_investigating",
    "investigation_event": {
     "seq": 17,
-    "at": "2026-11-12T15:27:23.106+00:00",
+    "at": "2026-11-20T12:00:14.457+00:00",
     "kind": "referral_dispatched",
     "cop": "behavior_analytics",
     "referral_id": "0af8a479-cbe0-5dc2-9e42-8e78d6b5cb52",
@@ -478,11 +478,11 @@
   },
   {
    "seq": 27,
-   "at": "2026-11-12T15:27:23.129+00:00",
+   "at": "2026-11-20T12:00:14.499+00:00",
    "stage": "request_for_support",
    "investigation_event": {
     "seq": 20,
-    "at": "2026-11-12T15:27:23.129+00:00",
+    "at": "2026-11-20T12:00:14.499+00:00",
     "kind": "referral_requested",
     "cop": "workflow_orchestration",
     "referral_id": "f9790984-ee76-5009-a5db-60a8db2dd5de",
@@ -494,11 +494,11 @@
   },
   {
    "seq": 28,
-   "at": "2026-11-12T15:27:23.129+00:00",
+   "at": "2026-11-20T12:00:14.499+00:00",
    "stage": "referral_failure_reused",
    "investigation_event": {
     "seq": 21,
-    "at": "2026-11-12T15:27:23.129+00:00",
+    "at": "2026-11-20T12:00:14.499+00:00",
     "kind": "referral_failure_reused",
     "cop": "workflow_orchestration",
     "referral_id": "f9790984-ee76-5009-a5db-60a8db2dd5de",
@@ -509,11 +509,11 @@
   },
   {
    "seq": 29,
-   "at": "2026-11-12T15:27:23.130+00:00",
+   "at": "2026-11-20T12:00:14.500+00:00",
    "stage": "receiver_answered",
    "investigation_event": {
     "seq": 23,
-    "at": "2026-11-12T15:27:23.130+00:00",
+    "at": "2026-11-20T12:00:14.500+00:00",
     "kind": "referral_answered",
     "cop": "workflow_orchestration",
     "referral_id": "0af8a479-cbe0-5dc2-9e42-8e78d6b5cb52",
@@ -535,11 +535,11 @@
   },
   {
    "seq": 30,
-   "at": "2026-11-12T15:27:23.131+00:00",
+   "at": "2026-11-20T12:00:14.500+00:00",
    "stage": "reassessment_started",
    "investigation_event": {
     "seq": 24,
-    "at": "2026-11-12T15:27:23.131+00:00",
+    "at": "2026-11-20T12:00:14.500+00:00",
     "kind": "reassessment_started",
     "cop": "behavior_analytics",
     "round": 1,
@@ -554,11 +554,11 @@
   },
   {
    "seq": 31,
-   "at": "2026-11-12T15:27:23.156+00:00",
+   "at": "2026-11-20T12:00:14.528+00:00",
    "stage": "receiver_answered",
    "investigation_event": {
     "seq": 27,
-    "at": "2026-11-12T15:27:23.156+00:00",
+    "at": "2026-11-20T12:00:14.528+00:00",
     "kind": "referral_answered",
     "cop": "behavior_analytics",
     "referral_id": "4a01eef8-394b-595b-bd13-a09bbb6100d3",
@@ -580,7 +580,7 @@
   },
   {
    "seq": 32,
-   "at": "2026-11-12T15:27:23.156+00:00",
+   "at": "2026-11-20T12:00:14.528+00:00",
    "stage": "referral_response",
    "referral_id": "4a01eef8-394b-595b-bd13-a09bbb6100d3",
    "receiver": "behavior_analytics",
@@ -625,11 +625,11 @@
   },
   {
    "seq": 33,
-   "at": "2026-11-12T15:27:23.156+00:00",
+   "at": "2026-11-20T12:00:14.529+00:00",
    "stage": "reassessment_started",
    "investigation_event": {
     "seq": 28,
-    "at": "2026-11-12T15:27:23.156+00:00",
+    "at": "2026-11-20T12:00:14.529+00:00",
     "kind": "reassessment_started",
     "cop": "anomaly_detection",
     "round": 1,
@@ -644,7 +644,7 @@
   },
   {
    "seq": 34,
-   "at": "2026-11-12T15:27:23.196+00:00",
+   "at": "2026-11-20T12:00:14.640+00:00",
    "stage": "revised_evidence_score",
    "round": 1,
    "decision": "SUPPORTED",
@@ -676,7 +676,7 @@
   },
   {
    "seq": 35,
-   "at": "2026-11-12T15:27:23.196+00:00",
+   "at": "2026-11-20T12:00:14.641+00:00",
    "stage": "investigation_final",
    "tier": "human",
    "routing_reason": "referral limit hit (runtime_monitoring TIMED_OUT: INSUFFICIENT (SUBSTANTIVE); not_delivered); quotient 0.906 in the autonomous band of anomaly_detection (autonomous >= 0.8, assisted >= 0.6, specialist >= 0.35)",
@@ -693,7 +693,7 @@
   },
   {
    "seq": 36,
-   "at": "2026-11-12T15:27:23.212+00:00",
+   "at": "2026-11-20T12:00:14.659+00:00",
    "stage": "final_action",
    "typed_action": "ALERT",
    "triage_selected": "ALERT",
@@ -705,7 +705,7 @@
   },
   {
    "seq": 37,
-   "at": "2026-11-12T15:27:23.212+00:00",
+   "at": "2026-11-20T12:00:14.659+00:00",
    "stage": "authority_check",
    "authorised": true,
    "checks": [
@@ -727,7 +727,7 @@
   },
   {
    "seq": 38,
-   "at": "2026-11-12T15:27:23.214+00:00",
+   "at": "2026-11-20T12:00:14.662+00:00",
    "stage": "approval_requested",
    "approval_id": "f2e7f43b-b971-58c3-9d33-73519cc297fc",
    "typed_action": "ALERT",
@@ -737,7 +737,7 @@
   },
   {
    "seq": 39,
-   "at": "2026-11-12T15:27:23.215+00:00",
+   "at": "2026-11-20T12:00:14.663+00:00",
    "stage": "approval_decided",
    "approval_id": "f2e7f43b-b971-58c3-9d33-73519cc297fc",
    "decision": "approve",
@@ -746,7 +746,7 @@
   },
   {
    "seq": 40,
-   "at": "2026-11-12T15:27:23.275+00:00",
+   "at": "2026-11-20T12:00:14.777+00:00",
    "stage": "action_execution",
    "execution_status": "EXECUTED_SANDBOX",
    "gateway_action_id": "2acf2ff9-72ee-5fb1-a442-13adaa5505f2",
@@ -764,10 +764,10 @@
   },
   {
    "seq": 41,
-   "at": "2026-11-12T15:27:23.275+00:00",
+   "at": "2026-11-20T12:00:14.778+00:00",
    "stage": "outcome_confirmation",
    "gateway_state": "VERIFIED",
-   "observed": "endpoint returned 200 for ack 90b56d6b-c973-495b-9ddc-10115f4b1a84",
+   "observed": "endpoint returned 200 for ack 7ec1f482-a260-4036-93f7-195ed23fab62",
    "alerts_at_endpoint": [
     "2acf2ff9-72ee-5fb1-a442-13adaa5505f2"
    ],
@@ -775,7 +775,7 @@
   },
   {
    "seq": 42,
-   "at": "2026-11-12T15:27:23.283+00:00",
+   "at": "2026-11-20T12:00:14.782+00:00",
    "stage": "feedback_persisted",
    "execution_entry": {
     "feedback_id": "429006c1-5782-5f01-9b35-615a00baecfa",
@@ -793,11 +793,11 @@
     "applied_to_memory": true
    },
    "ineligible_because": [],
-   "memory_record_id": "b6cbd2f6-093a-57bc-a32f-9dae30630e40"
+   "memory_record_id": "f8d389ef-c594-5239-97f0-e2d69e12943a"
   },
   {
    "seq": 43,
-   "at": "2026-11-12T15:27:23.284+00:00",
+   "at": "2026-11-20T12:00:14.783+00:00",
    "stage": "restart_check",
    "ledger": [
     [
@@ -825,7 +825,7 @@
   },
   {
    "seq": 44,
-   "at": "2026-11-12T15:27:23.284+00:00",
+   "at": "2026-11-20T12:00:14.785+00:00",
    "stage": "run_details",
    "runs": [
     {
@@ -1292,6 +1292,21 @@
      ],
      "tool_calls": [
       {
+       "tool_call_id": "8d59498e-9ce4-5ec1-a2ea-debbf18fa3a7",
+       "tool": "assess_anomaly_questions",
+       "args": {},
+       "requested_by": "rules",
+       "status": "OK",
+       "rejection_reason": null,
+       "latency_ms": 29.319,
+       "purpose": null,
+       "result": {
+        "truncated": true,
+        "bytes": 32976,
+        "preview": "{\"questions\": {\"AD-1\": {\"assessment\": {\"cop\": \"anomaly_detection\", \"question_id\": \"AD-1\", \"question\": \"Is the agent repeating actions, retrying operations or failing unusually often?\", \"presence\": {\"status\": \"PRESENT\", \"items\": [{\"requirement\": \"insights.repetition\", \"kind\": \"REQUIRED\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 4, \"metric_state\": \"EXCEPTION\", \"features\": {\"by_tool\": {\"Bash\": 4}}, \"evidence_refs\": [\"observable:ca1-6\", \"observable:ca1-7\", \"observable:ca1-8\", \"observable:ca1-9\"]}, {\"requirement\": \"insights.retry\", \"kind\": \"REQUIRED_WHEN_APPLICABLE\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 4, \"metric_state\": \"EXCEPTION\", \"features\": {\"distinct_commands\": 1}, \"evidence_refs\": [\"observable:ca1-6\", \"observable:ca1-7\", \"observable:ca1-8\", \"observable:ca1-9\"]}, {\"requirement\": \"insights.failed\", \"kind\": \"REQUIRED\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 5, \"metric_state\": \"EXCEPTION\", \"features\": {\"failure_rate\": 0.714}, \"evidence_refs\": [\"observable:ca1-5\", \"observable:ca1-6\", \"observable:ca1-7\", \"observable:ca1-8\", \"observable:ca1-9\"]}, {\"requirement\": \"telemetry.turn_linkage\", \"kind\": \"REQUIRED_WHEN_APPLICABLE\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 1.0, \"metric_state\": \"NORMAL\", \"features\": {\"steps\": 8, \"without_turn\": 0}, \"evidence_refs\": []}], \"fields\": {\"session_id\": {\"rows_with_value\": 10, \"rows\": 10, \"status\": \"PRESENT\"}, \"turn_id\": {\"rows_with_value\": 10, \"rows\": 10, \"status\": \"PRESENT\"}, \"tool_use_id\": {\"rows_with_value\": 7, \"rows\": 10, \"status\": \"PARTIAL\"}, \"tool_name\": {\"rows_with_value\": 7, \"rows\": 10, \"status\": \"PARTIAL\"}, \"tool_arguments\": {\"rows_with_value\": 7, \"rows\": 10, \"status\": \"PARTIAL\"}, \"tool_result\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"success\": {\"rows_with_value\": 7, \"rows\": 10, \"status\": \"PARTIAL\"}, \"status\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"error_type\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"error_message\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"exit_code\": {\"rows_with_value\": 5, \"rows\": 10, \"status\": \"PARTIAL\"}, \"loop_count\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"turn_count\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"command\": {\"rows_with_value\": 5, \"rows\": 10, \"status\": \"PARTIAL\"}}}, \"reliability\": {\"status\": \"RELIABLE\", \"checks\": [{\"check\": \"CONFLICTING_SOURCES\", \"value\": null, \"evidence_refs\": [], \"evidence\": {\"collectors\": [\"otel\"], \"rows\": 10, \"cross_checked\": 0, \"disagreed\": 0}, \"outcome\": \"COMPARISON_NOT_POSSIBLE\", \"detail\": \"only one source (otel) observed this activity\", \"source\": \"telemetry.source_agreement\", \"metric_value\": null}, {\"check\": \"CONFLICTING_ACTION_SOURCES\", \"value\": null, \"evidence_refs\": [], \"evidence\": {\"collectors\": [\"otel\"], \"rows\": 7, \"cross_checked\": 0, \"disagreed\": 0}, \"outcome\": \"COMPARISON_NOT_POSSIBLE\", \"detail\": \"only one source (otel) observed this activity\", \"source\": \"collectors_agree on action rows\"}, {\"check\": \"UNVERIFIABLE_PROVENANCE\", \"outcome\": \"EVIDENCE_MISSING\", \"detail\": \"raw_ref was not read for this session\", \"source\": \"audit_source_provenance_completeness\", \"evidence_refs\": []}, {\"check\": \"UNVERIFIABLE_PROVENANCE\", \"outcome\": \"NOT_EXECUTED\", \"detail\": \"the raw event store was not supplied, so no row was linked to a source event\", \"source\": \"source_events\", \"evidence_refs\": [], \"not_executed_because\": \"RAW_STORE_NOT_SUPPLIED\"}, {\"check\": \"INCOMPARABLE_TIMESTAMPS\", \"outcome\": \"EVIDENCE_MISSING\", \"detail\": \"no row carries occurred_at, captured_at and ingested_at\", \"source\": \"audit_timestamp_integrity\", \"evidence_refs\": []}, {\"check\": \"TIMESTAMP_ORDER\", \"outcome\": \"EVIDENCE_MISSING\", \"detail\": \"no row carries occurred_at, captured_at and ingested_at\", \"source\": \"audit_timestamp_integrity\", \"evidence_refs\": []}, {\"check\": \"INGEST_LATENCY\", \"outcome\": \"EVIDENCE_MISSING\", \"detail\": \"basis absent: ingest\", \"source\": \"event_freshness_live\", \"evidence_refs\": []}, {\"check\": \"STALE\", \"value\": 1688401.0, \"limit\": null, \"limit_ke"
+       }
+      },
+      {
        "tool_call_id": "36112468-bcbc-5d7d-af06-d9b158f09f90",
        "tool": "calculate_deviation",
        "args": {
@@ -1300,7 +1315,7 @@
        "requested_by": "llm",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 0.146,
+       "latency_ms": 0.142,
        "purpose": "raw token deviation against comparable sessions",
        "result": {
         "quantity": "tokens",
@@ -1320,7 +1335,7 @@
        "requested_by": "llm",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 0.094,
+       "latency_ms": 0.097,
        "purpose": "which baseline version the outlier is against",
        "result": {
         "metric_id": "insights.token_outlier",
@@ -1342,7 +1357,7 @@
        "requested_by": "llm",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 0.153,
+       "latency_ms": 0.113,
        "purpose": "does action count rise with tokens",
        "result": {
         "quantity": "actions",
@@ -1360,7 +1375,7 @@
        "requested_by": "llm",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 0.097,
+       "latency_ms": 0.087,
        "purpose": "is the sequence itself unusual",
        "result": {
         "calls": 7,
@@ -1399,7 +1414,8 @@
         "metric:activity.action_rate_ratio",
         "metric:access.first_seen_mcp",
         "metric:insights.retry",
-        "metric:insights.repetition"
+        "metric:insights.repetition",
+        "tool:8d59498e-9ce4-5ec1-a2ea-debbf18fa3a7"
        ],
        "tools_exposed": [
         "retrieve_trace_window",
@@ -1408,7 +1424,7 @@
         "calculate_deviation",
         "analyse_tool_call_sequence"
        ],
-       "latency_ms": 0.692,
+       "latency_ms": 1.003,
        "cost_usd": null,
        "cost_basis": "unpriced"
       },
@@ -1426,6 +1442,7 @@
         "metric:access.first_seen_mcp",
         "metric:insights.retry",
         "metric:insights.repetition",
+        "tool:8d59498e-9ce4-5ec1-a2ea-debbf18fa3a7",
         "tool:36112468-bcbc-5d7d-af06-d9b158f09f90",
         "tool:5beeaf11-40e7-53a7-b237-08dd3be0d0d7"
        ],
@@ -1436,7 +1453,7 @@
         "calculate_deviation",
         "analyse_tool_call_sequence"
        ],
-       "latency_ms": 2.137,
+       "latency_ms": 2.249,
        "cost_usd": null,
        "cost_basis": "unpriced"
       },
@@ -1454,6 +1471,7 @@
         "metric:access.first_seen_mcp",
         "metric:insights.retry",
         "metric:insights.repetition",
+        "tool:8d59498e-9ce4-5ec1-a2ea-debbf18fa3a7",
         "tool:36112468-bcbc-5d7d-af06-d9b158f09f90",
         "tool:5beeaf11-40e7-53a7-b237-08dd3be0d0d7",
         "tool:1d7923af-395e-5e70-a13c-3bbeaf15cd59",
@@ -1466,7 +1484,7 @@
         "calculate_deviation",
         "analyse_tool_call_sequence"
        ],
-       "latency_ms": 2.523,
+       "latency_ms": 2.448,
        "cost_usd": null,
        "cost_basis": "unpriced"
       }
@@ -1721,7 +1739,7 @@
          "value": 1.0,
          "weight": 0.1,
          "contribution": 0.1,
-         "basis": "3 of 3 tools returned OK"
+         "basis": "4 of 4 tools returned OK"
         },
         "authority": {
          "value": 1.0,
@@ -1986,24 +2004,24 @@
      },
      "node_timings": {
       "receive_case": 0.007,
-      "load_inputs": 0.004,
-      "validate_evidence": 0.134,
-      "retrieve_memory": 1.306,
-      "computational_baseline": 0.213,
-      "evidence_precheck": 0.059,
-      "llm_plan_investigation": 1.308,
-      "validate_tool_request": 0.011,
-      "execute_authorised_tool": 0.265,
+      "load_inputs": 0.005,
+      "validate_evidence": 0.109,
+      "retrieve_memory": 1.614,
+      "computational_baseline": 42.885,
+      "evidence_precheck": 0.054,
+      "llm_plan_investigation": 1.61,
+      "validate_tool_request": 0.008,
+      "execute_authorised_tool": 0.213,
       "validate_tool_result": 0.003,
-      "llm_assess_evidence": 3.066,
-      "formulate_finding": 0.089,
-      "independent_verify": 0.454,
-      "grade_and_route": 0.167,
-      "authority_check": 0.085,
-      "execute_action": 0.042,
-      "record_decision": 0.015,
-      "validate_memory_update": 4.548,
-      "persist_and_publish": 4.225
+      "llm_assess_evidence": 3.098,
+      "formulate_finding": 0.086,
+      "independent_verify": 11.634,
+      "grade_and_route": 0.197,
+      "authority_check": 0.087,
+      "execute_action": 0.035,
+      "record_decision": 0.021,
+      "validate_memory_update": 3.591,
+      "persist_and_publish": 26.769
      }
     },
     {
@@ -2024,7 +2042,7 @@
       "status": "SUBSTANTIVE",
       "confidence": 0.9,
       "verified": true,
-      "rationale": "evidence insufficient; telemetry.collector_coverage=0.5 (EXCEPTION); telemetry.unknown_share=0.25 (WARNING); cannot judge: insights.stalled, insights.outside, insights.blocked, insights.lockfile, insights.unattributed; rows by collector: otel 10",
+      "rationale": "evidence insufficient; telemetry.collector_coverage=0.5 (EXCEPTION); telemetry.unknown_share=0.25 (WARNING); cannot judge: insights.stalled, insights.outside, insights.blocked, insights.lockfile, insights.unattributed; rows by collector: otel 10; not fully assessed: RM-2, RM-3, RM-4, RM-5",
       "severity": "MEDIUM",
       "claims": [
        {
@@ -2076,6 +2094,70 @@
          "tool:0d275ad4-24cc-5f75-954c-d2310245a22a"
         ],
         "origin": "computational"
+       },
+       {
+        "statement": "telemetry.collector_coverage is 0.5",
+        "kind": "metric_value",
+        "metric_id": "telemetry.collector_coverage",
+        "asserted_state": null,
+        "asserted_value": 0.5,
+        "tool_call_id": null,
+        "result_field": null,
+        "record_id": null,
+        "upstream_cop": null,
+        "upstream_label": null,
+        "evidence_refs": [
+         "metric:telemetry.collector_coverage"
+        ],
+        "origin": "computational"
+       },
+       {
+        "statement": "telemetry.turn_linkage is 1.0",
+        "kind": "metric_value",
+        "metric_id": "telemetry.turn_linkage",
+        "asserted_state": null,
+        "asserted_value": 1.0,
+        "tool_call_id": null,
+        "result_field": null,
+        "record_id": null,
+        "upstream_cop": null,
+        "upstream_label": null,
+        "evidence_refs": [
+         "metric:telemetry.turn_linkage"
+        ],
+        "origin": "computational"
+       },
+       {
+        "statement": "telemetry.unknown_share is 0.25",
+        "kind": "metric_value",
+        "metric_id": "telemetry.unknown_share",
+        "asserted_state": null,
+        "asserted_value": 0.25,
+        "tool_call_id": null,
+        "result_field": null,
+        "record_id": null,
+        "upstream_cop": null,
+        "upstream_label": null,
+        "evidence_refs": [
+         "metric:telemetry.unknown_share"
+        ],
+        "origin": "computational"
+       },
+       {
+        "statement": "RM-1 answered EXPECTED_COLLECTORS_MISSING (DEGRADED_TELEMETRY): EXPECTED_COLLECTORS_MISSING",
+        "kind": "tool_observation",
+        "metric_id": null,
+        "asserted_state": null,
+        "asserted_value": "EXPECTED_COLLECTORS_MISSING",
+        "tool_call_id": "55b1839a-da67-5ff0-8be7-4e28d2243554",
+        "result_field": "questions.RM-1.answer.outcome",
+        "record_id": null,
+        "upstream_cop": null,
+        "upstream_label": null,
+        "evidence_refs": [
+         "tool:55b1839a-da67-5ff0-8be7-4e28d2243554"
+        ],
+        "origin": "computational"
        }
       ],
       "missing_evidence": [],
@@ -2084,8 +2166,10 @@
       "qualifications": [],
       "lineage": [
        "telemetry.collector_coverage",
+       "telemetry.turn_linkage",
        "telemetry.unknown_share",
-       "tool_call:0d275ad4-24cc-5f75-954c-d2310245a22a"
+       "tool_call:0d275ad4-24cc-5f75-954c-d2310245a22a",
+       "tool_call:55b1839a-da67-5ff0-8be7-4e28d2243554"
       ],
       "baseline": null
      },
@@ -2096,15 +2180,15 @@
       "label_class": "attention",
       "assessed": "finding",
       "decision": "SUPPORTED",
-      "basis": "support 0.5846 >= supported_min 0.3462, corroborated by 2 sources, against 0 <= 0.1",
+      "basis": "support 0.6824 >= supported_min 0.2647, corroborated by 2 sources, against 0 <= 0.1",
       "limitations": [],
-      "score": 0.5846,
+      "score": 0.6824,
       "against": 0,
-      "unknown": 0.4154,
+      "unknown": 0.3176,
       "dimensions": {
-       "relevance": 0.6667,
-       "reliability": 0.9667,
-       "completeness": 0.9231,
+       "relevance": 0.75,
+       "reliability": 0.975,
+       "completeness": 0.9412,
        "consistency": 1.0,
        "corroboration": 2
       },
@@ -2113,13 +2197,13 @@
        "telemetry"
       ],
       "thresholds": {
-       "total_weight": 3.25,
+       "total_weight": 4.25,
        "required_weight": 1.0,
        "primary_weight": 1.0,
        "smallest_corroborating_weight": 0.25,
-       "supported_min": 0.3462,
-       "provisional_min": 0.1846,
-       "reject_min": 0.1846,
+       "supported_min": 0.2647,
+       "provisional_min": 0.1412,
+       "reject_min": 0.1412,
        "max_against_supported": 0.1,
        "min_corroboration_supported": 2,
        "derivation": {
@@ -2155,8 +2239,8 @@
        },
        {
         "check": "MC-01",
-        "result": "NOT_RUN",
-        "reason": "no_recomputable_claim",
+        "result": "PASS",
+        "reason": "recomputed",
         "kind": "factual: cited metric values recompute from raw observables"
        },
        {
@@ -2237,7 +2321,7 @@
          "applicable": true,
          "retrievable_with": []
         },
-        "contribution": 0.2769
+        "contribution": 0.2118
        },
        {
         "name": "tool:get_collector_breakdown",
@@ -2285,7 +2369,31 @@
          "applicable": true,
          "retrievable_with": []
         },
-        "contribution": 0.3077
+        "contribution": 0.2353
+       },
+       {
+        "name": "tool:assess_runtime_evidence",
+        "kind": "record",
+        "relevance": "direct",
+        "weight": 1.0,
+        "required": null,
+        "source": "measurement_tool",
+        "tools": [
+         "assess_runtime_evidence"
+        ],
+        "metrics": [],
+        "item": {
+         "direction": "supports",
+         "strength": 1.0,
+         "reliability": 1.0,
+         "basis": "cited and checked by SC-01: RM-1 answered EXPECTED_COLLECTORS_MISSING (DEGRADED_TELEMETRY): EXPECTED_COLLECTORS_MISSING",
+         "refs": [
+          "tool:55b1839a-da67-5ff0-8be7-4e28d2243554"
+         ],
+         "applicable": true,
+         "retrievable_with": []
+        },
+        "contribution": 0.2353
        },
        {
         "name": "validated_memory",
@@ -2363,7 +2471,7 @@
        "requested_by": "rules",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 0.059,
+       "latency_ms": 0.07,
        "purpose": null,
        "result": {
         "rows_by_collector": {
@@ -2378,7 +2486,7 @@
        "requested_by": "rules",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 0.051,
+       "latency_ms": 0.04,
        "purpose": null,
        "result": {
         "tool": "claude-code",
@@ -2392,6 +2500,21 @@
         "missing": [
          "local_hooks"
         ]
+       }
+      },
+      {
+       "tool_call_id": "55b1839a-da67-5ff0-8be7-4e28d2243554",
+       "tool": "assess_runtime_evidence",
+       "args": {},
+       "requested_by": "rules",
+       "status": "OK",
+       "rejection_reason": null,
+       "latency_ms": 14.341,
+       "purpose": null,
+       "result": {
+        "truncated": true,
+        "bytes": 27201,
+        "preview": "{\"questions\": {\"RM-1\": {\"assessment\": {\"cop\": \"runtime_monitoring\", \"question_id\": \"RM-1\", \"question\": \"Are the expected telemetry collectors operating and providing the required data?\", \"presence\": {\"status\": \"PRESENT\", \"items\": [{\"requirement\": \"telemetry.collector_coverage\", \"kind\": \"REQUIRED\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 0.5, \"metric_state\": \"EXCEPTION\", \"features\": {\"expected\": [\"local_hooks\", \"otel\"], \"present\": [\"otel\"], \"missing\": [\"local_hooks\"]}, \"evidence_refs\": []}, {\"requirement\": \"collector_heartbeat\", \"kind\": \"OPTIONAL\", \"state\": \"NOT_CALCULATED\", \"reason\": \"not calculated by signal_metrics.py\", \"value\": null, \"metric_state\": null, \"features\": {}, \"evidence_refs\": []}, {\"requirement\": \"collector_errors\", \"kind\": \"OPTIONAL\", \"state\": \"NOT_CALCULATED\", \"reason\": \"not calculated by signal_metrics.py\", \"value\": null, \"metric_state\": null, \"features\": {}, \"evidence_refs\": []}], \"fields\": {\"collector\": {\"rows_with_value\": 10, \"rows\": 10, \"status\": \"PRESENT\"}, \"observable_id\": {\"rows_with_value\": 10, \"rows\": 10, \"status\": \"PRESENT\"}, \"observable_type\": {\"rows_with_value\": 10, \"rows\": 10, \"status\": \"PRESENT\"}, \"session_id\": {\"rows_with_value\": 10, \"rows\": 10, \"status\": \"PRESENT\"}, \"agent_id\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"raw_ref\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}}}, \"reliability\": {\"status\": \"RELIABLE\", \"checks\": [{\"check\": \"CONFLICTING_SOURCES\", \"value\": null, \"evidence_refs\": [], \"evidence\": {\"collectors\": [\"otel\"], \"rows\": 10, \"cross_checked\": 0, \"disagreed\": 0}, \"outcome\": \"COMPARISON_NOT_POSSIBLE\", \"detail\": \"only one source (otel) observed this activity\", \"source\": \"telemetry.source_agreement\", \"metric_value\": null}, {\"check\": \"CONFLICTING_ACTION_SOURCES\", \"value\": null, \"evidence_refs\": [], \"evidence\": {\"collectors\": [\"otel\"], \"rows\": 7, \"cross_checked\": 0, \"disagreed\": 0}, \"outcome\": \"COMPARISON_NOT_POSSIBLE\", \"detail\": \"only one source (otel) observed this activity\", \"source\": \"collectors_agree on action rows\"}, {\"check\": \"UNVERIFIABLE_PROVENANCE\", \"outcome\": \"EVIDENCE_MISSING\", \"detail\": \"raw_ref was not read for this session\", \"source\": \"audit_source_provenance_completeness\", \"evidence_refs\": []}, {\"check\": \"UNVERIFIABLE_PROVENANCE\", \"outcome\": \"NOT_EXECUTED\", \"detail\": \"the raw event store was not supplied, so no row was linked to a source event\", \"source\": \"source_events\", \"evidence_refs\": [], \"not_executed_because\": \"RAW_STORE_NOT_SUPPLIED\"}, {\"check\": \"INCOMPARABLE_TIMESTAMPS\", \"outcome\": \"EVIDENCE_MISSING\", \"detail\": \"no row carries occurred_at, captured_at and ingested_at\", \"source\": \"audit_timestamp_integrity\", \"evidence_refs\": []}, {\"check\": \"TIMESTAMP_ORDER\", \"outcome\": \"EVIDENCE_MISSING\", \"detail\": \"no row carries occurred_at, captured_at and ingested_at\", \"source\": \"audit_timestamp_integrity\", \"evidence_refs\": []}, {\"check\": \"INGEST_LATENCY\", \"outcome\": \"EVIDENCE_MISSING\", \"detail\": \"basis absent: ingest\", \"source\": \"event_freshness_live\", \"evidence_refs\": []}, {\"check\": \"STALE\", \"value\": 1688401.0, \"limit\": null, \"limit_key\": \"max_evidence_age_s\", \"evidence_refs\": [], \"outcome\": \"NOT_EXECUTED\", \"not_executed_because\": \"LIMIT_NOT_APPROVED\", \"detail\": \"age of the newest observation at evaluation time is 1688401.0 s; no evidence_limits.max_evidence_age_s has been approved\", \"newest_observation\": \"2026-10-09T10:59:59+00:00\", \"evaluated_at\": \"2026-10-29T00:00:00+00:00\", \"source\": \"occurred_at against the evaluation time\"}, {\"check\": \"DISCONTINUITY\", \"outcome\": \"EVIDENCE_MISSING\", \"detail\": \"basis absent: results\", \"source\": \"missing_event_rate\", \"evidence_refs\": []}], \"blocking_checks\": [], \"verified_checks\": []}, \"findings\": [], \"sufficiency\": {\"status\": \"SUFFICIENT\", \"reasons\": [], \"not_assessed\": [{\"requirement\": \"collector_heartbeat\", \"state\": \"NOT_CALCULATED\", \"detail\": \"not calculated by signal_metrics.py\"}, {\"requirement\": \"collector_errors\", \"state\": \"NOT_CALCULATED\", \"detail\": \"not calculated by signal_metrics.py\"}], \"missing_req"
        }
       }
      ],
@@ -2432,9 +2555,9 @@
       },
       {
        "check_id": "MC-01",
-       "result": "NOT_RUN",
-       "reason_code": "no_recomputable_claim",
-       "detail": "no cited metric has an independent raw recomputation",
+       "result": "PASS",
+       "reason_code": "recomputed",
+       "detail": "recomputed ['telemetry.collector_coverage', 'telemetry.collector_coverage']",
        "effect": "BLOCKS_FINDING",
        "subject": ""
       },
@@ -2490,7 +2613,7 @@
        "check_id": "VS-01",
        "result": "PASS",
        "reason_code": "SUPPORTED",
-       "detail": "support 0.5846 >= supported_min 0.3462, corroborated by 2 sources, against 0 <= 0.1",
+       "detail": "support 0.6824 >= supported_min 0.2647, corroborated by 2 sources, against 0 <= 0.1",
        "effect": "BLOCKS_FINDING",
        "subject": ""
       },
@@ -2535,7 +2658,7 @@
       "evidence_support": {
        "score": 4,
        "meaning": "strong support with bounded, named limitations",
-       "rule": "SUPPORTED: support 0.5846 >= supported_min 0.3462, corroborated by 2 sources, against 0 <= 0.1",
+       "rule": "SUPPORTED: support 0.6824 >= supported_min 0.2647, corroborated by 2 sources, against 0 <= 0.1",
        "reading": "INSUFFICIENT",
        "candidate_verification": "VERIFIED",
        "provisional": false,
@@ -2545,14 +2668,21 @@
          "evidence": [
           "attention state observed (claimed severity MEDIUM): telemetry.collector_coverage=EXCEPTION (0.5), telemetry.unknown_share=WARNING (0.25)"
          ],
-         "contribution": 0.2769
+         "contribution": 0.2118
         },
         {
          "kind": "tool:check_collector_expectations",
          "evidence": [
           "cited and checked by SC-01: expected collectors missing: local_hooks"
          ],
-         "contribution": 0.3077
+         "contribution": 0.2353
+        },
+        {
+         "kind": "tool:assess_runtime_evidence",
+         "evidence": [
+          "cited and checked by SC-01: RM-1 answered EXPECTED_COLLECTORS_MISSING (DEGRADED_TELEMETRY): EXPECTED_COLLECTORS_MISSING"
+         ],
+         "contribution": 0.2353
         }
        ],
        "limiting": [
@@ -2570,14 +2700,14 @@
        },
        "verification_support": {
         "decision": "SUPPORTED",
-        "basis": "support 0.5846 >= supported_min 0.3462, corroborated by 2 sources, against 0 <= 0.1",
-        "score": 0.5846,
+        "basis": "support 0.6824 >= supported_min 0.2647, corroborated by 2 sources, against 0 <= 0.1",
+        "score": 0.6824,
         "against": 0,
-        "unknown": 0.4154,
+        "unknown": 0.3176,
         "dimensions": {
-         "relevance": 0.6667,
-         "reliability": 0.9667,
-         "completeness": 0.9231,
+         "relevance": 0.75,
+         "reliability": 0.975,
+         "completeness": 0.9412,
          "consistency": 1.0,
          "corroboration": 2
         },
@@ -2628,7 +2758,7 @@
          "value": 1.0,
          "weight": 0.1,
          "contribution": 0.1,
-         "basis": "2 of 2 tools returned OK"
+         "basis": "3 of 3 tools returned OK"
         },
         "authority": {
          "value": 1.0,
@@ -2872,19 +3002,19 @@
       }
      },
      "node_timings": {
-      "receive_case": 0.006,
+      "receive_case": 0.007,
       "load_inputs": 0.002,
-      "validate_evidence": 0.073,
-      "retrieve_memory": 1.196,
-      "computational_baseline": 0.29,
-      "evidence_precheck": 0.049,
-      "independent_verify": 0.384,
-      "grade_and_route": 0.14,
-      "authority_check": 0.078,
-      "execute_action": 0.032,
-      "record_decision": 0.013,
-      "validate_memory_update": 1.874,
-      "persist_and_publish": 2.205
+      "validate_evidence": 0.101,
+      "retrieve_memory": 2.146,
+      "computational_baseline": 24.021,
+      "evidence_precheck": 0.062,
+      "independent_verify": 10.108,
+      "grade_and_route": 0.182,
+      "authority_check": 0.097,
+      "execute_action": 0.037,
+      "record_decision": 0.022,
+      "validate_memory_update": 5.673,
+      "persist_and_publish": 32.203
      }
     },
     {
@@ -3375,7 +3505,7 @@
        "requested_by": "rules",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 0.123,
+       "latency_ms": 0.124,
        "purpose": null,
        "result": {
         "calls": 7,
@@ -3407,7 +3537,7 @@
        "requested_by": "rules",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 1.943,
+       "latency_ms": 1.363,
        "purpose": null,
        "result": {
         "history": {
@@ -3935,19 +4065,19 @@
       }
      },
      "node_timings": {
-      "receive_case": 0.004,
-      "load_inputs": 0.003,
-      "validate_evidence": 0.06,
-      "retrieve_memory": 1.47,
-      "computational_baseline": 2.283,
-      "evidence_precheck": 0.052,
-      "independent_verify": 0.498,
-      "grade_and_route": 0.172,
-      "authority_check": 0.078,
-      "execute_action": 0.034,
-      "record_decision": 0.014,
-      "validate_memory_update": 2.987,
-      "persist_and_publish": 2.714
+      "receive_case": 0.016,
+      "load_inputs": 0.004,
+      "validate_evidence": 0.101,
+      "retrieve_memory": 2.146,
+      "computational_baseline": 1.691,
+      "evidence_precheck": 0.062,
+      "independent_verify": 0.422,
+      "grade_and_route": 0.187,
+      "authority_check": 0.079,
+      "execute_action": 0.057,
+      "record_decision": 0.018,
+      "validate_memory_update": 2.561,
+      "persist_and_publish": 2.723
      }
     },
     {
@@ -4363,7 +4493,7 @@
        "requested_by": "rules",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 0.077,
+       "latency_ms": 0.099,
        "purpose": null,
        "result": {
         "objective": "make tests/test_api.py pass",
@@ -4386,7 +4516,7 @@
        "requested_by": "rules",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 0.074,
+       "latency_ms": 0.092,
        "purpose": null,
        "result": {
         "transitions": {
@@ -4418,7 +4548,7 @@
        "requested_by": "llm",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 0.063,
+       "latency_ms": 0.098,
        "purpose": "is the objective reached",
        "result": {
         "objective": "make tests/test_api.py pass",
@@ -4441,7 +4571,7 @@
        "requested_by": "llm",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 0.068,
+       "latency_ms": 0.092,
        "purpose": "is the agent cycling",
        "result": {
         "transitions": {
@@ -4489,7 +4619,7 @@
         "compare_workflow_failures",
         "retrieve_trace_window"
        ],
-       "latency_ms": 0.465,
+       "latency_ms": 1.152,
        "cost_usd": null,
        "cost_basis": "unpriced"
       },
@@ -4516,7 +4646,7 @@
         "compare_workflow_failures",
         "retrieve_trace_window"
        ],
-       "latency_ms": 1.766,
+       "latency_ms": 2.317,
        "cost_usd": null,
        "cost_basis": "unpriced"
       }
@@ -5024,25 +5154,25 @@
       }
      },
      "node_timings": {
-      "receive_case": 0.005,
-      "load_inputs": 0.002,
-      "validate_evidence": 0.054,
-      "retrieve_memory": 1.208,
-      "computational_baseline": 0.252,
-      "evidence_precheck": 0.044,
-      "llm_plan_investigation": 0.908,
-      "validate_tool_request": 0.006,
-      "execute_authorised_tool": 0.142,
-      "validate_tool_result": 0.003,
-      "llm_assess_evidence": 2.508,
-      "formulate_finding": 0.067,
-      "independent_verify": 0.256,
-      "grade_and_route": 0.126,
-      "authority_check": 0.062,
-      "execute_action": 0.035,
-      "record_decision": 0.012,
-      "validate_memory_update": 2.355,
-      "persist_and_publish": 3.04
+      "receive_case": 0.006,
+      "load_inputs": 0.003,
+      "validate_evidence": 0.08,
+      "retrieve_memory": 2.335,
+      "computational_baseline": 0.335,
+      "evidence_precheck": 1.08,
+      "llm_plan_investigation": 1.855,
+      "validate_tool_request": 0.01,
+      "execute_authorised_tool": 0.206,
+      "validate_tool_result": 0.004,
+      "llm_assess_evidence": 2.999,
+      "formulate_finding": 0.093,
+      "independent_verify": 0.389,
+      "grade_and_route": 0.179,
+      "authority_check": 0.088,
+      "execute_action": 0.047,
+      "record_decision": 0.022,
+      "validate_memory_update": 4.009,
+      "persist_and_publish": 7.433
      }
     },
     {
@@ -5525,7 +5655,7 @@
        "requested_by": "rules",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 0.125,
+       "latency_ms": 0.135,
        "purpose": null,
        "result": {
         "calls": 7,
@@ -5557,7 +5687,7 @@
        "requested_by": "rules",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 1.504,
+       "latency_ms": 1.524,
        "purpose": null,
        "result": {
         "history": {
@@ -6088,17 +6218,17 @@
      "node_timings": {
       "receive_case": 0.005,
       "load_inputs": 0.004,
-      "validate_evidence": 0.07,
-      "retrieve_memory": 1.633,
-      "computational_baseline": 1.806,
-      "evidence_precheck": 0.049,
-      "independent_verify": 0.397,
-      "grade_and_route": 0.153,
-      "authority_check": 0.077,
-      "execute_action": 0.033,
-      "record_decision": 0.013,
-      "validate_memory_update": 2.206,
-      "persist_and_publish": 2.53
+      "validate_evidence": 0.081,
+      "retrieve_memory": 2.291,
+      "computational_baseline": 1.858,
+      "evidence_precheck": 0.072,
+      "independent_verify": 0.467,
+      "grade_and_route": 0.172,
+      "authority_check": 0.084,
+      "execute_action": 0.047,
+      "record_decision": 0.028,
+      "validate_memory_update": 2.931,
+      "persist_and_publish": 4.365
      }
     },
     {
@@ -6554,6 +6684,21 @@
      ],
      "tool_calls": [
       {
+       "tool_call_id": "8d59498e-9ce4-5ec1-a2ea-debbf18fa3a7",
+       "tool": "assess_anomaly_questions",
+       "args": {},
+       "requested_by": "rules",
+       "status": "OK",
+       "rejection_reason": null,
+       "latency_ms": 19.992,
+       "purpose": null,
+       "result": {
+        "truncated": true,
+        "bytes": 33188,
+        "preview": "{\"questions\": {\"AD-1\": {\"assessment\": {\"cop\": \"anomaly_detection\", \"question_id\": \"AD-1\", \"question\": \"Is the agent repeating actions, retrying operations or failing unusually often?\", \"presence\": {\"status\": \"PRESENT\", \"items\": [{\"requirement\": \"insights.repetition\", \"kind\": \"REQUIRED\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 4, \"metric_state\": \"EXCEPTION\", \"features\": {\"by_tool\": {\"Bash\": 4}}, \"evidence_refs\": [\"observable:ca1-6\", \"observable:ca1-7\", \"observable:ca1-8\", \"observable:ca1-9\"]}, {\"requirement\": \"insights.retry\", \"kind\": \"REQUIRED_WHEN_APPLICABLE\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 4, \"metric_state\": \"EXCEPTION\", \"features\": {\"distinct_commands\": 1}, \"evidence_refs\": [\"observable:ca1-6\", \"observable:ca1-7\", \"observable:ca1-8\", \"observable:ca1-9\"]}, {\"requirement\": \"insights.failed\", \"kind\": \"REQUIRED\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 5, \"metric_state\": \"EXCEPTION\", \"features\": {\"failure_rate\": 0.714}, \"evidence_refs\": [\"observable:ca1-5\", \"observable:ca1-6\", \"observable:ca1-7\", \"observable:ca1-8\", \"observable:ca1-9\"]}, {\"requirement\": \"telemetry.turn_linkage\", \"kind\": \"REQUIRED_WHEN_APPLICABLE\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 1.0, \"metric_state\": \"NORMAL\", \"features\": {\"steps\": 8, \"without_turn\": 0}, \"evidence_refs\": []}], \"fields\": {\"session_id\": {\"rows_with_value\": 10, \"rows\": 10, \"status\": \"PRESENT\"}, \"turn_id\": {\"rows_with_value\": 10, \"rows\": 10, \"status\": \"PRESENT\"}, \"tool_use_id\": {\"rows_with_value\": 7, \"rows\": 10, \"status\": \"PARTIAL\"}, \"tool_name\": {\"rows_with_value\": 7, \"rows\": 10, \"status\": \"PARTIAL\"}, \"tool_arguments\": {\"rows_with_value\": 7, \"rows\": 10, \"status\": \"PARTIAL\"}, \"tool_result\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"success\": {\"rows_with_value\": 7, \"rows\": 10, \"status\": \"PARTIAL\"}, \"status\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"error_type\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"error_message\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"exit_code\": {\"rows_with_value\": 5, \"rows\": 10, \"status\": \"PARTIAL\"}, \"loop_count\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"turn_count\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"command\": {\"rows_with_value\": 5, \"rows\": 10, \"status\": \"PARTIAL\"}}}, \"reliability\": {\"status\": \"RELIABLE\", \"checks\": [{\"check\": \"CONFLICTING_SOURCES\", \"value\": null, \"evidence_refs\": [], \"evidence\": {\"collectors\": [\"otel\"], \"rows\": 10, \"cross_checked\": 0, \"disagreed\": 0}, \"outcome\": \"COMPARISON_NOT_POSSIBLE\", \"detail\": \"only one source (otel) observed this activity\", \"source\": \"telemetry.source_agreement\", \"metric_value\": null}, {\"check\": \"CONFLICTING_ACTION_SOURCES\", \"value\": null, \"evidence_refs\": [], \"evidence\": {\"collectors\": [\"otel\"], \"rows\": 7, \"cross_checked\": 0, \"disagreed\": 0}, \"outcome\": \"COMPARISON_NOT_POSSIBLE\", \"detail\": \"only one source (otel) observed this activity\", \"source\": \"collectors_agree on action rows\"}, {\"check\": \"UNVERIFIABLE_PROVENANCE\", \"outcome\": \"EVIDENCE_MISSING\", \"detail\": \"raw_ref was not read for this session\", \"source\": \"audit_source_provenance_completeness\", \"evidence_refs\": []}, {\"check\": \"UNVERIFIABLE_PROVENANCE\", \"outcome\": \"NOT_EXECUTED\", \"detail\": \"the raw event store was not supplied, so no row was linked to a source event\", \"source\": \"source_events\", \"evidence_refs\": [], \"not_executed_because\": \"RAW_STORE_NOT_SUPPLIED\"}, {\"check\": \"INCOMPARABLE_TIMESTAMPS\", \"outcome\": \"EVIDENCE_MISSING\", \"detail\": \"no row carries occurred_at, captured_at and ingested_at\", \"source\": \"audit_timestamp_integrity\", \"evidence_refs\": []}, {\"check\": \"TIMESTAMP_ORDER\", \"outcome\": \"EVIDENCE_MISSING\", \"detail\": \"no row carries occurred_at, captured_at and ingested_at\", \"source\": \"audit_timestamp_integrity\", \"evidence_refs\": []}, {\"check\": \"INGEST_LATENCY\", \"outcome\": \"EVIDENCE_MISSING\", \"detail\": \"basis absent: ingest\", \"source\": \"event_freshness_live\", \"evidence_refs\": []}, {\"check\": \"STALE\", \"value\": 1688401.0, \"limit\": null, \"limit_ke"
+       }
+      },
+      {
        "tool_call_id": "d87a73bf-5522-5469-a260-74c356c10a16",
        "tool": "calculate_deviation",
        "args": {
@@ -6562,7 +6707,7 @@
        "requested_by": "llm",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 0.141,
+       "latency_ms": 0.154,
        "purpose": "raw token deviation against comparable sessions",
        "result": {
         "quantity": "tokens",
@@ -6582,7 +6727,7 @@
        "requested_by": "llm",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 0.085,
+       "latency_ms": 0.199,
        "purpose": "which baseline version the outlier is against",
        "result": {
         "metric_id": "insights.token_outlier",
@@ -6604,7 +6749,7 @@
        "requested_by": "llm",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 0.166,
+       "latency_ms": 0.184,
        "purpose": "does action count rise with tokens",
        "result": {
         "quantity": "actions",
@@ -6622,7 +6767,7 @@
        "requested_by": "llm",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 0.149,
+       "latency_ms": 0.096,
        "purpose": "is the sequence itself unusual",
        "result": {
         "calls": 7,
@@ -6661,7 +6806,8 @@
         "metric:activity.action_rate_ratio",
         "metric:access.first_seen_mcp",
         "metric:insights.retry",
-        "metric:insights.repetition"
+        "metric:insights.repetition",
+        "tool:8d59498e-9ce4-5ec1-a2ea-debbf18fa3a7"
        ],
        "tools_exposed": [
         "retrieve_trace_window",
@@ -6670,7 +6816,7 @@
         "calculate_deviation",
         "analyse_tool_call_sequence"
        ],
-       "latency_ms": 1.147,
+       "latency_ms": 0.998,
        "cost_usd": null,
        "cost_basis": "unpriced"
       },
@@ -6688,6 +6834,7 @@
         "metric:access.first_seen_mcp",
         "metric:insights.retry",
         "metric:insights.repetition",
+        "tool:8d59498e-9ce4-5ec1-a2ea-debbf18fa3a7",
         "tool:d87a73bf-5522-5469-a260-74c356c10a16",
         "tool:f1481d65-f58b-5e66-8c12-2aa69f14fc08"
        ],
@@ -6698,7 +6845,7 @@
         "calculate_deviation",
         "analyse_tool_call_sequence"
        ],
-       "latency_ms": 2.284,
+       "latency_ms": 2.552,
        "cost_usd": null,
        "cost_basis": "unpriced"
       },
@@ -6716,6 +6863,7 @@
         "metric:access.first_seen_mcp",
         "metric:insights.retry",
         "metric:insights.repetition",
+        "tool:8d59498e-9ce4-5ec1-a2ea-debbf18fa3a7",
         "tool:d87a73bf-5522-5469-a260-74c356c10a16",
         "tool:f1481d65-f58b-5e66-8c12-2aa69f14fc08",
         "tool:51f50d92-0a61-5e5d-b324-fde6a9069fed",
@@ -6728,7 +6876,7 @@
         "calculate_deviation",
         "analyse_tool_call_sequence"
        ],
-       "latency_ms": 2.081,
+       "latency_ms": 2.716,
        "cost_usd": null,
        "cost_basis": "unpriced"
       }
@@ -6977,7 +7125,7 @@
          "value": 1.0,
          "weight": 0.1,
          "contribution": 0.1,
-         "basis": "3 of 3 tools returned OK"
+         "basis": "4 of 4 tools returned OK"
         },
         "authority": {
          "value": 1.0,
@@ -7241,25 +7389,25 @@
       }
      },
      "node_timings": {
-      "receive_case": 0.005,
-      "load_inputs": 0.003,
-      "validate_evidence": 0.081,
-      "retrieve_memory": 1.585,
-      "computational_baseline": 0.205,
-      "evidence_precheck": 0.058,
-      "llm_plan_investigation": 1.645,
-      "validate_tool_request": 0.009,
-      "execute_authorised_tool": 0.33,
-      "validate_tool_result": 0.003,
-      "llm_assess_evidence": 2.612,
-      "formulate_finding": 0.16,
-      "independent_verify": 0.432,
-      "grade_and_route": 0.153,
-      "authority_check": 0.076,
-      "execute_action": 0.035,
-      "record_decision": 0.017,
-      "validate_memory_update": 2.23,
-      "persist_and_publish": 10.355
+      "receive_case": 0.008,
+      "load_inputs": 0.004,
+      "validate_evidence": 0.154,
+      "retrieve_memory": 1.818,
+      "computational_baseline": 32.114,
+      "evidence_precheck": 0.067,
+      "llm_plan_investigation": 1.754,
+      "validate_tool_request": 0.01,
+      "execute_authorised_tool": 0.296,
+      "validate_tool_result": 0.004,
+      "llm_assess_evidence": 3.369,
+      "formulate_finding": 0.135,
+      "independent_verify": 14.486,
+      "grade_and_route": 0.178,
+      "authority_check": 0.084,
+      "execute_action": 0.036,
+      "record_decision": 0.023,
+      "validate_memory_update": 3.402,
+      "persist_and_publish": 28.855
      }
     }
    ],
@@ -7716,6 +7864,21 @@
     ],
     "tool_calls": [
      {
+      "tool_call_id": "8d59498e-9ce4-5ec1-a2ea-debbf18fa3a7",
+      "tool": "assess_anomaly_questions",
+      "args": {},
+      "requested_by": "rules",
+      "status": "OK",
+      "rejection_reason": null,
+      "latency_ms": 19.992,
+      "purpose": null,
+      "result": {
+       "truncated": true,
+       "bytes": 33188,
+       "preview": "{\"questions\": {\"AD-1\": {\"assessment\": {\"cop\": \"anomaly_detection\", \"question_id\": \"AD-1\", \"question\": \"Is the agent repeating actions, retrying operations or failing unusually often?\", \"presence\": {\"status\": \"PRESENT\", \"items\": [{\"requirement\": \"insights.repetition\", \"kind\": \"REQUIRED\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 4, \"metric_state\": \"EXCEPTION\", \"features\": {\"by_tool\": {\"Bash\": 4}}, \"evidence_refs\": [\"observable:ca1-6\", \"observable:ca1-7\", \"observable:ca1-8\", \"observable:ca1-9\"]}, {\"requirement\": \"insights.retry\", \"kind\": \"REQUIRED_WHEN_APPLICABLE\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 4, \"metric_state\": \"EXCEPTION\", \"features\": {\"distinct_commands\": 1}, \"evidence_refs\": [\"observable:ca1-6\", \"observable:ca1-7\", \"observable:ca1-8\", \"observable:ca1-9\"]}, {\"requirement\": \"insights.failed\", \"kind\": \"REQUIRED\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 5, \"metric_state\": \"EXCEPTION\", \"features\": {\"failure_rate\": 0.714}, \"evidence_refs\": [\"observable:ca1-5\", \"observable:ca1-6\", \"observable:ca1-7\", \"observable:ca1-8\", \"observable:ca1-9\"]}, {\"requirement\": \"telemetry.turn_linkage\", \"kind\": \"REQUIRED_WHEN_APPLICABLE\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 1.0, \"metric_state\": \"NORMAL\", \"features\": {\"steps\": 8, \"without_turn\": 0}, \"evidence_refs\": []}], \"fields\": {\"session_id\": {\"rows_with_value\": 10, \"rows\": 10, \"status\": \"PRESENT\"}, \"turn_id\": {\"rows_with_value\": 10, \"rows\": 10, \"status\": \"PRESENT\"}, \"tool_use_id\": {\"rows_with_value\": 7, \"rows\": 10, \"status\": \"PARTIAL\"}, \"tool_name\": {\"rows_with_value\": 7, \"rows\": 10, \"status\": \"PARTIAL\"}, \"tool_arguments\": {\"rows_with_value\": 7, \"rows\": 10, \"status\": \"PARTIAL\"}, \"tool_result\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"success\": {\"rows_with_value\": 7, \"rows\": 10, \"status\": \"PARTIAL\"}, \"status\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"error_type\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"error_message\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"exit_code\": {\"rows_with_value\": 5, \"rows\": 10, \"status\": \"PARTIAL\"}, \"loop_count\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"turn_count\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"command\": {\"rows_with_value\": 5, \"rows\": 10, \"status\": \"PARTIAL\"}}}, \"reliability\": {\"status\": \"RELIABLE\", \"checks\": [{\"check\": \"CONFLICTING_SOURCES\", \"value\": null, \"evidence_refs\": [], \"evidence\": {\"collectors\": [\"otel\"], \"rows\": 10, \"cross_checked\": 0, \"disagreed\": 0}, \"outcome\": \"COMPARISON_NOT_POSSIBLE\", \"detail\": \"only one source (otel) observed this activity\", \"source\": \"telemetry.source_agreement\", \"metric_value\": null}, {\"check\": \"CONFLICTING_ACTION_SOURCES\", \"value\": null, \"evidence_refs\": [], \"evidence\": {\"collectors\": [\"otel\"], \"rows\": 7, \"cross_checked\": 0, \"disagreed\": 0}, \"outcome\": \"COMPARISON_NOT_POSSIBLE\", \"detail\": \"only one source (otel) observed this activity\", \"source\": \"collectors_agree on action rows\"}, {\"check\": \"UNVERIFIABLE_PROVENANCE\", \"outcome\": \"EVIDENCE_MISSING\", \"detail\": \"raw_ref was not read for this session\", \"source\": \"audit_source_provenance_completeness\", \"evidence_refs\": []}, {\"check\": \"UNVERIFIABLE_PROVENANCE\", \"outcome\": \"NOT_EXECUTED\", \"detail\": \"the raw event store was not supplied, so no row was linked to a source event\", \"source\": \"source_events\", \"evidence_refs\": [], \"not_executed_because\": \"RAW_STORE_NOT_SUPPLIED\"}, {\"check\": \"INCOMPARABLE_TIMESTAMPS\", \"outcome\": \"EVIDENCE_MISSING\", \"detail\": \"no row carries occurred_at, captured_at and ingested_at\", \"source\": \"audit_timestamp_integrity\", \"evidence_refs\": []}, {\"check\": \"TIMESTAMP_ORDER\", \"outcome\": \"EVIDENCE_MISSING\", \"detail\": \"no row carries occurred_at, captured_at and ingested_at\", \"source\": \"audit_timestamp_integrity\", \"evidence_refs\": []}, {\"check\": \"INGEST_LATENCY\", \"outcome\": \"EVIDENCE_MISSING\", \"detail\": \"basis absent: ingest\", \"source\": \"event_freshness_live\", \"evidence_refs\": []}, {\"check\": \"STALE\", \"value\": 1688401.0, \"limit\": null, \"limit_ke"
+      }
+     },
+     {
       "tool_call_id": "d87a73bf-5522-5469-a260-74c356c10a16",
       "tool": "calculate_deviation",
       "args": {
@@ -7724,7 +7887,7 @@
       "requested_by": "llm",
       "status": "OK",
       "rejection_reason": null,
-      "latency_ms": 0.141,
+      "latency_ms": 0.154,
       "purpose": "raw token deviation against comparable sessions",
       "result": {
        "quantity": "tokens",
@@ -7744,7 +7907,7 @@
       "requested_by": "llm",
       "status": "OK",
       "rejection_reason": null,
-      "latency_ms": 0.085,
+      "latency_ms": 0.199,
       "purpose": "which baseline version the outlier is against",
       "result": {
        "metric_id": "insights.token_outlier",
@@ -7766,7 +7929,7 @@
       "requested_by": "llm",
       "status": "OK",
       "rejection_reason": null,
-      "latency_ms": 0.166,
+      "latency_ms": 0.184,
       "purpose": "does action count rise with tokens",
       "result": {
        "quantity": "actions",
@@ -7784,7 +7947,7 @@
       "requested_by": "llm",
       "status": "OK",
       "rejection_reason": null,
-      "latency_ms": 0.149,
+      "latency_ms": 0.096,
       "purpose": "is the sequence itself unusual",
       "result": {
        "calls": 7,
@@ -7823,7 +7986,8 @@
        "metric:activity.action_rate_ratio",
        "metric:access.first_seen_mcp",
        "metric:insights.retry",
-       "metric:insights.repetition"
+       "metric:insights.repetition",
+       "tool:8d59498e-9ce4-5ec1-a2ea-debbf18fa3a7"
       ],
       "tools_exposed": [
        "retrieve_trace_window",
@@ -7832,7 +7996,7 @@
        "calculate_deviation",
        "analyse_tool_call_sequence"
       ],
-      "latency_ms": 1.147,
+      "latency_ms": 0.998,
       "cost_usd": null,
       "cost_basis": "unpriced"
      },
@@ -7850,6 +8014,7 @@
        "metric:access.first_seen_mcp",
        "metric:insights.retry",
        "metric:insights.repetition",
+       "tool:8d59498e-9ce4-5ec1-a2ea-debbf18fa3a7",
        "tool:d87a73bf-5522-5469-a260-74c356c10a16",
        "tool:f1481d65-f58b-5e66-8c12-2aa69f14fc08"
       ],
@@ -7860,7 +8025,7 @@
        "calculate_deviation",
        "analyse_tool_call_sequence"
       ],
-      "latency_ms": 2.284,
+      "latency_ms": 2.552,
       "cost_usd": null,
       "cost_basis": "unpriced"
      },
@@ -7878,6 +8043,7 @@
        "metric:access.first_seen_mcp",
        "metric:insights.retry",
        "metric:insights.repetition",
+       "tool:8d59498e-9ce4-5ec1-a2ea-debbf18fa3a7",
        "tool:d87a73bf-5522-5469-a260-74c356c10a16",
        "tool:f1481d65-f58b-5e66-8c12-2aa69f14fc08",
        "tool:51f50d92-0a61-5e5d-b324-fde6a9069fed",
@@ -7890,7 +8056,7 @@
        "calculate_deviation",
        "analyse_tool_call_sequence"
       ],
-      "latency_ms": 2.081,
+      "latency_ms": 2.716,
       "cost_usd": null,
       "cost_basis": "unpriced"
      }
@@ -8163,7 +8329,7 @@
         "value": 1.0,
         "weight": 0.1,
         "contribution": 0.1,
-        "basis": "3 of 3 tools returned OK"
+        "basis": "4 of 4 tools returned OK"
        },
        "authority": {
         "value": 0.5,
@@ -8336,7 +8502,7 @@
       "decision": "approve",
       "reviewer": "reviewer@tenant-a.example",
       "note": "checked the failing runs",
-      "at": "2026-11-12T15:27:23Z"
+      "at": "2026-11-20T12:00:14Z"
      },
      "execution_status": "EXECUTED_SANDBOX",
      "execution_outcome": {
@@ -8413,7 +8579,7 @@
        "decision": "approve",
        "reviewer": "reviewer@tenant-a.example",
        "note": "checked the failing runs",
-       "at": "2026-11-12T15:27:23Z"
+       "at": "2026-11-20T12:00:14Z"
       },
       "external_effect": false,
       "simulated": true,
@@ -8437,13 +8603,13 @@
      }
     },
     "node_timings": {
-     "grade_and_route": 0.162,
-     "authority_check": 0.065,
-     "await_approval": 0.424,
-     "execute_action": 42.801,
-     "record_decision": 0.017,
-     "validate_memory_update": 2.453,
-     "persist_and_publish": 4.099
+     "grade_and_route": 0.227,
+     "authority_check": 0.102,
+     "await_approval": 0.584,
+     "execute_action": 64.72,
+     "record_decision": 0.036,
+     "validate_memory_update": 3.377,
+     "persist_and_publish": 30.738
     }
    },
    "baseline_session_ids": [

@@ -65,7 +65,9 @@ def test_registry_is_versioned_categorised_and_effects_are_declared():
     assert len(describe()) == len(CHECKS)
 
 
-ROWS = E._estate(S.normal_session("v1", 9))
+# Anomaly Detection's package decides a session with no deviation without the model (D-AD1), and a model
+# NORMAL over a deviation cannot be verified (U-AD2); the model checks below run on a token spike.
+ROWS = E._estate(E.spike_session("v1", 9))
 
 
 def verify_with(claims, label="ANOMALOUS", upstream=None, cop="anomaly_detection", rows=ROWS, sid="v1"):
@@ -77,14 +79,13 @@ def verify_with(claims, label="ANOMALOUS", upstream=None, cop="anomaly_detection
 
 
 def test_true_claims_pass_independent_checks():
-    f, v = verify_with(lambda p: [FX.cm(p, "insights.token_outlier"), FX.ct(p, "calculate_deviation", "current")],
-                       label="NORMAL")
+    f, v = verify_with(lambda p: [FX.cm(p, "insights.token_outlier"), FX.ct(p, "calculate_deviation", "current")])
     assert f["verified"] and v["SC-01"]["result"] == "PASS" and v["MC-01"]["result"] == "PASS"
 
 
 def test_mc01_recomputes_from_raw_and_can_fail():
-    f, v = verify_with(lambda p: [{"statement": "ratio 40", "kind": "metric_value", "metric_id": "insights.token_outlier",
-                                   "asserted_value": 40.0, "evidence_refs": ["metric:insights.token_outlier"]}])
+    f, v = verify_with(lambda p: [{"statement": "ratio 4", "kind": "metric_value", "metric_id": "insights.token_outlier",
+                                   "asserted_value": 4.0, "evidence_refs": ["metric:insights.token_outlier"]}])
     assert v["MC-01"]["result"] == "FAIL" and f["status"] == "REJECTED_BY_VERIFIER"
 
 
@@ -105,7 +106,7 @@ def test_ev01_catches_label_outside_vocabulary():
 
 
 def test_ds01_quiet_label_on_insufficient_telemetry_fails():
-    rows = E._estate(S.Session("thin", 9, collectors=("cli_wrapper",)).start().tools(S.NORMAL_TOOLS).end())
+    rows = E._estate(S.Session("thin", 9, collectors=("cli_wrapper",)).start(40000).tools(S.NORMAL_TOOLS).end())
     rm = {"cop": "runtime_monitoring", "label": "INSUFFICIENT", "status": "SUBSTANTIVE", "verified": True,
           "finding_id": "f-rm", "lineage": ["telemetry.collector_coverage"]}
     f, v = verify_with(lambda p: [FX.ct(p, "calculate_deviation", "current")], label="NORMAL",
@@ -131,8 +132,7 @@ def test_ds02_correlated_upstream_counted_as_independent_fails():
 
 
 def test_rp01_is_diagnostic_and_never_blocks():
-    f, v = verify_with(lambda p: [FX.cm(p, "insights.token_outlier"), FX.ct(p, "calculate_deviation", "current")],
-                       label="NORMAL")
+    f, v = verify_with(lambda p: [FX.cm(p, "insights.token_outlier"), FX.ct(p, "calculate_deviation", "current")])
     assert v["RP-01"]["effect"] == "DIAGNOSTIC" and not v["RP-01"]["independent"]
 
 
@@ -142,8 +142,8 @@ def run_with_action(action, mode="dry_run", live=False, cop="anomaly_detection")
     def script(c, purpose, p, n):
         if purpose == "plan":
             return FX.plan("x", [], [], [], FX.req("calculate_deviation", "t", quantity="tokens"))
-        return FX.conclude("x", "NORMAL", 0.7, [FX.cm(p, "insights.token_outlier"),
-                                                FX.ct(p, "calculate_deviation", "current")], "r", action)
+        return FX.conclude("x", "ANOMALOUS", 0.7, [FX.cm(p, "insights.token_outlier"),
+                                                   FX.ct(p, "calculate_deviation", "current")], "r", action)
     rt = E.make_runtime(f"au-{action}-{mode}", "v1", ROWS, {}, provider=FixtureProvider(script),
                         mode=mode, live=live)
     out = run_cop(rt, cop)
@@ -171,14 +171,15 @@ def test_au01_fails_on_an_unauthorised_proposal_inside_the_graph():
     assert pa["original_proposal"]["action"] == "BLOCK"
     assert (orig["check_id"], orig["result"], orig["reason_code"], orig["subject"]) == \
         ("AU-01", "FAIL", "not_permitted", "original_proposal")
-    # graded triage (2026-11-04): the finding reads NORMAL, a PASS, so the action rule replaces the
-    # proposal with NONE before authority. The unauthorised original is still recorded as AU-01 FAIL.
-    assert pa["corrected_proposal"]["action"] == "NONE"
+    # the finding reads ANOMALOUS (a model NORMAL on Anomaly Detection is no longer reached, D-AD1); triage
+    # replaces the unauthorised BLOCK with the label's default ALERT before authority. The original is
+    # still recorded as AU-01 FAIL.
+    assert pa["corrected_proposal"]["action"] == "ALERT"
     assert pa["corrected_proposal"]["source"] == "triage action selection"
-    assert pa["action"] == "NONE" and pa["final_authority"]["action"] == "NONE"
+    assert pa["action"] == "ALERT" and pa["final_authority"]["action"] == "ALERT"
     final = [c for c in pa["final_authority"]["checks"] if c["check_id"] == "AU-01"][0]
     assert final["result"] == "PASS" and final["subject"] == "final_action"
-    assert pa["execution_status"] == "NOT_EXECUTED_NO_ACTION"     # BLOCK never reached execution
+    assert not pa["execution_status"].startswith("EXECUTED")      # BLOCK never reached execution
     au = [r for r in vr if r["check_id"] == "AU-01"]
     assert [r["subject"] for r in au] == ["original_proposal", "final_action"]
 
@@ -196,11 +197,10 @@ def test_au01_records_the_dry_run_substitution_as_a_failed_original():
 
 def test_au01_passes_and_records_no_correction_for_a_permitted_proposal():
     pa, vr = run_with_action("ALERT")
-    # the proposal is permitted (AU-01 PASS on the original); on a PASS reading the action rule
-    # still withdraws it: no remedial action on PASS (graded triage, 2026-11-04)
-    assert pa["original_verification"]["result"] == "PASS"
-    assert pa["corrected_proposal"]["source"] == "triage action selection"
-    assert pa["final_authority"]["action"] == "NONE" and pa["execution_status"] == "NOT_EXECUTED_NO_ACTION"
+    # the proposal is permitted (AU-01 PASS on the original) and within the ceiling for ANOMALOUS, so
+    # nothing corrects it; in dry run it is not executed
+    assert pa["original_verification"]["result"] == "PASS" and pa["corrected_proposal"] is None
+    assert pa["final_authority"]["action"] == "ALERT" and pa["execution_status"] == "NOT_EXECUTED_DRY_RUN"
 
 
 def test_ds03_rejects_a_quiet_model_reading_the_rule_baseline_contradicts():

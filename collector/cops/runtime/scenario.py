@@ -334,7 +334,7 @@ def _run(variant, workdir, reviewer, tr, paths, case_id, ep):
     why = {"successful": "the failing runs and the token spike are real",
            "timeout": "confirmed after approving the alert",
            "denied_approval": "planned load test, not an incident",
-           "contradictory": "the collector dropped the failing runs: the NORMAL reading was wrong",
+           "contradictory": "the collector dropped the failing runs: the session was not ordinary",
            "missing_evidence": "a new tenant: no baseline yet"}[variant]
     rv = ledger.record_review(case_id, rt.case.tenant_id, COP, f.get("finding_id"), decision_id(rx.run_id, SESSION, COP),
                               verdict, reviewer, bool(f.get("verified")), memory_record_id=rec_id,

@@ -373,11 +373,13 @@ def test_only_the_packaged_cops_and_shared_runtime_use_the_assessment():
     users = sorted(os.path.relpath(p, here) for p in glob.glob(os.path.join(here, "**", "*.py"), recursive=True)
                    if any(m in open(p).read() for m in ("evidence_assessment", "cop_package"))
                    and not p.endswith(("evidence_assessment.py", "cop_package.py")))
-    assert users == [os.path.join("cops", "packages", "audit_traceability", "harness.py"),
+    assert users == [os.path.join("cops", "packages", "anomaly_detection", "harness.py"),
+                     os.path.join("cops", "packages", "audit_traceability", "harness.py"),
                      os.path.join("cops", "packages", "interaction_discovery", "harness.py"),
                      os.path.join("cops", "packages", "runtime_monitoring", "harness.py"),
                      os.path.join("cops", "runtime", "decision.py"),
-                     os.path.join("cops", "runtime", "evolution.py"), os.path.join("cops", "runtime", "replay.py"),
+                     os.path.join("cops", "runtime", "evolution.py"), os.path.join("cops", "runtime", "graph.py"),
+                     os.path.join("cops", "runtime", "replay.py"),
                      os.path.join("cops", "runtime", "rules.py"), os.path.join("cops", "runtime", "tools.py")]
 
 

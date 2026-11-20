@@ -17,7 +17,7 @@ from cops.runtime.llm import (AnthropicProvider, FixtureProvider, SCHEMAS, _stri
                               decode_wire, LLMBudget)
 from cops.runtime.profiles import LLM_COPS, build_profiles
 
-ROWS = E._estate(E.sensitive_session("lp1", 9))
+ROWS = E._estate(E.sensitive_retried_session("lp1", 9))   # a retry, so Anomaly Detection consults the model
 REQ = httpx.Request("POST", "https://api.anthropic.com/v1/messages")
 UNSUPPORTED = {"minimum", "maximum", "exclusiveMinimum", "exclusiveMaximum", "multipleOf", "minLength",
                "maxLength", "maxItems", "pattern"}

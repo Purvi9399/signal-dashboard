@@ -59,7 +59,7 @@ def test_authorised_alert_in_dry_run_is_recorded_by_the_adapter_only():
 
 
 def test_verifier_rejection_withdraws_the_proposal_and_keeps_the_candidate_action():
-    rt = E.make_runtime("act-c16", "c16", E._estate(S.normal_session("c16", 9)), {},
+    rt = E.make_runtime("act-c16", "c16", E._estate(E._normal_retried("c16", 9)), {},     # as case 16
                         FX.Script({"anomaly_detection": E.ad_wrong_steps()}))
     r = run_case(rt, cops=["runtime_monitoring", "anomaly_detection"])["results"]["anomaly_detection"]
     f, lc = r["finding"], r["proposed_action"]["lifecycle"]

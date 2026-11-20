@@ -244,7 +244,7 @@ def test_s03_interpretive_contradiction_goes_to_assisted_not_inconclusive():
 
 
 def test_s04_a_contradiction_that_disproves_the_claim_does_nothing_to_the_agent():
-    rt = E.make_runtime("tri-c16", "c16", E._estate(S.normal_session("c16", 9)), {},
+    rt = E.make_runtime("tri-c16", "c16", E._estate(E._normal_retried("c16", 9)), {},     # as case 16
                         FX.Script({"anomaly_detection": E.ad_wrong_steps()}))
     r = run_case(rt, cops=["runtime_monitoring", "anomaly_detection"])["results"]["anomaly_detection"]
     t = r["triage"]
@@ -308,18 +308,27 @@ def test_s08_high_impact_action_needs_a_human_however_strong_the_evidence():
 
 
 def test_s09_an_action_proposed_on_pass_is_suppressed_but_still_audited():
+    # Knowledge & Policy Management carries this: Anomaly Detection no longer reaches a model PASS reading
+    # (the package decides a quiet session without the model, D-AD1; a model NORMAL over a deviation is
+    # rejected, U-AD2)
+    from cops.runtime import live_eval as L
+    from cops.runtime.graph import run_case
+    b = next(c for c in L.CASES if c["id"] == "knowledge_policy_management:normal")["build"]("kpmpass")
+    steps = FX.generic_careful("knowledge_policy_management")
+
     def script(c, purpose, p, n):
-        if purpose == "plan":
-            return FX.plan("x", [], [], [], FX.req("calculate_deviation", "t", quantity="tokens"))
-        return FX.conclude("x", "NORMAL", 0.7, [FX.cm(p, "insights.token_outlier"),
-                                                FX.ct(p, "calculate_deviation", "current")], "r", "ALERT")
-    rows = E._estate(S.normal_session("v9", 9))
-    rt = E.make_runtime("tri-pass", "v9", rows, {}, provider=FixtureProvider(script))
-    out = run_cop(rt, "anomaly_detection")
+        r = steps[min(n, 1)](p)
+        if r.get("finding"):
+            r["finding"]["proposed_action"] = "WATCH"
+        return r
+    rt = E.make_runtime("tri-pass", "kpmpass", b["rows"], b["art"], provider=FixtureProvider(script))
+    out = run_case(rt, cops=L.deterministic_upstream("knowledge_policy_management"))["results"][
+        "knowledge_policy_management"]
     t, pa = out["triage"], out["proposed_action"]
-    assert t["outcome"] == "PASS" and t["action_selection"]["suppressed_on_pass"] == "ALERT"
+    assert out["finding"]["label"] == "CURRENT" and out["finding"]["verified"]
+    assert t["outcome"] == "PASS" and t["action_selection"]["suppressed_on_pass"] == "WATCH"
     assert pa["typed_action"] == "NONE" and pa["execution_status"] == "NOT_EXECUTED_NO_ACTION"
-    assert pa["original_proposal"]["action"] == "ALERT"        # kept for audit
+    assert pa["original_proposal"]["action"] == "WATCH"        # kept for audit
 
 
 def test_s10_an_action_outside_authority_is_never_selected():

@@ -36,7 +36,7 @@ from ..authority import permitted as authority_permitted
 from . import live_eval as LE
 from .bench_cases import DET_CASES, DET_EXPECTED, FLEET
 from .evaluation import make_runtime, summarise
-from .graph import run_case
+from .graph import run_case, NO_MODEL_NEEDED
 from .llm import AnthropicProvider, FixtureProvider, UnavailableProvider
 from .persistence import SQLiteStore
 from .profiles import LLM_COPS, DETERMINISTIC_COPS
@@ -136,7 +136,7 @@ def dimensions(cop, kind, accept, r, label, outcome, err):
     vr = {x["check_id"]: x["result"] for x in r["verifier_results"]}
     is_llm = cop in LLM_COPS
     d = {}
-    prechecked = (f.get("cop_specific") or {}).get("stop_reason") == "precheck_required_evidence_unavailable"
+    prechecked = (f.get("cop_specific") or {}).get("stop_reason") in NO_MODEL_NEEDED
     d["execution"] = bool(label) and f["status"] != "ERROR" and (not is_llm or bool(inv) or prechecked) \
         and (is_llm or not inv)
     d["evidence_accessed"] = bool(r["tool_calls"] or r["evidence"]["rows"])

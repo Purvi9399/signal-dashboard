@@ -12,7 +12,7 @@ from cops.runtime.profiles import LLM_COPS, DETERMINISTIC_COPS, build_profiles, 
 from cops.runtime.graph import run_cop
 from cops.specs import BY_KEY
 
-ROWS = E._estate(E.sensitive_session("llm1", 9))
+ROWS = E._estate(E.sensitive_retried_session("llm1", 9))   # a retry, so Anomaly Detection consults the model
 RECORD_FIELDS = ("invocation_id", "cop", "case_id", "purpose", "provider", "model", "model_version",
                  "prompt_version", "simulated", "evidence_refs", "tools_exposed", "input_tokens",
                  "output_tokens", "latency_ms", "cost_usd", "cost_basis", "structured_response",
@@ -110,8 +110,10 @@ def test_prohibited_tool_request_is_refused_and_logged(cop):
     rej = [t for t in r["tool_calls"] if t["status"] == "REJECTED"]
     assert {t["rejection_reason"].split(":")[0] for t in rej} == {"not_in_allowlist", "unknown_tool"}
     assert {e["code"] for e in r["security_events"]} == {"not_in_allowlist", "unknown_tool"}
-    # the allowlist is exactly the profile's tools (baseline tools are a subset), and unchanged
-    assert rt.tools.allowlist(cop) == sorted(build_profiles()[cop].tools)
+    # the allowlist is the profile's tools and the baseline tools (profiles.allowlists), and unchanged;
+    # Anomaly Detection's assess_anomaly_questions is a baseline tool the model is not offered
+    from cops.runtime.rules import DETERMINISTIC_TOOLS
+    assert rt.tools.allowlist(cop) == sorted(set(build_profiles()[cop].tools) | set(DETERMINISTIC_TOOLS[cop]))
 
 
 def test_llm_call_budget_stops_the_loop():

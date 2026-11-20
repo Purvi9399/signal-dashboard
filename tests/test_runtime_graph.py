@@ -70,9 +70,13 @@ def test_runtime_monitoring_insufficient_and_anomaly_baseline_indeterminate():
     assert rm["label"] == "INSUFFICIENT" and rm["verified"]
     ad = run_cop(E.make_runtime("g-ad-thin", "thin", rows, {}, None), "anomaly_detection",
                  upstream={"runtime_monitoring": rm})
-    # LLM unavailable: the finding is inconclusive; the labelled baseline reads INDETERMINATE
-    assert ad["finding"]["label"] == "INCONCLUSIVE"
-    assert ad["finding"]["baseline"]["label"] == "INDETERMINATE"
+    # no question deviates and Runtime Monitoring reads INSUFFICIENT: the package decides INDETERMINATE
+    # (AD-5 UNDETERMINED) without the model (D-AD1); before, the model was called and the threshold
+    # reading INDETERMINATE was recorded beside an INCONCLUSIVE finding
+    f = ad["finding"]
+    assert (f["label"], f["verified"], f.get("baseline")) == ("INDETERMINATE", True, None)
+    assert f["cop_specific"]["stop_reason"] == "decided_by_package_without_model"
+    assert f["cop_specific"]["questions"]["AD-5"]["answer"] == "UNDETERMINED" and ad["llm_invocations"] == []
 
 
 def test_anomaly_baseline_changes_with_runtime_monitoring_verdict():
@@ -83,8 +87,9 @@ def test_anomaly_baseline_changes_with_runtime_monitoring_verdict():
                 upstream={"runtime_monitoring": good})
     b = run_cop(E.make_runtime("g-ad2", "n9", rows, {}, None), "anomaly_detection",
                 upstream={"runtime_monitoring": insufficient})
-    assert a["finding"]["baseline"]["label"] == "NORMAL"
-    assert b["finding"]["baseline"]["label"] == "INDETERMINATE"
+    # the package decides both without the model (D-AD1), so the verdict changes the label itself
+    assert a["finding"]["label"] == "NORMAL" and a["finding"]["verified"]
+    assert b["finding"]["label"] == "INDETERMINATE" and b["finding"]["verified"]
 
 
 def test_behavior_analytics_consumes_context_integrity_finding():

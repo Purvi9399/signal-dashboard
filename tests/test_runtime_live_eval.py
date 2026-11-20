@@ -76,7 +76,11 @@ def test_deterministic_cops_make_no_model_calls():
     out = E.e2e_full({})
     for k in DETERMINISTIC_COPS:
         assert out["cops"][k]["llm_calls"] == 0, k
-    assert all(out["cops"][k]["llm_calls"] >= 1 for k in LLM_COPS)
+    # Anomaly Detection's package decides a session with no deviation without the model (D-AD1)
+    decided = {k for k in LLM_COPS if (out["cops"][k].get("cop_specific") or {}).get("stop_reason")
+               == "decided_by_package_without_model"}
+    assert decided == {"anomaly_detection"} and out["cops"]["anomaly_detection"]["llm_calls"] == 0
+    assert all(out["cops"][k]["llm_calls"] >= 1 for k in set(LLM_COPS) - decided)
 
 
 def test_fleet_matrix_has_eighteen_rows_and_marks_live_as_not_run():

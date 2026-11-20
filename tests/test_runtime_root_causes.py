@@ -513,8 +513,10 @@ def test_expectations_are_unchanged_and_independent_of_outputs(bench):
 
 # Interaction Discovery now answers thin telemetry with its own reading, PATH_PARTIAL, from its
 # questions (cops/packages/interaction_discovery/DECISIONS.md, D3), where the legacy rule's CONTAINED was
-# withheld as INCONCLUSIVE. Both are accepted by the case.
-RELABELLED = {"interaction_discovery:missing": "PATH_PARTIAL"}
+# withheld as INCONCLUSIVE. Both are accepted by the case. Anomaly Detection's package now decides thin
+# telemetry with no deviation as INDETERMINATE without the model (packages/anomaly_detection/DECISIONS.md,
+# D-AD1), where the unavailable model left INCONCLUSIVE; the case accepts both.
+RELABELLED = {"interaction_discovery:missing": "PATH_PARTIAL", "anomaly_detection:missing": "INDETERMINATE"}
 
 
 def test_legitimate_inconclusives_stay_inconclusive(bench):

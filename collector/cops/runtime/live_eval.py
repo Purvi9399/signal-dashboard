@@ -36,6 +36,7 @@ from . import synthetic as S
 from .evaluation import (make_runtime, summarise, _estate, allow_all, c05_art, spike_session,
                          sensitive_session, recovery_session, run_case, CLOCK)
 from .llm import AnthropicProvider, FixtureProvider, LLMBudget, UnavailableProvider, load_pricing
+from .graph import NO_MODEL_NEEDED
 from .persistence import SQLiteStore
 from .profiles import LLM_COPS, DETERMINISTIC_COPS
 
@@ -368,9 +369,9 @@ def verify_records(results, live):
         if r["other_llm_calls"]:
             problems.append(f"{r['id']}: {r['other_llm_calls']} model calls by COPs other than the target")
         if not r["invocations"] and r["outcome"] != "error" \
-                and r.get("stop_reason") != "precheck_required_evidence_unavailable":
-            # (the evidence precheck stops a COP whose every label lacks required evidence
-            # before any call, so that case has no call by design)
+                and r.get("stop_reason") not in NO_MODEL_NEEDED:
+            # (the evidence precheck stops a COP whose every label lacks required evidence before any
+            # call, and Anomaly Detection's package decides a session with no deviation; neither calls)
             problems.append(f"{r['id']}: no model call recorded")
         for i in r["invocations"]:
             if live:
