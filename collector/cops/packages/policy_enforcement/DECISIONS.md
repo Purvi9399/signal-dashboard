@@ -1,6 +1,6 @@
 # Policy Enforcement: decisions
 
-All proposed on 2026-11-20 and awaiting purvi's review. Nothing here changes a label name, the behavioural question,
+Proposed on 2026-11-20; accepted by purvi on 2026-11-20 at 11:11Z (see Acceptance below). Nothing here changes a label name, the behavioural question,
 a threshold, the policy evaluator (`tools.evaluate_operation`) or shared architecture.
 
 ## Made in this package
@@ -57,3 +57,15 @@ a threshold, the policy evaluator (`tools.evaluate_operation`) or shared archite
 
 No Supabase replay, collector change, dashboard work or self-evolution. No model call. No change to the policy
 evaluator, VS-01 or the requirements gate.
+
+## Acceptance (purvi, 2026-11-20 11:11Z)
+
+Policy Enforcement is accepted as implemented in 0f075bd. The review decisions are:
+
+| # | Decision | What it fixes in place |
+|---|---|---|
+| A-PE1 | APPROVED: with no approved policy store, Policy Enforcement is INCONCLUSIVE and never manufactures or proposes a verified VIOLATION | D-PE1 stands. Guarded by `test_no_policy_source_claims_no_violation_and_stays_inconclusive` and the harness scenarios missing_policy_store, missing_store_boundary_crossing and unapproved_policy_only |
+| A-PE2 | U-PE1 stays open. VS-01 is not weakened, and the policy and entitlement authority semantics do not change without further review | mcp_not_entitled keeps its INCONCLUSIVE label through the VS-01 rejection (`test_the_entitlement_only_violation_is_proposed_and_held_back_by_vs01`) |
+| A-PE3 | U-PE2 to U-PE7 stay open with their current conservative behaviour: session-level approval with a limitation, hook-stopped attempts not counted as violations, deny precedence with the conflict reported, delegation routes NOT_EVALUATED, `telemetry.unknown_shared` not read, and the 8 NOT_CALCULATED metrics. No approval, threshold, policy or definition is invented | no code change |
+| A-PE4 | All 31 metric mappings are kept, including the 8 NOT_CALCULATED metrics with their missing dependencies | `cop_package.validate("policy_enforcement")` is `[]`; `test_unbuilt_metrics_are_optional_not_calculated_and_name_their_missing_input` |
+| A-PE5 | Confirmed: the question answers determine the label, and the upstream and downstream contracts are intact | new test `test_the_label_follows_from_the_four_answers_in_every_scenario` recomputes PE-5 and the label from PE-1 to PE-4 for all 24 scenarios, independently of `cop_package`. Upstream: `test_interaction_discovery_routes_change_the_answer`, `test_runtime_monitoring_insufficient_stops_allowed`. Downstream: `test_audit_traceability_traces_the_policy_decision`, `test_existing_consumer_fields_are_kept`, evaluation cases C01, C04, C05 and E2E |

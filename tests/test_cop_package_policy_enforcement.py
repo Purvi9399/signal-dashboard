@@ -207,6 +207,29 @@ def test_answers_decide_the_label(bench):
             assert cand == lab[five], name
 
 
+def test_the_label_follows_from_the_four_answers_in_every_scenario(bench):
+    """Accepted 2026-11-20: the answers determine the label. PE-5 and the label are recomputed here from
+    PE-1 to PE-4 with the documented order (SPEC.md PE-5), independently of cop_package."""
+    lab = P.EA.load_package(COP)["labels"]
+    for name, r in bench["results"].items():
+        f = r["cop"]["finding"]
+        a = answers(f)
+        if a["PE-2"] == "OUTSIDE_AUTHORIZED_BOUNDARIES" or a["PE-4"] == "NEW_ROUTES_NOT_PERMITTED":
+            want = "DENY"
+        elif a["PE-3"] == "APPROVAL_MISSING":
+            want = "REQUIRE_APPROVAL"
+        elif (a["PE-1"] == "POLICY_PARTIALLY_APPLIES" or a["PE-2"] == "BOUNDARY_NOT_DEFINED"
+              or a["PE-4"] == "NEW_ROUTES_UNDECIDED"):
+            want = "UNDECIDED"
+        elif "INCONCLUSIVE" in (a["PE-1"], a["PE-2"], a["PE-3"], a["PE-4"]):
+            want = "INCONCLUSIVE"
+        else:
+            want = "ALLOW"
+        assert a["PE-5"] == want, name
+        cand = (f.get("rejected_candidate") or {}).get("label") or f["label"]
+        assert cand == lab[want], name
+
+
 def test_several_findings_keep_every_answer_and_the_label_order(bench):
     f = bench["results"]["several_findings"]["cop"]["finding"]
     assert f["label"] == "VIOLATION" and f["cop_specific"]["also_held"] == ["APPROVAL_REQUIRED", "UNCERTAIN"]
