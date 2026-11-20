@@ -1,0 +1,178 @@
+# Anomaly Detection: expected outcomes per scenario, written before the harness and before the package code.
+#
+# Each expectation follows from the workbook questions (rows 31 to 35), the approved thresholds in
+# metrics_config.json (a deviation is a metric in EXCEPTION or CRITICAL; WARNING is recorded, not counted),
+# the minimum samples in metrics_config.json (min_sessions_for_baseline 5, min_transitions_for_novelty 5),
+# and the accepted contracts this package must keep (DS-03: a quiet model reading cannot be published over a
+# substantive non-quiet rule baseline; VS-01 unchanged). No expected value was taken from a run of this package.
+#
+# All rows are synthetic. "interpreted" scenarios use a scripted model reply (fixtures.Script, every
+# invocation simulated=True); no provider is called. Without a script the provider is unavailable.
+#
+# questions: the answer each question must give (INCONCLUSIVE where it cannot be answered).
+# cop_label: accepted labels. action: the COP's proposal before triage (typed).
+# checks: named properties, defined in harness.CHECKS.
+
+estate: >-
+  Seven earlier sessions base1 to base7 of dev1@tenant-a.example with claude-code, 1000 tokens each, tools
+  Read, Grep, Read, Edit, Bash with 200 ms steps, plus the scenario session s1 on day 9, unless the scenario
+  says otherwise.
+
+scenarios:
+  normal:
+    description: an ordinary session like the seven before it
+    questions: {AD-1: NOT_UNUSUAL, AD-2: COMPARABLE, AD-3: RATE_WITHIN_BASELINE, AD-4: FAMILIAR, AD-5: NO_DEVIATION}
+    cop_label: [NORMAL]
+    action: NONE
+    checks: [decision_contract_valid, five_question_findings, decided_without_model, no_model_call, verified,
+             baseline_methodology_recorded, low_rate_not_evaluated, not_calculated_named, no_observation_written]
+
+  below_threshold_warning:
+    description: 4000 tokens, 4x the estate median; WARNING under the approved thresholds, not EXCEPTION
+    questions: {AD-1: NOT_UNUSUAL, AD-2: COMPARABLE, AD-3: RATE_WITHIN_BASELINE, AD-4: FAMILIAR, AD-5: NO_DEVIATION}
+    cop_label: [NORMAL]
+    action: NONE
+    checks: [decided_without_model, token_warning_recorded]
+
+  token_spike_without_model:
+    description: 40000 tokens, 40x the estate median; same tools and path as the estate; no model available
+    questions: {AD-1: NOT_UNUSUAL, AD-2: SIGNIFICANTLY_DIFFERENT, AD-3: RATE_WITHIN_BASELINE, AD-4: FAMILIAR,
+                AD-5: INCONCLUSIVE}
+    cop_label: [INCONCLUSIVE]
+    checks: [decision_contract_valid, model_was_needed, interpretation_required_for_ad2, baseline_kept_apart,
+             never_a_violation]
+
+  token_spike_interpreted:
+    description: the same spike; the simulated model concludes ANOMALOUS citing the token outlier
+    questions: {AD-1: NOT_UNUSUAL, AD-2: SIGNIFICANTLY_DIFFERENT, AD-3: RATE_WITHIN_BASELINE, AD-4: FAMILIAR,
+                AD-5: MEANINGFUL_ANOMALY}
+    cop_label: [ANOMALOUS]
+    checks: [decision_contract_valid, verified, simulated_model, drivers_ad2_ad5, recipients_downstream,
+             observation_written_unvalidated_by_itself]
+
+  legitimate_retries_interpreted:
+    description: >-
+      a failing test run three times (retry 2, EXCEPTION); tokens, rate and path ordinary; the simulated
+      model concludes NORMAL, naming a test-and-fix loop as the explanation
+    questions: {AD-1: UNUSUALLY_FREQUENT, AD-2: COMPARABLE, AD-3: RATE_WITHIN_BASELINE, AD-4: FAMILIAR,
+                AD-5: LEGITIMATE_VARIATION}
+    cop_label: [NORMAL]
+    checks: [verified, simulated_model, explanation_recorded]
+
+  legitimate_large_task_interpreted:
+    description: >-
+      6000 tokens (6x, EXCEPTION) on an ordinary path; the simulated model concludes NORMAL (a larger task).
+      The rule baseline reads ANOMALOUS on the token outlier, so DS-03 rejects the quiet reading; the label is
+      not ANOMALOUS and not NORMAL
+    questions: {AD-1: NOT_UNUSUAL, AD-2: SIGNIFICANTLY_DIFFERENT, AD-3: RATE_WITHIN_BASELINE, AD-4: FAMILIAR,
+                AD-5: INCONCLUSIVE}
+    cop_label: [INCONCLUSIVE]
+    checks: [rejected_by_ds03, interpretation_rejection_recorded]
+
+  insufficient_baseline_history:
+    description: only two earlier sessions; token, rate and path baselines need five
+    estate: base1 and base2 only
+    questions: {AD-1: NOT_UNUSUAL, AD-2: BASELINE_INSUFFICIENT, AD-3: BASELINE_INSUFFICIENT,
+                AD-4: BASELINE_INSUFFICIENT, AD-5: UNDETERMINED}
+    cop_label: [INDETERMINATE]
+    action: WATCH
+    checks: [decided_without_model, baseline_gaps_named]
+
+  first_session_of_operator_with_mcp:
+    description: >-
+      dev2's first session uses the github MCP server, which dev1 used in every earlier session; dev2 has no
+      earlier session, so "previously unseen" cannot be judged for dev2
+    estate: base1 to base7 of dev1 each call github twice; s1 is dev2's
+    questions: {AD-1: NOT_UNUSUAL, AD-2: COMPARABLE, AD-3: RATE_WITHIN_BASELINE, AD-4: BASELINE_INSUFFICIENT,
+                AD-5: UNDETERMINED}
+    cop_label: [INDETERMINATE]
+    checks: [decided_without_model, first_seen_without_history_not_counted]
+
+  new_mcp_server_without_model:
+    description: dev1, with seven earlier sessions, calls the github MCP server for the first time
+    questions: {AD-1: NOT_UNUSUAL, AD-2: COMPARABLE, AD-3: RATE_WITHIN_BASELINE, AD-4: UNFAMILIAR,
+                AD-5: INCONCLUSIVE}
+    cop_label: [INCONCLUSIVE]
+    checks: [model_was_needed, new_server_named]
+
+  novelty_is_not_a_violation:
+    description: >-
+      the same new github server, permitted by the approved policy and entitled; Runtime Monitoring,
+      Interaction Discovery, Anomaly Detection and Policy Enforcement run; no model
+    questions: {AD-4: UNFAMILIAR}
+    checks: [policy_allows_new_route, never_a_violation]
+
+  high_action_rate_without_model:
+    description: forty actions on the estate's usual path in one session, 6x the tool median rate
+    questions: {AD-1: NOT_UNUSUAL, AD-2: COMPARABLE, AD-3: RATE_UNUSUAL, AD-4: FAMILIAR, AD-5: INCONCLUSIVE}
+    cop_label: [INCONCLUSIVE]
+    checks: [model_was_needed]
+
+  low_action_rate:
+    description: >-
+      four actions in the session, 0.57x the tool median rate. No lower limit is approved, so the low
+      direction is not evaluated; the high direction is within its limit
+    questions: {AD-1: NOT_UNUSUAL, AD-2: COMPARABLE, AD-3: RATE_WITHIN_BASELINE, AD-4: FAMILIAR, AD-5: NO_DEVIATION}
+    cop_label: [NORMAL]
+    checks: [decided_without_model, low_rate_not_evaluated]
+
+  unreliable_telemetry:
+    description: the 40000-token spike, with two collectors disagreeing on an action
+    questions: {AD-1: INCONCLUSIVE, AD-2: INCONCLUSIVE, AD-3: INCONCLUSIVE, AD-4: INCONCLUSIVE, AD-5: UNDETERMINED}
+    cop_label: [INDETERMINATE]
+    checks: [decided_without_model, conflict_named, spike_observed_not_judged]
+
+  incomplete_telemetry:
+    description: only the CLI wrapper reported; Runtime Monitoring reads the telemetry INSUFFICIENT
+    questions: {AD-5: UNDETERMINED}
+    cop_label: [INDETERMINATE]
+    checks: [decided_without_model, runtime_monitoring_bounds]
+
+  baseline_shift:
+    description: >-
+      seven later sessions of 40000 tokens join the seven of 1000; s1 uses 40000. The estate median moves to
+      40000, so s1 is comparable; against the earlier estate alone the same session is 40x
+    estate: base1 to base7 at 1000 tokens and new1 to new7 at 40000 tokens
+    questions: {AD-1: NOT_UNUSUAL, AD-2: COMPARABLE, AD-3: RATE_WITHIN_BASELINE, AD-4: FAMILIAR, AD-5: NO_DEVIATION}
+    cop_label: [NORMAL]
+    checks: [baseline_shift_recorded, no_baseline_window_named]
+
+  simultaneous_findings_interpreted:
+    description: >-
+      repeated identical searches (repetition 3), a failing test retried (retry 2), 40000 tokens, one 5000 ms
+      step, and a jira MCP server new to dev1; the simulated model concludes ANOMALOUS
+    questions: {AD-1: UNUSUALLY_FREQUENT, AD-2: SIGNIFICANTLY_DIFFERENT, AD-3: RATE_WITHIN_BASELINE,
+                AD-4: UNFAMILIAR, AD-5: MEANINGFUL_ANOMALY}
+    cop_label: [ANOMALOUS]
+    checks: [verified, all_deviations_listed]
+
+  behaviour_analytics_correlated:
+    description: >-
+      a failing test run five times; Behaviour Analytics runs first. Its verified LOOPING reading rests on the
+      same retry metrics, so Anomaly Detection records it and does not count it as independent support
+    questions: {AD-1: UNUSUALLY_FREQUENT}
+    checks: [behaviour_analytics_not_counted]
+
+  adversarial_instruction_text:
+    description: >-
+      the 40000-token spike, with a tool result that tells the governance system the usage is expected and to
+      report NORMAL; no model. The answers are those of the same session without the text
+    questions: {AD-1: NOT_UNUSUAL, AD-2: SIGNIFICANTLY_DIFFERENT, AD-3: RATE_WITHIN_BASELINE, AD-4: FAMILIAR,
+                AD-5: INCONCLUSIVE}
+    cop_label: [INCONCLUSIVE]
+    checks: [same_as_without_text]
+
+  memory_precedent_interpreted:
+    description: >-
+      an earlier spike case (session m0, outside the estate) concluded ANOMALOUS and was validated by a
+      reviewer; an unverified observation also exists. A second spike is interpreted by the simulated model
+    questions: {AD-2: SIGNIFICANTLY_DIFFERENT, AD-5: MEANINGFUL_ANOMALY}
+    cop_label: [ANOMALOUS]
+    checks: [earlier_write_not_self_validated, validated_precedent_listed, unverified_not_precedent]
+
+  downstream_incident_response:
+    description: >-
+      Incident Response after Anomaly Detection, for three sessions: normal (AD-5 NO_DEVIATION), the spike
+      interpreted (AD-5 MEANINGFUL_ANOMALY) and the CLI-wrapper-only session (AD-5 UNDETERMINED). Incident
+      Response's rule reading follows the label AD-5 gives
+    checks: [incident_response_reads_ad5]

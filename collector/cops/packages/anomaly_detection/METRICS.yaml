@@ -1,0 +1,159 @@
+# Anomaly Detection: machine-readable question contract.
+# Loaded by collector/cops/runtime/cop_package.py and validated by
+# tests/test_cop_package_anomaly_detection.py. The Markdown files beside it
+# explain this file; where they differ, this file is what the runtime uses.
+
+cop: anomaly_detection
+contract: cop_metrics/1
+version: 2026-11-20.1
+
+sources:
+  questions: >-
+    AD-1 to AD-5: COPS- implementation 1.xlsx, sheet COMPLETE_DELEGATION_DATA, rows 31 to 35 (behavioural
+    question row 31); metric list row 36; partial-input rule row 4 ("Missing unrelated fields should not
+    block"). The workbook gives no external data column for this COP.
+  metric_mapping: >-
+    COPS_METRIC_MAPPING.md, sha256 5bd3c16f1ba26b297644259faaedfe75c1f219980e5c046a9bb56308c38e951e
+    (collector/metric_registry.json, consumers = anomaly_detection). No code-only pair.
+  baselines: >-
+    signal_metrics.estate over the sessions of the fetched estate, as the metrics compute them; nothing in
+    this package recomputes a baseline. The comparison groups and minimum samples are read from the same
+    estate (cop_package._ad_baselines) only to say which baseline a missing value lacks.
+
+mapping:
+  insights.repetition: {used_by: [AD-1]}
+  insights.retry: {used_by: [AD-1]}
+  insights.failed: {used_by: [AD-1]}
+  telemetry.turn_linkage: {used_by: [AD-1]}
+  insights.token_outlier: {used_by: [AD-2]}
+  insights.duration_outlier: {used_by: [AD-2]}
+  token_expansion_per_turn:
+    used_by: [AD-2]
+    note: >-
+      IMPLEMENTED catalogue metric with no approved threshold (state NO_THRESHOLD): its value is reported,
+      never judged.
+  activity.action_rate_ratio: {used_by: [AD-3]}
+  path.transition_novelty: {used_by: [AD-4]}
+  access.first_seen_mcp: {used_by: [AD-4]}
+  interaction.mcp_servers: {used_by: [AD-4]}
+  interaction.subagent_lanes: {used_by: [AD-4]}
+  telemetry.lane_linkage: {used_by: [AD-4]}
+  resource_access_novelty_files:
+    used_by: [AD-4]
+    note: >-
+      IMPLEMENTED catalogue metric with no approved threshold (state NO_THRESHOLD): its value is reported,
+      never judged. It needs 5 earlier sessions of the same operator and workspace (INSUFFICIENT_HISTORY).
+  tool_use_deviation_per_agent:
+    used_by: [AD-4]
+    note: >-
+      NOT_CALCULATED. Registry category H, NOT_IMPLEMENTED. Missing input: an approved method (which distance
+      between tool_name distributions, and per which agent identity); proposal: tool_name distribution per
+      agent_id against that agent's history.
+  task_adjusted_anomaly_score:
+    used_by: [AD-5]
+    note: >-
+      NOT_CALCULATED. Registry category M, NOT_IMPLEMENTED. Missing input: a task classification from
+      prompt_text and a baseline per task class; the classification needs paid model calls, which need
+      explicit approval.
+
+questions:
+  AD-1:
+    question: Is the agent repeating actions, retrying operations or failing unusually often?
+    fields: [session_id, turn_id, tool_use_id, tool_name, tool_arguments, tool_result, success, status, error_type,
+             error_message, exit_code, loop_count, turn_count, command]
+    requires:
+      - {metric: insights.repetition, kind: REQUIRED}
+      - {metric: insights.retry, kind: REQUIRED_WHEN_APPLICABLE}
+      - {metric: insights.failed, kind: REQUIRED}
+      - {metric: telemetry.turn_linkage, kind: REQUIRED_WHEN_APPLICABLE}
+    verified: []
+    blocking: [CONFLICTING_ACTION_SOURCES]
+    outcomes: [NOT_UNUSUAL, UNUSUALLY_FREQUENT]
+
+  AD-2:
+    question: Is its token consumption or execution duration significantly different from comparable sessions?
+    fields: [session_id, agent_id, agent_type, model, model_id, tool_name, tool_duration_ms, latency_ms,
+             request_latency_ms, input_tokens, output_tokens, total_tokens, cache_read_tokens, cache_write_tokens,
+             cost_usd, turn_count, status]
+    requires:
+      - {metric: insights.token_outlier, kind: REQUIRED}
+      - {metric: insights.duration_outlier, kind: REQUIRED}
+      - {metric: token_expansion_per_turn, kind: OPTIONAL}
+    verified: []
+    blocking: [CONFLICTING_SOURCES]
+    outcomes: [COMPARABLE, SIGNIFICANTLY_DIFFERENT, BASELINE_INSUFFICIENT]
+
+  AD-3:
+    question: Is the agent performing actions at an unusually high or low rate?
+    fields: [session_id, turn_id, agent_id, agent_type, observable_id, observable_type, tool_use_id, tool_name,
+             tool_duration_ms, latency_ms, turn_count, batch_size, loop_count, status]
+    requires:
+      - {metric: activity.action_rate_ratio, kind: REQUIRED}
+    verified: []
+    blocking: [CONFLICTING_ACTION_SOURCES]
+    outcomes: [RATE_WITHIN_BASELINE, RATE_UNUSUAL, BASELINE_INSUFFICIENT]
+
+  AD-4:
+    question: Is the agent following an unfamiliar execution path or accessing previously unseen MCP servers?
+    fields: [observable_id, observable_type, session_id, turn_id, agent_id, parent_agent_id, delegation_depth,
+             tool_use_id, tool_name, tool_arguments, command, file_path, workspace, mcp_server, mcp_tool,
+             mcp_transport, multi_agent_source, raw_ref]
+    requires:
+      - {metric: path.transition_novelty, kind: REQUIRED}
+      - {metric: access.first_seen_mcp, kind: REQUIRED}
+      - {metric: telemetry.lane_linkage, kind: REQUIRED_WHEN_APPLICABLE}
+      - {metric: interaction.mcp_servers, kind: OPTIONAL}
+      - {metric: interaction.subagent_lanes, kind: OPTIONAL}
+      - {metric: resource_access_novelty_files, kind: OPTIONAL}
+      - {metric: tool_use_deviation_per_agent, kind: OPTIONAL}
+    verified: []
+    blocking: [CONFLICTING_ACTION_SOURCES]
+    outcomes: [FAMILIAR, UNFAMILIAR, BASELINE_INSUFFICIENT]
+
+  AD-5:
+    question: >-
+      Do the observed deviations constitute a meaningful behavioural anomaly, rather than legitimate task
+      variation?
+    fields: [session_id, agent_id, agent_type, model, prompt_text, plan_item, plan_status, tool_name, tool_arguments,
+             tool_result, success, status, error_type, turn_id, turn_count, loop_count, response_text, file_path,
+             workspace, repo_name, permission_scope, permission_decision, outside_workspace, total_tokens,
+             tool_duration_ms, raw_ref]
+    requires:
+      - {metric: task_adjusted_anomaly_score, kind: OPTIONAL}
+    verified: []
+    blocking: []
+    depends_on: [AD-1, AD-2, AD-3, AD-4]
+    outcomes: [NO_DEVIATION, LEGITIMATE_VARIATION, MEANINGFUL_ANOMALY, UNDETERMINED]
+
+# AD-5's answer gives the label. NO_DEVIATION and UNDETERMINED are decided from AD-1 to AD-4 and Runtime
+# Monitoring without a model; LEGITIMATE_VARIATION and MEANINGFUL_ANOMALY are the model's interpretation of
+# deviations that AD-1 to AD-4 observed, after verification.
+labels:
+  NO_DEVIATION: NORMAL
+  LEGITIMATE_VARIATION: NORMAL
+  MEANINGFUL_ANOMALY: ANOMALOUS
+  UNDETERMINED: INDETERMINATE
+  INCONCLUSIVE: INCONCLUSIVE
+
+# The model's verified label read back as AD-5's answer.
+interpretations:
+  ANOMALOUS: MEANINGFUL_ANOMALY
+  NORMAL: LEGITIMATE_VARIATION
+  INDETERMINATE: UNDETERMINED
+
+# Metric states that count as a deviation: the states cops/interpret.py:anomaly_detection treated as hot.
+# The thresholds are metrics_config.json's; WARNING is recorded, not counted.
+deviation_states: [EXCEPTION, CRITICAL]
+
+operations:
+  compute_metrics: {by: deterministic, code: collector/signal_metrics.py:compute}
+  compute_baselines: {by: deterministic, code: collector/signal_metrics.py:estate}
+  assess_evidence: {by: deterministic, code: collector/cops/runtime/evidence_assessment.py:assess}
+  observe_questions: {by: deterministic, code: collector/cops/runtime/cop_package.py:observe_anomaly_detection}
+  decide_without_deviation: {by: deterministic, code: collector/cops/runtime/cop_package.py:decide_anomaly_detection}
+  interpret_deviations: {by: llm, code: collector/cops/runtime/graph.py:llm_assess_evidence}
+  bind_interpretation: {by: deterministic, code: collector/cops/runtime/cop_package.py:interpreted_anomaly_detection}
+  verify_finding: {by: deterministic, code: collector/cops/runtime/verifiers.py}
+  select_action: {by: deterministic, code: collector/cops/runtime/triage.py}
+  memory_write: {by: deterministic, code: collector/cops/runtime/graph.py:validate_memory_update}
+  decision_record: {by: deterministic, code: collector/cops/runtime/decision.py:build}
