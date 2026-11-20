@@ -223,6 +223,24 @@ def extract_claude_hook(p, when, decision=None):
                         if ev.startswith("Task") else None),
         "error_type": p.get("reason") if ev == "SessionEnd" else None,
     }
+    # Claude Code expresses planning through the TodoWrite / ExitPlanMode tools
+    # (PostToolUse), not Task* hooks, so plan_item/plan_status would otherwise
+    # never populate. Derive them from the tool payload.
+    _tn = f.get("tool_name")
+    if _tn == "TodoWrite":
+        todos = tin.get("todos") if isinstance(tin, dict) else None
+        if isinstance(todos, list) and todos:
+            active = next((t for t in todos
+                           if isinstance(t, dict) and t.get("status") == "in_progress"), None)
+            cur = active or (todos[-1] if isinstance(todos[-1], dict) else None)
+            if isinstance(cur, dict):
+                f["plan_item"] = cur.get("content") or cur.get("activeForm") or f.get("plan_item")
+                f["plan_status"] = cur.get("status") or f.get("plan_status")
+    elif _tn == "ExitPlanMode":
+        plan = tin.get("plan") if isinstance(tin, dict) else None
+        if isinstance(plan, str) and plan:
+            f["plan_item"] = plan[:200]
+            f["plan_status"] = "created"
     if f["tool_name"]:
         f["tool_category"] = TOOL_CATEGORY.get(f["tool_name"], "other")
         f["tool_is_builtin"] = f["tool_name"] in BUILTIN
@@ -457,6 +475,10 @@ def extract_row(r):
         "operator_username": r.get("operator") or None,
         "operator_email": r.get("operator_email") or None,
         "tool_version": r.get("tool_version") or None,
+        "git_branch": r.get("git_branch") or None,
+        "tool_use_id": r.get("tool_use_id") or None,
+        "permission_decision": r.get("permission_decision") or None,
+        "denial_reason": r.get("denial_reason") or None,
         "workspace": r.get("workspace") or None,
         "cwd": r.get("cwd") or d.get("cwd") or None,
         "sensitivity_tier": r.get("sensitivity_tier"),
@@ -518,6 +540,7 @@ def extract_row(r):
         f["thinking_blocks"] = d.get("thinking_blocks") or None
         f["reasoning_text"] = d.get("reasoning_text") or None
         f["response_text"] = f.get("response_text") or d.get("response_text") or None
+        f["tool_result"] = d.get("tool_result") or None
         if d.get("models"):
             f["model"] = ", ".join(d["models"])
     return f

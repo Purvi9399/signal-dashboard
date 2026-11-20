@@ -149,6 +149,34 @@ def _tokens_total(detail: Mapping[str, Any]) -> Optional[int]:
     return total or None
 
 
+_DENY_MARKERS = (
+    "permission", "don't want to proceed", "do not want to proceed",
+    "user denied", "denied", "not allowed", "rejected", "blocked by",
+)
+
+
+def _tool_result_from_line(raw: Mapping[str, Any]):
+    """If a transcript 'user' line carries a tool_result block, return
+    (tool_use_id, is_error, text); else None. The transcript records the real
+    tool outcome (including is_error on denials) that the hook stream omits."""
+    msg = _as_mapping(raw.get("message"))
+    content = msg.get("content")
+    if not isinstance(content, list):
+        return None
+    for b in content:
+        if isinstance(b, dict) and b.get("type") == "tool_result":
+            c = b.get("content")
+            if isinstance(c, list):
+                txt = " ".join(
+                    str(x.get("text", "")) if isinstance(x, dict) else str(x)
+                    for x in c
+                )
+            else:
+                txt = str(c) if c is not None else ""
+            return (b.get("tool_use_id"), bool(b.get("is_error")), txt)
+    return None
+
+
 def extract_claude_transcript_line(
     raw: Mapping[str, Any],
     when: Optional[datetime],
@@ -159,13 +187,42 @@ def extract_claude_transcript_line(
     if not is_claude_transcript_line(raw):
         return None
     detail = _transcript_detail(raw)
+    if raw.get("cwd"):
+        detail["cwd"] = raw.get("cwd")
+    # The transcript carries agent identity/context the hooks omit: the client
+    # version (tool_version) and the active git branch. Surface them so they
+    # stop being Bucket-B "needs collection" fields for claude-code.
+    extra: Dict[str, Any] = {"tokens_total": _tokens_total(detail)}
+    if raw.get("version"):
+        extra["tool_version"] = raw.get("version")
+    if raw.get("gitBranch"):
+        extra["git_branch"] = raw.get("gitBranch")
+    # A 'user' line carrying a tool_result enriches the matching tool observable
+    # (merged by tool_use_id) with the real outcome the hook stream lacks:
+    # success/error, the result text, and permission-denial signals.
+    tr = _tool_result_from_line(raw)
+    if tr:
+        tuid, is_err, txt = tr
+        if tuid:
+            extra["tool_use_id"] = tuid
+        if txt:
+            detail["tool_result"] = {"output": txt[:4000]}
+        if is_err:
+            extra["success"] = False
+            extra["error_type"] = (txt[:200] or "tool_error")
+            low = txt.lower()
+            if any(m in low for m in _DENY_MARKERS):
+                extra["permission_decision"] = "deny"
+                extra["denial_reason"] = txt[:200]
+        else:
+            extra["success"] = True
     return _via_extract_row(
         tool,
         "transcript_appended",
         when,
         raw,
         detail,
-        {"tokens_total": _tokens_total(detail)},
+        extra,
     )
 
 

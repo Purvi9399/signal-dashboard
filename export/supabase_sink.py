@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -127,23 +128,37 @@ class SupabaseSink:
         qs = f"?{urllib.parse.urlencode(query)}" if query else ""
         url = f"{self.config.url}/rest/v1/{path.lstrip('/')}{qs}"
         data = None if body is None else json.dumps(body).encode("utf-8")
-        req = urllib.request.Request(
-            url,
-            data=data,
-            headers=self._headers(prefer=prefer),
-            method=method,
-        )
-        try:
-            with urllib.request.urlopen(req, timeout=60) as resp:
-                raw = resp.read()
-                if not raw:
-                    return None
-                return json.loads(raw.decode("utf-8"))
-        except urllib.error.HTTPError as exc:
-            detail = exc.read().decode("utf-8", errors="replace")
-            raise RuntimeError(
-                f"Supabase {method} {path} failed: HTTP {exc.code}: {detail}"
-            ) from exc
+        # Retry transient failures (connection resets, timeouts, 5xx) so an
+        # unattended live flush doesn't lose a whole session on a one-off blip.
+        last_exc: Optional[Exception] = None
+        for attempt in range(4):
+            req = urllib.request.Request(
+                url, data=data, headers=self._headers(prefer=prefer), method=method,
+            )
+            try:
+                with urllib.request.urlopen(req, timeout=60) as resp:
+                    raw = resp.read()
+                    if not raw:
+                        return None
+                    return json.loads(raw.decode("utf-8"))
+            except urllib.error.HTTPError as exc:
+                detail = exc.read().decode("utf-8", errors="replace")
+                if exc.code in (429, 500, 502, 503, 504) and attempt < 3:
+                    last_exc = RuntimeError(f"HTTP {exc.code}: {detail}")
+                    time.sleep(1.5 ** attempt)
+                    continue
+                raise RuntimeError(
+                    f"Supabase {method} {path} failed: HTTP {exc.code}: {detail}"
+                ) from exc
+            except (urllib.error.URLError, OSError) as exc:
+                last_exc = exc
+                if attempt < 3:
+                    time.sleep(1.5 ** attempt)
+                    continue
+                raise RuntimeError(
+                    f"Supabase {method} {path} failed after retries: {exc}"
+                ) from exc
+        raise RuntimeError(f"Supabase {method} {path} failed: {last_exc}")
 
     def ensure_tenant(self) -> None:
         row: Dict[str, Any] = {

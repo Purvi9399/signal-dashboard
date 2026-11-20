@@ -8,9 +8,12 @@ Optional curated observables ride in the same POST (fleet-safe).
 from __future__ import annotations
 
 import json
+import time
 import urllib.error
 import urllib.request
 from typing import Any, Dict, Mapping, Optional, Sequence
+
+_RETRYABLE_HTTP = {429, 500, 502, 503, 504}
 
 
 def build_ingest_body(
@@ -38,14 +41,37 @@ def urlopen_json(
     data: bytes,
     headers: Mapping[str, str],
     timeout: float = 60.0,
+    retries: int = 4,
+    backoff: float = 1.5,
 ) -> bytes:
-    req = urllib.request.Request(url, data=data, headers=dict(headers), method="POST")
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return resp.read()
-    except urllib.error.HTTPError as exc:
-        detail = exc.read().decode("utf-8", errors="replace")
-        raise RuntimeError(f"ingest POST failed: HTTP {exc.code}: {detail}") from exc
+    """POST with retry on transient failures (connection resets, timeouts, 5xx).
+
+    The teardown flush of a long live session was observed to drop a whole
+    session on a one-off "Connection reset by peer"; a bounded retry prevents
+    that data loss without masking real 4xx errors.
+    """
+    last_exc: Optional[Exception] = None
+    for attempt in range(retries):
+        req = urllib.request.Request(url, data=data, headers=dict(headers), method="POST")
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                return resp.read()
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")
+            if exc.code in _RETRYABLE_HTTP and attempt < retries - 1:
+                last_exc = RuntimeError(f"HTTP {exc.code}: {detail}")
+                time.sleep(backoff ** attempt)
+                continue
+            raise RuntimeError(f"ingest POST failed: HTTP {exc.code}: {detail}") from exc
+        except (urllib.error.URLError, OSError) as exc:
+            last_exc = exc
+            if attempt < retries - 1:
+                time.sleep(backoff ** attempt)
+                continue
+            raise RuntimeError(
+                f"ingest POST failed after {retries} attempts: {exc}"
+            ) from exc
+    raise RuntimeError(f"ingest POST failed: {last_exc}")
 
 
 class EdgeIngestClient:
