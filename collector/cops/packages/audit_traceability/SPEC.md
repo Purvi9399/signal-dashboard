@@ -13,7 +13,7 @@ METRICS.yaml is the contract the runtime reads. This file explains it.
 | Labels | COMPLETE, PARTIAL, BROKEN_TRACE, UNATTRIBUTABLE, or INCONCLUSIVE |
 | Permitted actions | NONE, WATCH, ALERT |
 | Consumes | Runtime Monitoring, Interaction Discovery, Policy Enforcement (`specs.CONSUMES`) |
-| Consumed by | Governance Architecture |
+| Consumed by | Governance Architecture (reads the answers into `gap_levels.audit`) |
 
 ## Purpose
 
@@ -67,10 +67,11 @@ answer that the record contradicts is kept as contrary evidence.
 
 `telemetry.collector_coverage`, `telemetry.unknown_share` (required); `telemetry.source_agreement`,
 `telemetry.turn_linkage`, `telemetry.lane_linkage` (when applicable); `audit_timestamp_integrity`,
-`audit_event_ordering_consistency` (optional). Reads the CONFLICTING_SOURCES, INCOMPARABLE_TIMESTAMPS and
-TIMESTAMP_ORDER checks. UNRELIABLE when source agreement is EXCEPTION or CRITICAL. DEGRADED when source agreement
+`audit_event_ordering_consistency` (optional). Reads the CONFLICTING_SOURCES, INCOMPARABLE_TIMESTAMPS,
+TIMESTAMP_ORDER, STALE (evidence age at the evaluation time) and INGEST_LATENCY checks; the last two run only
+against an approved `evidence_limits` value, and none is approved. UNRELIABLE when source agreement is EXCEPTION or CRITICAL. DEGRADED when source agreement
 is WARNING, an expected collector is missing, unknown share is not NORMAL, turn or lane linkage is in an
-attention state, a timestamp check failed, rows are out of sequence order in time, or a verified Runtime
+attention state, a timestamp, evidence-age or ingest-latency check failed, rows are out of sequence order in time, or a verified Runtime
 Monitoring is not SUFFICIENT. A check that could not run is listed as unassessed (D2).
 
 ### AT-4 Can each governance finding, decision and intervention be traced back to its supporting evidence?

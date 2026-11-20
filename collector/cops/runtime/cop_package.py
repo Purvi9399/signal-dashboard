@@ -730,7 +730,7 @@ def _at2(a, trace, rm=None, idf=None):
     comp, recon, lanes = (_item(a, m) for m in ("audit_trace_completeness", "audit_execution_reconstruction_rate",
                                                 "interaction.subagent_lanes"))
     turn, lane, tn = (_present(a, m) for m in ("telemetry.turn_linkage", "telemetry.lane_linkage",
-                                              "path.transition_novelty"))
+                                               "path.transition_novelty"))
     broken, gaps, contrary = [], [], []
     orphans = list(trace.get("lanes_without_parent") or [])
     if orphans:
@@ -771,7 +771,9 @@ def _at2(a, trace, rm=None, idf=None):
     return ("SEQUENCE_BROKEN" if broken else "RECONSTRUCTED_WITH_GAPS" if gaps else "FULLY_RECONSTRUCTED"), basis
 
 
-AT3_CHECKS = (EA.CONFLICTING_SOURCES, EA.INCOMPARABLE_TIMESTAMPS, EA.TIMESTAMP_ORDER)
+AT3_CHECKS = (EA.CONFLICTING_SOURCES, EA.INCOMPARABLE_TIMESTAMPS, EA.TIMESTAMP_ORDER, EA.STALE, EA.INGEST_LATENCY)
+# Checks whose failure degrades AT-3; source disagreement is judged by its metric's approved state instead.
+AT3_DEGRADING = (EA.INCOMPARABLE_TIMESTAMPS, EA.TIMESTAMP_ORDER, EA.STALE, EA.INGEST_LATENCY)
 
 
 def _at3(a, states, rm=None):
@@ -793,7 +795,7 @@ def _at3(a, states, rm=None):
         if x and x["metric_state"] in ATTENTION_STATES:
             degraded.append(f"{x['requirement']} {x['value']} is {x['metric_state']}")
     checks = {c: _check(a, c) for c in AT3_CHECKS}
-    for c in (EA.INCOMPARABLE_TIMESTAMPS, EA.TIMESTAMP_ORDER):
+    for c in AT3_DEGRADING:
         if checks[c]["outcome"] == EA.VERIFIED_FAILED:
             degraded.append(checks[c]["detail"])
     if order and order["features"].get("out_of_order"):
@@ -823,8 +825,8 @@ def _at4(a, linkage):
         bad = mel["features"].get("unresolved") or []
         gaps.append(f"{len(bad)} of {mel['features'].get('refs')} metric evidence refs do not resolve to a row in "
                     "the record")
-    basis = {"decisions": decisions, "unresolvable": [{"cop": d["cop"], "refs": d["refs"], "resolvable": d["resolvable"],
-                                                      "unresolvable": d["unresolvable"]} for d in unresolvable],
+    basis = {"decisions": decisions,
+             "unresolvable": [{k: d[k] for k in ("cop", "refs", "resolvable", "unresolvable")} for d in unresolvable],
              "metric_evidence_linkage": mel["value"] if mel else None,
              "unresolved_metric_refs": (mel["features"].get("unresolved") or []) if mel else [], "gaps": gaps,
              "not_traced": [f"{m}: not built" for m in AT_NOT_BUILT],
@@ -921,6 +923,9 @@ def observe_audit_traceability(assessments, trace=None, linkage=None, memory=Non
                                                memory)}[qid]()
         if outcome not in q["outcomes"]:
             raise ValueError(f"{qid}: outcome {outcome} is not in METRICS.yaml")
+        for u in basis.get("unassessed", []):
+            if u.get("state") == EA.NOT_CALCULATED:
+                u["missing_inputs"] = " ".join(((pkg["mapping"].get(u["metric"]) or {}).get("note") or "").split())
         out[qid] = {"outcome": outcome, "sufficiency": suf, "basis": basis,
                     "findings": a["findings"], "not_assessed": a["sufficiency"]["not_assessed"]}
     return out
@@ -945,7 +950,8 @@ def _explain_at(qid, ans):
         actor = b["actor"] or {}
         if ans["outcome"] == "ACTOR_NOT_ESTABLISHED":
             n = len(b["effects_without_actor"]) + b["actions_without_actor"]
-            return f"{n} actions or effects carry no session or operator, so the responsible actor cannot be established"
+            return f"{n} actions or effects carry no session or operator, so the responsible actor cannot be " \
+                "established"
         s = f"actor {actor.get('operator')} (session {actor.get('session_id')})"
         if ans["outcome"] == "CAUSE_NOT_ATTRIBUTED":
             return (f"{b['effects_without_step']} of {b['disk_changes']} disk changes are attributed to no step; "
@@ -999,8 +1005,8 @@ def decide_audit_traceability(questions, evidence_scale=1.0):
     undecided = [q for q in AT_CORE if out(q) == INCONCLUSIVE]
     partial = [q for q in ("AT-2", "AT-3", "AT-4") if out(q) in AT_GAP or out(q) == INCONCLUSIVE and q not in AT_CORE] \
         + (["AT-5"] if five.get("own_impaired") or out("AT-5") == INCONCLUSIVE else [])
-    held = [l for l, on in (("UNATTRIBUTABLE", unattr), ("BROKEN_TRACE", bool(broken)),
-                            (INCONCLUSIVE, bool(undecided)), ("PARTIAL", bool(partial))) if on]
+    held = [lab for lab, on in (("UNATTRIBUTABLE", unattr), ("BROKEN_TRACE", bool(broken)),
+                                (INCONCLUSIVE, bool(undecided)), ("PARTIAL", bool(partial))) if on]
     label = held[0] if held else "COMPLETE"
     drivers = {"UNATTRIBUTABLE": ["AT-1"], "BROKEN_TRACE": broken, INCONCLUSIVE: undecided, "PARTIAL": partial,
                "COMPLETE": list(ans)}[label]
@@ -1015,9 +1021,10 @@ def decide_audit_traceability(questions, evidence_scale=1.0):
     else:
         sev = "NONE"
     trace = _question_trace(questions, _explain_at, drivers)
-    contrary = [f"{q}: {x['check']} {x['detail']}" for q, v in questions.items() for x in v["answer"].get("findings", [])]
+    contrary = [f"{q}: {x['check']} {x['detail']}" for q, v in questions.items()
+                for x in v["answer"].get("findings", [])]
     contrary += [f"AT-2: {c}" for c in ans["AT-2"]["basis"].get("contrary", [])] if out("AT-2") != INCONCLUSIVE else []
-    contrary += [f"{l} also holds" for l in held[1:]]
+    contrary += [f"{lab} also holds" for lab in held[1:]]
     return {"label": label, "confidence": round(base * min(1.0, evidence_scale), 3), "severity": sev,
             "action": action, "action_reason": reason, "recipients": list(recipients),
             "drivers": drivers, "also_held": held[1:], "contrary": contrary, "questions": trace,

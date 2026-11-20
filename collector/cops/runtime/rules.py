@@ -36,7 +36,7 @@ from .contracts import (Claim, CLAIM_METRIC_STATE, CLAIM_METRIC_VALUE, CLAIM_TOO
 from ..interpret import EVIDENCE_LEVEL
 from ..specs import BY_KEY, SPEC_CONSUMES
 from .cop_package import aggregate_runtime_monitoring, decide_audit_traceability, decide_interaction_discovery, \
-    CEILING
+    AT_CLEAN, CEILING
 
 _RI = RuleInterpreter()
 HOT = ("EXCEPTION", "CRITICAL")
@@ -987,7 +987,17 @@ def governance_architecture(ctx):
               "latent_observations": [{"metric": x["metric"], "classification": x["classification"],
                                        "documented_consumers": x["documented_consumers"]}
                                       for x in estate if x not in latent_required]}
-    claims = []
+    claims, used = [], []
+    at = verified(ctx["upstream"], "audit_traceability")
+    if at:
+        q = (at.get("cop_specific") or {}).get("questions") or {}
+        levels["audit"] = {"label": at["label"], "finding_id": at.get("finding_id"),
+                           "unclean_answers": {k: v["answer"] for k, v in q.items()
+                                               if v["answer"] not in AT_CLEAN},
+                           "untraced": ((q.get("AT-4") or {}).get("basis") or {}).get("not_traced", [])}
+        used.append({"cop": "audit_traceability", "label": at["label"], "finding_id": at.get("finding_id"),
+                     "counted_as": "audit gaps of the case, owned by Audit & Traceability, and what it cannot trace"})
+        claims.append(uclaim("audit_traceability", at))
     if uncovered or latent_required:
         if uncovered:
             claims.append(tclaim(t, "query_coverage_matrix", "unowned_fields+unhandled_observable_types",
@@ -1002,13 +1012,15 @@ def governance_architecture(ctx):
         label = "STRUCTURAL_CHANGE_RECOMMENDED" if gi else "GAP"
         return F(label, 0.8, "WATCH", "a responsibility no executable rule or COP covers", "",
                  claims, "MEDIUM", cop_specific={"uncovered_responsibilities": uncovered, "gap_levels": levels,
-                                                 "estate_metrics_read_by_no_cop": cov.get("metrics_read_by_no_cop", [])})
+                                                 "estate_metrics_read_by_no_cop": cov.get("metrics_read_by_no_cop", [])},
+                 upstream_used=used)
     note = ""
     if levels["latent_observations"]:
         note = ("; latent, not gaps: " + ", ".join(
             f"{x['metric']} ({x['classification']})" for x in levels["latent_observations"]))
     return F("ADEQUATE", 0.6, "NONE", "", "no active gap and no uncovered required responsibility" + note,
-             [tclaim(t, "query_coverage_matrix", "unowned_fields", [], "no unowned field")],
+             [tclaim(t, "query_coverage_matrix", "unowned_fields", [], "no unowned field")] + claims,
+             upstream_used=used,
              cop_specific={"gap_levels": levels,
                            "estate_metrics_read_by_no_cop": cov.get("metrics_read_by_no_cop", []),
                            "edge_differences": len(result(t, "validate_cop_relationships").get("edge_differences", []))})

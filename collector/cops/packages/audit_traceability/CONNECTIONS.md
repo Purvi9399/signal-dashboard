@@ -19,7 +19,7 @@ contrary evidence; the record decides.
 
 | Consumer | Reads | Effect |
 |---|---|---|
-| Governance Architecture | receives the finding (`specs.CONSUMES`); it appears in its decision's `upstream_considered` | not read by its rule (U3) |
+| Governance Architecture | the verified finding: label, unclean answers, AT-4's untraced items (`rules.governance_architecture`) | recorded in `gap_levels.audit` and `upstream_used`; its label is unchanged, because a gap Audit & Traceability reports is owned by a COP (D9) |
 | Incident Response | any verified finding (`rules.incident_response`) | recorded as used with its label |
 
 The decision record names Governance Architecture as the recipient of BROKEN_TRACE and UNATTRIBUTABLE.
@@ -28,10 +28,10 @@ The decision record names Governance Architecture as the recipient of BROKEN_TRA
 
 `tests/test_cop_package_audit_traceability.py` and the harness: RM-3 changes the label; ID-2 and a contradicting
 upstream reading; a Policy Enforcement decision whose evidence does not resolve; Governance Architecture receives
-the finding.
+the finding, and its rule reads different answers from a COMPLETE and a BROKEN_TRACE finding.
 
 ## What a consumer receives
 
 The published finding: label, status, verified, confidence, claims, lineage, `cop_specific.questions` with the
-five answers and their bases, `drivers`, `also_held`, `contrary`, `trace`, `decision_linkage`. No consumer reads
-the question findings yet.
+five answers and their bases, `drivers`, `also_held`, `contrary`, `trace`, `decision_linkage`. Governance
+Architecture reads the question findings.

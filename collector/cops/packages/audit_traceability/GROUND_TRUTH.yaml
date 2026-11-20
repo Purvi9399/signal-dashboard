@@ -246,5 +246,26 @@ scenarios:
   downstream_governance_architecture:
     world: >-
       The effects_without_step world, run with Governance Architecture after Audit & Traceability.
+      Checks ga_reads_at_answers added 2026-11-20, when Governance Architecture began reading the finding.
+      Governance Architecture is a model COP and no model is called, so its deterministic rule (the baseline its
+      investigation starts from) is run on the published finding.
     cop_label: [BROKEN_TRACE]
-    checks: [recipients_include_ga, at_finding_reaches_ga]
+    checks: [recipients_include_ga, at_finding_reaches_ga, ga_reads_at_answers]
+
+  downstream_governance_architecture_complete:
+    world: >-
+      Added 2026-11-20 to show downstream behaviour follows the evidence: the normal world, run with
+      Governance Architecture. Governance Architecture reads a COMPLETE finding with no unclean answer.
+    cop_label: [COMPLETE]
+    checks: [ga_reads_clean_audit]
+
+  stale_evidence:
+    world: >-
+      Added 2026-11-20 for temporal validity. The normal world, evaluated at 2026-10-12T10:00:00Z, three days
+      after its last observation, with evidence_limits.max_evidence_age_s set to 3600 as a harness test value
+      (no limit is approved). The evidence is older than the limit.
+    questions:
+      AT-3: DEGRADED
+    cop_label: [PARTIAL]
+    action: WATCH
+    checks: [at3_names_stale]

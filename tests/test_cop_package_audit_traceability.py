@@ -58,6 +58,9 @@ def test_unbuilt_metrics_are_optional_and_reported_not_calculated():
     q = questions("normal")
     items = {x["requirement"]: x for v in q.values() for x in v["assessment"]["presence"]["items"]}
     assert all(items[m]["state"] == EA.NOT_CALCULATED for m in NOT_BUILT)
+    told = {u["metric"]: u["missing_inputs"] for v in q.values() for u in v["answer"]["basis"].get("unassessed", [])
+            if u.get("state") == EA.NOT_CALCULATED}
+    assert set(told) == set(NOT_BUILT) and all(x.startswith("NOT_CALCULATED.") for x in told.values())
 
 
 def test_questions_without_workbook_fields_list_none():
@@ -120,7 +123,8 @@ def test_a_source_disagreement_breaks_the_trace_only_beyond_its_threshold():
 def test_unrun_checks_are_reported_not_counted_as_degradation():
     b = questions("normal")["AT-3"]["answer"]["basis"]
     assert b["degraded"] == [] and b["unreliable"] == []
-    assert {u.get("check") for u in b["unassessed"] if u.get("check")} == {"INCOMPARABLE_TIMESTAMPS", "TIMESTAMP_ORDER"}
+    unrun = {u.get("check") for u in b["unassessed"] if u.get("check")}
+    assert unrun == {"INCOMPARABLE_TIMESTAMPS", "TIMESTAMP_ORDER", "STALE", "INGEST_LATENCY"}
 
 
 def test_thin_telemetry_leaves_attribution_undecided_and_keeps_the_partial_reading():
@@ -190,3 +194,20 @@ def test_the_validator_rejects_an_answer_outside_the_contract(bench):
     d = copy.deepcopy(bench["results"]["normal"]["cop"]["result"]["decision"])
     d["question_findings"][0]["answer"] = "PROBABLY_FINE"
     assert "AT-1: answer PROBABLY_FINE is not one of its outcomes" in D.validate(d)
+
+
+def test_old_evidence_degrades_reliability_only_against_an_approved_limit(bench):
+    stale = bench["results"]["stale_evidence"]["cop"]["finding"]["cop_specific"]["questions"]["AT-3"]
+    fresh = questions("normal")["AT-3"]["answer"]["basis"]["checks"]["STALE"]
+    assert (stale["answer"], stale["basis"]["checks"]["STALE"]["outcome"]) == ("DEGRADED", "VERIFIED_FAILED")
+    assert fresh["outcome"] == "NOT_EXECUTED"
+
+
+def test_governance_architecture_reads_what_the_evidence_changed(bench):
+    broken = bench["results"]["downstream_governance_architecture"]["ga_rule"]
+    clean = bench["results"]["downstream_governance_architecture_complete"]["ga_rule"]
+    want = {"AT-1": "CAUSE_NOT_ATTRIBUTED", "AT-5": "NOT_DEFENSIBLE"}
+    assert broken["cop_specific"]["gap_levels"]["audit"]["unclean_answers"] == want
+    assert clean["cop_specific"]["gap_levels"]["audit"]["unclean_answers"] == {}
+    assert broken["label"] == clean["label"]
+    assert [u["cop"] for u in broken["upstream_used"]] == [COP]

@@ -9,7 +9,7 @@ import copy, json, os, sys
 
 import yaml
 
-from ...runtime import evaluation as E, graph as G, synthetic as S
+from ...runtime import evaluation as E, evidence_assessment as EA, graph as G, synthetic as S
 from ...authority import LEGACY_TO_TYPED
 from ...runtime.contracts import VALIDATED
 from ...runtime.persistence import SQLiteStore
@@ -100,7 +100,13 @@ BUILD = {
     "memory_unvalidated_gap": lambda: history() + session(unaccounted=3),
     "adversarial_instruction_text": lambda: history() + session(unaccounted=3, text=INSTRUCTION),
     "downstream_governance_architecture": lambda: history() + session(unaccounted=3),
+    "downstream_governance_architecture_complete": lambda: history() + session(),
+    "stale_evidence": lambda: history() + session(),
 }
+
+# Harness test values, not approved limits.
+TEST_LIMITS = {"max_evidence_age_s": 3600}
+EVALUATED = {"stale_evidence": "2026-10-12T10:00:00Z"}
 
 
 # Upstream findings in the published shape: test inputs, not runs.
@@ -176,17 +182,35 @@ def run_scenario(name, t):
         store = SQLiteStore()
         res["remembered"] = _remembered(store, name == "memory_validated_gap")
     cops = ["runtime_monitoring", "interaction_discovery", COP]
-    if name == "downstream_governance_architecture":
+    if name.startswith("downstream_governance_architecture"):
         cops.append("governance_architecture")
-    rt = E.make_runtime(f"at-{name}", "s1", copy.deepcopy(rows), {}, store=store)
+    timed = {}
+    if name in EVALUATED:
+        cfg = copy.deepcopy(EA.signal_metrics.load_config())
+        cfg["evidence_limits"] = dict(TEST_LIMITS)
+        timed = {"cfg": cfg, "computed_at": EVALUATED[name]}
+    rt = E.make_runtime(f"at-{name}", "s1", copy.deepcopy(rows), {}, store=store, **timed)
     out = G.run_case(rt, cops=cops)
     res["cop"] = {"finding": out["results"][COP]["finding"], "result": out["results"][COP]}
     res["downstream"] = {k: out["results"][k] for k in cops[3:]}
+    if "governance_architecture" in cops:
+        res["ga_rule"] = ga_rule(rt, out["findings"])
     if name == "adversarial_instruction_text":
         clean = history() + session(unaccounted=3)
         rt = E.make_runtime("at-clean", "s1", clean, {})
         res["without_text"] = G.run_case(rt, cops=cops)["results"][COP]["finding"]
     return res
+
+
+def ga_rule(rt, findings):
+    """Governance Architecture is a model COP, and no model is called here: its deterministic rule, which is
+    the baseline the investigation starts from, is run on the published upstream findings."""
+    from ...runtime import rules as RU
+    from ...runtime.tools import TOOLS
+    tools = {n: {"result": TOOLS[n][0](rt.case, {}, {})}
+             for n in ("query_coverage_matrix", "validate_cop_relationships")}
+    up = {k: v for k, v in findings.items() if k in ("audit_traceability",)}
+    return RU.governance_architecture({"tools": tools, "upstream": up, "events": []})
 
 
 def _f(res):
@@ -207,6 +231,14 @@ def _b(res, qid):
 
 def _decision(res):
     return _r(res)["decision"]
+
+
+def _ga_audit(res):
+    return res["ga_rule"]["cop_specific"]["gap_levels"].get("audit") or {}
+
+
+def _ga_used(res):
+    return any(u["cop"] == COP and u["finding_id"] == _f(res)["finding_id"] for u in res["ga_rule"]["upstream_used"])
 
 
 CHECKS = {
@@ -264,7 +296,8 @@ CHECKS = {
                                 _b(r, "AT-2")["gaps"]),
     "contrary_names_upstream": lambda r: (
         {"AT-2: Interaction Discovery ID-2 answered FULLY_RECONSTRUCTED",
-         "AT-2: Runtime Monitoring RM-3 answered ALL_ACTIONS_LINKED"} <= set(_decision(r)["contrary_evidence"]["cop_reported"]),
+         "AT-2: Runtime Monitoring RM-3 answered ALL_ACTIONS_LINKED"}
+        <= set(_decision(r)["contrary_evidence"]["cop_reported"]),
         _decision(r)["contrary_evidence"]["cop_reported"]),
     "at5_names_calls_without_result": lambda r: (
         any("calls have no result" in c for c in _b(r, "AT-5")["own_impaired"]), _b(r, "AT-5")["own_impaired"]),
@@ -281,6 +314,14 @@ CHECKS = {
         {q: t["answer"] for q, t in _f(r)["cop_specific"]["questions"].items()}
         == {q: t["answer"] for q, t in r["without_text"]["cop_specific"]["questions"].items()}
         and _f(r)["label"] == r["without_text"]["label"], "answers compared"),
+    "ga_reads_at_answers": lambda r: (
+        _ga_audit(r).get("unclean_answers") == {"AT-1": "CAUSE_NOT_ATTRIBUTED", "AT-5": "NOT_DEFENSIBLE"}
+        and _ga_used(r), _ga_audit(r)),
+    "ga_reads_clean_audit": lambda r: (_ga_audit(r).get("label") == "COMPLETE"
+                                       and _ga_audit(r).get("unclean_answers") == {} and _ga_used(r), _ga_audit(r)),
+    "at3_names_stale": lambda r: (
+        _b(r, "AT-3")["checks"]["STALE"]["outcome"] == "VERIFIED_FAILED"
+        and any("exceeds the approved 3600 s" in d for d in _b(r, "AT-3")["degraded"]), _b(r, "AT-3")["degraded"]),
     "at_finding_reaches_ga": lambda r: (
         any(u["cop"] == COP and u.get("finding_id") == _f(r)["finding_id"]
             for u in r["downstream"]["governance_architecture"]["decision"]["upstream_considered"]),

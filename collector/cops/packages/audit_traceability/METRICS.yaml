@@ -5,7 +5,7 @@
 
 cop: audit_traceability
 contract: cop_metrics/1
-version: 2026-11-20.1
+version: 2026-11-20.2
 
 sources:
   questions: >-
@@ -27,25 +27,62 @@ mapping:
   telemetry.turn_linkage: {used_by: [AT-2, AT-3]}
   telemetry.lane_linkage: {used_by: [AT-2, AT-3]}
   path.transition_novelty: {used_by: [AT-2]}
-  audit_reconstruction_confidence: {used_by: [AT-2], note: not built; reported NOT_CALCULATED}
+  audit_reconstruction_confidence:
+    used_by: [AT-2]
+    note: >-
+      NOT_CALCULATED. Registry: "AT's own assessment", a decision field of the consuming COP, not a metric.
+      Missing input: none to collect; it would be this COP's own output.
   telemetry.collector_coverage: {used_by: [AT-3]}
   telemetry.unknown_share: {used_by: [AT-3]}
   telemetry.source_agreement: {used_by: [AT-3]}
   audit_timestamp_integrity: {used_by: [AT-3]}
   audit_event_ordering_consistency: {used_by: [AT-3]}
   audit_metric_evidence_linkage: {used_by: [AT-4]}
-  audit_decision_evidence_linkage: {used_by: [AT-4], note: not built; reported NOT_CALCULATED}
-  audit_intervention_traceability: {used_by: [AT-4], note: not built; reported NOT_CALCULATED}
-  audit_policy_version_traceability: {used_by: [AT-4], note: not built; reported NOT_CALCULATED}
-  audit_verifier_coverage: {used_by: [AT-4], note: not built; reported NOT_CALCULATED}
-  audit_evidence_sufficiency: {used_by: [AT-4], note: not built; reported NOT_CALCULATED}
+  audit_decision_evidence_linkage:
+    used_by: [AT-4]
+    note: >-
+      NOT_CALCULATED. Registry: cop_decisions.evidence_refs that resolve / refs, computed in the COPS runtime
+      from upstream findings. Missing input: none; tools.t_check_decision_linkage already computes the per-COP
+      counts AT-4 uses, but not as this metric (U4).
+  audit_intervention_traceability:
+    used_by: [AT-4]
+    note: >-
+      NOT_CALCULATED. Registry: intervention records linked to decisions. Missing input: stored records of
+      COPS actions and their outcomes; none are stored yet.
+  audit_policy_version_traceability:
+    used_by: [AT-4]
+    note: >-
+      NOT_CALCULATED. Registry: policy versions recorded with each decision. Missing input: the policy_registry
+      reference (policy_id, version, effective_from, scope, rule, precedents) from an enterprise administrator.
+  audit_verifier_coverage:
+    used_by: [AT-4]
+    note: >-
+      NOT_CALCULATED. Registry: COPS decisions with a verifier result / decisions, from upstream findings.
+      Missing input: none to collect; not yet computed in the runtime.
+  audit_evidence_sufficiency:
+    used_by: [AT-4]
+    note: >-
+      NOT_CALCULATED. Registry: evidence_confidence of upstream decisions. Missing input: none to collect; not
+      yet computed in the runtime.
   audit_missing_event_rate: {used_by: [AT-5]}
   audit_conflicting_record_rate: {used_by: [AT-5]}
   audit_unverifiable_record_rate: {used_by: [AT-5]}
   audit_source_provenance_completeness: {used_by: [AT-5]}
-  audit_raw_reference_resolution_rate: {used_by: [AT-5], note: not built; needs the source events as an input}
-  audit_evidence_integrity: {used_by: [AT-5], note: not built; the registry asks what integrity means}
-  audit_evidence_retention_coverage: {used_by: [AT-5], note: not built; reported NOT_CALCULATED}
+  audit_raw_reference_resolution_rate:
+    used_by: [AT-5]
+    note: >-
+      NOT_CALCULATED. Registry: raw_ref that resolves / raw_ref. Missing input: the source_events table as an
+      input to compute(), and the raw_ref meaning decision (raw_ref names native evidence, Runtime Monitoring M17).
+  audit_evidence_integrity:
+    used_by: [AT-5]
+    note: >-
+      NOT_CALCULATED. Registry question unresolved: content_hash exists for files only; integrity of what?
+      Missing input: a definition.
+  audit_evidence_retention_coverage:
+    used_by: [AT-5]
+    note: >-
+      NOT_CALCULATED. Registry: retention policy. Missing input: the retention_policy reference (evidence class,
+      retention period) from an enterprise administrator.
 
 questions:
   AT-1:

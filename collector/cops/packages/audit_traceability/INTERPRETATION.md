@@ -44,7 +44,8 @@ replaced rule. It is reported beside the label and never chooses it.
   MISSING_EVIDENCE.
 - Optional measures that could not be observed and checks that could not run are listed as unassessed, never
   counted as zero or as a failure.
-- Nine metrics are not built and are reported NOT_CALCULATED.
+- Nine metrics are not built and are reported NOT_CALCULATED, each with its missing inputs.
+- Temporal validity: evidence age and ingest latency are judged only against approved `evidence_limits`.
 - Unvalidated trace_gap records are shown as pending and never treated as precedent.
 
 ## Thresholds
