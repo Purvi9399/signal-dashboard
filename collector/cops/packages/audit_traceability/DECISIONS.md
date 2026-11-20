@@ -1,6 +1,18 @@
 # Audit & Traceability: decisions
 
-## Made in this package (proposed)
+## Acceptance
+
+2026-11-20: purvi accepted this package as the current implementation baseline (commits `048333b` and `be44783`;
+harness 138 of 138; full suite 777 passed, 1 skipped). Two limitations are retained and are not resolved:
+
+- **Evidence age and ingest latency (U5).** No `evidence_limits` value is approved, so AT-3's temporal checks are
+  never judged on real data. No threshold may be invented.
+- **AT-4 tracing coverage (U4).** AT-4 traces upstream decisions' evidence links only. Intervention, policy-version
+  and verifier traceability stay NOT_CALCULATED, and AT-4's scope is not expanded without review.
+
+The other open items (U1, U2, U3, D5) remain open.
+
+## Made in this package (part of the baseline accepted on 2026-11-20)
 
 | # | Decision | Alternatives considered | Rationale |
 |---|---|---|---|
