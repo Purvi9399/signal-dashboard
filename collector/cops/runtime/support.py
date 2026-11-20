@@ -193,7 +193,12 @@ def _tail(cop):
 
 def _anomaly():
     m = tuple(BY_KEY["anomaly_detection"].metric_keys)
-    return [C("deviation_metrics", "metrics", "direct", "all", "telemetry", metrics=m, defines_attention=True),
+    # explainable: a deviation that checkable context explains is the premise of either reading, not evidence
+    # for it (cop_package.ad_legitimacy). warning_is_partial: for the quiet label a WARNING is within the
+    # deviation limit, so it counts as partial support and is recorded (U-AD3). Both are Anomaly Detection's.
+    return [C("deviation_metrics", "metrics", "direct", "all", "telemetry", metrics=m, defines_attention=True,
+              explainable=True, warning_is_partial=True),
+            C("legitimacy_context", "legitimacy", "direct", None, "legitimacy_context"),
             C("versioned_baseline", "baseline_history", "supporting", None, "baseline_history",
               tools=("compare_versioned_baseline",)),
             C("upstream:behavior_analytics", "upstream", "supporting", None, "upstream:behavior_analytics",
@@ -320,6 +325,12 @@ def _metrics(ctx, comp, cls, label):
             f"{r['metric']}={r['state']}" for r in hot)) if hot else "no failure metric in an attention "
             "state", refs=[f"metric:{r['metric']}" for r in hot])
     rel = ctx["telemetry_reliability"]
+    premise = _premise(ctx, cls) if comp.get("explainable") else set()
+    if premise:
+        rows = [r for r in rows if r["metric"] not in premise]
+        if not rows:
+            return _item("neutral", basis="every metric deviates and checkable context explains each: the "
+                                          "premise, not evidence either way")
     obs = [r for r in rows if r["evidence"] == "OBSERVED"]
     na = [r for r in rows if r["evidence"] == "NOT_APPLICABLE"]
     if comp.get("unknown_is_observation"):
@@ -331,8 +342,17 @@ def _metrics(ctx, comp, cls, label):
     quiet = [r for r in obs if r["state"] not in ATTENTION_STATES]
     unknown = [r["metric"] for r in rows if r["evidence"] not in ("OBSERVED", "NOT_APPLICABLE")
                and not comp.get("unknown_is_observation")]
-    quiet_share = (len(quiet) + 0.5 * len(na)) / len(rows)
+    warned = []
+    if cls == "quiet" and comp.get("warning_is_partial"):
+        warned = [r for r in hot if r["state"] == "WARNING"]
+        hot = [r for r in hot if r["state"] != "WARNING"]
+    quiet_share = (len(quiet) + (1 - state_strength("WARNING")) * len(warned) + 0.5 * len(na)) / len(rows)
     tail = f"; unknown: {', '.join(unknown)}" if unknown else ""
+    if premise:
+        tail += "; explained by checkable context (premise, not evidence): " + ", ".join(sorted(premise))
+    if warned:
+        tail += "; WARNING, within the deviation limit (partial support, recorded): " + ", ".join(
+            f"{r['metric']}={r['value']}" for r in warned)
     if cls == "attention":
         if hot:
             top = max(hot, key=lambda r: _strength(ctx, r["state"]))
@@ -429,6 +449,9 @@ def _baseline(ctx, comp, cls, label):
     b = ctx.get("baseline")
     if not b:
         return NA("no separate rule baseline (deterministic COP: the rule is the finding)")
+    if _premise(ctx, cls):
+        return _item("neutral", basis=f"rule baseline reads {b.get('label')} from deviations that checkable "
+                                      f"context explains: the premise, not evidence")
     bl = b.get("label")
     bcls = label_class(ctx["cop"], bl) if b.get("status", SUBSTANTIVE) == SUBSTANTIVE else None
     if bcls is None:
@@ -455,10 +478,42 @@ def _memory(ctx, comp, cls, label):
 
 # ---- COP-specific evaluators
 
+def _premise(ctx, cls):
+    """Deviations that checkable context explains, for Anomaly Detection: for the quiet label only when every
+    deviation is explained and the finding cites the context; for the attention label whenever every deviation
+    is explained (contrary evidence needs no citation). One explained deviation never covers another."""
+    lg = ctx.get("legitimacy")
+    if not lg or not lg["all_explained"] or (cls == "quiet" and not lg["cited"]):
+        return set()
+    return set(lg["explained"])
+
+
+def _legitimacy(ctx, comp, cls, label):
+    lg = ctx.get("legitimacy")
+    if not lg or not lg["deviating"]:
+        return NA("no deviation to explain")
+    ref = [f"context:{m}" for m in lg["explained"]]
+    if cls == "quiet":
+        if lg["all_explained"] and lg["cited"]:
+            return _item("supports", 1.0, 1.0, "every deviation explained by re-checked context: " + "; ".join(
+                f"{x['metric']} by {', '.join(x['by'])}" for x in lg["context"]), ref)
+        if lg["all_explained"]:
+            return _item("neutral", basis="context explains every deviation but the finding does not cite it")
+        return _item("opposes", 1.0, 1.0, "not explained by checkable context: " + "; ".join(
+            f"{x['metric']} ({x.get('gap')})" for x in lg["context"] if not x["explained"]), ref)
+    if lg["all_explained"]:
+        return _item("opposes", 1.0, 1.0, "every deviation explained by re-checked context: " + "; ".join(
+            f"{x['metric']} by {', '.join(x['by'])}" for x in lg["context"]), ref)
+    return NA("not every deviation has checkable context: nothing explains the anomaly away")
+
+
 def _baseline_history(ctx, comp, cls, label):
     ok = _ok(_calls(ctx, comp["tools"]))
+    premise = _premise(ctx, cls)
     cmp_ = [(_result(c), c) for c in ok if (_result(c).get("sessions_in_baseline") or 0) > 0
-            and _result(c).get("current_value") is not None]
+            and _result(c).get("current_value") is not None and _result(c).get("metric_id") not in premise]
+    if premise and not cmp_ and ok:
+        return _item("neutral", basis="the versioned baseline restates deviations that context explains")
     if not cmp_:
         return UNKNOWN("no versioned baseline compared", comp["tools"])
     outside = [(r, c) for r, c in cmp_ if not (r["min"] <= float(r["current_value"]) <= r["max"])]
@@ -600,6 +655,7 @@ def _risk_recomputation(ctx, comp, cls, label):
 
 
 EVALUATORS = {"metrics": _metrics, "record": _record, "upstream": _upstream, "baseline": _baseline,
+              "legitimacy": _legitimacy,
               "memory": _memory, "baseline_history": _baseline_history,
               "policy_evaluation": _policy_evaluation, "entitlements": _entitlements,
               "milestones": _milestones, "transitions": _transitions,
@@ -656,6 +712,9 @@ def assess(cop, finding, results, rows, tool_calls, upstream, memory_view, basel
            "claims": cand.get("claims") or [], "telemetry_reliability": telemetry_reliability,
            "severity": cand.get("severity"),
            "sc01_pass": (by.get("SC-01") or {}).get("result") == "PASS"}
+    from .cop_package import LEGITIMACY
+    if cop in LEGITIMACY and cls is not None:
+        ctx["legitimacy"] = LEGITIMACY[cop](case, memory_view, ctx["claims"], ctx["tool_calls"])
     comps = []
     for comp in profile(cop):
         item = EVALUATORS[comp["kind"]](ctx, comp, cls or "attention", label) if cls else \

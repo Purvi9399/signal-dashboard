@@ -96,8 +96,42 @@ WORLDS = {
     "memory_precedent_interpreted": lambda: history() + session(tokens=40000),
 }
 
+def _classes(rows, s1="migration"):
+    ids = {r["session_id"] for r in rows}
+    return {i: (s1 if i == "s1" else "migration" if i.startswith("mig") else "bugfix") for i in ids}
+
+
+def _class_world(mig_tokens=40000, n=5, **kw):
+    return history() + history(n, tokens=mig_tokens, prefix="mig") + session(tokens=40000, **kw)
+
+
+WORLDS.update({
+    "legitimate_variation_task_class": lambda: _class_world(),
+    "unsupported_legitimacy_claim": lambda: history() + session(tokens=40000),
+    "legitimacy_with_too_few_peers": lambda: _class_world(n=2),
+    "explained_tokens_unexplained_retries": lambda: _class_world(retry=3),
+    "false_anomaly_over_explained_deviation": lambda: _class_world(),
+    "genuine_anomaly_despite_task_class": lambda: _class_world(mig_tokens=1000),
+    "false_normal_against_task_class_peers": lambda: _class_world(mig_tokens=1000),
+    "fabricated_context_citation": lambda: _class_world(mig_tokens=1000),
+    "validated_legitimate_precedent": lambda: history() + session(tokens=40000),
+    "unvalidated_legitimate_precedent": lambda: history() + session(tokens=40000),
+    "precedent_for_another_metric": lambda: history() + session(tokens=40000),
+    "baseline_contamination_half_estate": lambda: history(4) + history(3, tokens=40000, prefix="new", day0=5)
+    + session(tokens=40000),
+    "baseline_minimum_counts_self": lambda: history(4) + session(tokens=40000),
+})
+CLASSED = ("legitimate_variation_task_class", "legitimacy_with_too_few_peers", "explained_tokens_unexplained_retries",
+           "false_anomaly_over_explained_deviation", "genuine_anomaly_despite_task_class",
+           "false_normal_against_task_class_peers", "fabricated_context_citation")
+# the earlier observation each precedent scenario finds: (deviating metrics, validated by a reviewer)
+PRECEDENTS = {"validated_legitimate_precedent": (["insights.token_outlier"], True),
+              "unvalidated_legitimate_precedent": (["insights.token_outlier"], False),
+              "precedent_for_another_metric": (["access.first_seen_mcp"], True)}
+
 ARTIFACTS = {"novelty_is_not_a_violation": lambda: {"policy_store": S.policy_store(GITHUB),
-                                                     "entitlements": {S.OPS: {"mcp_servers": ["github"]}}}}
+                                                     "entitlements": {S.OPS: {"mcp_servers": ["github"]}}},
+             **{k: (lambda k=k: {"task_classes": _classes(WORLDS[k]())}) for k in CLASSED}}
 COPS = {"novelty_is_not_a_violation": ["runtime_monitoring", "interaction_discovery", COP, "policy_enforcement"],
         "behaviour_analytics_correlated": ["runtime_monitoring", "behavior_analytics", COP]}
 
@@ -132,7 +166,48 @@ def legitimate(metrics, quantity, explanation):
     return [lambda p: _investigate(quantity), s1]
 
 
+def _context_claims(p, value=None):
+    """tool_observation claims on the package's context, from the baseline tool result (value overrides the
+    asserted value, for the fabricated-citation scenario)."""
+    from ...runtime.verifiers import _get_path
+    c = next(x for x in p["baseline_tool_results"] if x["tool"] == "assess_anomaly_questions")
+    ctx = _get_path(c["result"], "questions.AD-5.answer.basis.context") or []
+    out = []
+    for i, x in enumerate(ctx):
+        field = f"questions.AD-5.answer.basis.context.{i}.explained"
+        got = _get_path(c["result"], field) if value is None else value
+        out.append({"statement": f"{x['metric']}: explained by checkable context = {got}", "kind": "tool_observation",
+                    "tool_call_id": c["tool_call_id"], "result_field": field, "asserted_value": got,
+                    "evidence_refs": [f"tool:{c['tool_call_id']}"]})
+    return out
+
+
+def legitimate_cited(metrics, explanation, value=None):
+    def s1(p):
+        claims = [FX.cm(p, m) for m in metrics] + [FX.ct(p, "calculate_deviation", "current")] + \
+            _context_claims(p, value)
+        return FX.conclude(explanation, "NORMAL", 0.7, claims, explanation, "NONE",
+                           detail={"deviating_quantities": list(metrics),
+                                   "alternative_explanations_considered": [explanation]},
+                           alternatives=[explanation])
+    return [lambda p: _investigate("tokens"), s1]
+
+
 SCRIPTS = {
+    "legitimate_variation_task_class": lambda: legitimate_cited(
+        ["insights.token_outlier"], "a migration: sessions of its task class use the same tokens"),
+    "unsupported_legitimacy_claim": lambda: legitimate(["insights.token_outlier"], "tokens", "a planned migration"),
+    "legitimacy_with_too_few_peers": lambda: legitimate_cited(["insights.token_outlier"], "a migration"),
+    "explained_tokens_unexplained_retries": lambda: legitimate_cited(
+        ["insights.token_outlier", "insights.retry"], "a migration; the test is rerun while migrating"),
+    "false_anomaly_over_explained_deviation": lambda: anomalous(["insights.token_outlier"]),
+    "genuine_anomaly_despite_task_class": lambda: anomalous(["insights.token_outlier"]),
+    "false_normal_against_task_class_peers": lambda: legitimate_cited(["insights.token_outlier"], "a migration"),
+    "fabricated_context_citation": lambda: legitimate_cited(["insights.token_outlier"], "a migration", value=True),
+    "validated_legitimate_precedent": lambda: legitimate_cited(
+        ["insights.token_outlier"], "the same legitimate spike a reviewer validated before"),
+    "unvalidated_legitimate_precedent": lambda: legitimate_cited(["insights.token_outlier"], "seen before"),
+    "precedent_for_another_metric": lambda: legitimate_cited(["insights.token_outlier"], "seen before"),
     "token_spike_interpreted": lambda: anomalous(["insights.token_outlier"]),
     "legitimate_retries_interpreted": lambda: legitimate(
         ["insights.retry"], "failures", "test-and-fix loop: the failing test is rerun after each edit"),
@@ -169,6 +244,30 @@ def _remembered(store_):
     return w, unv["record_id"]
 
 
+def _legitimate_precedent(store_, metrics, validate):
+    """An earlier observation of this agent outside the scenario estate. For the token spike it is a real run:
+    session m1 in the task-class world, read NORMAL by the simulated model citing its class, verified and so
+    remembered (graph.validate_memory_update, remember_quiet). For another metric it is written VERIFIED
+    directly, as that run would write it. A reviewer validates it when validate is set."""
+    if metrics == ["insights.token_outlier"]:
+        rows = history() + history(5, tokens=40000, prefix="mig") + session("m1", 8, tokens=40000)
+        rt = E.make_runtime("ad-memory-m1", "m1", rows, {"task_classes": _classes(rows, "migration") | {"m1": "migration"}},
+                            FX.Script({COP: SCRIPTS["legitimate_variation_task_class"]()}), store=store_)
+        w = G.run_case(rt, cops=["runtime_monitoring", COP])["results"][COP]["memory_write"]
+        rid = w.get("record_id")
+    else:
+        rt = E.make_runtime("ad-memory-m2", "m2", history() + session("m2", 8, mcp=("github",)), {}, None,
+                            store=store_)
+        rid = rt.memory.write(COP, "ad-memory-m2", rt.case.tenant_id, "anomaly_observation",
+                              {"label": "NORMAL", "finding_status": "SUBSTANTIVE", "session_id": "m2",
+                               "deviating_metrics": list(metrics)},
+                              {"case_id": "ad-memory-m2", "finding_id": "f-m2"}, agent_scope=S.OPS,
+                              status="VERIFIED")["record_id"]
+    if validate and rid:
+        rt.memory.record_feedback(rid, rt.case.tenant_id, VALIDATED, REVIEWER, "reviewed: a legitimate variation")
+    return rid
+
+
 def run_scenario(name, t):
     rows = WORLDS[name]() if name in WORLDS else None
     res = {"scenario": name}
@@ -188,6 +287,9 @@ def run_scenario(name, t):
     if name == "memory_precedent_interpreted":
         store_ = SQLiteStore()
         res["remembered"], res["unverified_record"] = _remembered(store_)
+    if name in PRECEDENTS:
+        store_ = SQLiteStore()
+        res["precedent_record"] = _legitimate_precedent(store_, *PRECEDENTS[name])
     script = SCRIPTS[name]() if name in SCRIPTS else None
     art = ARTIFACTS[name]() if name in ARTIFACTS else None
     out, rt = _case(name, rows, art, script, store_, COPS.get(name, ("runtime_monitoring", COP)))
@@ -384,7 +486,59 @@ CHECKS = {
     "unverified_not_precedent": lambda r: (
         r["unverified_record"] not in [p["record_id"] for p in _b(r, "AD-5")["precedents"]], r["unverified_record"]),
     "incident_response_reads_ad5": _ir_reads_ad5,
+    "context_explains_tokens_by_task_class": lambda r: (
+        _ctx(r, "insights.token_outlier")["explained"] and _ctx(r, "insights.token_outlier")["by"] == ["task_classes"]
+        and _src(r, "insights.token_outlier", "task_classes")["peers"] >= 5, _ctx(r, "insights.token_outlier")),
+    "context_explains_tokens_by_precedent": lambda r: (
+        "validated_precedent" in _ctx(r, "insights.token_outlier")["by"]
+        and _src(r, "insights.token_outlier", "validated_precedent")["record_id"] == r["precedent_record"],
+        _ctx(r, "insights.token_outlier")),
+    "context_does_not_explain_tokens": lambda r: (not _ctx(r, "insights.token_outlier")["explained"],
+                                                  _ctx(r, "insights.token_outlier")),
+    "context_peers_insufficient": lambda r: (
+        (_src(r, "insights.token_outlier", "task_classes")["peers"], _src(r, "insights.token_outlier", "task_classes")
+         ["needed"], _src(r, "insights.token_outlier", "task_classes")["explains"]) == (2, 5, False),
+        _src(r, "insights.token_outlier", "task_classes")),
+    "retry_unexplained": lambda r: (not _ctx(r, "insights.retry")["explained"], _ctx(r, "insights.retry")),
+    "legitimacy_rechecked_by_vs01": lambda r: (
+        _comp(r, "legitimacy_context")["item"]["direction"] == "supports"
+        and _vr(r)["VS-01"]["result"] in ("PASS", "WARN"), (_comp(r, "legitimacy_context")["item"], _vr(r)["VS-01"])),
+    "ds03_contradiction_explained": lambda r: (
+        (_vr(r)["DS-03"]["result"], _vr(r)["DS-03"]["reason_code"]) == ("PASS", "baseline_contradiction_explained"),
+        _vr(r)["DS-03"]),
+    "normal_rejected": lambda r: (
+        _f(r)["status"] == "REJECTED_BY_VERIFIER" and (_f(r).get("rejected_candidate") or {}).get("label") == "NORMAL",
+        (_f(r)["status"], [x["check_id"] for x in _r(r)["verifier_results"] if x["result"] == "FAIL"])),
+    "anomalous_rejected": lambda r: (
+        _f(r)["status"] == "REJECTED_BY_VERIFIER"
+        and (_f(r).get("rejected_candidate") or {}).get("label") == "ANOMALOUS",
+        (_f(r)["status"], [x["check_id"] for x in _r(r)["verifier_results"] if x["result"] == "FAIL"])),
+    "legitimacy_not_established_named": lambda r: ("LEGITIMACY_NOT_ESTABLISHED" in _codes(r, "AD-5"), _codes(r, "AD-5")),
+    "sc01_catches_fabricated_context": lambda r: (_vr(r)["SC-01"]["result"] == "FAIL", _vr(r)["SC-01"]),
+    "warning_qualifies_vs01": lambda r: (
+        _vr(r)["VS-01"]["result"] in ("PASS", "WARN")
+        and "WARNING, within the deviation limit" in _comp(r, "deviation_metrics")["item"]["basis"],
+        (_vr(r)["VS-01"], _comp(r, "deviation_metrics")["item"]["basis"])),
+    "self_inclusion_recorded": lambda r: (
+        "this one included" in _m(r, "AD-2", "insights.token_outlier")["baseline"]["comparison"],
+        _m(r, "AD-2", "insights.token_outlier")["baseline"]),
 }
+
+
+def _ctx(r, metric):
+    return next(x for x in _b(r, "AD-5")["context"] if x["metric"] == metric)
+
+
+def _src(r, metric, source):
+    return next(x for x in _ctx(r, metric)["sources"] if x["source"] == source)
+
+
+def _vr(r):
+    return {x["check_id"]: x for x in _r(r)["verifier_results"]}
+
+
+def _comp(r, name):
+    return next(c for c in _f(r)["verification_support"]["components"] if c["name"] == name)
 
 
 def evaluate(name, t, res):

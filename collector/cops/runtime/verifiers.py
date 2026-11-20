@@ -560,9 +560,22 @@ def verify_finding(ctx):
     if f.get("origin") == ORIGIN_LLM and f.get("label") == quiet and base:
         contra = (base.get("status") == "SUBSTANTIVE" and base.get("label") not in (None, quiet)
                   and base.get("label") in spec.interpretations)
-        out.append(R("DS-03", FAIL if contra else PASS, "baseline_contradicts_quiet" if contra else "no_contradiction",
-                     f"the rules read {base.get('label')} on the same evidence; a quiet reading must "
-                     f"explain that, and cannot be published over it" if contra else ""))
+        from .cop_package import LEGITIMACY
+        lg = LEGITIMACY[ctx["cop"]](ctx.get("case"), ctx.get("memory_view"), f.get("claims"),
+                                    ctx.get("tool_calls")) if contra and ctx["cop"] in LEGITIMACY else None
+        if lg and lg["all_explained"] and lg["cited"]:
+            # the quiet reading explains the contradiction with context the verifier re-checked itself
+            out.append(R("DS-03", PASS, "baseline_contradiction_explained",
+                         f"the rules read {base.get('label')}; every deviation is explained by re-checked "
+                         f"context: " + "; ".join(f"{x['metric']} by {', '.join(x['by'])}" for x in lg["context"]),
+                         [f"context:{m}" for m in lg["explained"]]))
+        else:
+            out.append(R("DS-03", FAIL if contra else PASS,
+                         "baseline_contradicts_quiet" if contra else "no_contradiction",
+                         f"the rules read {base.get('label')} on the same evidence; a quiet reading must "
+                         f"explain that, and cannot be published over it" +
+                         (f" (not explained: {', '.join(lg['unexplained']) or 'context not cited'})" if lg else "")
+                         if contra else ""))
     else:
         out.append(R("DS-03", NOT_RUN, "not_a_quiet_model_reading"))
 

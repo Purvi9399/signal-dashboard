@@ -1615,6 +1615,12 @@ DEVIATES, WITHIN, NO_BASELINE, UNOBSERVED, NOT_JUDGED, DOES_NOT_APPLY = (
     "DEVIATES", "WITHIN", "NO_BASELINE", "UNOBSERVED", "NOT_JUDGED", "DOES_NOT_APPLY")
 INTERPRETATION_REQUIRED = "INTERPRETATION_REQUIRED"
 DECIDED_WITHOUT_MODEL = "decided_by_package_without_model"
+LEGITIMACY_NOT_ESTABLISHED = "LEGITIMACY_NOT_ESTABLISHED"
+# The measures a task class can explain: the quantities it compares like for like. The others (repetition,
+# retry, failure, duration, novelty, first-seen MCP) have no task-class basis.
+AD_CLASS_MEASURES = ("insights.token_outlier", "activity.action_rate_ratio")
+NO_WORKLOAD_RECORD = ("no approved record of an authorised workload change or of a task's expected volume "
+                      "exists; neither is accepted as context")
 NO_WINDOW = ("no approved baseline window: every session of the fetched estate weighs the same, however old "
              "(metrics_config.json has no window)")
 
@@ -1762,7 +1768,52 @@ def _ad_precedents(memory, deviating):
     return out[:10]
 
 
-def _ad5(a, deps, upstream, memory):
+def _ad_context(deviations, peers, memory):
+    """For each deviating measure, the checkable context that could explain it as legitimate variation
+    (GROUND_TRUTH.yaml, revision 2). Task-class peers are compared with signal_metrics' own metric function and
+    approved thresholds on signal_metrics.estate of the peers (the session left out); a precedent is a
+    VALIDATED NORMAL observation that names the measure."""
+    sm = EA.signal_metrics
+    pkg = EA.load_package(AD)
+    states = tuple(pkg["deviation_states"])
+    fns = {"insights.token_outlier": sm.m_token_outlier, "activity.action_rate_ratio": sm.m_action_rate}
+    out = []
+    for d in deviations:
+        m, srcs = d["metric"], []
+        if m in AD_CLASS_MEASURES:
+            src = {"source": "task_classes"}
+            if not peers or peers.get("classes") is None:
+                src.update(explains=False, gap="no task-class record supplied")
+            elif peers.get("class") is None:
+                src.update(explains=False, gap="the session has no task class in the record")
+            else:
+                cfg, ps, need = peers["cfg"], peers["sessions"], peers["cfg"]["min_sessions_for_baseline"]
+                src.update({"task_class": peers["class"], "peers": len(ps), "needed": need,
+                            "peer_sessions": sorted(x.id for x in ps)})
+                if len(ps) < need:
+                    src.update(explains=False, gap=f"{len(ps)} other sessions of class {peers['class']}; {need} "
+                                                   f"needed (min_sessions_for_baseline)")
+                else:
+                    v = fns[m](peers["session"], sm.estate(ps), cfg)[0]
+                    st = sm.judge(v, cfg["thresholds"].get(m, {}))
+                    src.update(peer_value=v, peer_state=st, explains=v is not None and st not in states)
+                    if v is None:
+                        src["gap"] = "no peer baseline for this measure"
+            srcs.append(src)
+        for r in (memory or {}).get("established", []):
+            pl = r.get("payload") or {}
+            if pl.get("label") == "NORMAL" and m in (pl.get("deviating_metrics") or []):
+                srcs.append({"source": "validated_precedent", "record_id": r["record_id"],
+                             "status": r.get("status"), "explains": True})
+        by = [x["source"] for x in srcs if x.get("explains")]
+        out.append({"question": d["question"], "metric": m, "state": d["state"], "explained": bool(by),
+                    "by": by, "sources": srcs,
+                    **({} if by else {"gap": "; ".join(x.get("gap", "") for x in srcs if x.get("gap"))
+                                      or "no checkable context names this measure"})})
+    return out
+
+
+def _ad5(a, deps, upstream, memory, peers=None):
     from .rules import verified
     rm = verified(upstream, "runtime_monitoring")
     devs = {q: deps[q]["basis"]["deviating"] for q in AD_OBSERVED if deps[q]["outcome"] == AD_DEVIATES[q]}
@@ -1779,6 +1830,8 @@ def _ad5(a, deps, upstream, memory):
     if not rm:
         basis["limitation"] = "no Runtime Monitoring finding was available to this run"
     if devs:
+        basis["context"] = _ad_context(basis["deviations"], peers, memory)
+        basis["context_not_accepted"] = NO_WORKLOAD_RECORD
         basis["interpretation_reasons"] = [{
             "code": INTERPRETATION_REQUIRED, "requirement": "interpretation", "check": None,
             "detail": "deviations observed (" + "; ".join(
@@ -1796,7 +1849,7 @@ def _ad5(a, deps, upstream, memory):
     return "NO_DEVIATION", basis
 
 
-def observe_anomaly_detection(assessments, baselines, upstream=None, memory=None):
+def observe_anomaly_detection(assessments, baselines, upstream=None, memory=None, peers=None):
     """{question_id: assessment} -> {question_id: answer}. baselines: _ad_baselines for the session; memory:
     {established, verified_pending} anomaly_observation records."""
     pkg = EA.load_package(AD)
@@ -1813,7 +1866,7 @@ def observe_anomaly_detection(assessments, baselines, upstream=None, memory=None
                         "because": a["sufficiency"]["reasons"]}
             continue
         if qid == "AD-5":
-            outcome, basis = _ad5(a, {k: out[k] for k in q["depends_on"]}, upstream, memory)
+            outcome, basis = _ad5(a, {k: out[k] for k in q["depends_on"]}, upstream, memory, peers)
         else:
             outcome, basis = _ad_observe(qid, a, baselines, states, upstream)
         if outcome not in q["outcomes"] and outcome != INCONCLUSIVE:
@@ -1827,7 +1880,7 @@ def observe_anomaly_detection(assessments, baselines, upstream=None, memory=None
 
 
 def assess_anomaly_detection(rows, session_id, cfg=None, computed_at=None, upstream=None, memory=None,
-                             raw_events=None, native=None):
+                             raw_events=None, native=None, task_classes=None):
     """The five questions for one session: each assessment with its answer, and the baselines used."""
     cfg = cfg or EA.signal_metrics.load_config()
     events, srows = EA.session_inputs(rows, session_id, cfg, computed_at)
@@ -1836,7 +1889,11 @@ def assess_anomaly_detection(rows, session_id, cfg=None, computed_at=None, upstr
     base = _ad_baselines(sessions, s, cfg)
     assessments = {qid: EA.assess(AD, qid, events, srows, cfg, computed_at, raw_events, native)
                    for qid in EA.QUESTIONS[AD]}
-    answers = observe_anomaly_detection(assessments, base, upstream, memory)
+    cls = (task_classes or {}).get(session_id)
+    peers = {"classes": task_classes, "class": cls, "cfg": cfg, "session": s,
+             "sessions": [x for x in sessions if x.id != session_id and cls is not None
+                          and (task_classes or {}).get(x.id) == cls]}
+    answers = observe_anomaly_detection(assessments, base, upstream, memory, peers)
     return {qid: {"assessment": assessments[qid], "answer": answers[qid]} for qid in assessments}
 
 
@@ -1955,6 +2012,12 @@ def interpreted_anomaly_detection(f, baseline):
         if cand:
             r = {"code": "INTERPRETATION_REJECTED", "requirement": "interpretation", "check": None,
                  "detail": f"model interpretation {cand} rejected: {f.get('rationale', '')[:240]}"}
+            ctxs = (five.get("basis") or {}).get("context") or []
+            if cand == "NORMAL" and not (ctxs and all(x["explained"] for x in ctxs)):
+                reasons.append({"code": LEGITIMACY_NOT_ESTABLISHED, "requirement": "interpretation", "check": None,
+                                "detail": "legitimate variation needs checkable context for every deviation; "
+                                          "not explained: " + "; ".join(f"{x['metric']} ({x.get('gap')})"
+                                                                        for x in ctxs if not x["explained"])})
         else:
             r = {"code": "NO_INTERPRETATION", "requirement": "interpretation", "check": None,
                  "detail": "no verified model interpretation: "
@@ -1973,5 +2036,33 @@ def interpreted_anomaly_detection(f, baseline):
                            "recipients": AD_RECIPIENTS.get(f["label"], []) if answer != INCONCLUSIVE else [],
                            "memory_payload": {**(cs.get("memory_payload") or {}),
                                               "answers": {k: v["answer"] for k, v in q.items()}},
-                           "decision": answer}
+                           "decision": answer,
+                           # a verified legitimate variation explains a deviation: remembered, so that a reviewer
+                           # can validate it as a precedent (MEMORY.md)
+                           **({"remember_quiet": True} if answer == "LEGITIMATE_VARIATION" else {})}
     return out
+
+
+def ad_legitimacy(case, memory_view, claims, tool_calls):
+    """The verifiers' re-check of a legitimate-variation reading: the package's deviations and their context
+    recomputed from the case rows, the case's task-class record and validated memory (never from the model's
+    text), and whether the finding cites that context (a tool_observation on assess_anomaly_questions under
+    questions.AD-5.basis.context)."""
+    if case is None or not case.session:
+        return None
+    mem = {"established": (memory_view or {}).get("established", [])}
+    q = assess_anomaly_detection(case.rows, case.session_id, case.cfg, case.computed_at, None, mem,
+                                 task_classes=case.artifact("task_classes"))
+    five = q["AD-5"]["answer"]["basis"] or {}
+    context = five.get("context") or []
+    tools = {c.get("tool_call_id"): c.get("tool") for c in (tool_calls.values() if isinstance(tool_calls, dict)
+                                                             else tool_calls or [])}
+    cited = any(c.get("kind") == "tool_observation" and tools.get(c.get("tool_call_id")) == "assess_anomaly_questions"
+                and "AD-5" in str(c.get("result_field") or "") and "basis.context" in str(c.get("result_field") or "") for c in claims or [])
+    return {"deviating": [x["metric"] for x in context], "explained": [x["metric"] for x in context if x["explained"]],
+            "unexplained": [x["metric"] for x in context if not x["explained"]],
+            "all_explained": bool(context) and all(x["explained"] for x in context), "cited": cited,
+            "context": context}
+
+
+LEGITIMACY = {AD: ad_legitimacy}

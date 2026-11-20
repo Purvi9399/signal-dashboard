@@ -380,7 +380,8 @@ def test_only_the_packaged_cops_and_shared_runtime_use_the_assessment():
                      os.path.join("cops", "runtime", "decision.py"),
                      os.path.join("cops", "runtime", "evolution.py"), os.path.join("cops", "runtime", "graph.py"),
                      os.path.join("cops", "runtime", "replay.py"),
-                     os.path.join("cops", "runtime", "rules.py"), os.path.join("cops", "runtime", "tools.py")]
+                     os.path.join("cops", "runtime", "rules.py"), os.path.join("cops", "runtime", "support.py"),
+                     os.path.join("cops", "runtime", "tools.py"), os.path.join("cops", "runtime", "verifiers.py")]
 
 
 # ---------------------------------------------------------------- raw_ref resolution

@@ -741,6 +741,7 @@ def independent_verify(state):
     results = verify_finding({"finding": f, "spec": spec, "picture": state["picture"],
                               "events": _events(rt, cop, state["picture"]), "case": rt.case,
                               "tool_calls": calls, "upstream": up, "memory": rt.memory, "cop": cop,
+                              "memory_view": state.get("memory_view") or {},
                               "evidence_ceiling": ceiling, "baseline": state.get("baseline"),
                               "rule_rerun": rerun})
     results = [r if isinstance(r, dict) else r.to_dict() for r in results]
@@ -1133,7 +1134,8 @@ def validate_memory_update(state):
     quiet = spec.interpretations[0] if spec.interpretations else None
     if rt.memory is None:
         return {"memory_write": {"written": False, "reason": "no memory gateway"}}
-    if f["status"] == SUBSTANTIVE and f["label"] != quiet:
+    remember = (f.get("cop_specific") or {}).get("remember_quiet")   # a quiet label that explains a deviation
+    if f["status"] == SUBSTANTIVE and (f["label"] != quiet or remember):
         status, label = (VERIFIED if f["verified"] else UNVALIDATED), f["label"]
     elif f["status"] == REJECTED:
         # kept as an unverified observation so a later case can see it was

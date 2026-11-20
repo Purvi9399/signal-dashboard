@@ -1176,7 +1176,7 @@ def t_assess_anomaly_questions(case, a, ctx):
         else None
     q = cop_package.assess_anomaly_detection(case.rows, case.session_id, case.cfg, case.computed_at,
                                              ctx.get("upstream"), memory, case.artifact("source_events"),
-                                             case.artifact("native_transcripts"))
+                                             case.artifact("native_transcripts"), case.artifact("task_classes"))
     return {"questions": q, "memory_supplied": memory is not None,
             "upstream_supplied": sorted((ctx.get("upstream") or {})), "evaluated_at": case.computed_at}
 
