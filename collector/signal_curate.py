@@ -1143,5 +1143,41 @@ def main():
     return 0
 
 
+# Fields that identify or describe a stored record rather than the occurrence; never merged.
+LATE_KEEP = {"observable_id", "dedup_key", "schema_version", "captured_at", "ingested_at", "revised_at",
+             "collector", "contributing", "collectors_agree", "confidence"}
+
+
+def fill_missing(stored, incoming):
+    """Late evidence for an occurrence already stored (same dedup_key).
+
+    Fills fields the stored record lacks and never overwrites a non-null stored value. A field both
+    carry with different values is a conflict: the stored value stays and both are reported, with the
+    collector each came from, for reconciliation. Returns (patch, conflicts); an empty patch means
+    nothing new arrived."""
+    empty = (None, "", [], {})
+    patch, conflicts = {}, []
+    for field, val in incoming.items():
+        if field in LATE_KEEP or val in empty:
+            continue
+        have = stored.get(field)
+        if have in empty:
+            patch[field] = val
+        elif canonical(have) != canonical(val):
+            conflicts.append({"observable_id": stored.get("observable_id"), "dedup_key": stored.get("dedup_key"),
+                              "session_id": stored.get("session_id"), "field": field,
+                              "kept_value": have, "kept_source": stored.get("collector"),
+                              "incoming_value": val, "incoming_source": incoming.get("collector")})
+    def origin(r):
+        return set(r.get("contributing") or ([r["collector"]] if r.get("collector") else []))
+    if patch or conflicts:
+        sources = sorted(origin(stored) | origin(incoming))
+        if sources != sorted(stored.get("contributing") or []):
+            patch["contributing"] = sources
+        if conflicts:
+            patch["collectors_agree"] = False
+    return patch, conflicts
+
+
 if __name__ == "__main__":
     sys.exit(main())

@@ -157,20 +157,22 @@ class Router:
         self.states = {}                   # (case_id, cop) -> final COP run state, for decision_record.run_detail
 
     # ------------------------------------------------------------------ public
-    def route(self, events, estate_rows=()):
+    def route(self, events, estate_rows=(), salt=None):
+        """salt: a caller's key for the evidence being routed (pipeline.py), so a reevaluation on new
+        evidence or new versions gets a new investigation id and an identical retry reuses the old one."""
         cases, dup = group_events(events)
         out = []
         for (tenant, sid), rows in sorted(cases.items(), key=lambda kv: (str(kv[0][0]), kv[0][1])):
-            out.append(self._route_case(tenant, sid, rows, list(estate_rows), dup))
+            out.append(self._route_case(tenant, sid, rows, list(estate_rows), dup, salt))
         return out
 
     # ------------------------------------------------------------------ one case
-    def _route_case(self, tenant, sid, rows, estate, dup_events):
+    def _route_case(self, tenant, sid, rows, estate, dup_events, salt=None):
         rt = self.factory(f"case:{tenant}:{sid}", sid, estate + rows)
         case = rt.case
         n_prior = len([r for r in self.log.records if r.case_id == case.case_id])
         inv = stable_id(case.case_id, self.version, digest(sorted(r.get("observable_id") or "" for r in rows)),
-                        n_prior)[:18]
+                        n_prior, *((salt,) if salt else ()))[:18]
         rt = copy.copy(rt)
         rt.run_id = f"route:{inv}"
         ev = normalise(case)
