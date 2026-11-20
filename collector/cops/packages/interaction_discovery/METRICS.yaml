@@ -5,7 +5,7 @@
 
 cop: interaction_discovery
 contract: cop_metrics/1
-version: 2026-11-19.1
+version: 2026-11-20.1
 
 sources:
   questions: >-
@@ -34,7 +34,12 @@ mapping:
   telemetry.collector_coverage: {used_by: [ID-5]}
   telemetry.unknown_share: {used_by: [ID-5]}
   telemetry.source_agreement: {used_by: [ID-5]}
-  interaction_unattributed_edges: {used_by: [ID-5], note: not built; reported NOT_CALCULATED}
+  interaction_unattributed_edges:
+    used_by: [ID-5]
+    note: >-
+      NOT_CALCULATED. Registry: "edges with attribution = unknown", definition to confirm, because the
+      attribution column describes file effects, not interaction edges. Missing input: an approved
+      definition of an unattributed interaction edge.
 
 questions:
   ID-1:

@@ -255,3 +255,82 @@ def test_the_validator_rejects_an_answer_outside_the_contract(bench):
     probs = D.validate(d)
     assert "ID-3: answer PROBABLY_FINE is not one of its outcomes" in probs
     assert "question_findings do not cover every question in the contract" in probs
+
+
+# ---------------------------------------------------------------- link provenance, time order, continuity
+
+def _links(q):
+    return {x["link"]: x["basis"] for x in q["ID-2"]["answer"]["basis"]["links"] if x["kind"] == "delegation"}
+
+
+def test_the_unbuilt_metric_states_its_missing_input():
+    u = questions("normal")["ID-5"]["answer"]["basis"]["unassessed"]
+    m = next(x for x in u if x["metric"] == "interaction_unattributed_edges")
+    assert m["state"] == EA.NOT_CALCULATED and "Missing input: an approved definition" in m["missing_inputs"]
+
+
+def test_a_link_is_recorded_only_when_a_row_names_the_parent():
+    assert _links(questions("recorded_delegation")) == {"main>sub-a": "RECORDED", "main>sub-b": "RECORDED"}
+    assert _links(questions("known_delegation")) == {"main>sub-a": "INFERRED", "main>sub-b": "INFERRED"}
+    assert _links(questions("unlinked_subagents")) == {"?>sub-a": "UNLINKED", "?>sub-b": "UNLINKED"}
+
+
+def test_an_inferred_link_is_reported_as_not_verified_but_does_not_change_the_answer():
+    inferred, recorded = questions("known_delegation"), questions("recorded_delegation")
+    assert inferred["ID-2"]["answer"]["outcome"] == recorded["ID-2"]["answer"]["outcome"] == "FULLY_RECONSTRUCTED"
+    lim = P.decide_interaction_discovery(inferred)["limitations"]
+    assert any("not verified: main>sub-a, main>sub-b" in x for x in lim)
+    assert not any("delegation link" in x for x in P.decide_interaction_discovery(recorded)["limitations"])
+
+
+def test_a_handoff_recorded_after_the_lane_began_is_a_gap():
+    """Only the order of sub-a's first call and its handoff differs from known_delegation."""
+    q = questions("handoff_after_lane_start")
+    assert _links(q) == {"main>sub-a": "INFERRED_AGAINST_TIME_ORDER", "main>sub-b": "INFERRED"}
+    assert q["ID-2"]["answer"]["outcome"] == "PARTIALLY_RECONSTRUCTED"
+    assert P.decide_interaction_discovery(q)["label"] == "PATH_PARTIAL"
+
+
+def test_timestamps_out_of_order_are_a_gap_and_missing_ones_a_limitation():
+    bad, plain = questions("timestamps_out_of_order"), questions("normal")
+    assert bad["ID-2"]["answer"]["basis"]["temporal_checks"]["TIMESTAMP_ORDER"]["outcome"] == EA.VERIFIED_FAILED
+    assert (bad["ID-2"]["answer"]["outcome"], plain["ID-2"]["answer"]["outcome"]) == (
+        "PARTIALLY_RECONSTRUCTED", "FULLY_RECONSTRUCTED")
+    assert any("TIMESTAMP_ORDER EVIDENCE_MISSING" in x for x in P.decide_interaction_discovery(plain)["limitations"])
+
+
+def test_tools_are_associated_with_the_lane_that_called_them():
+    b = questions("known_delegation")["ID-1"]["answer"]["basis"]
+    assert b["tools_by_lane"]["sub-a"] == ["Read"] and "Bash" in b["tools_by_lane"]["main"]
+
+
+def test_a_session_with_no_operator_has_no_continuity_and_no_route_answer():
+    q = questions("no_operator_with_routes")
+    assert q["ID-3"]["answer"]["outcome"] == "INCONCLUSIVE"
+    assert P.decide_interaction_discovery(q)["label"] == "INCONCLUSIVE"
+    c = questions("known_delegation")["ID-3"]["answer"]["basis"]["continuity"]
+    assert c["operator_recorded"] is True and c["earlier_sessions"] == 7
+
+
+def test_limitations_reach_the_decision_record(bench):
+    d = bench["results"]["known_delegation"]["cop"]["result"]["decision"]
+    assert any("not verified" in x for x in d["uncertainty"]["cop_limitations"])
+    assert "limitations" not in d["extensions"][COP]
+
+
+# ---------------------------------------------------------------- downstream use changes with the evidence
+
+def test_audit_traceability_reads_id2_and_its_label_follows(bench):
+    late, clean = (bench["results"][n] for n in ("downstream_audit_traceability", "downstream_audit_traceability_clean"))
+    at = [r["downstream"]["audit_traceability"] for r in (late, clean)]
+    assert [a["label"] for a in at] == ["PARTIAL", "COMPLETE"]
+    assert at[0]["cop_specific"]["questions"]["AT-2"]["basis"]["gaps"] == [
+        "Interaction Discovery ID-2: PARTIALLY_RECONSTRUCTED"]
+    assert at[0]["cop_specific"]["questions"]["AT-2"]["basis"]["upstream"]["interaction_discovery"]["finding_id"] \
+        == late["cop"]["finding"]["finding_id"]
+
+
+def test_agent_lifecycle_uses_a_new_route_and_nothing_otherwise(bench):
+    used = [[u["cop"] for u in bench["results"][n]["downstream"]["agent_lifecycle_management"]["upstream_used"]]
+            for n in ("downstream_lifecycle", "downstream_lifecycle_no_route")]
+    assert used == [[COP], []]

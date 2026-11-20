@@ -32,8 +32,8 @@ through triage and the authority check (`triage.py`, `graph.authority_check`); n
   `assess_interaction_questions` (the five answers, read against validated route memory and upstream Runtime
   Monitoring).
 - Output: the finding, with `cop_specific.questions` (each question's answer, explanation, metrics, basis and
-  evidence refs), `drivers`, `also_held`, `contrary`, `edges` and `new_routes`; and the common decision record
-  (`cops/runtime/decision.py`).
+  evidence refs), `drivers`, `also_held`, `contrary`, `limitations`, `edges` and `new_routes`; and the common
+  decision record (`cops/runtime/decision.py`), where `limitations` appear as `uncertainty.cop_limitations`.
 
 ## The five questions
 
@@ -43,14 +43,25 @@ Source: the workbook, sheet COMPLETE_DELEGATION_DATA, rows 43-48. Fields are the
 
 `interaction_unique_entities` and `interaction.subagent_lanes` (required); `interaction.mcp_servers` (optional:
 unknown when no collector able to see MCP ran). ENTITIES_PARTIALLY_IDENTIFIED when MCP servers could not be
-observed; otherwise ENTITIES_IDENTIFIED. The basis names the subagent lanes, tools and servers.
+observed; otherwise ENTITIES_IDENTIFIED. The basis names the subagent lanes, tools and servers, the tools each
+lane called (`tools_by_lane`), how identity is established (a subagent lane by `agent_id`; the main agent carries
+none) and the provenance check outcomes.
 
 ### ID-2 Can we reconstruct the relationships and communication paths between these entities?
 
 `interaction_edge_count` (required); `interaction_graph_completeness`, `interaction_orphaned_events`,
 `telemetry.lane_linkage`, `telemetry.turn_linkage` (when applicable). Blocking check: CONFLICTING_ACTION_SOURCES.
 NOT_RECONSTRUCTABLE when subagent rows exist and none has a resolvable parent; PARTIALLY_RECONSTRUCTED when any
-ratio is below 1 or any subagent event is orphaned; otherwise FULLY_RECONSTRUCTED.
+ratio is below 1 or any subagent event is orphaned, when a delegation link was joined to a handoff recorded
+after the lane began, or when the timestamp order check fails; otherwise FULLY_RECONSTRUCTED.
+
+Each link carries its basis (`cop_package.interaction_links`): RECORDED when the lane's rows name
+`parent_agent_id`, or for an MCP link from `mcp_server`; INFERRED when only `signal_traces.link_lanes` joined the
+lane to a handoff by time; INFERRED_AGAINST_TIME_ORDER when that handoff was recorded after the lane's first step
+(`link_lanes` falls back to the first handoff); UNLINKED otherwise. An inferred link is not a verified one: it is
+listed as a limitation in the decision record and does not by itself change the answer (D12).
+INCOMPARABLE_TIMESTAMPS and TIMESTAMP_ORDER are read with the outcome they have; when no row carries the three
+timestamps they are EVIDENCE_MISSING, which is a limitation and not a gap (D13).
 
 ### ID-3 Have new or previously unseen interaction routes appeared?
 
@@ -58,7 +69,10 @@ ratio is below 1 or any subagent event is orphaned; otherwise FULLY_RECONSTRUCTE
 `interaction_edge_count` (required); `access.first_seen_mcp` and `path.transition_novelty` (optional). A route
 is a delegation or MCP edge (`signal_metrics.interaction_edges`) or a first-seen MCP server. Routes a validated
 route record establishes are known. With no interaction edge the question is answered without history: no
-route exists to be new. Tools new to the operator are listed, and do not make a route (D5).
+route exists to be new. Tools new to the operator are listed, and do not make a route (D5). The basis reports
+cross-session continuity: what the session is compared with, whether an operator was recorded and how many
+earlier sessions were found. A session with no operator has no history, so ID-3 is INCONCLUSIVE when it has
+routes.
 
 ### ID-4 How deeply and widely is activity propagating across agents, tools and services?
 
@@ -70,7 +84,8 @@ are reported, not judged. A reported `delegation_depth` that disagrees with the 
 ### ID-5 Are missing agent identities, lane links or interaction records preventing reliable reconstruction?
 
 `telemetry.collector_coverage`, `telemetry.unknown_share` (required); `telemetry.source_agreement`,
-`interaction_orphaned_events` (when applicable); `interaction_unattributed_edges` (optional, not built). Depends
+`interaction_orphaned_events` (when applicable); `interaction_unattributed_edges` (optional, NOT_CALCULATED:
+the missing input is an approved definition, U2). Depends
 on ID-1, ID-2, ID-4. RECONSTRUCTION_IMPAIRED when any cause holds: an expected collector missing, unknown share
 or source agreement not NORMAL, orphaned subagent events, delegation observed with no subagent identity, an
 earlier graph question partial or unanswered, a depth conflict, or a verified upstream Runtime Monitoring that is

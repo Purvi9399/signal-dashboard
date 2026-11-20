@@ -29,14 +29,21 @@ def truth():
 # ---------------------------------------------------------------- the worlds
 
 def session(sid="s1", day=9, subagents=(), handoff=True, mcp=None, outside=False, depth=None, disagree=False,
-            text=None, operator=S.OPS):
+            text=None, operator=S.OPS, parent=None, late=(), misordered=0):
     s = S.Session(sid, day, operator=operator).start(1000).tools(S.NORMAL_TOOLS)
     for a in subagents:
-        if handoff:
+        if handoff and a not in late:
             s.add(observable_type="subagent_start", agent_id=a)
         s.add(observable_type="tool_request", tool_name="Read", agent_id=a, tool_use_id=f"{sid}-{a}",
               tool_arguments={"a": a}, tool_duration_ms=200, success=True,
-              **({"delegation_depth": depth} if depth is not None else {}))
+              **({"delegation_depth": depth} if depth is not None else {}),
+              **({"parent_agent_id": parent} if parent else {}))
+        if handoff and a in late:
+            s.add(observable_type="subagent_start", agent_id=a)
+    for i in range(misordered):
+        r = s.add(observable_type="tool_request", tool_name="Grep", tool_use_id=f"{sid}-g{i}", tool_arguments={"g": i},
+                  success=True)
+        r["captured_at"], r["ingested_at"] = _earlier(r["occurred_at"]), r["occurred_at"]
     for i in range(2 if mcp else 0):
         s.add(observable_type="tool_request", tool_name=f"mcp__{mcp}__call", mcp_server=mcp,
               tool_use_id=f"{sid}-m{i}", tool_arguments={"i": i}, success=True)
@@ -49,6 +56,13 @@ def session(sid="s1", day=9, subagents=(), handoff=True, mcp=None, outside=False
     if text:
         s.add(observable_type="tool_result", tool_name="Read", tool_use_id=f"{sid}-u3", tool_result=text)
     return s.full_instrumentation().end()
+
+
+def _earlier(ts):
+    """One minute before an ISO timestamp of the synthetic clock."""
+    from datetime import datetime, timedelta
+    t = datetime.fromisoformat(ts.replace("Z", "+00:00")) - timedelta(minutes=1)
+    return t.isoformat().replace("+00:00", "Z")
 
 
 def history(n=7, **k):
@@ -98,7 +112,21 @@ BUILD = {
     "adversarial_instruction_text": lambda: history() + session(mcp="github", text=INSTRUCTION),
     "downstream_policy": lambda: history() + session(mcp="github"),
     "downstream_resource_attribution": lambda: E._estate(heavy_delegation("s1")),
+    "recorded_delegation": lambda: history(subagents=SUBS, parent="main") + session(subagents=SUBS, parent="main"),
+    "handoff_after_lane_start": lambda: history(subagents=SUBS) + session(subagents=SUBS, late=("sub-a",)),
+    "timestamps_out_of_order": lambda: history() + session(misordered=3),
+    "no_operator_with_routes": lambda: history(subagents=SUBS) + session(subagents=SUBS, operator=None),
+    "downstream_audit_traceability": lambda: history(subagents=SUBS) + session(subagents=SUBS, late=("sub-a",)),
+    "downstream_audit_traceability_clean": lambda: history(subagents=SUBS) + session(subagents=SUBS),
+    "downstream_lifecycle": lambda: history() + session(mcp="github"),
+    "downstream_lifecycle_no_route": lambda: history() + session(),
 }
+
+DOWNSTREAM = {"downstream_policy": "policy_enforcement", "downstream_resource_attribution": "resource_management",
+              "downstream_audit_traceability": "audit_traceability",
+              "downstream_audit_traceability_clean": "audit_traceability",
+              "downstream_lifecycle": "agent_lifecycle_management",
+              "downstream_lifecycle_no_route": "agent_lifecycle_management"}
 
 
 def rm_finding(rm3):
@@ -142,9 +170,7 @@ def run_scenario(name, t):
             r = G.run_cop(rt, COP, upstream={"runtime_monitoring": rm_finding(rm3)})
             res[key] = {"finding": r["finding"], "result": r["result"]}
         return res
-    cops = {"downstream_policy": ("runtime_monitoring", COP, "policy_enforcement"),
-            "downstream_resource_attribution": ("runtime_monitoring", COP, "resource_management")}.get(
-        name, ("runtime_monitoring", COP))
+    cops = ("runtime_monitoring", COP) + ((DOWNSTREAM[name],) if name in DOWNSTREAM else ())
     art = {"policy_store": allow_all()} if name == "downstream_policy" else None
     out = _case(name, rows, store, cops, art)
     res["cop"] = {"finding": out["results"][COP]["finding"], "result": out["results"][COP]}
@@ -169,6 +195,22 @@ def _q(res, qid):
 
 def _decision(res):
     return _r(res)["decision"]
+
+
+def _links(r):
+    return [x for x in _q(r, "ID-2")["basis"]["links"] if x["kind"] == "delegation"]
+
+
+def _limits(r):
+    return _decision(r)["uncertainty"]["cop_limitations"]
+
+
+def _down(r, cop):
+    return r["downstream"][cop]
+
+
+def _at2(r):
+    return _down(r, "audit_traceability")["cop_specific"]["questions"]["AT-2"]["basis"]
 
 
 CHECKS = {
@@ -241,6 +283,47 @@ CHECKS = {
     "resource_attributed_through_id": lambda r: (
         r["downstream"]["resource_management"]["cop_specific"]["attribution"].get("source_finding")
         == _f(r)["finding_id"], r["downstream"]["resource_management"]["cop_specific"]["attribution"].get("status")),
+    "links_inferred_not_verified": lambda r: (
+        [x["basis"] for x in _links(r)] == ["INFERRED", "INFERRED"]
+        and any("not verified" in x and "main>sub-a" in x for x in _limits(r)), (_links(r), _limits(r))),
+    "continuity_reported": lambda r: (
+        _q(r, "ID-3")["basis"]["continuity"]["operator_recorded"] is True
+        and _q(r, "ID-3")["basis"]["continuity"]["earlier_sessions"] == 7, _q(r, "ID-3")["basis"]["continuity"]),
+    "links_recorded": lambda r: (
+        [x["basis"] for x in _links(r)] == ["RECORDED", "RECORDED"] and _q(r, "ID-2")["basis"]["inferred_links"] == [],
+        _links(r)),
+    "no_link_limitation": lambda r: (not any("delegation link" in x for x in _limits(r)), _limits(r)),
+    "id2_names_late_link": lambda r: (
+        {x["link"]: x["basis"] for x in _links(r)} == {"main>sub-a": "INFERRED_AGAINST_TIME_ORDER",
+                                                       "main>sub-b": "INFERRED"}
+        and any("after the lane began: main>sub-a" in g for g in _q(r, "ID-2")["basis"]["gaps"]),
+        (_links(r), _q(r, "ID-2")["basis"]["gaps"])),
+    "late_link_limitation": lambda r: (any("not verified" in x and "main>sub-a" in x for x in _limits(r)), _limits(r)),
+    "id2_names_timestamp_order": lambda r: (
+        _q(r, "ID-2")["basis"]["temporal_checks"]["TIMESTAMP_ORDER"]["outcome"] == "VERIFIED_FAILED"
+        and any("captured before they occurred" in g for g in _q(r, "ID-2")["basis"]["gaps"]),
+        _q(r, "ID-2")["basis"]["temporal_checks"]),
+    "id3_reason_no_operator": lambda r: (
+        any("operator" in json.dumps(x) for x in _q(r, "ID-3")["sufficiency_reasons"]),
+        _q(r, "ID-3")["sufficiency_reasons"]),
+    "at2_reads_id2_partial": lambda r: (
+        _at2(r)["upstream"]["interaction_discovery"]["ID-2"] == "PARTIALLY_RECONSTRUCTED"
+        and _at2(r)["upstream"]["interaction_discovery"]["finding_id"] == _f(r)["finding_id"]
+        and "Interaction Discovery ID-2: PARTIALLY_RECONSTRUCTED" in _at2(r)["gaps"], _at2(r)["upstream"]),
+    "at_label_partial": lambda r: (_down(r, "audit_traceability")["label"] == "PARTIAL",
+                                   _down(r, "audit_traceability")["label"]),
+    "at2_reads_id2_full": lambda r: (
+        _at2(r)["upstream"]["interaction_discovery"]["ID-2"] == "FULLY_RECONSTRUCTED"
+        and not any("Interaction Discovery" in g for g in _at2(r)["gaps"]), _at2(r)["upstream"]),
+    "at_label_complete": lambda r: (_down(r, "audit_traceability")["label"] == "COMPLETE",
+                                    _down(r, "audit_traceability")["label"]),
+    "lifecycle_consumed_new_route": lambda r: (
+        any(u["cop"] == COP and u["label"] == "NEW_ROUTE" and u.get("finding_id") == _f(r)["finding_id"]
+            for u in _down(r, "agent_lifecycle_management")["upstream_used"]),
+        _down(r, "agent_lifecycle_management")["upstream_used"]),
+    "lifecycle_did_not_use_id": lambda r: (
+        not any(u["cop"] == COP for u in _down(r, "agent_lifecycle_management")["upstream_used"]),
+        _down(r, "agent_lifecycle_management")["upstream_used"]),
     "resource_reads_id2": lambda r: (_q(r, "ID-2")["answer"] == "FULLY_RECONSTRUCTED"
                                      and r["downstream"]["resource_management"]["cop_specific"]["attribution"]["status"]
                                      == "ATTRIBUTED", _q(r, "ID-2")["answer"]),

@@ -369,7 +369,22 @@ def _unassessed(a, *metrics):
             for m in metrics if _item(a, m)["state"] != EA.PRESENT]
 
 
-def _id1(a, graph=None):
+def _missing_inputs(pkg, basis):
+    """Each NOT_CALCULATED entry carries its mapping note: what the metric lacks."""
+    for u in basis.get("unassessed", []):
+        if u.get("state") == EA.NOT_CALCULATED:
+            u["missing_inputs"] = " ".join(((pkg["mapping"].get(u["metric"]) or {}).get("note") or "").split())
+
+
+def _provenance_view(a):
+    return [{"outcome": c["outcome"], "detail": c["detail"]} for c in a["reliability"]["checks"]
+            if c["check"] == EA.UNVERIFIABLE_PROVENANCE]
+
+
+ID_TEMPORAL = (EA.INCOMPARABLE_TIMESTAMPS, EA.TIMESTAMP_ORDER)
+
+
+def _id1(a, graph=None, links=None):
     ent, lanes, mcp = (_item(a, m) for m in ("interaction_unique_entities", "interaction.subagent_lanes",
                                              "interaction.mcp_servers"))
     tools = sorted({e["to"][len("tool:"):] for e in (graph or {}).get("edges", []) if e["to"].startswith("tool:")})
@@ -377,11 +392,14 @@ def _id1(a, graph=None):
              "tools": ent["features"].get("tools"), "tool_names": tools,
              "subagent_lanes": lanes["features"].get("lanes", []),
              "mcp_servers": (mcp["features"].get("servers") or {}) if mcp["state"] == EA.PRESENT else None,
+             "tools_by_lane": (links or {}).get("tools_by_lane", {}),
+             "identity": "subagent lanes are named by agent_id; the main agent carries none",
+             "provenance": _provenance_view(a),
              "unidentified": _unassessed(a, "interaction.mcp_servers")}
     return ("ENTITIES_PARTIALLY_IDENTIFIED" if basis["unidentified"] else "ENTITIES_IDENTIFIED"), basis
 
 
-def _id2(a):
+def _id2(a, links=None):
     edges = _item(a, "interaction_edge_count")
     comp, orphan, lane, turn = (_present(a, m) for m in ("interaction_graph_completeness",
                                                          "interaction_orphaned_events", "telemetry.lane_linkage",
@@ -396,12 +414,23 @@ def _id2(a):
         gaps.append(f"subagent lanes {', '.join(lane['features'].get('unlinked', []))} are not linked to a handoff")
     if turn and turn["value"] < 1:
         gaps.append(f"{turn['features'].get('without_turn')} of {turn['features'].get('steps')} steps carry no turn")
+    ls = (links or {}).get("links", [])
+    late = [x for x in ls if x["basis"] == "INFERRED_AGAINST_TIME_ORDER"]
+    if late:
+        gaps.append(f"{len(late)} delegation link(s) inferred from a handoff recorded after the lane began: "
+                    + ", ".join(x["link"] for x in late))
+    temporal = {c: _check(a, c) for c in ID_TEMPORAL}
+    gaps += [x["detail"] for x in temporal.values() if x["outcome"] == EA.VERIFIED_FAILED]
     basis = {"edges": edges["value"], "by_kind": edges["features"].get("by_kind", {}),
              "edge_list": edges["features"].get("edges", []),
              "graph_completeness": comp["value"] if comp else None,
              "orphaned_events": orphan["value"] if orphan else None,
              "lane_linkage": lane["value"] if lane else None, "turn_linkage": turn["value"] if turn else None,
-             "gaps": gaps, "orphan_refs": orphan["evidence_refs"] if orphan else []}
+             "gaps": gaps, "orphan_refs": orphan["evidence_refs"] if orphan else [],
+             "links": ls, "recorded_links": [x["link"] for x in ls if x["basis"] == "RECORDED"],
+             "inferred_links": [x["link"] for x in ls if x["basis"].startswith("INFERRED")],
+             "temporal_checks": {c: {"outcome": x["outcome"], "detail": x["detail"]} for c, x in temporal.items()},
+             "provenance": _provenance_view(a)}
     if comp and comp["value"] == 0:
         return "NOT_RECONSTRUCTABLE", basis
     return ("PARTIALLY_RECONSTRUCTED" if gaps else "FULLY_RECONSTRUCTED"), basis
@@ -425,7 +454,7 @@ def _no_route_to_judge(a):
         and not [r for r in a["sufficiency"]["reasons"] if r.get("check")]
 
 
-def _id3(a, memory=None, known=None):
+def _id3(a, memory=None, known=None, links=None):
     nov, fsm, tn = (_item(a, m) for m in ("interaction_route_novelty", "access.first_seen_mcp",
                                           "path.transition_novelty"))
     established, pending = _route_memory(memory)
@@ -444,7 +473,9 @@ def _id3(a, memory=None, known=None):
              "transition_novelty": tn["value"] if tn["state"] == EA.PRESENT else None,
              "transition_state": tn["metric_state"],
              "new_tools": [r for r in (known or {}).get("new_routes", []) if r.startswith("tool:")],
-             "unassessed": _unassessed(a, "access.first_seen_mcp", "path.transition_novelty")}
+             "unassessed": _unassessed(a, "access.first_seen_mcp", "path.transition_novelty"),
+             "continuity": {**(links or {}).get("continuity", {}),
+                            "earlier_sessions": nov["features"].get("earlier_sessions")}}
     if nov["state"] != EA.PRESENT:
         basis["note"] = f"no interaction edge in the session ({nov['state']}: {nov['reason']})"
     return ("NEW_ROUTES_APPEARED" if basis["new_route_count"] > 0 or new_servers else "NO_NEW_ROUTES"), basis
@@ -525,7 +556,51 @@ def _id5(a, earlier, rm=None, delegation=()):
     return ("RECONSTRUCTION_IMPAIRED" if causes else "RECONSTRUCTION_RELIABLE"), basis
 
 
-def observe_interaction_discovery(assessments, graph=None, memory=None, known=None, upstream=None, delegation=()):
+def interaction_links(session):
+    """How each interaction link is evidenced. A delegation link is RECORDED when the lane's rows carry
+    parent_agent_id; INFERRED when only signal_traces.link_lanes joined the lane to a handoff by time; and an
+    inferred link whose handoff was recorded after the lane's first step is INFERRED_AGAINST_TIME_ORDER
+    (link_lanes falls back to the first handoff). An MCP link is RECORDED from mcp_server on the row."""
+    sm, ts = EA.signal_metrics, EA.signal_traces.ts
+    rows = sm.unique_rows(session)
+    steps = {x["step_id"]: x for x in session.steps}
+    out = []
+    for lane, lane_steps in sm.sub_lanes(session).items():
+        mine = [r for r in rows if sm.lane_of(r) == lane]
+        parents = sorted({r["parent_agent_id"] for r in mine if sm.has(r.get("parent_agent_id"))})
+        first = lane_steps[0] if lane_steps else {}
+        if parents:
+            out.append({"link": f"{parents[0]}>{lane}", "kind": "delegation", "basis": "RECORDED",
+                        "refs": [f"observable:{r['observable_id']}" for r in mine
+                                 if sm.has(r.get("parent_agent_id"))][:5]})
+        elif sm.linked(lane_steps):
+            h = steps.get(first["parent_step_id"]) or {}
+            a, b = ts(h.get("started_at")), ts(first.get("started_at"))
+            late = bool(a and b and (a.tzinfo is None) == (b.tzinfo is None) and a > b)
+            out.append({"link": f"main>{lane}", "kind": "delegation",
+                        "basis": "INFERRED_AGAINST_TIME_ORDER" if late else "INFERRED",
+                        "handoff": h.get("step_id"), "handoff_at": h.get("started_at"),
+                        "lane_started_at": first.get("started_at"),
+                        "refs": [f"step:{h.get('step_id')}", f"step:{first.get('step_id')}"]})
+        else:
+            out.append({"link": f"?>{lane}", "kind": "delegation", "basis": "UNLINKED",
+                        "refs": [f"observable:{r['observable_id']}" for r in mine][:5]})
+    mcp = {}
+    for r in rows:
+        if sm.has(r.get("mcp_server")):
+            mcp.setdefault(f"{sm.lane_of(r)}>mcp:{r['mcp_server']}", []).append(f"observable:{r['observable_id']}")
+    out += [{"link": k, "kind": "mcp", "basis": "RECORDED", "refs": v[:5]} for k, v in sorted(mcp.items())]
+    tools = {}
+    for r in session.actions:
+        if r.get("tool_name"):
+            tools.setdefault(sm.lane_of(r), set()).add(r["tool_name"])
+    return {"links": out, "tools_by_lane": {k: sorted(v) for k, v in sorted(tools.items())},
+            "continuity": {"compared_with": "earlier sessions of the same operator and tool",
+                           "operator_recorded": session.operator is not None, "tool": session.tool}}
+
+
+def observe_interaction_discovery(assessments, graph=None, memory=None, known=None, upstream=None, delegation=(),
+                                  links=None):
     """{question_id: assessment} -> {question_id: answer}. memory: the route_record view (established,
     verified_pending); upstream: {cop: published finding}; delegation: refs of rows that show delegation
     with no subagent identity (_delegation_without_identity)."""
@@ -540,12 +615,13 @@ def observe_interaction_discovery(assessments, graph=None, memory=None, known=No
             out[qid] = {"outcome": INCONCLUSIVE, "sufficiency": suf, "basis": {},
                         "because": a["sufficiency"]["reasons"]}
             continue
-        outcome, basis = {"ID-1": lambda: _id1(a, graph), "ID-2": lambda: _id2(a),
-                          "ID-3": lambda: _id3(a, memory, known), "ID-4": lambda: _id4(a, states),
+        outcome, basis = {"ID-1": lambda: _id1(a, graph, links), "ID-2": lambda: _id2(a, links),
+                          "ID-3": lambda: _id3(a, memory, known, links), "ID-4": lambda: _id4(a, states),
                           "ID-5": lambda: _id5(a, {k: out[k] for k in q.get("depends_on", [])}, rm,
                                                delegation)}[qid]()
         if outcome not in q["outcomes"]:
             raise ValueError(f"{qid}: outcome {outcome} is not in METRICS.yaml")
+        _missing_inputs(pkg, basis)
         out[qid] = {"outcome": outcome, "sufficiency": suf, "basis": basis,
                     "findings": a["findings"], "not_assessed": a["sufficiency"]["not_assessed"]}
     return out
@@ -559,8 +635,9 @@ def assess_interaction_discovery(rows, session_id, cfg=None, computed_at=None, g
     assessments = {qid: EA.assess(ID, qid, events, srows, cfg, computed_at, raw_events, native)
                    for qid in EA.QUESTIONS[ID]}
     lanes = (events.get("interaction.subagent_lanes") or {}).get("value")
+    session = next(x for x in EA._computed(rows, cfg, computed_at)[1] if x.id == session_id)
     answers = observe_interaction_discovery(assessments, graph, memory, known, upstream,
-                                            _delegation_without_identity(srows, lanes))
+                                            _delegation_without_identity(srows, lanes), interaction_links(session))
     return {qid: {"assessment": assessments[qid], "answer": answers[qid]} for qid in assessments}
 
 
@@ -575,8 +652,11 @@ def _explain(qid, ans):
         return s + ("; not identified: " + ", ".join(f"{u['metric']} ({u['reason'] or u['state']})"
                                                      for u in b["unidentified"]) if b["unidentified"] else "")
     if qid == "ID-2":
-        return f"{b['edges']} delegation/MCP edge(s)" + ("; " + "; ".join(b["gaps"]) if b["gaps"] else
-                                                          "; every subagent lane and step is attached")
+        s = f"{b['edges']} delegation/MCP edge(s)" + ("; " + "; ".join(b["gaps"]) if b["gaps"] else
+                                                       "; every subagent lane and step is attached")
+        inferred = b.get("inferred_links") or []
+        return s + (f"; {len(inferred)} delegation link(s) inferred from timing, not recorded: {', '.join(inferred)}"
+                    if inferred else "")
     if qid == "ID-3":
         if ans["outcome"] == "NEW_ROUTES_APPEARED":
             return ("new for this operator: " + ", ".join(b["new_routes"] + [f"mcp:{s}" for s in b["new_mcp_servers"]
@@ -664,9 +744,20 @@ def decide_interaction_discovery(questions, evidence_scale=1.0):
     if ans["ID-4"].get("basis", {}).get("depth_conflict"):
         contrary.append(f"ID-4: {ans['ID-4']['basis']['depth_conflict']}")
     contrary += [f"{l} also holds" for l in held[1:]]
+    id2 = ans["ID-2"].get("basis") or {}
+    limitations = []
+    if id2.get("inferred_links"):
+        limitations.append(f"ID-2: {len(id2['inferred_links'])} delegation link(s) are inferred from timing, not "
+                           f"recorded, and are not verified: {', '.join(id2['inferred_links'])}")
+    limitations += [f"{q}: provenance {p['outcome']}: {p['detail']}" for q in ("ID-1", "ID-2")
+                    for p in (ans[q].get("basis") or {}).get("provenance", [])
+                    if p["outcome"] not in (EA.VERIFIED_OK, EA.VERIFIED_FAILED)]
+    limitations += [f"ID-2: {c} {x['outcome']}: {x['detail']}" for c, x in id2.get("temporal_checks", {}).items()
+                    if x["outcome"] not in (EA.VERIFIED_OK, EA.VERIFIED_FAILED)]
     return {"label": label, "confidence": round(base * min(1.0, evidence_scale), 3), "severity": sev,
             "action": action, "action_reason": reason, "recipients": list(recipients),
-            "drivers": drivers, "also_held": held[1:], "contrary": contrary, "questions": trace}
+            "drivers": drivers, "also_held": held[1:], "contrary": contrary, "questions": trace,
+            "limitations": limitations}
 
 
 # ---------------------------------------------------------------- Audit & Traceability
@@ -923,9 +1014,7 @@ def observe_audit_traceability(assessments, trace=None, linkage=None, memory=Non
                                                memory)}[qid]()
         if outcome not in q["outcomes"]:
             raise ValueError(f"{qid}: outcome {outcome} is not in METRICS.yaml")
-        for u in basis.get("unassessed", []):
-            if u.get("state") == EA.NOT_CALCULATED:
-                u["missing_inputs"] = " ".join(((pkg["mapping"].get(u["metric"]) or {}).get("note") or "").split())
+        _missing_inputs(pkg, basis)
         out[qid] = {"outcome": outcome, "sufficiency": suf, "basis": basis,
                     "findings": a["findings"], "not_assessed": a["sufficiency"]["not_assessed"]}
     return out

@@ -15,6 +15,20 @@
 | D9 | `route_record` payloads carry `routes`; Resource Management reads ID-2 | none | Without routes the memory read was empty; without ID-2 a NEW_ROUTE on a partial graph would have been used for attribution |
 | D10 | A depth conflict (reported `delegation_depth` against the linked structure) impairs ID-5 | record only | Two records of the same delegation disagree |
 
+## Made on 2026-11-20 (proposed)
+
+| # | Decision | Alternatives considered | Rationale |
+|---|---|---|---|
+| D11 | Every delegation and MCP link carries its basis: RECORDED, INFERRED, INFERRED_AGAINST_TIME_ORDER or UNLINKED (`cop_package.interaction_links`) | report only the ratios | A relationship that can be inferred is not a verified one. The basis says which it is |
+| D12 | An INFERRED link is listed as a limitation and does not change ID-2; an INFERRED_AGAINST_TIME_ORDER link is a gap | treat every inferred link as a gap, which would make every session with handoffs but no `parent_agent_id` PATH_PARTIAL | `link_lanes` joins by time and that join is consistent with the order of events; one joined to a later handoff is not (U5) |
+| D13 | TIMESTAMP_ORDER and INCOMPARABLE_TIMESTAMPS failing is a gap in ID-2; EVIDENCE_MISSING is a limitation | ignore; block ID-2 | They compare a row's own timestamps and need no approved limit. STALE and INGEST_LATENCY are not read here: no limit is approved (as in Audit & Traceability) |
+| D14 | `limitations` is a field of the shared decision record (`decision.py`: `uncertainty.cop_limitations`), empty for COPs that do not set it | an extension field per COP | A decision record must show what it rests on without verifying, in one place for every consumer |
+| D15 | ID-3 reports cross-session continuity (operator recorded, tool, earlier sessions) | none | The comparison was implicit in `interaction_route_novelty` |
+| D16 | The missing-input note of a NOT_CALCULATED metric is shared code (`cop_package._missing_inputs`), used by ID and Audit & Traceability | copy | Same behaviour in both |
+
+Ground truth gained eight scenarios and four checks on known_delegation on 2026-11-20, each written before the
+harness ran on it.
+
 ## Needs your decision
 
 | # | Question | Options |
@@ -22,6 +36,8 @@
 | U2 | `interaction_unattributed_edges`: the registry says its definition is unconfirmed | define it; drop it from the mapping |
 | U3 | Approved thresholds for depth and breadth | leave reported only; supply values |
 | U4 | Should a CONTAINED session write a route record, so routes become known from memory as well as history? | no (current); yes |
+| U5 | Should an INFERRED delegation link (handoff recorded, no `parent_agent_id`) make ID-2 partial? | no (current, D12); yes |
+| U6 | `signal_traces.link_lanes` falls back to the first handoff when none precedes a lane. Should the collector stop doing that? It is outside this package, so it is reported here and not changed | keep and flag (current); change the collector |
 
 ## Not done, by instruction
 

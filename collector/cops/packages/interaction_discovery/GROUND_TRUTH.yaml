@@ -19,6 +19,7 @@
 
 contract: id_ground_truth/1
 written: 2026-11-19
+extended: 2026-11-20
 
 scenarios:
   normal:
@@ -47,7 +48,9 @@ scenarios:
       ID-5: RECONSTRUCTION_RELIABLE
     cop_label: [CONTAINED]
     action: NONE
-    checks: [depth_one_breadth_two, decision_contract_valid]
+    # links_inferred_not_verified and continuity_reported added 2026-11-20: the handoffs are recorded but no
+    # row names a parent, so both links are joined by time only and must be reported as not verified.
+    checks: [depth_one_breadth_two, decision_contract_valid, links_inferred_not_verified, continuity_reported]
 
   new_mcp_route:
     world: >-
@@ -240,3 +243,95 @@ scenarios:
       A heavy session where two linked subagents and the jira MCP server do the work, run with Runtime
       Monitoring, Interaction Discovery and Resource Management.
     checks: [resource_attributed_through_id, resource_reads_id2]
+
+  # Added 2026-11-20, before the harness was run on them, for link provenance, temporal ordering,
+  # cross-session continuity and downstream use (purvi's Interaction Discovery instruction of 2026-11-20).
+
+  recorded_delegation:
+    world: >-
+      Added 2026-11-20 to separate recorded links from inferred ones. As known_delegation, but every
+      subagent row also records parent_agent_id main, in s1 and in the seven earlier sessions.
+    questions:
+      ID-1: ENTITIES_IDENTIFIED
+      ID-2: FULLY_RECONSTRUCTED
+      ID-3: NO_NEW_ROUTES
+      ID-4: WITHIN_APPROVED_BOUNDS
+      ID-5: RECONSTRUCTION_RELIABLE
+    cop_label: [CONTAINED]
+    action: NONE
+    checks: [links_recorded, no_link_limitation, decision_contract_valid]
+
+  handoff_after_lane_start:
+    world: >-
+      Added 2026-11-20 because signal_traces.link_lanes joins a lane to the first handoff when no handoff
+      precedes it, so a lane can be linked to a handoff recorded after it began. As known_delegation, but
+      sub-a's Read is recorded before the handoff that opens sub-a; sub-b is opened normally. The seven
+      earlier sessions delegate normally.
+    questions:
+      ID-1: ENTITIES_IDENTIFIED
+      ID-2: PARTIALLY_RECONSTRUCTED
+      ID-3: NO_NEW_ROUTES
+      ID-4: WITHIN_APPROVED_BOUNDS
+      ID-5: RECONSTRUCTION_IMPAIRED
+    cop_label: [PATH_PARTIAL]
+    action: WATCH
+    checks: [id2_names_late_link, late_link_limitation, decision_contract_valid]
+
+  timestamps_out_of_order:
+    world: >-
+      Added 2026-11-20 for temporal ordering. As normal, plus three Grep calls whose captured_at is one
+      minute before their occurred_at. The order check compares a row's own timestamps and needs no
+      approved limit.
+    questions:
+      ID-1: ENTITIES_IDENTIFIED
+      ID-2: PARTIALLY_RECONSTRUCTED
+      ID-3: NO_NEW_ROUTES
+      ID-4: WITHIN_APPROVED_BOUNDS
+      ID-5: RECONSTRUCTION_IMPAIRED
+    cop_label: [PATH_PARTIAL]
+    action: WATCH
+    checks: [id2_names_timestamp_order]
+
+  no_operator_with_routes:
+    world: >-
+      Added 2026-11-20 for cross-session continuity. As known_delegation, but no s1 row names an operator,
+      so s1 cannot be compared with earlier sessions of the same operator. The seven earlier sessions
+      name dev1.
+    questions:
+      ID-1: ENTITIES_IDENTIFIED
+      ID-2: FULLY_RECONSTRUCTED
+      ID-3: INCONCLUSIVE
+      ID-4: WITHIN_APPROVED_BOUNDS
+      ID-5: RECONSTRUCTION_RELIABLE
+    cop_label: [INCONCLUSIVE]
+    action: WATCH
+    checks: [id3_reason_no_operator, deferred_with_reason]
+
+  downstream_audit_traceability:
+    world: >-
+      Added 2026-11-20. The rows of handoff_after_lane_start, run with Runtime Monitoring, Interaction
+      Discovery and Audit & Traceability. Audit & Traceability reads the published ID-2 answer as a gap
+      and so labels the session PARTIAL.
+    cop_label: [PATH_PARTIAL]
+    checks: [at2_reads_id2_partial, at_label_partial]
+
+  downstream_audit_traceability_clean:
+    world: >-
+      Added 2026-11-20. The rows of known_delegation, run with the same three COPs. ID-2 is fully
+      reconstructed, so Audit & Traceability takes no gap from it and labels the session COMPLETE.
+    cop_label: [CONTAINED]
+    checks: [at2_reads_id2_full, at_label_complete]
+
+  downstream_lifecycle:
+    world: >-
+      Added 2026-11-20. The rows of new_mcp_route, run with Runtime Monitoring, Interaction Discovery and
+      Agent Lifecycle Management, which counts a verified NEW_ROUTE as a connectivity change input.
+    cop_label: [NEW_ROUTE]
+    checks: [lifecycle_consumed_new_route]
+
+  downstream_lifecycle_no_route:
+    world: >-
+      Added 2026-11-20. The rows of normal, run with the same three COPs. Interaction Discovery finds no
+      new route, so Agent Lifecycle Management uses nothing from it.
+    cop_label: [CONTAINED]
+    checks: [lifecycle_did_not_use_id]

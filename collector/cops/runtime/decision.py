@@ -17,7 +17,7 @@ CORE = ("decision_contract", "cop", "case", "questions_assessed", "metrics", "qu
         "contrary_evidence", "uncertainty", "recommendation", "authority", "recipients", "provenance",
         "extensions", "absent")
 # cop_specific keys that are part of the core record rather than extensions.
-LIFTED = ("questions", "memory_payload", "recipients", "evidence_assessment", "contrary", "also_held")
+LIFTED = ("questions", "memory_payload", "recipients", "evidence_assessment", "contrary", "also_held", "limitations")
 
 
 def _questions(f):
@@ -103,7 +103,7 @@ def build(state, rt):
         "uncertainty": {"confidence": f["confidence"], "confidence_basis": tri.get("confidence"),
                         "missing_evidence": f.get("missing_evidence", []),
                         "missing_dependencies": f.get("missing_dependencies", []),
-                        "inconclusive_questions": inconclusive_q},
+                        "inconclusive_questions": inconclusive_q, "cop_limitations": cs.get("limitations", [])},
         "recommendation": {"action": pa.get("action"), "typed_action": pa.get("typed_action"),
                            "reason": pa.get("reason", ""), "execution_status": pa.get("execution_status"),
                            "deferred": deferred,

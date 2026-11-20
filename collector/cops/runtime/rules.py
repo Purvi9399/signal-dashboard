@@ -277,7 +277,7 @@ def interaction_discovery(ctx):
     return F(d["label"], d["confidence"], d["action"], d["action_reason"], rationale, claims, d["severity"],
              cop_specific={"edges": graph.get("edges", []), "new_routes": known.get("new_routes", []),
                            "questions": d["questions"], "drivers": d["drivers"], "also_held": d["also_held"],
-                           "contrary": d["contrary"],
+                           "contrary": d["contrary"], "limitations": d["limitations"],
                            "recipients": d["recipients"], "memory_payload": {"routes": routes}},
              upstream_used=used)
 
