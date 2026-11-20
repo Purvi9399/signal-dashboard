@@ -20,6 +20,10 @@
 contract: id_ground_truth/1
 written: 2026-11-19
 extended: 2026-11-20
+# 2026-11-20 08:52Z purvi decided U5: a handoff with no recorded parent_agent_id is an inferred relationship,
+# not a confirmed one, so ID-2 is partial. Expectations that rested on inferred links were changed by that
+# decision and each change is marked "U5". Where a scenario tests something else (history, continuity,
+# attribution), its world now records parent_agent_id so it keeps testing that.
 
 scenarios:
   normal:
@@ -39,18 +43,20 @@ scenarios:
   known_delegation:
     world: >-
       The main agent opens two subagents (sub-a, sub-b) with a recorded handoff; each calls Read.
-      Seven earlier sessions delegated to the same two subagents the same way.
+      Seven earlier sessions delegated to the same two subagents the same way. No row names a parent.
+    # U5: ID-2 was FULLY_RECONSTRUCTED, ID-5 RECONSTRUCTION_RELIABLE, label CONTAINED, action NONE.
     questions:
       ID-1: ENTITIES_IDENTIFIED
-      ID-2: FULLY_RECONSTRUCTED
+      ID-2: PARTIALLY_RECONSTRUCTED
       ID-3: NO_NEW_ROUTES
       ID-4: WITHIN_APPROVED_BOUNDS
-      ID-5: RECONSTRUCTION_RELIABLE
-    cop_label: [CONTAINED]
-    action: NONE
+      ID-5: RECONSTRUCTION_IMPAIRED
+    cop_label: [PATH_PARTIAL]
+    action: WATCH
     # links_inferred_not_verified and continuity_reported added 2026-11-20: the handoffs are recorded but no
     # row names a parent, so both links are joined by time only and must be reported as not verified.
-    checks: [depth_one_breadth_two, decision_contract_valid, links_inferred_not_verified, continuity_reported]
+    checks: [depth_one_breadth_two, decision_contract_valid, links_inferred_not_verified, continuity_reported,
+             id2_names_timed_links]
 
   new_mcp_route:
     world: >-
@@ -124,6 +130,7 @@ scenarios:
   insufficient_history_with_routes:
     world: >-
       As known_delegation, but only two earlier sessions exist, so route novelty has no baseline.
+      U5: every subagent row records parent_agent_id main, so the scenario still tests history alone.
     questions:
       ID-1: ENTITIES_IDENTIFIED
       ID-2: FULLY_RECONSTRUCTED
@@ -194,9 +201,10 @@ scenarios:
     world: >-
       As known_delegation, but every subagent row reports delegation_depth 3 while the recorded handoffs
       make each subagent one level below the main agent.
+    # U5: ID-2 was FULLY_RECONSTRUCTED.
     questions:
       ID-1: ENTITIES_IDENTIFIED
-      ID-2: FULLY_RECONSTRUCTED
+      ID-2: PARTIALLY_RECONSTRUCTED
       ID-3: NO_NEW_ROUTES
       ID-4: WITHIN_APPROVED_BOUNDS
       ID-5: RECONSTRUCTION_IMPAIRED
@@ -241,7 +249,8 @@ scenarios:
   downstream_resource_attribution:
     world: >-
       A heavy session where two linked subagents and the jira MCP server do the work, run with Runtime
-      Monitoring, Interaction Discovery and Resource Management.
+      Monitoring, Interaction Discovery and Resource Management. U5: the subagent rows record
+      parent_agent_id main, so the links are confirmed.
     checks: [resource_attributed_through_id, resource_reads_id2]
 
   # Added 2026-11-20, before the harness was run on them, for link provenance, temporal ordering,
@@ -296,7 +305,8 @@ scenarios:
     world: >-
       Added 2026-11-20 for cross-session continuity. As known_delegation, but no s1 row names an operator,
       so s1 cannot be compared with earlier sessions of the same operator. The seven earlier sessions
-      name dev1.
+      name dev1. U5: every subagent row records parent_agent_id main, so the scenario still tests
+      continuity alone.
     questions:
       ID-1: ENTITIES_IDENTIFIED
       ID-2: FULLY_RECONSTRUCTED
@@ -317,8 +327,9 @@ scenarios:
 
   downstream_audit_traceability_clean:
     world: >-
-      Added 2026-11-20. The rows of known_delegation, run with the same three COPs. ID-2 is fully
-      reconstructed, so Audit & Traceability takes no gap from it and labels the session COMPLETE.
+      Added 2026-11-20. U5: the rows of recorded_delegation (was known_delegation), run with the same three
+      COPs. ID-2 is fully reconstructed, so Audit & Traceability takes no gap from it and labels the
+      session COMPLETE.
     cop_label: [CONTAINED]
     checks: [at2_reads_id2_full, at_label_complete]
 
@@ -335,3 +346,19 @@ scenarios:
       new route, so Agent Lifecycle Management uses nothing from it.
     cop_label: [CONTAINED]
     checks: [lifecycle_did_not_use_id]
+
+  # Added 2026-11-20 after purvi's U5 decision.
+
+  downstream_audit_traceability_inferred:
+    world: >-
+      The rows of known_delegation, run with Runtime Monitoring, Interaction Discovery and Audit &
+      Traceability. They differ from downstream_audit_traceability_clean only in that no row names a
+      parent, so ID-2 is partial and Audit & Traceability labels the session PARTIAL.
+    cop_label: [PATH_PARTIAL]
+    checks: [at2_reads_id2_partial, at_label_partial]
+
+  downstream_resource_attribution_inferred:
+    world: >-
+      As downstream_resource_attribution, but no row names a parent. The links are inferred, ID-2 is
+      partial, and Resource Management does not attribute consumption through Interaction Discovery.
+    checks: [resource_unattributed_inferred]

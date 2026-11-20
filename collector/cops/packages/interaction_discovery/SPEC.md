@@ -52,14 +52,16 @@ none) and the provenance check outcomes.
 `interaction_edge_count` (required); `interaction_graph_completeness`, `interaction_orphaned_events`,
 `telemetry.lane_linkage`, `telemetry.turn_linkage` (when applicable). Blocking check: CONFLICTING_ACTION_SOURCES.
 NOT_RECONSTRUCTABLE when subagent rows exist and none has a resolvable parent; PARTIALLY_RECONSTRUCTED when any
-ratio is below 1 or any subagent event is orphaned, when a delegation link was joined to a handoff recorded
-after the lane began, or when the timestamp order check fails; otherwise FULLY_RECONSTRUCTED.
+ratio is below 1, when any subagent event is orphaned, when a delegation link rests on timing alone (no recorded
+`parent_agent_id`) or was joined to a handoff recorded after the lane began, or when the timestamp order check
+fails. Otherwise it is FULLY_RECONSTRUCTED.
 
 Each link carries its basis (`cop_package.interaction_links`): RECORDED when the lane's rows name
 `parent_agent_id`, or for an MCP link from `mcp_server`; INFERRED when only `signal_traces.link_lanes` joined the
 lane to a handoff by time; INFERRED_AGAINST_TIME_ORDER when that handoff was recorded after the lane's first step
-(`link_lanes` falls back to the first handoff); UNLINKED otherwise. An inferred link is not a verified one: it is
-listed as a limitation in the decision record and does not by itself change the answer (D12).
+(`link_lanes` falls back to the first handoff); UNLINKED otherwise. An inferred link is not a verified one: the
+handoff is an observed event, and the parent-child relationship is inferred. It is listed as a limitation in the
+decision record and makes ID-2 partial (U5, decided 2026-11-20).
 INCOMPARABLE_TIMESTAMPS and TIMESTAMP_ORDER are read with the outcome they have; when no row carries the three
 timestamps they are EVIDENCE_MISSING, which is a limitation and not a gap (D13).
 

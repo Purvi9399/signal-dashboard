@@ -21,7 +21,7 @@ These are maintenance instructions for Claude Code. They are not the runtime's s
 
 1. Change METRICS.yaml first, then the code. `cop_package.validate("interaction_discovery")` must return `[]`.
 2. The five answers decide the label in the order NEW_ROUTE, PROPAGATING, PATH_PARTIAL, INCONCLUSIVE, CONTAINED (D2, D3 and D4, accepted). Do not add a decision path that bypasses the answers.
-3. A link inferred by time is not a verified link. Keep each link's basis (RECORDED, INFERRED, INFERRED_AGAINST_TIME_ORDER, UNLINKED) and list inferred links in `limitations`. Do not report an interaction as verified because a relationship can be inferred.
+3. A link inferred by time is not a verified link. Keep each link's basis (RECORDED, INFERRED, INFERRED_AGAINST_TIME_ORDER, UNLINKED) and list inferred links in `limitations`. Only a recorded `parent_agent_id` confirms a delegation; an inferred link leaves ID-2 partial (U5, decided by the owner on 2026-11-20). Do not report an interaction as verified because a relationship can be inferred.
 4. Never edit GROUND_TRUTH.yaml to match an output. A new scenario says in its `world` when and why it was added. Every expectation must pass; a miss is a defect or a DECISIONS.md entry, never an allowance.
 5. Do not invent thresholds. Depth and breadth have none and are reported, not judged. STALE and INGEST_LATENCY stay unread until `evidence_limits` values are approved.
 6. A check that cannot run, or a metric that is not built, is listed as unassessed or as a limitation with its reason. It is never a pass and never a failure. Do not substitute a proxy.

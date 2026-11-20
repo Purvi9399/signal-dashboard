@@ -12,6 +12,15 @@ harness 138 of 138; full suite 777 passed, 1 skipped). Two limitations are retai
 
 The other open items (U1, U2, U3, D5) remain open.
 
+Reconfirmed by purvi on 2026-11-20 (08:52Z), during the Interaction Discovery review. Neither capability is
+operational:
+
+- STALE and INGEST_LATENCY return NOT_EXECUTED with reason LIMIT_NOT_APPROVED. Each is listed in AT-3's
+  `unassessed` and is never counted as a pass or a failure. AT-3 RELIABLE therefore means that no check which
+  ran found a problem. It does not mean the evidence is fresh.
+- AT-4 TRACEABLE means that the upstream decisions' evidence links resolve. It says nothing about
+  interventions, policy versions or verifiers.
+
 ## Made in this package (part of the baseline accepted on 2026-11-20)
 
 | # | Decision | Alternatives considered | Rationale |

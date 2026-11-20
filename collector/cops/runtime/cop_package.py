@@ -415,6 +415,10 @@ def _id2(a, links=None):
     if turn and turn["value"] < 1:
         gaps.append(f"{turn['features'].get('without_turn')} of {turn['features'].get('steps')} steps carry no turn")
     ls = (links or {}).get("links", [])
+    timed = [x for x in ls if x["basis"] == "INFERRED"]
+    if timed:
+        gaps.append(f"{len(timed)} delegation link(s) rest on timing alone, with no recorded parent_agent_id: "
+                    + ", ".join(x["link"] for x in timed))
     late = [x for x in ls if x["basis"] == "INFERRED_AGAINST_TIME_ORDER"]
     if late:
         gaps.append(f"{len(late)} delegation link(s) inferred from a handoff recorded after the lane began: "
@@ -558,7 +562,8 @@ def _id5(a, earlier, rm=None, delegation=()):
 
 def interaction_links(session):
     """How each interaction link is evidenced. A delegation link is RECORDED when the lane's rows carry
-    parent_agent_id; INFERRED when only signal_traces.link_lanes joined the lane to a handoff by time; and an
+    parent_agent_id; INFERRED when only signal_traces.link_lanes joined the lane to a handoff by time (the
+    handoff is an observed event; the parent-child relationship is not); and an
     inferred link whose handoff was recorded after the lane's first step is INFERRED_AGAINST_TIME_ORDER
     (link_lanes falls back to the first handoff). An MCP link is RECORDED from mcp_server on the row."""
     sm, ts = EA.signal_metrics, EA.signal_traces.ts
@@ -580,6 +585,7 @@ def interaction_links(session):
             out.append({"link": f"main>{lane}", "kind": "delegation",
                         "basis": "INFERRED_AGAINST_TIME_ORDER" if late else "INFERRED",
                         "handoff": h.get("step_id"), "handoff_at": h.get("started_at"),
+                        "handoff_names_agent": h.get("agent_id"),
                         "lane_started_at": first.get("started_at"),
                         "refs": [f"step:{h.get('step_id')}", f"step:{first.get('step_id')}"]})
         else:

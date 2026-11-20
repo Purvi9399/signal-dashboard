@@ -275,9 +275,13 @@ def test_a_link_is_recorded_only_when_a_row_names_the_parent():
     assert _links(questions("unlinked_subagents")) == {"?>sub-a": "UNLINKED", "?>sub-b": "UNLINKED"}
 
 
-def test_an_inferred_link_is_reported_as_not_verified_but_does_not_change_the_answer():
+def test_a_link_inferred_from_timing_is_not_verified_and_leaves_id2_partial():
+    """U5: only parent_agent_id differs between the two worlds."""
     inferred, recorded = questions("known_delegation"), questions("recorded_delegation")
-    assert inferred["ID-2"]["answer"]["outcome"] == recorded["ID-2"]["answer"]["outcome"] == "FULLY_RECONSTRUCTED"
+    assert (inferred["ID-2"]["answer"]["outcome"], recorded["ID-2"]["answer"]["outcome"]) == (
+        "PARTIALLY_RECONSTRUCTED", "FULLY_RECONSTRUCTED")
+    assert (P.decide_interaction_discovery(inferred)["label"], P.decide_interaction_discovery(recorded)["label"]) == (
+        "PATH_PARTIAL", "CONTAINED")
     lim = P.decide_interaction_discovery(inferred)["limitations"]
     assert any("not verified: main>sub-a, main>sub-b" in x for x in lim)
     assert not any("delegation link" in x for x in P.decide_interaction_discovery(recorded)["limitations"])
@@ -321,9 +325,11 @@ def test_limitations_reach_the_decision_record(bench):
 # ---------------------------------------------------------------- downstream use changes with the evidence
 
 def test_audit_traceability_reads_id2_and_its_label_follows(bench):
-    late, clean = (bench["results"][n] for n in ("downstream_audit_traceability", "downstream_audit_traceability_clean"))
-    at = [r["downstream"]["audit_traceability"] for r in (late, clean)]
-    assert [a["label"] for a in at] == ["PARTIAL", "COMPLETE"]
+    late, clean, timed = (bench["results"][n] for n in ("downstream_audit_traceability",
+                                                         "downstream_audit_traceability_clean",
+                                                         "downstream_audit_traceability_inferred"))
+    at = [r["downstream"]["audit_traceability"] for r in (late, clean, timed)]
+    assert [a["label"] for a in at] == ["PARTIAL", "COMPLETE", "PARTIAL"]
     assert at[0]["cop_specific"]["questions"]["AT-2"]["basis"]["gaps"] == [
         "Interaction Discovery ID-2: PARTIALLY_RECONSTRUCTED"]
     assert at[0]["cop_specific"]["questions"]["AT-2"]["basis"]["upstream"]["interaction_discovery"]["finding_id"] \

@@ -11,17 +11,19 @@ from cops.runtime.graph import _payload, _rule_ctx, run_case, run_cop
 from cops.runtime.rules import RULES
 
 
-def delegated_spike(sid, linked=True):
-    """Heavy session with two subagent lanes and three MCP calls."""
+def delegated_spike(sid, linked=True, parent="main"):
+    """Heavy session with two subagent lanes and three MCP calls. A linked lane records its parent; with
+    parent=None the link rests on the handoff's timing alone, which Interaction Discovery reads as partial (U5)."""
     s = S.Session(sid, 9).start(40000).tools(["WebFetch", "Bash"] * 3)
     for a in ("sub-a", "sub-b"):
         if linked:
             s.add(observable_type="subagent_start", agent_id=a)
+    p = {"parent_agent_id": parent} if linked and parent else {}
     for i in range(3):
         s.add(observable_type="tool_request", tool_name="Read", agent_id="sub-a", tool_use_id=f"{sid}-a{i}",
-              tool_arguments={"i": i}, tool_duration_ms=200, success=True)
+              tool_arguments={"i": i}, tool_duration_ms=200, success=True, **p)
         s.add(observable_type="tool_request", tool_name="Grep", agent_id="sub-b", tool_use_id=f"{sid}-b{i}",
-              tool_arguments={"i": i}, tool_duration_ms=200, success=True)
+              tool_arguments={"i": i}, tool_duration_ms=200, success=True, **p)
         s.add(observable_type="mcp_request", tool_name="jira_search", mcp_server="jira",
               tool_use_id=f"{sid}-m{i}", tool_arguments={"i": i}, success=True)
     return s.full_instrumentation().end()
@@ -58,6 +60,13 @@ def test_verified_interaction_graph_attributes_consumption(attributed):
             "counted_as": "attribution of consumption"} in f["upstream_used"]
     assert any(c.get("upstream_cop") == "interaction_discovery" for c in f["claims"])
     assert out["findings"]["resource_management"]["verified"]
+
+
+def test_a_link_inferred_from_timing_does_not_attribute_consumption():
+    out, f = resm("inf-timed", E._estate(delegated_spike("dt", parent=None)), "dt")
+    assert out["findings"]["interaction_discovery"]["cop_specific"]["questions"]["ID-2"]["answer"] \
+        == "PARTIALLY_RECONSTRUCTED"
+    assert f["cop_specific"]["attribution"]["status"] == "UNATTRIBUTED"
 
 
 def test_missing_interaction_finding_leaves_consumption_unattributed(attributed):

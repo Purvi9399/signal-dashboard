@@ -15,7 +15,7 @@ Runtime Monitoring. Read only when verified and substantive:
 |---|---|---|
 | Policy Enforcement | label NEW_ROUTE (`rules.policy_enforcement`) | a new route becomes an input to evaluate; with no policy store, ALLOWED becomes UNCERTAIN |
 | Agent Lifecycle Management | label NEW_ROUTE | a connectivity change input; used for a new route, not used otherwise (tested 2026-11-20) |
-| Resource Management | label, `cop_specific.edges`, and the ID-2 answer | attributes consumption to subagents and MCP servers only when ID-2 is FULLY_RECONSTRUCTED (changed in this package; before, only the label PATH_PARTIAL stopped it) |
+| Resource Management | label, `cop_specific.edges`, and the ID-2 answer | attributes consumption to subagents and MCP servers only when ID-2 is FULLY_RECONSTRUCTED, so since U5 only when every subagent link records `parent_agent_id` (changed in this package; before, only the label PATH_PARTIAL stopped it) |
 | Risk Mitigation | the verified finding and its lineage (`independent_upstream`) | counted as an independent signal when its lineage does not overlap Risk Mitigation's metrics |
 | Incident Response | any verified finding (`rules.incident_response`) | recorded as used with its label |
 | Audit & Traceability | the ID-2 answer (`cop_package._at2`) | NOT_RECONSTRUCTABLE breaks AT-2, PARTIALLY_RECONSTRUCTED is a gap in it. A late handoff makes AT PARTIAL, the same session with ordered handoffs COMPLETE (tested 2026-11-20) |

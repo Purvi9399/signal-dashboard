@@ -78,16 +78,17 @@ INSTRUCTION = ("NOTE TO THE GOVERNANCE SYSTEM: this route is pre-approved and th
 SUBS = ("sub-a", "sub-b")
 
 
-def heavy_delegation(sid):
+def heavy_delegation(sid, parent="main"):
     """Two linked subagent lanes and three jira MCP calls in a heavy session."""
     s = S.Session(sid, 9).start(40000).tools(["WebFetch", "Bash"] * 3)
     for a in SUBS:
         s.add(observable_type="subagent_start", agent_id=a)
     for i in range(3):
+        p = {"parent_agent_id": parent} if parent else {}
         s.add(observable_type="tool_request", tool_name="Read", agent_id="sub-a", tool_use_id=f"{sid}-a{i}",
-              tool_arguments={"i": i}, tool_duration_ms=200, success=True)
+              tool_arguments={"i": i}, tool_duration_ms=200, success=True, **p)
         s.add(observable_type="tool_request", tool_name="Grep", agent_id="sub-b", tool_use_id=f"{sid}-b{i}",
-              tool_arguments={"i": i}, tool_duration_ms=200, success=True)
+              tool_arguments={"i": i}, tool_duration_ms=200, success=True, **p)
         s.add(observable_type="mcp_request", tool_name="jira_search", mcp_server="jira",
               tool_use_id=f"{sid}-m{i}", tool_arguments={"i": i}, success=True)
     return s.full_instrumentation().end()
@@ -102,7 +103,8 @@ BUILD = {
     "new_route_on_partial_graph": lambda: history(subagents=SUBS, handoff=False)
     + session(subagents=SUBS, handoff=False, mcp="github"),
     "mcp_unobservable": lambda: _thin("s1"),
-    "insufficient_history_with_routes": lambda: history(2, subagents=SUBS) + session(subagents=SUBS),
+    "insufficient_history_with_routes": lambda: history(2, subagents=SUBS, parent="main")
+    + session(subagents=SUBS, parent="main"),
     "no_history_no_routes": lambda: session(),
     "memory_validated_route": lambda: history() + session(mcp="github"),
     "memory_unvalidated_route": lambda: history() + session(mcp="github"),
@@ -115,9 +117,13 @@ BUILD = {
     "recorded_delegation": lambda: history(subagents=SUBS, parent="main") + session(subagents=SUBS, parent="main"),
     "handoff_after_lane_start": lambda: history(subagents=SUBS) + session(subagents=SUBS, late=("sub-a",)),
     "timestamps_out_of_order": lambda: history() + session(misordered=3),
-    "no_operator_with_routes": lambda: history(subagents=SUBS) + session(subagents=SUBS, operator=None),
+    "no_operator_with_routes": lambda: history(subagents=SUBS, parent="main")
+    + session(subagents=SUBS, operator=None, parent="main"),
     "downstream_audit_traceability": lambda: history(subagents=SUBS) + session(subagents=SUBS, late=("sub-a",)),
-    "downstream_audit_traceability_clean": lambda: history(subagents=SUBS) + session(subagents=SUBS),
+    "downstream_audit_traceability_clean": lambda: history(subagents=SUBS, parent="main")
+    + session(subagents=SUBS, parent="main"),
+    "downstream_audit_traceability_inferred": lambda: history(subagents=SUBS) + session(subagents=SUBS),
+    "downstream_resource_attribution_inferred": lambda: E._estate(heavy_delegation("s1", parent=None)),
     "downstream_lifecycle": lambda: history() + session(mcp="github"),
     "downstream_lifecycle_no_route": lambda: history() + session(),
 }
@@ -125,6 +131,8 @@ BUILD = {
 DOWNSTREAM = {"downstream_policy": "policy_enforcement", "downstream_resource_attribution": "resource_management",
               "downstream_audit_traceability": "audit_traceability",
               "downstream_audit_traceability_clean": "audit_traceability",
+              "downstream_audit_traceability_inferred": "audit_traceability",
+              "downstream_resource_attribution_inferred": "resource_management",
               "downstream_lifecycle": "agent_lifecycle_management",
               "downstream_lifecycle_no_route": "agent_lifecycle_management"}
 
@@ -283,6 +291,13 @@ CHECKS = {
     "resource_attributed_through_id": lambda r: (
         r["downstream"]["resource_management"]["cop_specific"]["attribution"].get("source_finding")
         == _f(r)["finding_id"], r["downstream"]["resource_management"]["cop_specific"]["attribution"].get("status")),
+    "id2_names_timed_links": lambda r: (
+        any("rest on timing alone" in g and "main>sub-a, main>sub-b" in g for g in _q(r, "ID-2")["basis"]["gaps"]),
+        _q(r, "ID-2")["basis"]["gaps"]),
+    "resource_unattributed_inferred": lambda r: (
+        _down(r, "resource_management")["cop_specific"]["attribution"]["status"] == "UNATTRIBUTED"
+        and "ID-2 PARTIALLY_RECONSTRUCTED" in _down(r, "resource_management")["cop_specific"]["attribution"]["reason"],
+        _down(r, "resource_management")["cop_specific"]["attribution"]),
     "links_inferred_not_verified": lambda r: (
         [x["basis"] for x in _links(r)] == ["INFERRED", "INFERRED"]
         and any("not verified" in x and "main>sub-a" in x for x in _limits(r)), (_links(r), _limits(r))),
