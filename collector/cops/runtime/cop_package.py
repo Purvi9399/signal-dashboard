@@ -1174,3 +1174,418 @@ def decide_audit_traceability(questions, evidence_scale=1.0):
             "action": action, "action_reason": reason, "recipients": list(recipients),
             "drivers": drivers, "also_held": held[1:], "contrary": contrary, "questions": trace,
             "gap_codes": at_gap_codes(ans)}
+
+
+# ---------------------------------------------------------------- Policy Enforcement
+
+PE = "policy_enforcement"
+PE_RESOLUTION = "deny beats require_approval beats allow; no rule is not permission (tools.evaluate_operation)"
+PE_PARTIAL = ("POLICY_PARTIALLY_APPLIES", "BOUNDARY_NOT_DEFINED", "NEW_ROUTES_UNDECIDED")
+PE_DENY = ("OUTSIDE_AUTHORIZED_BOUNDARIES", "NEW_ROUTES_NOT_PERMITTED")
+NO_POLICY = {"code": EA.MISSING_REFERENCE, "requirement": "policy_store", "check": None,
+             "detail": "no approved policy version is in force, so no rule was evaluated"}
+NO_ENTITLEMENTS = {"code": EA.MISSING_REFERENCE, "requirement": "entitlements", "check": None,
+                   "detail": "an MCP server was used and no entitlement record was supplied"}
+
+
+def _pe_store(policy):
+    """The policy versions supplied and which one is in force (tools.latest_policy)."""
+    store, v = policy.get("store") or {}, policy.get("in_force")
+    versions = [{"version": x.get("version"), "effective": x.get("effective"), "approved": bool(x.get("approved_by"))}
+                for x in store.get("versions", [])]
+    return {"supplied": bool(store), "synthetic": bool(store.get("synthetic")),
+            "in_force": None if v is None else {"version": v.get("version"), "effective": v.get("effective"),
+                                                "approved_by": v.get("approved_by")},
+            "not_in_force": [dict(x, why="superseded by a later approved version" if x["approved"] else "not approved")
+                             for x in versions if not v or x["version"] != v.get("version")]}
+
+
+def _pe_ops(policy):
+    """Observed and proposed operations as evaluated against the version in force, each with its rules' effects."""
+    ev, v = policy.get("evaluation") or {}, policy.get("in_force") or {}
+    if "missing_dependency" in ev or not v:
+        return None
+    effect = {r["id"]: r.get("effect") for r in v.get("rules", [])}
+    ops = [dict(o, stage="executed" if not o["blocked_by_hook"] else "stopped_by_hook") for o in ev["observed"]]
+    ops += [dict(o, stage="proposed") for o in ev["proposed"]]
+    for o in ops:
+        o["effects"] = {r: effect.get(r) for r in o["rules"]}
+    return ops
+
+
+def _pe_view(o):
+    return {k: o.get(k) for k in ("ref", "action", "resource", "decision", "rules", "stage")}
+
+
+def _pe_entitlements(policy):
+    ent = policy.get("entitlements") or {}
+    used = sorted({o["resource"] for o in (policy.get("evaluation") or {}).get("observed", []) if o["action"] == "mcp"})
+    supplied = "missing_dependency" not in ent and bool(ent)
+    return {"applies": bool(used), "supplied": supplied, "mcp_servers_used": used,
+            "entitled": ent.get("entitled_mcp_servers") if supplied else None,
+            "used_not_entitled": ent.get("used_not_entitled", []) if supplied else None}
+
+
+def _pe_observed(a, states):
+    return [{"metric": x["requirement"], "value": x["value"], "state": x["metric_state"],
+             "policy_relevant": x["metric_state"] in states, "evidence_refs": x["evidence_refs"][:10]}
+            for x in a["presence"]["items"] if x["state"] == EA.PRESENT]
+
+
+def _pe1(a, policy):
+    ops, ent = _pe_ops(policy), _pe_entitlements(policy)
+    basis = {"policy": _pe_store(policy), "entitlements": ent, "resolution": PE_RESOLUTION,
+             "unassessed": _unassessed(a, "policy_applicability_coverage", "entitlement_mismatch_rate",
+                                       "policy_exception_rate")}
+    if ops is None:
+        basis["interpretation_reasons"] = [NO_POLICY]
+        return INCONCLUSIVE, basis
+    counts = {}
+    for o in ops:
+        counts[o["decision"]] = counts.get(o["decision"], 0) + 1
+    basis.update(operations=len(ops), by_decision=counts,
+                 no_rule=[_pe_view(o) for o in ops if o["decision"] == "NO_RULE"][:20],
+                 conflicts=[{**_pe_view(o), "effects": o["effects"], "resolved_as": o["decision"]}
+                            for o in ops if len(set(o["effects"].values())) > 1][:20])
+    if ent["applies"] and not ent["supplied"]:
+        basis["interpretation_reasons"] = [NO_ENTITLEMENTS]
+        return INCONCLUSIVE, basis
+    return ("POLICY_PARTIALLY_APPLIES" if basis["no_rule"] else "POLICY_APPLIES"), basis
+
+
+def _pe2(a, states, policy):
+    ops, ent = _pe_ops(policy), _pe_entitlements(policy)
+    observed = _pe_observed(a, states)
+    basis = {"observed": observed, "policy_relevant": [x["metric"] for x in observed if x["policy_relevant"]],
+             "violations": [], "attempts_stopped": [], "permitted_relevant": []}
+    if ops is None:
+        basis["note"] = ("observed conditions are policy-relevant at most; no rule was evaluated, so no violation "
+                         "is claimed")
+        basis["interpretation_reasons"] = [NO_POLICY]
+        return INCONCLUSIVE, basis
+    by_ref = {o["ref"]: o for o in ops if o.get("ref")}
+    basis["violations"] = [_pe_view(o) for o in ops if o["decision"] == "DENY" and o["stage"] != "stopped_by_hook"]
+    basis["violations"] += [{"action": "mcp", "resource": s, "decision": "NOT_ENTITLED", "rules": [],
+                             "stage": "executed", "ref": None} for s in ent["used_not_entitled"] or []]
+    basis["attempts_stopped"] = [_pe_view(o) for o in ops if o["stage"] == "stopped_by_hook"]
+    basis["permitted_relevant"] = [{"metric": x["metric"], "ref": r, "decision": by_ref[r]["decision"],
+                                    "rules": by_ref[r]["rules"]}
+                                   for x in observed if x["policy_relevant"] for r in x["evidence_refs"]
+                                   if r in by_ref and by_ref[r]["decision"] in ("ALLOW", "REQUIRE_APPROVAL")]
+    basis["no_rule"] = [_pe_view(o) for o in ops if o["decision"] == "NO_RULE" and o["stage"] != "stopped_by_hook"][:20]
+    if basis["violations"]:
+        return "OUTSIDE_AUTHORIZED_BOUNDARIES", basis
+    if ent["applies"] and not ent["supplied"]:
+        basis["interpretation_reasons"] = [NO_ENTITLEMENTS]
+        return INCONCLUSIVE, basis
+    return ("BOUNDARY_NOT_DEFINED" if basis["no_rule"] else "WITHIN_AUTHORIZED_BOUNDARIES"), basis
+
+
+def _pe3(a, states, policy):
+    ops, ev = _pe_ops(policy), policy.get("evaluation") or {}
+    observed = _pe_observed(a, states)
+    link = _item(a, "approval_action_linkage")
+    basis = {"observed": observed, "policy_relevant": [x["metric"] for x in observed if x["policy_relevant"]],
+             "approval_action_linkage": link["value"], "unassessed": _unassessed(a, "approval_requirement_compliance")}
+    if ops is None:
+        basis["note"] = "whether approval was required is the policy's to say; no rule was evaluated"
+        basis["interpretation_reasons"] = [NO_POLICY]
+        return INCONCLUSIVE, basis
+    need = [_pe_view(o) for o in ops if o["decision"] == "REQUIRE_APPROVAL"]
+    basis.update(required=need, approval_recorded=ev.get("approval_recorded"),
+                 approval_scope="session: a permission_decision allow or approved anywhere in the session "
+                                "(tools.t_evaluate_session_operations)")
+    if not need:
+        return "NO_APPROVAL_REQUIRED", basis
+    return ("APPROVAL_OBTAINED" if ev.get("approval_recorded") else "APPROVAL_MISSING"), basis
+
+
+def _pe_routes(a, upstream):
+    """New routes to evaluate: Interaction Discovery's verified ID-3 routes, or access.first_seen_mcp."""
+    from .rules import verified
+    idf = verified(upstream, "interaction_discovery")
+    if idf:
+        q3 = ((idf.get("cop_specific") or {}).get("questions") or {}).get("ID-3") or {}
+        b = q3.get("basis") or {}
+        named = list(b.get("new_routes") or [])
+        routes = named + [f"main>mcp:{s}" for s in b.get("new_mcp_servers") or []
+                          if not any(r.endswith(f">mcp:{s}") for r in named)]
+        if not routes and idf["label"] == "NEW_ROUTE":
+            routes = [f"main>{r}" for r in (idf.get("cop_specific") or {}).get("new_routes") or []
+                      if r.startswith("mcp:")]
+        return {"source": "interaction_discovery", "finding_id": idf.get("finding_id"), "label": idf["label"],
+                "id3": q3.get("answer")}, routes
+    fsm = _present(a, "access.first_seen_mcp")
+    if fsm:
+        return {"source": "access.first_seen_mcp", "value": fsm["value"]}, \
+            [f"main>mcp:{s}" for s in fsm["features"].get("new_servers", [])]
+    return {"source": None}, []
+
+
+def _pe4(a, policy, upstream, memory):
+    from .tools import evaluate_operation
+    src, routes = _pe_routes(a, upstream)
+    ent, v = _pe_entitlements(policy), policy.get("in_force")
+    blind = [x["requirement"] for x in a["presence"]["items"]
+             if x["requirement"] in ("access.first_seen_mcp", "interaction.mcp_servers") and x["state"] != EA.PRESENT]
+    known = {r: x["record_id"] for x in (memory or {}).get("established", []) for r in x["payload"].get("routes", [])}
+    basis = {"routes_from": src, "routes": [], "mcp_unobservable": blind,
+             "unassessed": _unassessed(a, "unapproved_tool_usage", "unapproved_mcp_access",
+                                       "unauthorized_interaction_route_count")}
+    if not routes and src.get("label") == "NEW_ROUTE":
+        basis["interpretation_reasons"] = [{"code": EA.MISSING_DATA, "requirement": "interaction_discovery",
+                                            "check": None, "detail": "Interaction Discovery reports NEW_ROUTE but "
+                                                                     "names no route to evaluate"}]
+        return INCONCLUSIVE, basis
+    if not routes:
+        if blind:
+            basis["interpretation_reasons"] = [{"code": EA.NOT_OBSERVED, "requirement": m, "check": None,
+                                                "detail": f"{m} has no basis, so a new MCP route cannot be ruled out"}
+                                               for m in blind]
+            return INCONCLUSIVE, basis
+        return "NO_NEW_ROUTES", basis
+    if v is None:
+        basis["routes"] = [{"route": r} for r in routes]
+        basis["interpretation_reasons"] = [NO_POLICY]
+        return INCONCLUSIVE, basis
+    for r in routes:
+        target = r.partition(">")[2]
+        entry = {"route": r, "established_in_memory": known.get(r) or known.get(target)}
+        if target.startswith("mcp:"):
+            s = target[4:]
+            entry.update(evaluate_operation(v, {"action": "mcp", "resource": s}, policy.get("agent", "*")))
+            entry["entitled"] = None if not ent["supplied"] else s in (ent["entitled"] or [])
+        else:
+            entry.update(decision="NOT_EVALUATED", rules=[], entitled=None,
+                         reason="the policy model has no operation for a delegation route")
+        basis["routes"].append(entry)
+    rs = basis["routes"]
+    if any(x["decision"] == "DENY" or x["entitled"] is False for x in rs):
+        return "NEW_ROUTES_NOT_PERMITTED", basis
+    if any(x["decision"] in ("NO_RULE", "NOT_EVALUATED") for x in rs):
+        return "NEW_ROUTES_UNDECIDED", basis
+    if any(x["entitled"] is None and x["route"].partition(">")[2].startswith("mcp:") for x in rs):
+        basis["interpretation_reasons"] = [NO_ENTITLEMENTS]
+        return INCONCLUSIVE, basis
+    return "NEW_ROUTES_PERMITTED", basis
+
+
+PE_HELD = (("VIOLATION", "DENY"), ("APPROVAL_REQUIRED", "REQUIRE_APPROVAL"), ("UNCERTAIN", "UNDECIDED"),
+           (INCONCLUSIVE, INCONCLUSIVE))
+
+
+def _pe_held(ans, rm=None):
+    """Every decision the answers support, in the label order, with the questions behind each."""
+    o = lambda q: (ans.get(q) or {}).get("outcome")                                     # noqa: E731
+    on = {"DENY": [q for q in ("PE-2", "PE-4") if o(q) in PE_DENY],
+          "REQUIRE_APPROVAL": [q for q in ("PE-3",) if o(q) == "APPROVAL_MISSING"],
+          "UNDECIDED": [q for q in ("PE-1", "PE-2", "PE-4") if o(q) in PE_PARTIAL],
+          INCONCLUSIVE: [q for q in ("PE-1", "PE-2", "PE-3", "PE-4", "PE-5") if q in ans and o(q) == INCONCLUSIVE]}
+    if rm and rm.get("verified") and rm.get("label") == "INSUFFICIENT":
+        on[INCONCLUSIVE].append("runtime_monitoring")
+    return [(d, on[d]) for _, d in PE_HELD if on[d]]
+
+
+def _pe5(a, deps, upstream, memory, policy):
+    from .rules import verified
+    rm = verified(upstream, "runtime_monitoring")
+    held = _pe_held(deps, rm)
+    v = policy.get("in_force") or {}
+    ops = _pe_ops(policy) or []
+    mine = {(o["action"], o["resource"]) for o in ops}
+    precedents = []
+    for x in (memory or {}).get("established", []):
+        p = x["payload"]
+        same = [d for d in p.get("decisions", []) if (d.get("action"), d.get("resource")) in mine]
+        if same:
+            precedents.append({"record_id": x["record_id"], "label": p.get("label"),
+                               "policy_version": p.get("policy_version"), "operations": same[:5],
+                               "status": "SAME_POLICY" if p.get("policy_version") == v.get("version")
+                               else "SUPERSEDED"})
+    basis = {"held": [{"decision": d, "questions": qs} for d, qs in held], "resolution": PE_RESOLUTION,
+             "upstream": {"runtime_monitoring": None if not rm else {"label": rm["label"],
+                                                                     "finding_id": rm.get("finding_id")}},
+             "precedents": precedents, "observed": _pe_observed(a, ()),
+             "unassessed": _unassessed(a, "insights.unattributed", "policy_evidence_sufficiency")}
+    if not rm:
+        basis["limitation"] = "no Runtime Monitoring finding was available to this run"
+    if not held:
+        return "ALLOW", basis
+    if held[0][0] == INCONCLUSIVE:
+        basis["interpretation_reasons"] = [
+            {"code": "DEPENDS_ON_INCONCLUSIVE", "requirement": q, "check": None,
+             "detail": "Runtime Monitoring reads the telemetry INSUFFICIENT" if q == "runtime_monitoring"
+             else f"{q} could not be answered"} for q in held[0][1]]
+        return INCONCLUSIVE, basis
+    return held[0][0], basis
+
+
+def observe_policy_enforcement(assessments, policy, upstream=None, memory=None):
+    """{question_id: assessment} -> {question_id: answer}. policy: {store, in_force, evaluation, entitlements,
+    agent} as tools.t_assess_policy_questions supplies them; memory: {record_type: (established,
+    verified_pending)} for enforcement_record and route_record."""
+    pkg = EA.load_package(PE)
+    states = tuple(pkg["relevance_states"])
+    memory = memory or {}
+    out = {}
+    for qid, q in pkg["questions"].items():
+        a = assessments[qid]
+        suf = a["sufficiency"]["status"]
+        if suf != "SUFFICIENT":
+            out[qid] = {"outcome": INCONCLUSIVE, "sufficiency": suf, "basis": {},
+                        "because": a["sufficiency"]["reasons"]}
+            continue
+        outcome, basis = {"PE-1": lambda: _pe1(a, policy), "PE-2": lambda: _pe2(a, states, policy),
+                          "PE-3": lambda: _pe3(a, states, policy),
+                          "PE-4": lambda: _pe4(a, policy, upstream, memory.get("route_record")),
+                          "PE-5": lambda: _pe5(a, {k: out[k] for k in q.get("depends_on", [])}, upstream,
+                                               memory.get("enforcement_record"), policy)}[qid]()
+        if outcome not in q["outcomes"] and not (outcome == INCONCLUSIVE and basis.get("interpretation_reasons")):
+            raise ValueError(f"{qid}: outcome {outcome} is not in METRICS.yaml")
+        _missing_inputs(pkg, basis)
+        out[qid] = {"outcome": outcome, "sufficiency": suf, "basis": basis,
+                    "findings": a["findings"], "not_assessed": a["sufficiency"]["not_assessed"]}
+        if outcome == INCONCLUSIVE:
+            out[qid]["because"] = basis["interpretation_reasons"]
+    return out
+
+
+def assess_policy_enforcement(rows, session_id, cfg=None, computed_at=None, policy=None, upstream=None,
+                              memory=None, raw_events=None, native=None):
+    """The five questions for one session: each assessment with its answer."""
+    cfg = cfg or EA.signal_metrics.load_config()
+    events, srows = EA.session_inputs(rows, session_id, cfg, computed_at)
+    assessments = {qid: EA.assess(PE, qid, events, srows, cfg, computed_at, raw_events, native)
+                   for qid in EA.QUESTIONS[PE]}
+    answers = observe_policy_enforcement(assessments, policy or {}, upstream, memory)
+    return {qid: {"assessment": assessments[qid], "answer": answers[qid]} for qid in assessments}
+
+
+def _ops_text(xs):
+    return ", ".join(f"{x['action']} {x['resource'] or '(no resource)'} ({x['decision']}"
+                     + (f" by {', '.join(x['rules'])}" if x.get("rules") else "") + ")" for x in xs[:5])
+
+
+def _explain_pe(qid, ans):
+    b = ans["basis"]
+    if ans["outcome"] == INCONCLUSIVE:
+        s = _explain(qid, ans)
+        rel = b.get("policy_relevant") if b else None
+        return s + (f"; observed and policy-relevant, not judged: {', '.join(rel)}" if rel else "")
+    if qid == "PE-1":
+        s = f"{b['operations']} operations evaluated against {b['policy']['in_force']['version']}: " + \
+            ", ".join(f"{n} {d}" for d, n in sorted(b["by_decision"].items()))
+        if b["no_rule"]:
+            s += "; no rule for " + _ops_text(b["no_rule"])
+        if b["conflicts"]:
+            s += f"; {len(b['conflicts'])} operations matched rules with different effects, resolved as {PE_RESOLUTION}"
+        if b["entitlements"]["applies"]:
+            s += f"; entitlements apply to {', '.join(b['entitlements']['mcp_servers_used'])}"
+        return s
+    if qid == "PE-2":
+        if b["violations"]:
+            return "outside its authorized boundaries: " + _ops_text(b["violations"])
+        s = ("no rule defines the boundary for " + _ops_text(b["no_rule"])) if b["no_rule"] else \
+            "every executed and proposed operation is within the policy in force"
+        if b["permitted_relevant"]:
+            s += "; observed policy-relevant and permitted: " + ", ".join(
+                f"{x['metric']} {x['ref']} ({x['decision']} by {', '.join(x['rules'])})"
+                for x in b["permitted_relevant"][:5])
+        if b["attempts_stopped"]:
+            s += f"; {len(b['attempts_stopped'])} denied attempt(s) stopped by a hook and not executed: " + \
+                _ops_text(b["attempts_stopped"])
+        return s
+    if qid == "PE-3":
+        if ans["outcome"] == "NO_APPROVAL_REQUIRED":
+            return "no operation requires approval under the policy in force"
+        return f"approval required for {_ops_text(b['required'])}; " + \
+            ("approval recorded in the session" if b["approval_recorded"] else "no approval recorded")
+    if qid == "PE-4":
+        if not b["routes"]:
+            return "no new tool, MCP server or interaction route"
+        return f"new routes from {b['routes_from']['source']}: " + ", ".join(
+            f"{x['route']} {x['decision']}" + ("" if x["entitled"] is None else f", entitled {x['entitled']}")
+            for x in b["routes"])
+    s = "; ".join(f"{h['decision']} from {', '.join(h['questions'])}" for h in b["held"]) or \
+        "every question found the operations permitted"
+    return s + "".join(f"; precedent {p['record_id']} {p['label']} under {p['policy_version']} ({p['status']})"
+                       for p in b["precedents"])
+
+
+# What each label proposes, carried over from rules.policy_enforcement's evaluated-policy path:
+# confidence, action, severity, why.
+PE_LABELS = {
+    "VIOLATION": (0.85, "ALERT", "HIGH", "an executed operation matched a deny rule in the policy in force"),
+    "APPROVAL_REQUIRED": (0.85, "REQUEST_APPROVAL", "MEDIUM",
+                          "the policy requires approval for an operation and none is recorded"),
+    "UNCERTAIN": (0.4, "WATCH", "LOW", "operations with no matching rule: not shown to be permitted"),
+    "ALLOWED": (0.85, "NONE", "NONE", ""),
+    INCONCLUSIVE: (0.0, "WATCH", "NONE", "the policy evidence needed to decide is missing, so permission is not "
+                                         "concluded"),
+}
+
+
+def decide_policy_enforcement(questions):
+    """The COP decision from the five answers (INTERPRETATION.md): PE-5's answer when it was given, otherwise
+    the same order over PE-1 to PE-4. A verified deny stands with other questions undecided."""
+    pkg = EA.load_package(PE)
+    ans = {q: v["answer"] for q, v in questions.items()}
+    held = _pe_held(ans)
+    if ans["PE-5"]["outcome"] != INCONCLUSIVE:
+        decision = ans["PE-5"]["outcome"]
+    else:
+        decision = held[0][0] if held and held[0][0] != INCONCLUSIVE else INCONCLUSIVE
+    label = pkg["labels"][decision]
+    labels = [pkg["labels"][d] for d, _ in held]
+    also = [x for x in labels if x != label]
+    drivers = next((qs for d, qs in held if d == decision), list(ans)) if decision != "ALLOW" else list(ans)
+    base, action, sev, reason = PE_LABELS[label]
+    two = ans["PE-2"].get("basis") or {}
+    if label == "VIOLATION":
+        executed = [x for x in two.get("violations", []) if x["stage"] == "executed"]
+        routes = [x for x in (ans["PE-4"].get("basis") or {}).get("routes", [])
+                  if x["decision"] == "DENY" or x.get("entitled") is False]
+        if not executed and not routes:
+            action, reason = "BLOCK", "a proposed operation is denied by the policy in force; recommend blocking it"
+    elif label == "UNCERTAIN" and drivers == ["PE-4"] and all(
+            x["decision"] == "NOT_EVALUATED" for x in ans["PE-4"]["basis"]["routes"] if x["decision"] != "ALLOW"):
+        reason = "a new route the policy model cannot evaluate is not a permitted one"
+    recipients = {"VIOLATION": ["incident_response", "audit_traceability"],
+                  "APPROVAL_REQUIRED": ["incident_response", "audit_traceability"],
+                  "UNCERTAIN": ["audit_traceability"]}.get(label, [])
+    if label == "VIOLATION" and "insights.secrets" in two.get("policy_relevant", []):
+        recipients.append("risk_mitigation")
+    one = ans["PE-1"].get("basis") or {}
+    if one.get("conflicts") or one.get("no_rule"):
+        recipients.append("knowledge_policy_management")
+    trace = _question_trace(questions, _explain_pe, drivers)
+    contrary = [f"{q}: {x['check']} {x['detail']}" for q, v in questions.items()
+                for x in v["answer"].get("findings", [])]
+    contrary += [f"PE-1: {c['action']} {c['resource']} matched "
+                 f"{', '.join(f'{r} {e}' for r, e in c['effects'].items())}; resolved {c['resolved_as']}"
+                 for c in one.get("conflicts", [])]
+    five = ans["PE-5"].get("basis") or {}
+    contrary += [f"PE-5: precedent {p['record_id']} was {p['label']} under {p['policy_version']}, superseded"
+                 for p in five.get("precedents", []) if p["status"] == "SUPERSEDED"]
+    contrary += [f"{x} also holds" for x in also]
+    return {"label": label, "confidence": base, "severity": sev, "action": action, "action_reason": reason,
+            "recipients": recipients, "drivers": drivers, "also_held": also, "contrary": contrary,
+            "questions": trace, "limitations": _pe_limitations(ans), "decision": decision}
+
+
+def _pe_limitations(ans):
+    from . import decision as D
+    out = []
+    for q, x in ans.items():
+        for r in (x.get("basis") or {}).get("interpretation_reasons", []):
+            if r["code"] == EA.MISSING_REFERENCE:
+                out.append(D.limitation(D.MISSING_EVIDENCE, q, r["requirement"], r["code"], r["detail"]))
+    three = ans["PE-3"].get("basis") or {}
+    if ans["PE-3"]["outcome"] == "APPROVAL_OBTAINED":
+        out.append(D.limitation(D.MISSING_EVIDENCE, "PE-3", "approval_operation_link", "SESSION_LEVEL_APPROVAL",
+                                f"approval is read at session level ({three['approval_scope']}); "
+                                f"approval_action_linkage is {three['approval_action_linkage']}"))
+    for x in (ans["PE-4"].get("basis") or {}).get("routes", []):
+        if x.get("decision") == "NOT_EVALUATED":
+            out.append(D.limitation(D.MISSING_EVIDENCE, "PE-4", x["route"], "NO_POLICY_OPERATION", x["reason"]))
+    return out

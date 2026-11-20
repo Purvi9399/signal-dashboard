@@ -1143,6 +1143,28 @@ def t_assess_audit_questions(case, a, ctx):
 def _arr(name, max_len):
     return {"type": "array", "max": max_len}
 
+def t_assess_policy_questions(case, a, ctx):
+    """The five Policy Enforcement questions for the case session (cop_package), read against the approved
+    policy version in force, the entitlement record, validated enforcement and route memory and the upstream
+    findings."""
+    if not case.session:
+        return missing("session", "policy question assessment", "the case session")
+    memory = {}
+    for rtype in ("enforcement_record", "route_record"):
+        mem = _memory_lookup(ctx, rtype) if ctx.get("memory") else None
+        if mem is not None and "missing_dependency" not in mem:
+            memory[rtype] = {k: mem[k] for k in ("established", "verified_pending")}
+    policy = {"store": case.artifact("policy_store"), "in_force": latest_policy(case),
+              "evaluation": t_evaluate_session_operations(case, a, ctx),
+              "entitlements": t_check_entitlements(case, a, ctx), "agent": case.agent_scope}
+    q = cop_package.assess_policy_enforcement(case.rows, case.session_id, case.cfg, case.computed_at, policy,
+                                              ctx.get("upstream"), memory, case.artifact("source_events"),
+                                              case.artifact("native_transcripts"))
+    return {"questions": q, "policy_store_supplied": policy["in_force"] is not None,
+            "memory_supplied": sorted(memory), "upstream_supplied": sorted((ctx.get("upstream") or {})),
+            "evaluated_at": case.computed_at}
+
+
 
 TOOLS = {
     # name: (fn, schema {arg: spec})
@@ -1207,6 +1229,7 @@ TOOLS = {
     "compare_known_routes": (t_compare_known_routes, {}),
     "assess_interaction_questions": (t_assess_interaction_questions, {}),
     "assess_audit_questions": (t_assess_audit_questions, {}),
+    "assess_policy_questions": (t_assess_policy_questions, {}),
     "get_agent_registry": (t_get_agent_registry, {}),
     "detect_configuration_changes": (t_detect_configuration_changes, {}),
     "compute_consumption": (t_compute_consumption, {}),

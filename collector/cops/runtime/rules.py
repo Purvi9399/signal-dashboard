@@ -36,7 +36,7 @@ from .contracts import (Claim, CLAIM_METRIC_STATE, CLAIM_METRIC_VALUE, CLAIM_TOO
 from ..interpret import EVIDENCE_LEVEL
 from ..specs import BY_KEY, SPEC_CONSUMES
 from .cop_package import aggregate_runtime_monitoring, decide_audit_traceability, decide_interaction_discovery, \
-    AT_CLEAN, CEILING
+    decide_policy_enforcement, AT_CLEAN, CEILING
 
 _RI = RuleInterpreter()
 HOT = ("EXCEPTION", "CRITICAL")
@@ -45,7 +45,7 @@ HOT = ("EXCEPTION", "CRITICAL")
 DETERMINISTIC_TOOLS = {
     "runtime_monitoring": ("get_collector_breakdown", "check_collector_expectations", "assess_runtime_evidence"),
     "interaction_discovery": ("build_interaction_graph", "compare_known_routes", "assess_interaction_questions"),
-    "policy_enforcement": ("evaluate_session_operations", "check_entitlements"),
+    "policy_enforcement": ("evaluate_session_operations", "check_entitlements", "assess_policy_questions"),
     "resource_management": ("compute_consumption", "get_quota"),
     "behavior_analytics": ("compute_sequence_statistics", "compare_behaviour_history"),
     "recovery_resilience": ("get_recovery_records", "validate_checkpoints"),
@@ -283,78 +283,91 @@ def interaction_discovery(ctx):
 
 
 def policy_enforcement(ctx):
-    up = ctx["upstream"]
-    base = _RI.policy_enforcement(ctx["events"], _legacy_up(up), {}, evidence_conf(up))
-    ev = result(ctx["tools"], "evaluate_session_operations")
-    ent = result(ctx["tools"], "check_entitlements")
-    miss = missing_of(ctx["tools"], "evaluate_session_operations", "check_entitlements")
-    claims, used = [], []
-    route = verified(up, "interaction_discovery", "NEW_ROUTE")
-    if route:
-        used.append({"cop": "interaction_discovery", "label": "NEW_ROUTE",
-                     "finding_id": route.get("finding_id"), "counted_as": "input to evaluate"})
-        claims.append(uclaim("interaction_discovery", route))
-    if "missing_dependency" in ev:
-        # No policy store: the condition reading stands, labelled as such. A new
-        # route alone is never a violation, and with no rule it is not allowed.
-        f = _from_legacy(ctx, base, claims)
-        if route and f["label"] == "ALLOWED":
-            f.update(label="UNCERTAIN", action="WATCH", confidence=0.3,
-                     action_reason="a new route arrived and no policy store exists to evaluate it; "
-                                   "a route with no rule is not a permitted one")
-        f["missing_dependencies"] = miss
-        f["rationale"] += "; conditions only: no policy store, so no rule was evaluated"
-        f["upstream_used"] = used
-        return f
-    denied = [o for o in ev["observed"] if o["decision"] == "DENY" and not o["blocked_by_hook"]]
-    blocked = [o for o in ev["observed"] if o["decision"] == "DENY" and o["blocked_by_hook"]]
-    need = [o for o in ev["observed"] + ev["proposed"] if o["decision"] == "REQUIRE_APPROVAL"]
-    no_rule = [o for o in ev["observed"] + ev["proposed"] if o["decision"] == "NO_RULE"]
-    prop_denied = [o for o in ev["proposed"] if o["decision"] == "DENY"]
-    unent = ent.get("used_not_entitled", []) if "missing_dependency" not in ent else []
-    sev = "NONE"
-    if denied or unent:
-        label, action, sev = "VIOLATION", "ALERT", "HIGH"
-        reason = "an executed operation matched a deny rule in the policy in force"
-        if denied:
-            claims.append(tclaim(ctx["tools"], "evaluate_session_operations", "observed[decision=DENY]",
-                                 len(denied), f"{len(denied)} executed operations denied by "
-                                 f"{ev['policy_version']}: " + ", ".join(sorted({r for o in denied for r in o['rules']}))))
-        if unent:
-            claims.append(tclaim(ctx["tools"], "check_entitlements", "used_not_entitled", unent,
-                                 f"MCP servers used without entitlement: {', '.join(unent)}"))
-    elif prop_denied:
-        label, action, sev = "VIOLATION", "BLOCK", "HIGH"
-        reason = "a proposed operation is denied by the policy in force; recommend blocking it"
-        claims.append(tclaim(ctx["tools"], "evaluate_session_operations", "proposed[decision=DENY]",
-                             len(prop_denied), f"{len(prop_denied)} proposed operations denied by "
-                             f"{ev['policy_version']}"))
-    elif need and not ev["approval_recorded"]:
-        label, action, sev = "APPROVAL_REQUIRED", "REQUEST_APPROVAL", "MEDIUM"
-        reason = "the policy requires approval for an operation and none is recorded"
-        claims.append(tclaim(ctx["tools"], "evaluate_session_operations",
-                             "observed+proposed[decision=REQUIRE_APPROVAL]", len(need),
-                             f"{len(need)} operations need approval under {ev['policy_version']}"))
-    elif no_rule:
-        label, action, sev = "UNCERTAIN", "WATCH", "LOW"
-        reason = "operations with no matching rule: not shown to be permitted"
-        claims.append(tclaim(ctx["tools"], "evaluate_session_operations",
-                             "observed+proposed[decision=NO_RULE]", len(no_rule),
-                             f"{len(no_rule)} operations match no rule in {ev['policy_version']}"))
-    else:
-        label, action = "ALLOWED", "NONE"
-        reason = ""
-        allowed = [o for o in ev["observed"] if o["decision"] == "ALLOW"]
-        claims.append(tclaim(ctx["tools"], "evaluate_session_operations", "observed[decision=ALLOW]",
-                             len(allowed), f"{len(allowed)} operations allowed by {ev['policy_version']}"
+    """Policy Enforcement's five answers decide its label (cop_package.decide_policy_enforcement). The approved
+    policy version in force and the entitlement record are the only policy sources; with neither, no rule is
+    evaluated and no violation is claimed."""
+    t = ctx["tools"]
+    ev = result(t, "evaluate_session_operations")
+    miss = missing_of(t, "evaluate_session_operations", "check_entitlements")
+    res = result(t, "assess_policy_questions")
+    if not res.get("questions"):
+        why = res.get("missing_dependency") or (t.get("assess_policy_questions") or {}).get("status")
+        return F(INCONCLUSIVE, 0.0, "WATCH", "the policy questions could not be assessed",
+                 f"question assessment unavailable: {why}", status=MISSING_DEPENDENCY, missing_deps=miss)
+    d = decide_policy_enforcement(res["questions"])
+    q = d["questions"]
+    claims = [tclaim(t, "assess_policy_questions", f"questions.{qid}.answer.outcome", x["answer"],
+                     f"{qid} answered {x['answer']}: {x['explanation']}"[:240]) for qid, x in q.items()]
+    observed = [] if "missing_dependency" in ev else ev["observed"]
+    proposed = [] if "missing_dependency" in ev else ev["proposed"]
+    denied = [o for o in observed if o["decision"] == "DENY" and not o["blocked_by_hook"]]
+    blocked = [o for o in observed if o["decision"] == "DENY" and o["blocked_by_hook"]]
+    need = [o for o in observed + proposed if o["decision"] == "REQUIRE_APPROVAL"]
+    no_rule = [o for o in observed + proposed if o["decision"] == "NO_RULE"]
+    prop_denied = [o for o in proposed if o["decision"] == "DENY"]
+    unent = ((q["PE-2"]["basis"] or {}).get("violations") or [])
+    unent = [x["resource"] for x in unent if x["decision"] == "NOT_ENTITLED"]
+    ver = ev.get("policy_version")
+    for rows, path, text in ((denied, "observed[decision=DENY]", "executed operations denied by"),
+                             (prop_denied, "proposed[decision=DENY]", "proposed operations denied by"),
+                             (need, "observed+proposed[decision=REQUIRE_APPROVAL]", "operations need approval under"),
+                             (no_rule, "observed+proposed[decision=NO_RULE]", "operations match no rule in")):
+        if rows:
+            claims.append(tclaim(t, "evaluate_session_operations", path, len(rows), f"{len(rows)} {text} {ver}"
+                                 + (": " + ", ".join(sorted({r for o in rows for r in o["rules"]}))
+                                    if "DENY" in path else "")))
+    if unent:
+        claims.append(tclaim(t, "check_entitlements", "used_not_entitled", unent,
+                             f"MCP servers used without entitlement: {', '.join(unent)}"))
+    if d["label"] == "ALLOWED":
+        allowed = [o for o in observed if o["decision"] == "ALLOW"]
+        claims.append(tclaim(t, "evaluate_session_operations", "observed[decision=ALLOW]", len(allowed),
+                             f"{len(allowed)} operations allowed by {ver}"
                              + (f"; {len(need)} needed approval and approval is recorded" if need else "")))
-    return F(label, 0.85 if label != "UNCERTAIN" else 0.4, action, reason,
-             f"evaluated against policy {ev['policy_version']}; {len(blocked)} attempts stopped by hooks",
-             claims, sev, missing_deps=miss,
-             cop_specific={"policy_version": ev["policy_version"], "denied": denied,
-                           "proposed": ev["proposed"], "approval_needed": need,
-                           "blocked_by_hook": blocked},
-             upstream_used=used)
+    if not ver:
+        # no rule was evaluated: the conditions are recorded as what was observed, not as the decision's basis
+        claims += [mclaim(e) for e in ctx["events"] if e.state in ATTENTION_STATES]
+    used = []
+    four = q["PE-4"]["basis"] or {}
+    # an upstream finding is cited only where it changed an answer, so its lineage is not counted as this COP's
+    five_reasons = (q["PE-5"]["basis"] or {}).get("interpretation_reasons", [])
+    relied = {"runtime_monitoring": "runtime_monitoring" in [x["requirement"] for x in five_reasons],
+              "interaction_discovery": (four.get("routes_from") or {}).get("source") == "interaction_discovery"
+              and bool(four.get("routes"))}
+    for cop, how in (("runtime_monitoring", "PE-5 telemetry sufficiency"),
+                     ("interaction_discovery", "PE-4 new routes, evaluated against the policy")):
+        f_ = verified(ctx["upstream"], cop)
+        if f_ and relied[cop]:
+            claims.append(uclaim(cop, f_))
+            used.append({"cop": cop, "label": f_["label"], "finding_id": f_.get("finding_id"), "counted_as": how})
+    for rid in [p["record_id"] for p in (q["PE-5"]["basis"] or {}).get("precedents", [])]:
+        claims.append(Claim(f"enforcement record {rid} is a validated precedent for these operations",
+                            CLAIM_MEMORY_PRECEDENT, record_id=rid, evidence_refs=[f"memory:{rid}"],
+                            origin=ORIGIN_RULES))
+    why = "; ".join(f"{x} {q[x]['answer']}" for x in d["drivers"])
+    rationale = f"{d['label']} from {why}" + (f"; also {', '.join(d['also_held'])}" if d["also_held"] else "")
+    rationale += f"; evaluated against policy {ver}; {len(blocked)} attempts stopped by hooks" if ver else \
+        "; no approved policy version in force, so no rule was evaluated"
+    inconclusive = d["label"] == INCONCLUSIVE
+    gaps = {r["requirement"] for x in q.values() for r in (x["basis"] or {}).get("interpretation_reasons", [])
+            if r["code"] == "MISSING_REFERENCE"}
+    status = SUBSTANTIVE if not inconclusive else MISSING_DEPENDENCY if gaps else "INCONCLUSIVE"
+    pe5 = q["PE-5"]["basis"] or {}
+    f = F(d["label"], d["confidence"], d["action"], d["action_reason"], rationale, claims, d["severity"], status,
+          missing_deps=miss,
+          cop_specific={"policy_version": ver, "denied": denied, "proposed": proposed, "approval_needed": need,
+                        "blocked_by_hook": blocked, "questions": q, "drivers": d["drivers"],
+                        "also_held": d["also_held"], "contrary": d["contrary"], "limitations": d["limitations"],
+                        "recipients": d["recipients"],
+                        "memory_payload": {"policy_version": ver, "decisions": [
+                            {k: o.get(k) for k in ("action", "resource", "decision", "rules")}
+                            for o in denied + prop_denied + need + no_rule][:20],
+                            "routes": [x["route"] for x in (q["PE-4"]["basis"] or {}).get("routes", [])],
+                            "precedents_read": [p["record_id"] for p in pe5.get("precedents", [])]}},
+          upstream_used=used)
+    if inconclusive and not gaps:
+        f["reason_codes"] = ["MISSING_EVIDENCE"]
+    return f
 
 
 def resource_management(ctx):

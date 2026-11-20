@@ -1,0 +1,223 @@
+# Policy Enforcement: machine-readable question contract.
+# Loaded by collector/cops/runtime/cop_package.py and validated by
+# tests/test_cop_package_policy_enforcement.py. The Markdown files beside it
+# explain this file; where they differ, this file is what the runtime uses.
+
+cop: policy_enforcement
+contract: cop_metrics/1
+version: 2026-11-20.1
+
+sources:
+  questions: >-
+    PE-1 to PE-5: COPS- implementation 1.xlsx, sheet COMPLETE_DELEGATION_DATA, rows 119, 121, 123, 125, 127;
+    metric list row 129; external data column per question.
+  metric_mapping: >-
+    COPS_METRIC_MAPPING.md, sha256 5bd3c16f1ba26b297644259faaedfe75c1f219980e5c046a9bb56308c38e951e
+    (collector/metric_registry.json, consumers = policy_enforcement). No code-only pair.
+  policy: >-
+    The approved policy version in force (tools.latest_policy over the case's policy_store) and the
+    entitlement record (case artifact entitlements), evaluated by tools.evaluate_operation. Nothing else
+    is a policy source: not memory, not an upstream finding, not a metric state.
+
+mapping:
+  policy_applicability_coverage:
+    used_by: [PE-1]
+    note: >-
+      NOT_CALCULATED. Registry category R, NOT_IMPLEMENTED. Missing input: the enterprise policy_registry
+      reference (policy_id, version, effective_from, scope, rule, precedents); location not chosen.
+  entitlement_mismatch_rate:
+    used_by: [PE-1]
+    note: >-
+      NOT_CALCULATED. Registry category R, NOT_IMPLEMENTED. Missing input: the entitlements reference
+      (principal, resource or action, allowed, requires_approval_by); location not chosen.
+  policy_exception_rate:
+    used_by: [PE-1]
+    note: >-
+      NOT_CALCULATED. Registry category R, NOT_IMPLEMENTED. Missing input: the policy_exceptions reference
+      (exception_id, policy_id, principal, granted_by, valid_from, valid_to); location not chosen.
+  insights.outside: {used_by: [PE-2]}
+  boundary_violation_count: {used_by: [PE-2]}
+  unauthorized_action_attempts: {used_by: [PE-2]}
+  insights.blocked: {used_by: [PE-2]}
+  insights.secrets: {used_by: [PE-2]}
+  restricted_resource_access_rate: {used_by: [PE-2]}
+  policy_violation_rate: {used_by: [PE-2]}
+  insights.sensitive_unasked: {used_by: [PE-3]}
+  approval_action_linkage: {used_by: [PE-3]}
+  oversight.declined_inferred: {used_by: [PE-3]}
+  oversight.fast_approvals: {used_by: [PE-3]}
+  insights.no_oversight: {used_by: [PE-3]}
+  approval_requirement_compliance:
+    used_by: [PE-3]
+    note: >-
+      NOT_CALCULATED. Registry category R, NOT_IMPLEMENTED. Missing input: approval requirements per action
+      or resource in the entitlements reference (requires_approval_by); location not chosen.
+  access.first_seen_mcp: {used_by: [PE-4]}
+  interaction.mcp_servers: {used_by: [PE-4]}
+  interaction.subagent_lanes: {used_by: [PE-4]}
+  path.transition_novelty: {used_by: [PE-4]}
+  unapproved_tool_usage:
+    used_by: [PE-4]
+    note: >-
+      NOT_CALCULATED. Registry category R, NOT_IMPLEMENTED. Missing input: the allowlists reference, kind
+      tool (kind, value, scope, approved_by, version); location not chosen.
+  unapproved_mcp_access:
+    used_by: [PE-4]
+    note: >-
+      NOT_CALCULATED. Registry category R, NOT_IMPLEMENTED. Missing input: the allowlists reference, kind
+      mcp_server; location not chosen.
+  unauthorized_interaction_route_count:
+    used_by: [PE-4]
+    note: >-
+      NOT_CALCULATED. Registry category R, NOT_IMPLEMENTED. Missing input: the allowlists reference, kind
+      interaction_route; location not chosen.
+  telemetry.collector_coverage: {used_by: [PE-5]}
+  telemetry.source_agreement: {used_by: [PE-5]}
+  telemetry.turn_linkage: {used_by: [PE-5]}
+  telemetry.lane_linkage: {used_by: [PE-5]}
+  insights.unattributed: {used_by: [PE-5]}
+  policy_evidence_sufficiency:
+    used_by: [PE-5]
+    note: >-
+      NOT_CALCULATED. Registry category D, NOT_IMPLEMENTED: the evidence confidence of the upstream decisions
+      Policy Enforcement consumes, to be computed in the COPS runtime. Missing input: an approved definition.
+  telemetry.unknown_shared:
+    note: >-
+      Not read. The workbook writes telemetry.unknown_shared; the registry records it as a suspected typo of
+      telemetry.unknown_share, awaiting purvi's confirmation, and kept as written. No question uses either id
+      until that is confirmed.
+  policy_decision_confidence:
+    note: >-
+      Not a calculated metric. Registry category O: a decision field of this COP. It is the finding's
+      confidence, which no question reads.
+
+questions:
+  PE-1:
+    question: Which policies, permissions and entitlements apply to the agent's intended action?
+    fields: [observable_id, observable_type, session_id, agent_id, agent_type, operator_id, operator_username,
+             org_id, team_id, permission_mode, permission_source, permission_scope, permission_options,
+             policy_rule_matched, sandboxed, tool_name, tool_category, tool_is_builtin, tool_arguments, command,
+             file_path, workspace, mcp_server, mcp_tool, raw_ref]
+    external: >-
+      Enterprise policy registry, policy versions, role-based entitlements, agent permissions, resource
+      classifications and approved exceptions.
+    requires:
+      - {metric: policy_applicability_coverage, kind: OPTIONAL}
+      - {metric: entitlement_mismatch_rate, kind: OPTIONAL}
+      - {metric: policy_exception_rate, kind: OPTIONAL}
+    verified: []
+    blocking: []
+    outcomes: [POLICY_APPLIES, POLICY_PARTIALLY_APPLIES]
+
+  PE-2:
+    question: Is the agent attempting to access a resource or perform an operation outside its authorized boundaries?
+    fields: [observable_id, observable_type, session_id, turn_id, agent_id, operator_id, permission_mode,
+             permission_decision, permission_source, permission_scope, denial_reason, sandboxed, outside_workspace,
+             policy_rule_matched, violation_count, tool_use_id, tool_name, tool_arguments, tool_result, command,
+             file_path, workspace, cwd, command_cwd, sensitivity_tier, secret_detected, risk_markers, mcp_server,
+             mcp_tool, success, status, raw_ref]
+    requires:
+      - {metric: insights.outside, kind: REQUIRED}
+      - {metric: boundary_violation_count, kind: REQUIRED}
+      - {metric: unauthorized_action_attempts, kind: REQUIRED}
+      - {metric: insights.blocked, kind: OPTIONAL}
+      - {metric: insights.secrets, kind: OPTIONAL}
+      - {metric: restricted_resource_access_rate, kind: OPTIONAL}
+      - {metric: policy_violation_rate, kind: OPTIONAL}
+    verified: []
+    blocking: []
+    depends_on: [PE-1]
+    outcomes: [WITHIN_AUTHORIZED_BOUNDARIES, BOUNDARY_NOT_DEFINED, OUTSIDE_AUTHORIZED_BOUNDARIES]
+
+  PE-3:
+    question: Has the agent obtained the required approval before performing a sensitive or restricted action?
+    fields: [observable_id, observable_type, session_id, turn_id, agent_id, operator_id, operator_username,
+             permission_mode, permission_decision, permission_source, permission_scope, permission_options,
+             denial_reason, escalation_flag, policy_rule_matched, tool_use_id, tool_name, tool_arguments,
+             tool_result, command, file_path, sensitivity_tier, secret_detected, outside_workspace, success,
+             status, raw_ref]
+    external: >-
+      Approval requirements, approval timestamps, authorized approver identities, approval-to-action linkage
+      and exception records.
+    requires:
+      - {metric: insights.sensitive_unasked, kind: REQUIRED}
+      - {metric: approval_action_linkage, kind: REQUIRED_WHEN_APPLICABLE}
+      - {metric: oversight.declined_inferred, kind: REQUIRED_WHEN_APPLICABLE}
+      - {metric: oversight.fast_approvals, kind: OPTIONAL}
+      - {metric: insights.no_oversight, kind: OPTIONAL}
+      - {metric: approval_requirement_compliance, kind: OPTIONAL}
+    verified: []
+    blocking: []
+    depends_on: [PE-1]
+    outcomes: [NO_APPROVAL_REQUIRED, APPROVAL_OBTAINED, APPROVAL_MISSING]
+
+  PE-4:
+    question: Are newly discovered tools, MCP servers or interaction routes permitted under existing policies?
+    fields: [observable_id, observable_type, session_id, turn_id, agent_id, agent_type, parent_agent_id,
+             is_multi_agent, multi_agent_source, delegation_depth, permission_mode, permission_decision,
+             permission_scope, policy_rule_matched, tool_use_id, tool_name, tool_category, tool_is_builtin,
+             tool_arguments, mcp_server, mcp_tool, mcp_transport, mcp_server_version, mcp_tools_available,
+             outside_workspace, raw_ref]
+    external: >-
+      Approved tool registry, MCP server allowlist, authorized interaction routes and applicable organizational
+      policies.
+    requires:
+      - {metric: access.first_seen_mcp, kind: OPTIONAL}
+      - {metric: interaction.mcp_servers, kind: OPTIONAL}
+      - {metric: interaction.subagent_lanes, kind: OPTIONAL}
+      - {metric: path.transition_novelty, kind: OPTIONAL}
+      - {metric: unapproved_tool_usage, kind: OPTIONAL}
+      - {metric: unapproved_mcp_access, kind: OPTIONAL}
+      - {metric: unauthorized_interaction_route_count, kind: OPTIONAL}
+    verified: []
+    blocking: []
+    outcomes: [NO_NEW_ROUTES, NEW_ROUTES_PERMITTED, NEW_ROUTES_UNDECIDED, NEW_ROUTES_NOT_PERMITTED]
+
+  PE-5:
+    question: >-
+      Should the action be allowed, denied, require approval or remain undecided because essential policy
+      evidence is missing?
+    fields: [observable_id, observable_type, collector, session_id, turn_id, agent_id, agent_type, operator_id,
+             org_id, team_id, permission_mode, permission_decision, permission_source, permission_scope,
+             permission_options, denial_reason, escalation_flag, policy_rule_matched, violation_count, sandboxed,
+             outside_workspace, sensitivity_tier, secret_detected, injection_markers, risk_markers, tool_use_id,
+             tool_name, tool_arguments, tool_result, mcp_server, mcp_tool, success, status, error_type, raw_ref]
+    external: >-
+      Applicable policy rules, policy precedence, current entitlements, approval state, evidence sufficiency
+      and authority to enforce the decision.
+    requires:
+      - {metric: telemetry.collector_coverage, kind: REQUIRED}
+      - {metric: telemetry.source_agreement, kind: REQUIRED_WHEN_APPLICABLE}
+      - {metric: telemetry.turn_linkage, kind: REQUIRED_WHEN_APPLICABLE}
+      - {metric: telemetry.lane_linkage, kind: REQUIRED_WHEN_APPLICABLE}
+      - {metric: insights.unattributed, kind: OPTIONAL}
+      - {metric: policy_evidence_sufficiency, kind: OPTIONAL}
+    verified: []
+    blocking: []
+    depends_on: [PE-1, PE-2, PE-3, PE-4]
+    outcomes: [ALLOW, DENY, REQUIRE_APPROVAL, UNDECIDED]
+
+# PE-5's answer gives the label. The decisions are tools.evaluate_operation's (deny beats
+# require_approval beats allow; no rule is not permission), as rules.policy_enforcement already used them.
+labels:
+  DENY: VIOLATION
+  REQUIRE_APPROVAL: APPROVAL_REQUIRED
+  UNDECIDED: UNCERTAIN
+  ALLOW: ALLOWED
+  INCONCLUSIVE: INCONCLUSIVE
+
+# Metric states that make an observation policy-relevant: the states cops/interpret.py:_policy_enforcement
+# acted on. The thresholds are metrics_config.json's; a state is relevance, not a policy decision.
+relevance_states: [EXCEPTION, CRITICAL]
+
+operations:
+  compute_metrics: {by: deterministic, code: collector/signal_metrics.py:compute}
+  assess_evidence: {by: deterministic, code: collector/cops/runtime/evidence_assessment.py:assess}
+  evaluate_policy: {by: deterministic, code: collector/cops/runtime/tools.py:t_evaluate_session_operations}
+  check_entitlements: {by: deterministic, code: collector/cops/runtime/tools.py:t_check_entitlements}
+  observe_questions: {by: deterministic, code: collector/cops/runtime/cop_package.py:observe_policy_enforcement}
+  cop_label: {by: deterministic, code: collector/cops/runtime/cop_package.py:decide_policy_enforcement}
+  verify_finding: {by: deterministic, code: collector/cops/runtime/verifiers.py}
+  select_action: {by: deterministic, code: collector/cops/runtime/triage.py}
+  memory_write: {by: deterministic, code: collector/cops/runtime/graph.py:validate_memory_update}
+  decision_record: {by: deterministic, code: collector/cops/runtime/decision.py:build}

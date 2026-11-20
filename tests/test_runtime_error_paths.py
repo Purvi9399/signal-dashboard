@@ -74,7 +74,11 @@ def test_deterministic_quiet_label_is_withheld_without_required_artifact(cop, ar
     without = {k: v for k, v in full.items() if k != {"budget_or_quota": "quotas"}.get(artifact, artifact)}
     f = run_cop(rt(NORMAL, "ep", without), cop)["finding"]
     assert f["label"] == "INCONCLUSIVE" and f["status"] == "MISSING_DEPENDENCY"
-    assert f["gated_label"] == QUIET[cop]
+    if cop == "policy_enforcement":
+        # the package answers PE-5 INCONCLUSIVE itself without an approved policy, so nothing is left to gate
+        assert f["cop_specific"]["questions"]["PE-5"]["answer"] == "INCONCLUSIVE" and "gated_label" not in f
+    else:
+        assert f["gated_label"] == QUIET[cop]
     assert artifact in [d["dependency"] for d in f["missing_dependencies"]]
     req = [r for r in f["evidence_requirements"] if r["artifact"] == artifact][0]
     assert req["kind"] == REQUIRED and req["status"] == UNAVAILABLE

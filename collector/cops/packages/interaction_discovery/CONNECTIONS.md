@@ -13,7 +13,7 @@ Runtime Monitoring. Read only when verified and substantive:
 
 | Consumer | Reads | Effect |
 |---|---|---|
-| Policy Enforcement | label NEW_ROUTE (`rules.policy_enforcement`) | a new route becomes an input to evaluate; with no policy store, ALLOWED becomes UNCERTAIN |
+| Policy Enforcement | the ID-3 answer's new routes (`cop_package._pe_routes`) | each new route is evaluated against the approved policy in PE-4; a new route alone is never a violation, and with no approved policy PE-4 is INCONCLUSIVE (Policy Enforcement package, 2026-11-20) |
 | Agent Lifecycle Management | label NEW_ROUTE | a connectivity change input; used for a new route, not used otherwise (tested 2026-11-20) |
 | Resource Management | label, `cop_specific.edges`, and the ID-2 answer | attributes consumption to subagents and MCP servers only when ID-2 is FULLY_RECONSTRUCTED, so since U5 only when every subagent link records `parent_agent_id` (changed in this package; before, only the label PATH_PARTIAL stopped it) |
 | Risk Mitigation | the verified finding and its lineage (`independent_upstream`) | counted as an independent signal when its lineage does not overlap Risk Mitigation's metrics |

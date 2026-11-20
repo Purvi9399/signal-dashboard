@@ -251,7 +251,9 @@ CHECKS = {
         _q(r, "ID-4")["basis"]["boundary_observations"]),
     "policy_reads_outside": lambda r: (
         "insights.outside is EXCEPTION" in json.dumps(_down(r, "policy_enforcement")["claims"], default=str)
-        and _down(r, "policy_enforcement")["rationale"].startswith("candidate VIOLATION rejected by VS-01")
+        and "insights.outside" in _down(r, "policy_enforcement")["cop_specific"]["questions"]["PE-2"]["basis"][
+            "policy_relevant"]
+        and _down(r, "policy_enforcement")["cop_specific"]["questions"]["PE-2"]["basis"]["violations"] == []
         and _down(r, "policy_enforcement")["label"] == "INCONCLUSIVE"
         and "policy_store" in [m["dependency"] for m in _down(r, "policy_enforcement")["missing_dependencies"]]
         and _q(r, "ID-4")["basis"]["boundary_observations"][0]["metric"] == "insights.outside",

@@ -385,6 +385,10 @@ scenarios:
     # INCONCLUSIVE with policy_store as the missing dependency. That is Policy Enforcement's existing,
     # approved behaviour, and not this COP's to change. The check was corrected to that behaviour and is
     # recorded in DECISIONS D17.
+    # 2026-11-20, Policy Enforcement package (COP 4): with no approved policy, Policy Enforcement no longer proposes
+    # a VIOLATION from conditions; it answers PE-2 INCONCLUSIVE (policy_store missing) and keeps insights.outside
+    # as a policy-relevant observation. The final label (INCONCLUSIVE) and the missing dependency are unchanged;
+    # the check now reads PE-2 instead of the VS-01 rejection text. Recorded in DECISIONS D19.
     cop_label: [CONTAINED]
     checks: [policy_reads_outside]
 

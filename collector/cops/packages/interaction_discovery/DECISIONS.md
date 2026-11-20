@@ -205,6 +205,12 @@ accepted.
   simultaneous question-level answer, explanation and evidence in the decision record (`several_concerns`).
 - **Regression.** ID harness 204/204, AT and RM harnesses, full suite and bench (see the completion report).
 
+## Downstream change from the Policy Enforcement package (2026-11-20)
+
+| # | Decision | Status |
+|---|---|---|
+| D19 | The check `policy_reads_outside` (scenario downstream_policy_outside_workspace) reads Policy Enforcement's PE-2 answer instead of the VS-01 rejection text. With no approved policy, Policy Enforcement no longer proposes VIOLATION from conditions, so no candidate is rejected. It still ends INCONCLUSIVE with policy_store missing, and PE-2 keeps insights.outside as a policy-relevant observation with no violation. Nothing in this COP changed | Consequence of the Policy Enforcement package; awaiting purvi's review with it |
+
 ## Remaining limitations
 
 - On real data, provenance stays unverified: the raw event store is not supplied, and the meaning of `raw_ref` is

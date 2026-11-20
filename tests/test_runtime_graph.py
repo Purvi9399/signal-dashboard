@@ -131,13 +131,13 @@ def test_policy_enforcement_paths():
     none_ = det("policy_enforcement", rows, "pe1", {})
     assert none_["finding"]["missing_dependencies"][0]["dependency"] == "policy_store"
     # Restated 2026-11-04 (graded verification support): with no policy store the rule's
-    # condition-only VIOLATION is no longer accepted. The policy evaluation is a required
-    # component for every Policy Enforcement label, and a missing policy cannot be
-    # replaced, so VS-01 leaves the evidence insufficient and the finding INCONCLUSIVE.
-    assert none_["finding"]["label"] == "INCONCLUSIVE"
-    assert none_["finding"]["rejected_candidate"]["rationale"].endswith("no rule was evaluated")
-    vs = none_["finding"]["verification_support"]
-    assert vs["decision"] == "INSUFFICIENT_EVIDENCE" and vs["required_unknown"] == ["policy_evaluation"]
+    # condition-only VIOLATION is no longer accepted. Restated 2026-11-20 (Policy Enforcement package):
+    # the COP no longer proposes it at all. With no approved policy every policy question is INCONCLUSIVE,
+    # the secret and sensitive read stay policy-relevant observations, and no violation is claimed.
+    assert none_["finding"]["label"] == "INCONCLUSIVE" and none_["finding"]["status"] == "MISSING_DEPENDENCY"
+    pe2 = none_["finding"]["cop_specific"]["questions"]["PE-2"]
+    assert pe2["answer"] == "INCONCLUSIVE" and pe2["basis"]["violations"] == []
+    assert "insights.secrets" in pe2["basis"]["policy_relevant"]
 
 
 def test_policy_enforcement_never_turns_a_new_route_into_a_violation():
@@ -148,7 +148,10 @@ def test_policy_enforcement_never_turns_a_new_route_into_a_violation():
                   upstream={"interaction_discovery": route}))
     # UNCERTAIN is an INCONCLUSIVE outcome: graded triage asks for what is missing rather than a reflex
     # WATCH (2026-11-04). What matters is unchanged: no violation and no intervention.
-    assert out["label"] == "UNCERTAIN" and out["triage"]["outcome"] == "INCONCLUSIVE"
+    # Restated 2026-11-20 (Policy Enforcement package): with no approved policy the route cannot be evaluated,
+    # so the decision is INCONCLUSIVE (policy_store missing), not UNCERTAIN; PE-4 names the reason.
+    assert out["label"] == "INCONCLUSIVE" and out["triage"]["outcome"] == "INCONCLUSIVE"
+    assert out["cop_specific"]["questions"]["PE-4"]["answer"] == "INCONCLUSIVE"
     assert out["proposed_action"]["typed_action"] in ("REQUEST_CONTEXT", "REQUEST_COP_SUPPORT",
                                                       "COLLECT_EVIDENCE", "NONE")
 
