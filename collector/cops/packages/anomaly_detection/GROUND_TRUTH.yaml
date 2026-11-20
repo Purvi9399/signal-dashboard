@@ -29,10 +29,12 @@ scenarios:
 
   below_threshold_warning:
     description: 4000 tokens, 4x the estate median; WARNING under the approved thresholds, not EXCEPTION
-    # Post-run correction C-AD1 (see the end of this file): cop_label was [NORMAL]; action NONE removed.
+    # Post-run correction C-AD1 made cop_label [INCONCLUSIVE]; design revision R-AD1 (U-AD3, written before
+    # the revised run) restores [NORMAL] with the WARNING kept as a qualification.
     questions: {AD-1: NOT_UNUSUAL, AD-2: COMPARABLE, AD-3: RATE_WITHIN_BASELINE, AD-4: FAMILIAR, AD-5: NO_DEVIATION}
-    cop_label: [INCONCLUSIVE]
-    checks: [decided_without_model, token_warning_recorded, normal_rejected_by_vs01]
+    cop_label: [NORMAL]
+    action: NONE
+    checks: [decided_without_model, token_warning_recorded, verified, warning_qualifies_vs01]
 
   token_spike_without_model:
     description: 40000 tokens, 40x the estate median; same tools and path as the estate; no model available
@@ -58,7 +60,8 @@ scenarios:
     questions: {AD-1: UNUSUALLY_FREQUENT, AD-2: COMPARABLE, AD-3: RATE_WITHIN_BASELINE, AD-4: FAMILIAR,
                 AD-5: INCONCLUSIVE}
     cop_label: [INCONCLUSIVE]
-    checks: [simulated_model, explanation_recorded, normal_rejected_by_vs01, interpretation_rejection_recorded]
+    checks: [simulated_model, explanation_recorded, normal_rejected_by_vs01, interpretation_rejection_recorded,
+             legitimacy_not_established_named]
 
   legitimate_large_task_interpreted:
     description: >-
@@ -68,7 +71,7 @@ scenarios:
     questions: {AD-1: NOT_UNUSUAL, AD-2: SIGNIFICANTLY_DIFFERENT, AD-3: RATE_WITHIN_BASELINE, AD-4: FAMILIAR,
                 AD-5: INCONCLUSIVE}
     cop_label: [INCONCLUSIVE]
-    checks: [rejected_by_ds03, interpretation_rejection_recorded]
+    checks: [rejected_by_ds03, interpretation_rejection_recorded, legitimacy_not_established_named]
 
   insufficient_baseline_history:
     description: only two earlier sessions; token, rate and path baselines need five
@@ -181,6 +184,141 @@ scenarios:
 
 # Post-run corrections. Each changes an expectation that was derived wrongly from the contracts named at the top
 # of this file; none changes what a question means or what the package must do.
+  # ---------------------------------------------------------------- revision 2 (purvi 12:13Z and 12:24Z)
+  # Written before the revised code and before the revised harness ran. The contract they test:
+  #
+  # Legitimacy context (U-AD2). For each measure in a deviation state, the package lists the checkable
+  # context that could explain it (AD-5 basis.context, one entry per deviating measure). Two sources exist:
+  #   task_classes: the case's task-class record. The session is compared with the other sessions of its
+  #     class by the same metric function and approved thresholds (signal_metrics.m_token_outlier,
+  #     m_action_rate on signal_metrics.estate of the peers); it needs min_sessions_for_baseline (5) peers.
+  #     It explains a deviation when the same measure against the peers is not in EXCEPTION or CRITICAL.
+  #     It applies to insights.token_outlier and activity.action_rate_ratio only (the quantities a task class
+  #     compares); repetition, retry, failure, duration, novelty and first-seen MCP have no task-class basis.
+  #   validated_precedent: a VALIDATED anomaly_observation of this agent whose label is NORMAL and whose
+  #     deviating_metrics include the measure. VERIFIED and UNVALIDATED records do not count.
+  # No approved record of an authorised workload change or of a task's expected volume exists: neither is
+  # accepted (documented, DECISIONS.md).
+  # A model NORMAL over a deviation (legitimate variation) stands only when every deviating measure is
+  # explained and the finding cites the context (a tool_observation on assess_anomaly_questions). VS-01 and
+  # DS-03 re-check the context from the case and the memory store, not from the model's text. One explained
+  # deviation never covers another. A model ANOMALOUS over deviations that are all explained is rejected.
+  #
+  # WARNING (U-AD3). A metric in WARNING is not a deviation. For Anomaly Detection's quiet label only, VS-01
+  # counts it as partial support (it is within the deviation limit) and records it; EXCEPTION and CRITICAL
+  # still oppose. Other COPs' verification is unchanged.
+  #
+  # Self-inclusion (U-AD7). Baselines are unchanged; two scenarios pin today's behaviour where the
+  # leave-one-out comparison differs (LOO_COMPARISON.json), marked known_limitation.
+
+  legitimate_variation_task_class:
+    description: >-
+      40000 tokens; the task-class record puts s1 in class migration with five earlier migration sessions of
+      40000 tokens (mig1 to mig5) beside the seven 1000-token sessions (class bugfix). Against its class s1
+      is comparable. The simulated model concludes NORMAL, citing the task-class context
+    estate: base1 to base7 (bugfix, 1000 tokens), mig1 to mig5 (migration, 40000 tokens), s1 (migration)
+    questions: {AD-1: NOT_UNUSUAL, AD-2: SIGNIFICANTLY_DIFFERENT, AD-3: RATE_WITHIN_BASELINE, AD-4: FAMILIAR,
+                AD-5: LEGITIMATE_VARIATION}
+    cop_label: [NORMAL]
+    checks: [verified, simulated_model, context_explains_tokens_by_task_class, legitimacy_rechecked_by_vs01,
+             ds03_contradiction_explained]
+
+  unsupported_legitimacy_claim:
+    description: >-
+      the plain 40000-token spike with no task-class record and no precedent; the simulated model concludes
+      NORMAL ("a planned migration") citing only the metrics
+    questions: {AD-2: SIGNIFICANTLY_DIFFERENT, AD-5: INCONCLUSIVE}
+    cop_label: [INCONCLUSIVE]
+    checks: [normal_rejected, legitimacy_not_established_named]
+
+  legitimacy_with_too_few_peers:
+    description: >-
+      as legitimate_variation_task_class but only two earlier migration sessions; the class comparison has 2
+      of the 5 peers it needs. The simulated model concludes NORMAL citing the context
+    questions: {AD-2: SIGNIFICANTLY_DIFFERENT, AD-5: INCONCLUSIVE}
+    cop_label: [INCONCLUSIVE]
+    checks: [context_peers_insufficient, normal_rejected, legitimacy_not_established_named]
+
+  explained_tokens_unexplained_retries:
+    description: >-
+      the legitimate_variation_task_class world, and s1 also retries a failing test three times (AD-1
+      deviates). The class explains the tokens, nothing explains the retries. The simulated model concludes
+      NORMAL citing the token context
+    questions: {AD-1: UNUSUALLY_FREQUENT, AD-2: SIGNIFICANTLY_DIFFERENT, AD-5: INCONCLUSIVE}
+    cop_label: [INCONCLUSIVE]
+    checks: [context_explains_tokens_by_task_class, retry_unexplained, normal_rejected]
+
+  false_anomaly_over_explained_deviation:
+    description: the legitimate_variation_task_class world; the simulated model concludes ANOMALOUS
+    questions: {AD-2: SIGNIFICANTLY_DIFFERENT, AD-5: INCONCLUSIVE}
+    cop_label: [INCONCLUSIVE]
+    checks: [anomalous_rejected, context_explains_tokens_by_task_class]
+
+  genuine_anomaly_despite_task_class:
+    description: >-
+      s1 is in class migration, but the five earlier migration sessions used 1000 tokens: against its class
+      s1 is still 40x. The simulated model concludes ANOMALOUS
+    questions: {AD-2: SIGNIFICANTLY_DIFFERENT, AD-5: MEANINGFUL_ANOMALY}
+    cop_label: [ANOMALOUS]
+    checks: [verified, context_does_not_explain_tokens]
+
+  false_normal_against_task_class_peers:
+    description: the genuine_anomaly_despite_task_class world; the simulated model concludes NORMAL citing the context
+    questions: {AD-2: SIGNIFICANTLY_DIFFERENT, AD-5: INCONCLUSIVE}
+    cop_label: [INCONCLUSIVE]
+    checks: [context_does_not_explain_tokens, normal_rejected]
+
+  fabricated_context_citation:
+    description: >-
+      the genuine_anomaly_despite_task_class world; the simulated model concludes NORMAL and asserts that the
+      context explains the tokens (explained true), which the tool result does not say
+    questions: {AD-5: INCONCLUSIVE}
+    cop_label: [INCONCLUSIVE]
+    checks: [normal_rejected, sc01_catches_fabricated_context]
+
+  validated_legitimate_precedent:
+    description: >-
+      the 40000-token spike. An earlier spike of this agent (session m1, outside the estate) was read NORMAL by
+      the model, rejected, and its observation later validated by a reviewer as legitimate. The simulated model
+      concludes NORMAL citing that precedent in the context
+    questions: {AD-2: SIGNIFICANTLY_DIFFERENT, AD-5: LEGITIMATE_VARIATION}
+    cop_label: [NORMAL]
+    checks: [verified, context_explains_tokens_by_precedent, ds03_contradiction_explained]
+
+  unvalidated_legitimate_precedent:
+    description: as validated_legitimate_precedent, but no reviewer validated the earlier observation
+    questions: {AD-2: SIGNIFICANTLY_DIFFERENT, AD-5: INCONCLUSIVE}
+    cop_label: [INCONCLUSIVE]
+    checks: [context_does_not_explain_tokens, normal_rejected]
+
+  precedent_for_another_metric:
+    description: >-
+      as validated_legitimate_precedent, but the validated NORMAL observation was about a first-seen MCP
+      server, not tokens
+    questions: {AD-2: SIGNIFICANTLY_DIFFERENT, AD-5: INCONCLUSIVE}
+    cop_label: [INCONCLUSIVE]
+    checks: [context_does_not_explain_tokens, normal_rejected]
+
+  baseline_contamination_half_estate:
+    description: >-
+      known_limitation U-AD7. Four 1000-token sessions, three of 40000 and s1 at 40000. The estate median
+      includes s1 and is 20500, so s1 reads 1.95 (NORMAL); left out, the median is 1000 and s1 reads 40
+      (CRITICAL). Today's behaviour is pinned, not endorsed
+    estate: base1 to base4 (1000), new1 to new3 (40000), s1 (40000)
+    questions: {AD-2: COMPARABLE, AD-5: NO_DEVIATION}
+    cop_label: [NORMAL]
+    checks: [self_inclusion_recorded]
+
+  baseline_minimum_counts_self:
+    description: >-
+      known_limitation U-AD7. Four earlier sessions and s1 at 40000 tokens: five sessions with token counts,
+      the minimum, only because s1 counts itself; left out, there would be no baseline. Today's behaviour is
+      pinned, not endorsed; no model
+    estate: base1 to base4 (1000), s1 (40000)
+    questions: {AD-2: SIGNIFICANTLY_DIFFERENT, AD-5: INCONCLUSIVE}
+    cop_label: [INCONCLUSIVE]
+    checks: [self_inclusion_recorded]
+
 post_run_corrections:
   C-AD1:
     scenario: below_threshold_warning
@@ -208,3 +346,21 @@ post_run_corrections:
       Behaviour Analytics reads a failing command run five times as POOR_RECOVERY, one of the two labels
       rules.anomaly_detection reads from it. The expectation about Anomaly Detection (recorded, not counted) is
       unchanged.
+
+design_revisions:
+  R-AD1:
+    scenario: below_threshold_warning
+    was: {cop_label: [INCONCLUSIVE]}
+    now: {cop_label: [NORMAL], action: NONE, checks: [verified, warning_qualifies_vs01]}
+    why: >-
+      purvi approved resolving U-AD3 (12:13Z, 12:24Z): a WARNING is not a deviation, and for Anomaly
+      Detection's quiet label VS-01 now counts it as partial support with a recorded qualification instead of
+      opposition. Written before the revised harness ran.
+  R-AD2:
+    scenario: [legitimate_retries_interpreted, legitimate_large_task_interpreted]
+    was: {checks: unchanged}
+    now: {added_check: legitimacy_not_established_named}
+    why: >-
+      Neither world has checkable context for its deviation (retries have no context source; there is no
+      task-class record), so under the legitimacy contract both NORMAL readings stay rejected, now with the
+      reason named. Labels and answers unchanged.
