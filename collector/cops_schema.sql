@@ -48,11 +48,13 @@ create table if not exists metric_events (
   operator          text,
   workspace         text,
   value             numeric,
+  deviation         numeric,   -- value / exception threshold (direction-aware): how far past, computed once
   threshold         numeric,
   direction         text,
   thresholds        jsonb,
   state             text not null,          -- NORMAL | WARNING | EXCEPTION | CRITICAL | UNKNOWN
   features          jsonb not null default '{}'::jsonb,
+  context           jsonb not null default '{}'::jsonb,   -- session facts that change what the metric means
   evidence_refs     text[] not null default '{}',   -- observable:<id>, step:<id>
   required_fields   text[] not null default '{}',
   basis             text,
@@ -96,8 +98,18 @@ create table if not exists cop_decisions (
   failed               boolean,
   error                text,
   decided_at           timestamptz,
-  inputs_hash          text
+  inputs_hash          text,
+  lens                 jsonb not null default '[]'::jsonb   -- what each driving metric meant to this COP, here
 );
 create index if not exists cop_decisions_session on cop_decisions (session_id, cop);
 create index if not exists cop_decisions_action on cop_decisions (cop, action);
 create index if not exists cop_decisions_failed on cop_decisions (failed) where failed;
+
+-- for tables created by an earlier version of this file
+alter table metric_events add column if not exists context jsonb not null default '{}'::jsonb;
+alter table trace_effects add column if not exists attributed_via text;
+alter table trace_effects add column if not exists had_session boolean;
+alter table cop_decisions add column if not exists lens jsonb not null default '[]'::jsonb;
+
+alter table metric_events add column if not exists deviation numeric;
+alter table cop_decisions alter column confidence drop not null;
