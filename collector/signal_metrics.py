@@ -95,6 +95,10 @@ def calls(rows):
         out.append(r)
     return out
 
+def common(rows, key):
+    c = Counter(r.get(key) for r in rows if has(r.get(key)))
+    return c.most_common(1)[0][0] if c else None
+
 def ref(kind, x):
     return f"{kind}:{x}" if has(x) else None
 
@@ -113,6 +117,41 @@ def judge(value, t):
         if state in t and worse(value, t[state]):
             return state.upper()
     return "NORMAL"
+
+
+# ------------------------------------------------------------------ command kinds
+
+import re as _re
+KINDS = {
+    "test_command":    _re.compile(r"\b(pytest|unittest|jest|vitest|mocha|go test|cargo test|npm (run )?test|yarn test|pnpm test|rspec|phpunit)\b"),
+    "install_command": _re.compile(r"\b(pip3? install|uv (pip|add)|poetry add|npm (i|install|ci)\b|yarn (add|install)|pnpm (add|install)|brew install|apt(-get)? install|cargo add|go get)\b"),
+    "deploy_command":  _re.compile(r"\b(git push|npm publish|docker push|kubectl apply|terraform apply|helm (install|upgrade)|vercel|fly deploy|gcloud .*deploy|aws .*deploy|twine upload)\b"),
+}
+
+def command_kinds(cmds):
+    out = {}
+    for c in cmds:
+        for k, rx in KINDS.items():
+            if rx.search(str(c).lower()):
+                out[k] = True
+    return out
+
+def in_subagent_lane(r):
+    # same rule signal_traces uses to assign lanes
+    return bool(r.get("agent_id")) and "subagent" not in (r.get("observable_type") or "")
+
+
+def deviation(value, t):
+    """How far past its exception threshold a value is, as a ratio (2.0 = twice the
+    threshold). Computed here, once, so no COP has to divide anything to rank
+    findings. None where there is no value or no exception threshold."""
+    thr = t.get("exception")
+    if value is None or not thr:
+        return None
+    v, thr = float(value), float(thr)
+    if t.get("direction", "above") == "above":
+        return round(v / thr, 2)
+    return round(min(thr / v, 99.0), 2) if v > 0 else 99.0
 
 
 # ------------------------------------------------------------------ session context
@@ -144,6 +183,10 @@ class Session:
         self.actions = calls(rows)
         self.approvals = [s for s in steps if s["step"] == "ASK"]
         self.tokens = sum(num(r.get("total_tokens")) for r in rows)
+        self.version = common(rows, "tool_version")
+        self.model = common(rows, "model")
+        self.machine = common(rows, "machine_id") or common(rows, "hostname")
+        self.previous = None            # the operator's previous session with this tool, set in compute()
 
     def minutes(self):
         a, b = signal_traces.ts(self.start), signal_traces.ts(self.end)
@@ -177,7 +220,10 @@ def m_repetition(s, e, cfg):
         else:
             seen.add(k)
     tools = Counter(r["tool_name"] for r in hits)
-    return len(hits), {"by_tool": dict(tools.most_common(5))}, refs("observable", hits, "observable_id"), None
+    ctx = {"in_subagent_lane": any(in_subagent_lane(r) for r in hits),
+           **command_kinds(r.get("command") for r in hits if has(r.get("command")))}
+    return len(hits), {"by_tool": dict(tools.most_common(5)), "_ctx": ctx}, \
+        refs("observable", hits, "observable_id"), None
 
 def m_retry(s, e, cfg):
     failed, hits = set(), []
@@ -187,7 +233,8 @@ def m_retry(s, e, cfg):
             hits.append(r)
         if nonzero_exit(r):
             failed.add(k)
-    return len(hits), {"distinct_commands": len({str(r['command']).strip() for r in hits})}, \
+    return len(hits), {"distinct_commands": len({str(r['command']).strip() for r in hits}),
+                       "_ctx": command_kinds(r["command"] for r in hits)}, \
         refs("observable", hits, "observable_id"), None
 
 def m_stalled(s, e, cfg):
@@ -295,6 +342,29 @@ def m_lane_linkage(s, e, cfg):
     linked = [k for k, v in subs.items() if v and v[0].get("parent_step_id")]
     return round(len(linked) / len(subs), 3), {"lanes": len(subs), "unlinked": sorted(set(subs) - set(linked))[:10]}, [], None
 
+def m_event_freshness(s, e, cfg):
+    lags = []
+    for r in s.rows:
+        a, b = signal_traces.ts(r.get("occurred_at")), signal_traces.ts(r.get("ingested_at"))
+        if a and b:
+            lags.append(max(0.0, (b - a).total_seconds()))
+    if not lags:
+        return None, {"reason": "no ingested_at on this session's rows"}, [], None
+    return round(median(lags), 1), {"rows": len(lags), "max_s": round(max(lags), 1)}, [], None
+
+def _change(attr, label):
+    def fn(s, e, cfg):
+        a, b = getattr(s.previous, attr), getattr(s, attr)
+        if not (has(a) and has(b)):
+            return None, {"reason": f"{label} not recorded on one of the two sessions"}, [], None
+        return (0 if a == b else 1), {"from": a, "to": b, "previous_session": s.previous.id}, \
+            [f"session:{s.previous.id}"], None
+    return fn
+
+m_version_change = _change("version", "tool version")
+m_model_change = _change("model", "model")
+m_new_machine = _change("machine", "machine")
+
 # ---- anomaly: distance from what this estate normally does
 
 def m_transition_novelty(s, e, cfg):
@@ -363,6 +433,7 @@ A = {
     "multi":     lambda s: len(s.collectors) > 1,
     "effects":   lambda s: bool(s.effects),
     "steps":     lambda s: bool(s.steps),
+    "has_previous": lambda s: s.previous is not None,
 }
 
 # basis checks: could this detector have fired here at all
@@ -375,7 +446,7 @@ B = {
     "content":   lambda s: any(has(r.get("tool_arguments")) or has(r.get("command")) for r in s.rows),
     "our_rules": lambda s: bool({"local_hooks", "mcp_proxy"} & s.collectors),
     "hashes":    lambda s: any(has(x.get("content_hash")) for x in s.effects),
-    "fs":        lambda s: bool(s.effects),
+    "fs":        lambda s: bool(s.effects) or "fs_watcher" in s.collectors,
     "outcomes":  lambda s: any(r.get("success") is not None or has(r.get("exit_code")) for r in s.rows),
     "tokens":    lambda s: s.tokens > 0,
     "durations": lambda s: any(num(x.get("duration_ms")) > 0 for x in s.steps),
@@ -407,10 +478,15 @@ METRICS = [
     ("access.first_seen_mcp",      "MCP server new for this operator",      m_first_seen_mcp,    "mcp",       ["mcp_server"], "always"),
     ("oversight.fast_approvals",   "Approvals returned in under a second",  m_fast_approvals,    "approvals", ["observable_type", "occurred_at"], "asked"),
     ("oversight.declined_inferred", "Approval requests apparently declined", m_declined_inferred, "approvals", ["observable_type", "turn_id"], "asked"),
+    ("telemetry.event_freshness",  "Median delay from event to ingestion (s)", m_event_freshness, "always",   ["occurred_at", "ingested_at"], "always"),
+    ("lifecycle.version_change",   "Tool version differs from operator's last session", m_version_change, "always", ["tool_version"], "has_previous"),
+    ("lifecycle.model_change",     "Model differs from operator's last session", m_model_change, "always",  ["model"], "has_previous"),
+    ("lifecycle.new_machine",      "Machine differs from operator's last session", m_new_machine, "always", ["machine_id", "hostname"], "has_previous"),
     ("interaction.subagent_lanes", "Subagent lanes in session",             m_subagent_lanes,    "always",    ["agent_id"], "always"),
     ("interaction.mcp_servers",    "Distinct MCP servers used",             m_mcp_servers,       "mcp",       ["mcp_server"], "always"),
 ]
 METRIC_IDS = [m[0] for m in METRICS]
+SESSION_METRICS = ["telemetry.unknown_share", "telemetry.evidence_score"]   # computed from the others, per session
 
 
 # ------------------------------------------------------------------ estate baselines (computed once per run)
@@ -433,7 +509,16 @@ def estate(sessions):
     def mcp_before(s):
         return set().union(*[sv for st, sv in seen[s.operator] if st < (s.start or "")] or [set()])
 
+    first, previous, last = {}, {}, {}
+    for s in sorted(sessions, key=lambda s: s.start or ""):
+        first.setdefault(s.operator, s.id)
+        if s.operator and s.tool:
+            if (s.operator, s.tool) in last:
+                previous[s.id] = last[(s.operator, s.tool)]
+            last[(s.operator, s.tool)] = s
     return {
+        "first_session_by_operator": first,
+        "previous": previous,
         "median_tokens": median(toks) if toks else 0,
         "sessions_with_tokens": len(toks),
         "median_duration_ms": median(durs) if durs else 0,
@@ -534,28 +619,53 @@ def orphans(rows):
               f"{(hit or '-')[:24]}  {how}")
 
 
+def session_context(s, est, cfg):
+    """Deterministic facts about the session that change what a metric means.
+    Computed once; every metric event for the session carries them."""
+    agentish = s.collectors - {"fs_watcher", "cli_wrapper"}
+    ctx = {
+        "tool": s.tool,
+        "transcript_only": not agentish and "cli_wrapper" not in s.collectors,
+        "terminal_only": not agentish and "cli_wrapper" in s.collectors,
+        "approvals_hidden": not approvals_visible(s, cfg),
+        "has_subagents": any(k != "main" and not k.startswith("terminal") for k in s.trace["lanes"]),
+        "touched_sensitive": any(num(r.get("sensitivity_tier")) >= 3 for r in s.rows + s.effects),
+        "first_for_operator": est["first_session_by_operator"].get(s.operator) == s.id,
+    }
+    ctx.update(command_kinds(r["command"] for r in s.rows if has(r.get("command"))))
+    return ctx
+
+
 def compute(rows, cfg=None, computed_at=None):
     """Every metric for every session, once. Returns metric_event dicts."""
     cfg = cfg or load_config()
     computed_at = computed_at or datetime.now(timezone.utc).isoformat()
     sessions = build_sessions(rows)
     est = estate(sessions)
+    for s in sessions:
+        s.previous = est["previous"].get(s.id)
     out = []
     for s in sessions:
         events = []
+        sctx = session_context(s, est, cfg)
         for mid, name, fn, basis, fields, applies in METRICS:
             t = cfg["thresholds"].get(mid, {})
             could_fire = approvals_visible(s, cfg) if basis == "approvals" else B[basis](s)
             if not A[applies](s):
                 events.append(event(s, mid, name, None, t, "NOT_APPLICABLE",
                                     {"reason": f"did not arise: {applies}"}, [], None,
-                                    fields, basis, could_fire, cfg, computed_at, None))
+                                    fields, basis, could_fire, cfg, computed_at, None, sctx))
                 continue
             try:
                 value, feats, ev, trace_id = fn(s, est, cfg)
                 err = None
             except Exception as ex:                       # a broken metric is a fact, not a crash
                 value, feats, ev, trace_id, err = None, {}, [], None, f"{type(ex).__name__}: {ex}"
+            # a hit's own context (e.g. which commands were retried) overrides the session's
+            hctx = feats.pop("_ctx", {}) if isinstance(feats, dict) else {}
+            ctx = {**sctx, **{k: v for k, v in hctx.items() if k in ("in_subagent_lane",)}}
+            if any(k in hctx for k in KINDS):
+                ctx.update({k: bool(hctx.get(k)) for k in KINDS})
             state = judge(value, t)
             if err:
                 state = "UNKNOWN"
@@ -565,20 +675,31 @@ def compute(rows, cfg=None, computed_at=None):
                 state = "UNKNOWN"
                 feats = {**feats, "reason": f"basis absent: {basis}"}
             events.append(event(s, mid, name, value, t, state, feats, ev, trace_id,
-                                fields, basis, could_fire, cfg, computed_at, err))
-        # share of this session's metrics that could not be judged
-        judged = [x for x in events if x["state"] != "NOT_APPLICABLE"]
+                                fields, basis, could_fire, cfg, computed_at, err, ctx))
+        # evidence metrics: those describing whether this session can be judged
+        excl = tuple(cfg.get("evidence_excludes", []))
+        judged = [x for x in events if x["state"] != "NOT_APPLICABLE" and not x["metric_id"].startswith(excl)]
         unknown = sum(1 for x in judged if x["state"] == "UNKNOWN") / max(len(judged), 1)
         t = cfg["thresholds"]["telemetry.unknown_share"]
         events.append(event(s, "telemetry.unknown_share", "Share of metrics that could not be judged",
                             round(unknown, 3), t, judge(unknown, t),
-                            {"unknown": [x["metric_id"] for x in events if x["state"] == "UNKNOWN"]},
-                            [], None, [], "always", True, cfg, computed_at, None))
+                            {"unknown": [x["metric_id"] for x in judged if x["state"] == "UNKNOWN"]},
+                            [], None, [], "always", True, cfg, computed_at, None, sctx))
+        # one score for "how much of the evidence this session needs is present":
+        # the share of metrics that could be judged, times the share of expected
+        # collectors present (when that is known). Computed here so no COP invents one.
+        cov = next((x["value"] for x in events if x["metric_id"] == "telemetry.collector_coverage"), None)
+        score = round((1 - unknown) * (cov if cov is not None else 1.0), 3)
+        t = cfg["thresholds"]["telemetry.evidence_score"]
+        events.append(event(s, "telemetry.evidence_score", "Share of needed evidence present",
+                            score, t, judge(score, t),
+                            {"judged_share": round(1 - unknown, 3), "collector_coverage": cov},
+                            [], None, [], "always", True, cfg, computed_at, None, sctx))
         out += events
     return out, sessions
 
 
-def event(s, mid, name, value, t, state, feats, ev, trace_id, fields, basis, could_fire, cfg, at, err):
+def event(s, mid, name, value, t, state, feats, ev, trace_id, fields, basis, could_fire, cfg, at, err, ctx=None):
     version = cfg["metric_version"]
     return {
         "metric_event_id": str(uuid.uuid5(NS, f"{s.id}|{mid}|{version}")),
@@ -589,7 +710,9 @@ def event(s, mid, name, value, t, state, feats, ev, trace_id, fields, basis, cou
         "threshold": t.get("exception"), "direction": t.get("direction"),
         "thresholds": t,
         "state": state,
+        "deviation": deviation(value, t),
         "features": feats,
+        "context": ctx or {},
         "evidence_refs": ev,
         "required_fields": fields, "basis": basis, "basis_present": could_fire,
         "source": f"signal_metrics.py:{mid}@{version}",
@@ -638,7 +761,7 @@ def main():
     for e in events:
         per[e["metric_id"]][e["state"]] += 1
     print(f"\n{'metric':<30}" + "".join(f"{s:>10}" for s in STATES))
-    for mid in METRIC_IDS + ["telemetry.unknown_share"]:
+    for mid in METRIC_IDS + SESSION_METRICS:
         print(f"{mid:<30}" + "".join(f"{per[mid][s]:>10}" for s in STATES))
 
     if a.why:
