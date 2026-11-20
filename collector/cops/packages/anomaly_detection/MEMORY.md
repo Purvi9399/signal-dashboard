@@ -6,8 +6,9 @@ Access goes through `MemoryGateway` (`cops/runtime/memory.py`) under `POLICIES["
 ## What it writes
 
 `graph.validate_memory_update` writes one `anomaly_observation` for a substantive finding that is not NORMAL
-(VERIFIED when the finding verified, else UNVALIDATED), and an UNVALIDATED one for a rejected candidate. A package
-NORMAL and an INCONCLUSIVE finding write nothing. Besides the common payload, `cop_specific.memory_payload` adds:
+(VERIFIED when the finding verified, else UNVALIDATED), and an UNVALIDATED one for a rejected candidate. A verified
+legitimate variation (NORMAL with AD-5 LEGITIMATE_VARIATION) is also written, VERIFIED (`remember_quiet`, D-AD20),
+so that a reviewer can validate it. A package NORMAL and an INCONCLUSIVE finding write nothing. Besides the common payload, `cop_specific.memory_payload` adds:
 
 - `deviating_metrics`: the measures in EXCEPTION or CRITICAL against a sufficient baseline;
 - `answers`: the outcome of each of AD-1 to AD-5;
@@ -22,6 +23,9 @@ NORMAL and an INCONCLUSIVE finding write nothing. Besides the common payload, `c
   session and `use: comparison only, never proof` (scenario memory_precedent_interpreted). The model sees it among
   the baseline tool results. It never changes an answer: AD-1 to AD-4 come from the metrics, AD-5 from them or the
   model's verified interpretation.
+- A VALIDATED record labelled NORMAL that names a deviating measure is legitimacy context for that measure (AD-5
+  `basis.context`, source validated_precedent). VS-01 and DS-03 re-check it from the memory view (scenarios
+  validated_legitimate_precedent, unvalidated_legitimate_precedent, precedent_for_another_metric).
 - VERIFIED and UNVALIDATED records are not precedent (the harness supplies one of each and checks they are not
   listed).
 - `behaviour_baseline` is readable under the policy and not used by this package.

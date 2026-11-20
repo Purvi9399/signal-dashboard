@@ -24,11 +24,12 @@ These are maintenance instructions for Claude Code. They are not the runtime's s
 4. Baselines come from `signal_metrics.estate`; read them, do not recompute or invent another comparison group. A missing baseline is BASELINE_INSUFFICIENT with its size and minimum, never a deviation and never normal.
 5. Unusual is not prohibited. No answer names a policy or a violation; permission is Policy Enforcement's.
 6. Keep the label names, actions and the legacy threshold reading (`cops/interpret.py:anomaly_detection`, recorded as the baseline beside a model finding). Do not weaken DS-03 or VS-01 from this package; record the need in DECISIONS.md (U-AD2, U-AD3).
-7. Tests that need a model call on Anomaly Detection must give it a deviation (`evaluation.spike_session`, `_retried`, `sensitive_retried_session`). A model NORMAL over a deviation is rejected by the verifiers.
+7. Tests that need a model call on Anomaly Detection must give it a deviation (`evaluation.spike_session`, `_retried`, `sensitive_retried_session`). A model NORMAL over a deviation stands only with checkable context for every deviation, cited and re-checked (`cop_package.ad_legitimacy`). Never accept the model's stated reason, a task plan's objective or an unapproved record as context, and never let one explained deviation cover another.
 8. A new baseline tool for an LLM COP that has recorded live replies goes in `tools.UNSEQUENCED`, or the replies stop replaying.
 9. Never edit GROUND_TRUTH.yaml to match an output. A correction after a run is marked in the file and in DECISIONS.md with why.
 10. Memory: only VALIDATED anomaly_observation records are precedent, listed for comparison, never deciding. Only an independent reviewer validates a record.
 11. No paid model calls. Model replies in tests and the harness are scripted and simulated.
+12. The legitimacy re-check and the WARNING qualification are Anomaly Detection's (`cop_package.LEGITIMACY`, the `explainable` and `warning_is_partial` component flags). Do not extend them to another COP without the owner's approval.
 
 ## Checks before you report
 

@@ -68,7 +68,9 @@ deviation leaves AD-5 and the label INCONCLUSIVE.
 Not taken into account, because no approved specification asks for it or no definition exists: a temporal window
 (every session of the fetched estate weighs the same; limitation `baseline_window`), the model, agent or task class
 (`task_adjusted_anomaly_score` is NOT_CALCULATED), and a per-agent tool distribution (`tool_use_deviation_per_agent`
-is NOT_CALCULATED). The token and rate baselines include the session judged, as `signal_metrics` computes them.
+is NOT_CALCULATED). The token and rate baselines include the session judged, as `signal_metrics` computes them; the
+measured effect and a leave-one-out proposal are in DECISIONS.md (U-AD7). Task-class peers are compared leave-one-out,
+and only as legitimacy context.
 
 ## The five questions
 
@@ -127,7 +129,12 @@ threshold). Blocking check: CONFLICTING_SOURCES.
 - MEANINGFUL_ANOMALY or LEGITIMATE_VARIATION: a question deviates and the model's verified interpretation is
   ANOMALOUS or NORMAL; UNDETERMINED when it is INDETERMINATE.
 - INCONCLUSIVE: a question deviates and there is no verified interpretation (no model, the investigation stopped,
-  or a verifier rejected it; the reason says which).
+  or a verifier rejected it; the reason says which, LEGITIMACY_NOT_ESTABLISHED for a NORMAL without checkable
+  context for every deviation).
+- With a deviation, `basis.context` lists for each deviating measure the checkable context that could explain it:
+  task-class peers (tokens and action rate; the `task_classes` record, at least 5 peers, the same metric function
+  and thresholds) and validated NORMAL precedents. An authorised workload change or a task's expected volume has
+  no approved record and is not accepted (`context_not_accepted`).
 
 ## Authority
 

@@ -27,7 +27,7 @@ AD-5's answer gives the label (`labels` in METRICS.yaml).
 | NO_DEVIATION | AD-1 to AD-4 all answered without a deviation | NORMAL | package | NONE | 0.8 x evidence |
 | UNDETERMINED | no deviation, and Runtime Monitoring INSUFFICIENT or a question BASELINE_INSUFFICIENT or INCONCLUSIVE | INDETERMINATE | package | WATCH | 0.2 x evidence |
 | MEANINGFUL_ANOMALY | a deviation, and the model's verified label is ANOMALOUS | ANOMALOUS | model, verified | the model's, through triage | the model's, capped |
-| LEGITIMATE_VARIATION | a deviation, and the model's verified label is NORMAL | NORMAL | model, verified | the model's | the model's, capped |
+| LEGITIMATE_VARIATION | a deviation, every one explained by re-checked context, and the model's verified label is NORMAL | NORMAL | model, verified | the model's | the model's, capped |
 | UNDETERMINED | a deviation, and the model's verified label is INDETERMINATE | INDETERMINATE | model, verified | the model's | the model's |
 | INCONCLUSIVE | a deviation, and no verified interpretation | INCONCLUSIVE | | WATCH | 0 |
 
@@ -40,15 +40,25 @@ insufficient telemetry: the package decides UNDETERMINED first, and DS-01 and th
 
 ## Verification boundary
 
-The verifiers are unchanged and still decide whether a candidate stands:
+The verifiers still decide whether a candidate stands. For Anomaly Detection only (D-AD15 to D-AD19):
 
-- A package NORMAL is rejected by VS-01 when a deviation metric is in WARNING: for a quiet label VS-01 reads any
-  attention state as opposing (scenario below_threshold_warning, U-AD3). The answers stay as given and the label
-  is INCONCLUSIVE, as Policy Enforcement's verified-deny case is (U-PE1).
-- A model NORMAL over an observed deviation is rejected: by DS-03 when the threshold reading is ANOMALOUS
-  (legitimate_large_task_interpreted), and by VS-01 otherwise (legitimate_retries_interpreted). So
-  LEGITIMATE_VARIATION is defined but cannot currently be verified (U-AD2). AD-5 is then INCONCLUSIVE with
-  INTERPRETATION_REJECTED, and the label is not ANOMALOUS.
+- **Legitimate variation.** A model NORMAL over a deviation stands only when VS-01 and DS-03, re-checking from the
+  case and validated memory, find every deviation explained by checkable context (task-class peers for tokens
+  and action rate, or a validated NORMAL precedent naming the measure), and the finding cites it. Otherwise it is
+  rejected and AD-5 is INCONCLUSIVE with LEGITIMACY_NOT_ESTABLISHED.
+- **False anomaly.** A model ANOMALOUS where checkable context explains every deviation is rejected by VS-01
+  (scenario false_anomaly_over_explained_deviation).
+- **WARNING.** For the package's NORMAL, a WARNING is partial support and is recorded. VS-01 reads
+  PROVISIONALLY_SUPPORTED (below_threshold_warning), and the label stays NORMAL. EXCEPTION and CRITICAL still
+  oppose.
+
+| Reading | Outcome |
+|---|---|
+| deviation, model ANOMALOUS, not all explained | MEANINGFUL_ANOMALY, ANOMALOUS |
+| deviation, model NORMAL, every deviation explained and cited | LEGITIMATE_VARIATION, NORMAL |
+| deviation, model NORMAL, context missing, insufficient, partial or not cited | INCONCLUSIVE (LEGITIMACY_NOT_ESTABLISHED) |
+| deviation, model ANOMALOUS, every deviation explained | INCONCLUSIVE (VS-01 contrary evidence) |
+| model INDETERMINATE, or no deviation and evidence short | UNDETERMINED, INDETERMINATE |
 
 ## What changed from the existing rule
 

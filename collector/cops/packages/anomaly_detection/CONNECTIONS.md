@@ -20,7 +20,7 @@ baseline beside a model finding.
 | Risk Mitigation | the verified finding and its lineage | an independent signal when lineage does not overlap Risk's own metrics (`insights.token_outlier` overlaps; verifier DS-02) |
 | Classification & Tagging, Policy Enforcement | listed in `specs.CONSUMES` | Policy Enforcement does not read it (its CONNECTIONS.md); unusual is never a violation |
 | Behaviour Analytics | this COP's earlier verified finding | `rules._pattern_persistence`, unchanged |
-| Verifiers | `cop_specific.questions` is not read by any verifier | DS-03 compares a model label with the threshold reading; VS-01 reads the metric states (INTERPRETATION.md, Verification boundary) |
+| Verifiers | `cop_package.ad_legitimacy` (registered in `LEGITIMACY`, Anomaly Detection only) | VS-01 (`support._legitimacy`, `_premise`, the `warning_is_partial` flag) and DS-03 re-check legitimacy context from the case and validated memory; other COPs' contracts are unchanged (INTERPRETATION.md, Verification boundary) |
 
 Recipients: a verified ANOMALOUS notifies Incident Response and Risk Mitigation (`cop_specific.recipients`).
 
