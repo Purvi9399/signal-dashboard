@@ -1166,6 +1166,21 @@ def t_assess_policy_questions(case, a, ctx):
 
 
 
+def t_assess_anomaly_questions(case, a, ctx):
+    """The five Anomaly Detection questions for the case session (cop_package), with the estate baselines the
+    metrics used, read against validated anomaly_observation memory and the upstream findings."""
+    if not case.session:
+        return missing("session", "anomaly question assessment", "the case session")
+    mem = _memory_lookup(ctx, "anomaly_observation") if ctx.get("memory") else None
+    memory = {k: mem[k] for k in ("established", "verified_pending")} if mem and "missing_dependency" not in mem \
+        else None
+    q = cop_package.assess_anomaly_detection(case.rows, case.session_id, case.cfg, case.computed_at,
+                                             ctx.get("upstream"), memory, case.artifact("source_events"),
+                                             case.artifact("native_transcripts"))
+    return {"questions": q, "memory_supplied": memory is not None,
+            "upstream_supplied": sorted((ctx.get("upstream") or {})), "evaluated_at": case.computed_at}
+
+
 TOOLS = {
     # name: (fn, schema {arg: spec})
     "get_metric_rows": (t_get_metric_rows, {"metric_ids": _arr("metric_ids", 25)}),
@@ -1230,6 +1245,7 @@ TOOLS = {
     "assess_interaction_questions": (t_assess_interaction_questions, {}),
     "assess_audit_questions": (t_assess_audit_questions, {}),
     "assess_policy_questions": (t_assess_policy_questions, {}),
+    "assess_anomaly_questions": (t_assess_anomaly_questions, {}),
     "get_agent_registry": (t_get_agent_registry, {}),
     "detect_configuration_changes": (t_detect_configuration_changes, {}),
     "compute_consumption": (t_compute_consumption, {}),
@@ -1242,6 +1258,12 @@ TOOLS = {
     "check_decision_linkage": (t_check_decision_linkage, {}),
 }
 
+
+
+# Baseline tools added after the recorded live run (2026-11-02). They take no place in the call sequence,
+# so the model's tool-call ids, and the recorded replies that cite them, stay as they were
+# (packages/anomaly_detection/DECISIONS.md, D-AD9).
+UNSEQUENCED = frozenset({"assess_anomaly_questions"})
 
 class ToolGateway:
     def __init__(self, case, allowlists, memory=None):
@@ -1314,8 +1336,13 @@ class ToolGateway:
         return None
 
     def _record(self, cop, tool, args, requested_by):
-        n = len([x for x in self.log if x["cop"] == cop and x["case_id"] == self.case.case_id])
-        return {"tool_call_id": stable_id(self.case.case_id, cop, n, tool), "cop": cop,
+        if tool in UNSEQUENCED:
+            cid = stable_id(self.case.case_id, cop, "unsequenced", tool)
+        else:
+            n = len([x for x in self.log if x["cop"] == cop and x["case_id"] == self.case.case_id
+                     and x["tool"] not in UNSEQUENCED])
+            cid = stable_id(self.case.case_id, cop, n, tool)
+        return {"tool_call_id": cid, "cop": cop,
                 "case_id": self.case.case_id, "tool": tool, "args": args,
                 "requested_by": requested_by, "status": None, "rejection_reason": None,
                 "result_summary": None, "injection_flags": [], "latency_ms": 0.0}

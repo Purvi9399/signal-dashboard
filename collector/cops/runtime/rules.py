@@ -36,7 +36,7 @@ from .contracts import (Claim, CLAIM_METRIC_STATE, CLAIM_METRIC_VALUE, CLAIM_TOO
 from ..interpret import EVIDENCE_LEVEL
 from ..specs import BY_KEY, SPEC_CONSUMES
 from .cop_package import aggregate_runtime_monitoring, decide_audit_traceability, decide_interaction_discovery, \
-    decide_policy_enforcement, AT_CLEAN, CEILING
+    decide_policy_enforcement, decide_anomaly_detection, AT_CLEAN, CEILING, DECIDED_WITHOUT_MODEL
 
 _RI = RuleInterpreter()
 HOT = ("EXCEPTION", "CRITICAL")
@@ -54,7 +54,7 @@ DETERMINISTIC_TOOLS = {
     # LLM COPs: the tools their computational baseline reads, so it is
     # computed from the same sources the model can ask for.
     "workflow_orchestration": ("get_task_milestones", "analyse_execution_transitions"),
-    "anomaly_detection": (),
+    "anomaly_detection": ("assess_anomaly_questions",),
     "context_memory": ("get_context_snapshots", "compare_instruction_versions",
                        "inspect_context_references", "verify_context_provenance"),
     "incident_response": ("check_exposure",),
@@ -735,7 +735,34 @@ def anomaly_detection(ctx):
                      "correlated, not counted: " + ind["correlated"][0]["why"]})
     f = _from_legacy(ctx, out, [uclaim("runtime_monitoring", rm)] if rm else [])
     f["upstream_used"] = used
+    _ad_questions(ctx, f)
     return f
+
+
+def _ad_questions(ctx, f):
+    """Anomaly Detection's five answers (cop_package.decide_anomaly_detection). With no deviation, or with
+    evidence or a baseline too short to judge, AD-5 decides the label and the finding says it needs no model.
+    With a deviation the threshold reading above stays the computational baseline and the model interprets."""
+    t = ctx["tools"]
+    res = result(t, "assess_anomaly_questions")
+    if not res.get("questions"):
+        why = res.get("missing_dependency") or (t.get("assess_anomaly_questions") or {}).get("status")
+        f["cop_specific"]["question_assessment"] = f"unavailable: {why}"
+        return
+    d = decide_anomaly_detection(res["questions"], evidence_conf(ctx["upstream"]) / EVIDENCE_LEVEL["SUFFICIENT"])
+    q = d["questions"]
+    f["cop_specific"].update(questions=q, drivers=d["drivers"], contrary=d["contrary"], limitations=d["limitations"],
+                             recipients=d["recipients"], memory_payload=d["memory_payload"],
+                             decided_without_model=d["decided"])
+    if not d["decided"]:
+        return
+    claims = [tclaim(t, "assess_anomaly_questions", f"questions.{qid}.answer.outcome", x["answer"],
+                     f"{qid} answered {x['answer']}: {x['explanation']}"[:240]).to_dict() for qid, x in q.items()]
+    why = "; ".join(f"{x} {q[x]['answer']}" for x in d["drivers"])
+    f.update(label=d["label"], confidence=d["confidence"], action=d["action"], severity=d["severity"],
+             action_reason=d["action_reason"], status=SUBSTANTIVE, claims=claims + f["claims"],
+             rationale=f"{d['label']} from {why}; threshold reading: {f['rationale']}"[:600])
+    f["cop_specific"]["stop_reason"] = DECIDED_WITHOUT_MODEL
 
 
 def incident_response(ctx):

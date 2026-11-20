@@ -54,6 +54,7 @@ from .evidence import assess, usable
 from .requirements import assess_requirements, required_unavailable, precheck as evidence_precheck_fn
 from .memory import MemoryAccessDenied, POLICIES, VERIFIED
 from .rules import RULES, DETERMINISTIC_TOOLS, evidence_conf
+from .cop_package import DECIDED_WITHOUT_MODEL, interpreted_anomaly_detection
 from . import decision
 from .tools import TOOLS, scan
 from .verifiers import (R, au01, verify_finding, verify_action, verify_memory_update, blocking,
@@ -64,6 +65,11 @@ from .llm import LLMBudget
 from .actions import DryRunAdapter, lifecycle as action_lifecycle
 from . import triage as TRI
 from . import support as SUP
+
+# Stops before the model: required evidence absent for every label, or the COP's package decided alone.
+NO_MODEL_NEEDED = ("precheck_required_evidence_unavailable", DECIDED_WITHOUT_MODEL)
+# LLM COPs whose package reads the verified interpretation back into its question answers.
+INTERPRETED = {"anomaly_detection": interpreted_anomaly_detection}
 
 MODES = ("dry_run", "supervised")
 SECURITY_CODES = ("unknown_tool", "not_in_allowlist", "out_of_scope")
@@ -419,11 +425,18 @@ def evidence_precheck(state):
                               "note": "computational baseline, recorded separately"} if base else None}
         out.update(finding=_as_finding(rt, cop, f, ORIGIN_LLM, extra),
                    stop_reason="precheck_required_evidence_unavailable")
+    elif state["classification"] == "llm" and \
+            ((state.get("baseline") or {}).get("cop_specific") or {}).get("decided_without_model"):
+        # The COP's package decided from its question answers alone (cops/packages/<cop>/INTERPRETATION.md):
+        # nothing needs interpreting, so the model is not called and that decision is the finding. It is
+        # then not also its own baseline.
+        f = {k: v for k, v in state["baseline"].items() if k != "baseline_note"}
+        out.update(finding=f, baseline=None, stop_reason=DECIDED_WITHOUT_MODEL)
     return out
 
 
 def route_after_precheck(state):
-    if state["classification"] != "llm" or state.get("stop_reason") == "precheck_required_evidence_unavailable":
+    if state["classification"] != "llm" or state.get("stop_reason") in NO_MODEL_NEEDED:
         return "independent_verify"
     return "llm_plan_investigation"
 
@@ -761,6 +774,9 @@ def independent_verify(state):
             f["confidence"] = round(ceiling, 3)
     f["qualifications"] = quals
     f["verifier_registry"] = REGISTRY_VERSION
+    if state["classification"] == "llm" and cop in INTERPRETED:
+        # the package reads the verified interpretation back into its last question
+        f = INTERPRETED[cop](f, state.get("baseline"))
     out = {"finding": f, "verifier_results": results}
     rec = state.get("recovery")
     if rec:

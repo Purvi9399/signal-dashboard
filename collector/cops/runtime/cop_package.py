@@ -1589,3 +1589,389 @@ def _pe_limitations(ans):
         if x.get("decision") == "NOT_EVALUATED":
             out.append(D.limitation(D.MISSING_EVIDENCE, "PE-4", x["route"], "NO_POLICY_OPERATION", x["reason"]))
     return out
+
+
+# ---------------------------------------------------------------- Anomaly Detection
+
+AD = "anomaly_detection"
+AD_DEVIATES = {"AD-1": "UNUSUALLY_FREQUENT", "AD-2": "SIGNIFICANTLY_DIFFERENT", "AD-3": "RATE_UNUSUAL",
+               "AD-4": "UNFAMILIAR"}
+AD_QUIET = {"AD-1": "NOT_UNUSUAL", "AD-2": "COMPARABLE", "AD-3": "RATE_WITHIN_BASELINE", "AD-4": "FAMILIAR"}
+AD_SHORT = "BASELINE_INSUFFICIENT"
+AD_OBSERVED = ("AD-1", "AD-2", "AD-3", "AD-4")
+# Each question's measures, and the linkage that must hold before a quiet answer is given.
+AD_MEASURES = {"AD-1": ("insights.repetition", "insights.retry", "insights.failed"),
+               "AD-2": ("insights.token_outlier", "insights.duration_outlier"),
+               "AD-3": ("activity.action_rate_ratio",),
+               "AD-4": ("path.transition_novelty", "access.first_seen_mcp")}
+AD_LINKAGE = {"AD-1": "telemetry.turn_linkage", "AD-4": "telemetry.lane_linkage"}
+AD_REPORTED = {"AD-2": ("token_expansion_per_turn",),
+               "AD-4": ("interaction.mcp_servers", "interaction.subagent_lanes", "resource_access_novelty_files")}
+AD_NOT_BUILT = {"AD-4": ("tool_use_deviation_per_agent",), "AD-5": ("task_adjusted_anomaly_score",)}
+# The directions metrics_config.json approves no limit for: measured, never judged.
+AD_ONE_SIDED = {"AD-2": ("insights.token_outlier", "lower token use than the estate"),
+                "AD-3": ("activity.action_rate_ratio", "a lower action rate than the tool median")}
+DEVIATES, WITHIN, NO_BASELINE, UNOBSERVED, NOT_JUDGED, DOES_NOT_APPLY = (
+    "DEVIATES", "WITHIN", "NO_BASELINE", "UNOBSERVED", "NOT_JUDGED", "DOES_NOT_APPLY")
+INTERPRETATION_REQUIRED = "INTERPRETATION_REQUIRED"
+DECIDED_WITHOUT_MODEL = "decided_by_package_without_model"
+NO_WINDOW = ("no approved baseline window: every session of the fetched estate weighs the same, however old "
+             "(metrics_config.json has no window)")
+
+
+def _version(cfg, ids):
+    import hashlib
+    return f"{cfg.get('metric_version')}#" + hashlib.sha256(json.dumps(sorted(ids)).encode()).hexdigest()[:10]
+
+
+def _ad_baselines(sessions, s, cfg):
+    """Which comparison each baseline-dependent measure uses, how large it is, and whether it meets the
+    minimum, read from signal_metrics.estate as the metrics computed it. Nothing is recomputed here."""
+    sm = EA.signal_metrics
+    e = sm.estate(sessions)
+    need, need_t = cfg["min_sessions_for_baseline"], cfg["min_transitions_for_novelty"]
+    with_tokens = [x.id for x in sessions if x.tokens > 0]
+    with_steps = [x.id for x in sessions if any(sm.num(st.get("duration_ms")) > 0 for st in x.steps)]
+    same_tool = [x.id for x in sessions if x.tool == s.tool]
+    earlier = [x.id for x in sessions if x.operator == s.operator and (x.start or "") < (s.start or "")]
+    servers = sorted({r["mcp_server"] for r in s.rows if sm.has(r.get("mcp_server"))})
+    rate = e["median_rate_by_tool"].get(s.tool)
+    trans = len(s.transitions())
+    return {
+        "insights.token_outlier": {
+            "comparison": "every session of the fetched estate with token counts, this one included",
+            "sessions": len(with_tokens), "needed": need, "median": e["median_tokens"], "this_session": s.tokens,
+            "version": _version(cfg, with_tokens),
+            "sufficient": bool(e["median_tokens"]) and e["sessions_with_tokens"] >= need,
+            "gap": None if e["median_tokens"] and e["sessions_with_tokens"] >= need else
+            f"{len(with_tokens)} sessions with token counts; {need} needed (min_sessions_for_baseline)"},
+        "insights.duration_outlier": {
+            "comparison": "every timed step of the fetched estate, this session's included",
+            "sessions": len(with_steps), "needed": None, "median_step_ms": e["median_duration_ms"],
+            "limit_ms": (e["median_duration_ms"] or 0) * cfg["duration_outlier_multiple"],
+            "version": _version(cfg, with_steps), "sufficient": bool(e["median_duration_ms"]),
+            "gap": None if e["median_duration_ms"] else "no step in the estate has a recorded duration"},
+        "activity.action_rate_ratio": {
+            "comparison": f"sessions of {s.tool}, this one included", "sessions": len(same_tool), "needed": need,
+            "median_actions_per_min": rate, "version": _version(cfg, same_tool),
+            "sufficient": bool(rate) and len(same_tool) >= need,
+            "gap": None if rate and len(same_tool) >= need else
+            f"{len(same_tool)} sessions of {s.tool}; {need} needed (min_sessions_for_baseline)"},
+        "path.transition_novelty": {
+            "comparison": f"transitions of the other sessions of {s.tool}", "sessions": len(same_tool) - 1,
+            "needed": need, "session_transitions": trans, "transitions_needed": need_t,
+            "version": _version(cfg, [x for x in same_tool if x != s.id]),
+            "sufficient": len(same_tool) - 1 >= need and trans >= need_t,
+            "gap": None if len(same_tool) - 1 >= need and trans >= need_t else "; ".join(
+                x for x in (f"{len(same_tool) - 1} other sessions of {s.tool}; {need} needed"
+                            if len(same_tool) - 1 < need else "",
+                            f"this session has {trans} transitions; {need_t} needed (min_transitions_for_novelty)"
+                            if trans < need_t else "") if x)},
+        "access.first_seen_mcp": {
+            "comparison": f"earlier sessions of operator {s.operator}", "sessions": len(earlier), "needed": 1,
+            "servers_used": servers, "version": _version(cfg, earlier),
+            "sufficient": bool(earlier) or not servers,
+            "gap": None if earlier or not servers else
+            f"{s.operator} has no earlier session, so every server used is new to them by definition"},
+    }
+
+
+def _ad_measure(a, metric, base, states):
+    x = _item(a, metric)
+    b = base.get(metric)
+    out = {"metric": metric, "value": x["value"], "state": x["metric_state"], "presence": x["state"],
+           "evidence_refs": x["evidence_refs"][:10], **({"baseline": b} if b else {})}
+    if x["state"] == EA.NOT_APPLICABLE:
+        return dict(out, verdict=DOES_NOT_APPLY, reason=x["reason"])
+    if b and not b["sufficient"]:
+        return dict(out, verdict=NO_BASELINE, reason=b["gap"])
+    if x["state"] != EA.PRESENT:
+        return dict(out, verdict=UNOBSERVED, reason=x["reason"] or x["state"])
+    if x["metric_state"] == "NO_THRESHOLD":
+        return dict(out, verdict=NOT_JUDGED, reason="no approved threshold")
+    if x["metric_state"] in states:
+        return dict(out, verdict=DEVIATES)
+    return dict(out, verdict=WITHIN, **({"warning": True} if x["metric_state"] == "WARNING" else {}))
+
+
+def _ad_linkage(a, metric, states):
+    x = _item(a, metric)
+    if x["state"] == EA.NOT_APPLICABLE:
+        return None
+    if x["state"] != EA.PRESENT:
+        return {"metric": metric, "value": None, "state": x["metric_state"],
+                "detail": f"{metric} could not be measured ({x['reason'] or x['state']})"}
+    if x["metric_state"] in states:
+        return {"metric": metric, "value": x["value"], "state": x["metric_state"],
+                "detail": f"{metric} is {x['value']} ({x['metric_state']}): actions not linked are not compared"}
+    return None
+
+
+def _ad_observe(qid, a, base, states, upstream):
+    ms = [_ad_measure(a, m, base, states) for m in AD_MEASURES[qid]]
+    link = _ad_linkage(a, AD_LINKAGE[qid], states) if qid in AD_LINKAGE else None
+    basis = {"measures": ms, "deviating": [m["metric"] for m in ms if m["verdict"] == DEVIATES],
+             "warnings": [m["metric"] for m in ms if m.get("warning")],
+             "reported_not_judged": [{"metric": m, "value": _item(a, m)["value"], "state": _item(a, m)["metric_state"],
+                                      "reason": _item(a, m)["reason"]} for m in AD_REPORTED.get(qid, ())],
+             "unassessed": _unassessed(a, *AD_NOT_BUILT.get(qid, ())), "linkage": link}
+    if qid == "AD-1":
+        basis["comparison"] = "approved absolute thresholds per session (metrics_config.json); no history is compared"
+        basis["upstream"] = _ad_behaviour(upstream)
+    if qid in AD_ONE_SIDED:
+        m, what = AD_ONE_SIDED[qid]
+        basis["not_evaluated"] = [{"metric": m, "direction": "below", "value": _item(a, m)["value"],
+                                   "detail": f"{what} is not judged: metrics_config.json approves an upper "
+                                             f"limit only"}]
+    dev = basis["deviating"]
+    if dev:
+        return AD_DEVIATES[qid], basis
+    open_ = [m for m in ms if m["verdict"] not in (WITHIN, DOES_NOT_APPLY)]
+    if not open_ and not link:
+        return AD_QUIET[qid], basis
+    if qid != "AD-1" and open_ and not link and all(m["verdict"] == NO_BASELINE for m in open_):
+        return AD_SHORT, basis
+    basis["interpretation_reasons"] = [
+        {"code": EA.INSUFFICIENT_HISTORY if m["verdict"] == NO_BASELINE else EA.MISSING_DATA,
+         "requirement": m["metric"], "check": None, "detail": m["reason"]} for m in open_] + \
+        ([{"code": "LINKAGE_DEGRADED", "requirement": link["metric"], "check": None, "detail": link["detail"]}]
+         if link else [])
+    return INCONCLUSIVE, basis
+
+
+def _ad_behaviour(upstream):
+    """Behaviour Analytics, when verified LOOPING or POOR_RECOVERY: recorded beside AD-1, counted only when its
+    lineage is independent of the metrics this COP reads (rules.independent_upstream)."""
+    from .rules import verified, independent_upstream
+    ba = verified(upstream, "behavior_analytics", "LOOPING", "POOR_RECOVERY")
+    if not ba:
+        return None
+    ind = independent_upstream(tuple(BY_KEY[AD].metric_keys) + AD_MEASURES["AD-1"], {"behavior_analytics": ba})
+    return {"cop": "behavior_analytics", "label": ba["label"], "finding_id": ba.get("finding_id"),
+            "counted_as": "independent" if ind["independent"] else
+            "correlated, not counted: " + ind["correlated"][0]["why"]}
+
+
+def _ad_precedents(memory, deviating):
+    out = []
+    for x in (memory or {}).get("established", []):
+        p = x["payload"]
+        same = sorted(set(p.get("deviating_metrics") or []) & set(deviating))
+        out.append({"record_id": x["record_id"], "label": p.get("label"), "same_metrics": same,
+                    "status": x.get("status"), "use": "comparison only, never proof"})
+    return out[:10]
+
+
+def _ad5(a, deps, upstream, memory):
+    from .rules import verified
+    rm = verified(upstream, "runtime_monitoring")
+    devs = {q: deps[q]["basis"]["deviating"] for q in AD_OBSERVED if deps[q]["outcome"] == AD_DEVIATES[q]}
+    open_ = {q: deps[q]["outcome"] for q in AD_OBSERVED if deps[q]["outcome"] not in (AD_DEVIATES[q], AD_QUIET[q])}
+    measures = {m["metric"]: m for q in AD_OBSERVED for m in (deps[q]["basis"] or {}).get("measures", [])}
+    flat = [m for ms in devs.values() for m in ms]
+    basis = {"deviations": [{"question": q, "metric": m, "value": measures[m]["value"], "state": measures[m]["state"]}
+                            for q, ms in devs.items() for m in ms],
+             "not_answered": [{"question": q, "answer": o} for q, o in open_.items()],
+             "upstream": {"runtime_monitoring": None if not rm else {"label": rm["label"],
+                                                                     "finding_id": rm.get("finding_id")}},
+             "precedents": _ad_precedents(memory, flat),
+             "unassessed": _unassessed(a, "task_adjusted_anomaly_score")}
+    if not rm:
+        basis["limitation"] = "no Runtime Monitoring finding was available to this run"
+    if devs:
+        basis["interpretation_reasons"] = [{
+            "code": INTERPRETATION_REQUIRED, "requirement": "interpretation", "check": None,
+            "detail": "deviations observed (" + "; ".join(
+                f"{x['question']} {x['metric']} {x['value']} {x['state']}" for x in basis["deviations"])
+                      + "): whether they are a meaningful anomaly or legitimate task variation is the model's "
+                        "interpretation"}]
+        return INCONCLUSIVE, basis
+    if rm and rm["label"] == "INSUFFICIENT":
+        basis["because"] = ("Runtime Monitoring reads the telemetry INSUFFICIENT: quiet measures on missing "
+                            "telemetry are not evidence of normal behaviour")
+        return "UNDETERMINED", basis
+    if open_:
+        basis["because"] = "not every question could be answered: " + ", ".join(f"{q} {o}" for q, o in open_.items())
+        return "UNDETERMINED", basis
+    return "NO_DEVIATION", basis
+
+
+def observe_anomaly_detection(assessments, baselines, upstream=None, memory=None):
+    """{question_id: assessment} -> {question_id: answer}. baselines: _ad_baselines for the session; memory:
+    {established, verified_pending} anomaly_observation records."""
+    pkg = EA.load_package(AD)
+    states = tuple(pkg["deviation_states"])
+    out = {}
+    for qid, q in pkg["questions"].items():
+        a = assessments[qid]
+        suf = a["sufficiency"]["status"]
+        if suf == "INCONCLUSIVE":
+            # a blocking reliability check failed or could not run: nothing observed here is judged
+            ms = [_ad_measure(a, m, baselines, states) for m in AD_MEASURES.get(qid, ())]
+            out[qid] = {"outcome": INCONCLUSIVE, "sufficiency": suf,
+                        "basis": {"observed_not_judged": ms, "deviating": []},
+                        "because": a["sufficiency"]["reasons"]}
+            continue
+        if qid == "AD-5":
+            outcome, basis = _ad5(a, {k: out[k] for k in q["depends_on"]}, upstream, memory)
+        else:
+            outcome, basis = _ad_observe(qid, a, baselines, states, upstream)
+        if outcome not in q["outcomes"] and outcome != INCONCLUSIVE:
+            raise ValueError(f"{qid}: outcome {outcome} is not in METRICS.yaml")
+        _missing_inputs(pkg, basis)
+        out[qid] = {"outcome": outcome, "sufficiency": suf, "basis": basis,
+                    "findings": a["findings"], "not_assessed": a["sufficiency"]["not_assessed"]}
+        if outcome == INCONCLUSIVE:
+            out[qid]["because"] = basis["interpretation_reasons"]
+    return out
+
+
+def assess_anomaly_detection(rows, session_id, cfg=None, computed_at=None, upstream=None, memory=None,
+                             raw_events=None, native=None):
+    """The five questions for one session: each assessment with its answer, and the baselines used."""
+    cfg = cfg or EA.signal_metrics.load_config()
+    events, srows = EA.session_inputs(rows, session_id, cfg, computed_at)
+    sessions = EA._computed(rows, cfg, computed_at)[1]
+    s = next(x for x in sessions if x.id == session_id)
+    base = _ad_baselines(sessions, s, cfg)
+    assessments = {qid: EA.assess(AD, qid, events, srows, cfg, computed_at, raw_events, native)
+                   for qid in EA.QUESTIONS[AD]}
+    answers = observe_anomaly_detection(assessments, base, upstream, memory)
+    return {qid: {"assessment": assessments[qid], "answer": answers[qid]} for qid in assessments}
+
+
+def _measures_text(ms):
+    return ", ".join(f"{m['metric']} {m['value']} ({m['state']})" for m in ms)
+
+
+def _explain_ad(qid, ans):
+    b = ans["basis"]
+    if ans["outcome"] == INCONCLUSIVE:
+        s = _explain(qid, ans)
+        seen = [m for m in b.get("observed_not_judged", []) if m["verdict"] == DEVIATES]
+        return s + (f"; observed, not judged: {_measures_text(seen)}" if seen else "")
+    if qid == "AD-5":
+        if ans["outcome"] == "NO_DEVIATION":
+            return "no question found a deviation and every question was answered"
+        if ans["outcome"] == "UNDETERMINED":
+            return b["because"]
+        return b.get("interpretation_text") or ans["outcome"]
+    ms = b["measures"]
+    if ans["outcome"] == AD_DEVIATES[qid]:
+        s = "deviation: " + _measures_text([m for m in ms if m["verdict"] == DEVIATES])
+    elif ans["outcome"] == AD_SHORT:
+        s = "baseline insufficient: " + "; ".join(f"{m['metric']}: {m['reason']}" for m in ms
+                                                  if m["verdict"] == NO_BASELINE)
+    else:
+        s = "within the approved limits: " + _measures_text([m for m in ms if m["verdict"] == WITHIN]) + \
+            (f"; WARNING recorded, not a deviation: {', '.join(b['warnings'])}" if b["warnings"] else "")
+    for x in b.get("not_evaluated", []):
+        s += f"; not evaluated: {x['detail']}"
+    up = b.get("upstream")
+    return s + (f"; {up['cop']} {up['label']} ({up['counted_as']})" if up else "")
+
+
+# What each label proposes when the package decides it; the confidences are cops/interpret.py's.
+AD_LABELS = {"NORMAL": (0.8, "NONE", "NONE", ""),
+             "INDETERMINATE": (0.2, "WATCH", "NONE", "whether the behaviour is unusual cannot be judged on this "
+                                                    "evidence"),
+             INCONCLUSIVE: (0.0, "WATCH", "NONE", "deviations were observed and need interpretation")}
+AD_RECIPIENTS = {"ANOMALOUS": ["incident_response", "risk_mitigation"]}
+
+
+def _ad_limitations(ans):
+    from . import decision as D
+    out = []
+    for q, (m, what) in AD_ONE_SIDED.items():
+        if ans[q]["outcome"] in (AD_QUIET[q], AD_DEVIATES[q]):
+            out.append(D.limitation(D.LIMIT_NOT_APPROVED, q, f"{m} (below)", D.LIMIT_NOT_APPROVED,
+                                    f"{what} is measured and not judged: no lower limit is approved"))
+    for q in ("AD-2", "AD-3", "AD-4"):
+        if ans[q]["outcome"] in (AD_QUIET[q], AD_DEVIATES[q]):
+            out.append(D.limitation(D.LIMIT_NOT_APPROVED, q, "baseline_window", D.LIMIT_NOT_APPROVED, NO_WINDOW))
+    return out
+
+
+def _ad_payload(ans):
+    return {"deviating_metrics": sorted({m for q in AD_OBSERVED for m in (ans[q]["basis"] or {}).get("deviating", [])}),
+            "answers": {q: x["outcome"] for q, x in ans.items()},
+            "baselines": sorted({f"{m['metric']}@{m['baseline']['version']}" for q in AD_OBSERVED
+                                 for m in (ans[q]["basis"] or {}).get("measures", []) if m.get("baseline")})}
+
+
+def decide_anomaly_detection(questions, evidence_scale=1.0):
+    """The package's decision from the five answers (INTERPRETATION.md). AD-5 decides NORMAL when no question
+    deviates and every question was answered, INDETERMINATE when evidence or a baseline is short; with a
+    deviation, AD-5 waits for the model's interpretation and `decided` is False."""
+    pkg = EA.load_package(AD)
+    ans = {q: v["answer"] for q, v in questions.items()}
+    five = ans["AD-5"]["outcome"]
+    label = pkg["labels"][five]
+    base, action, sev, reason = AD_LABELS[label]
+    devs = [q for q in AD_OBSERVED if ans[q]["outcome"] == AD_DEVIATES[q]]
+    opens = [q for q in AD_OBSERVED if ans[q]["outcome"] not in (AD_DEVIATES[q], AD_QUIET[q])]
+    drivers = (devs + ["AD-5"]) if five == INCONCLUSIVE else (opens or ["runtime_monitoring"]) + ["AD-5"] \
+        if five == "UNDETERMINED" else list(ans)
+    drivers = [d for d in drivers if d in ans]
+    trace = _question_trace(questions, _explain_ad, drivers)
+    contrary = [f"{q}: {x['check']} {x['detail']}" for q, v in questions.items()
+                for x in v["answer"].get("findings", [])]
+    contrary += [f"{q}: WARNING on {', '.join(ans[q]['basis']['warnings'])}, recorded and not counted"
+                 for q in AD_OBSERVED if (ans[q]["basis"] or {}).get("warnings")]
+    return {"label": label, "confidence": round(base * evidence_scale, 3), "severity": sev, "action": action,
+            "action_reason": reason, "drivers": drivers, "contrary": contrary, "questions": trace,
+            "limitations": _ad_limitations(ans), "recipients": [], "decided": five != INCONCLUSIVE,
+            "memory_payload": _ad_payload(ans), "decision": five}
+
+
+def interpreted_anomaly_detection(f, baseline):
+    """AD-5 after verification, for a finding the model concluded: its verified label read back as AD-5's answer
+    (METRICS.yaml interpretations), or INCONCLUSIVE with why. AD-1 to AD-4 are the package's, unchanged. A
+    finding the package decided itself is returned as it is."""
+    import copy
+    from .contracts import ORIGIN_LLM
+    cs = (baseline or {}).get("cop_specific") or {}
+    if f.get("origin") != ORIGIN_LLM or not cs.get("questions"):
+        return f
+    pkg = EA.load_package(AD)
+    q = copy.deepcopy(cs["questions"])
+    five = q["AD-5"]
+    reasons = [r for r in five["sufficiency_reasons"] if r.get("code") != INTERPRETATION_REQUIRED]
+    detail = (f.get("cop_specific") or {}).get("detail") or {}
+    interp = {"by": "llm", "verified": bool(f.get("verified")), "status": f["status"],
+              "deviating_quantities": detail.get("deviating_quantities", []),
+              "alternative_explanations": (f.get("cop_specific") or {}).get("alternative_explanations", []),
+              "alternatives_considered": detail.get("alternative_explanations_considered", []),
+              "baseline_version": detail.get("baseline_version"), "telemetry_quality": detail.get("telemetry_quality")}
+    if f["status"] == "SUBSTANTIVE" and f["label"] in pkg["interpretations"]:
+        answer = pkg["interpretations"][f["label"]]
+        text = f"model interpretation {f['label']} ({'verified' if f.get('verified') else 'not verified'})"
+        if interp["alternatives_considered"] or interp["alternative_explanations"]:
+            text += "; alternatives considered: " + "; ".join(interp["alternatives_considered"]
+                                                              or interp["alternative_explanations"])
+    else:
+        answer = INCONCLUSIVE
+        cand = (f.get("rejected_candidate") or {}).get("label")
+        if cand:
+            r = {"code": "INTERPRETATION_REJECTED", "requirement": "interpretation", "check": None,
+                 "detail": f"model interpretation {cand} rejected: {f.get('rationale', '')[:240]}"}
+        else:
+            r = {"code": "NO_INTERPRETATION", "requirement": "interpretation", "check": None,
+                 "detail": "no verified model interpretation: "
+                           + str((f.get("cop_specific") or {}).get("stop_reason") or f.get("rationale", ""))[:200]}
+        reasons.append(r)
+        interp["candidate"] = cand
+        text = "not answered: " + r["detail"]
+    five.update(answer=answer, explanation=text, sufficiency_reasons=reasons, drives_label=True)
+    five["basis"] = {**(five["basis"] or {}), "interpretation": interp, "interpretation_text": text}
+    devs = [k for k in AD_OBSERVED if q[k]["answer"] == AD_DEVIATES[k]]
+    for k in AD_OBSERVED:
+        q[k]["drives_label"] = k in devs
+    out = dict(f)
+    out["cop_specific"] = {**(f.get("cop_specific") or {}), "questions": q, "drivers": devs + ["AD-5"],
+                           "limitations": cs.get("limitations", []), "contrary": cs.get("contrary", []),
+                           "recipients": AD_RECIPIENTS.get(f["label"], []) if answer != INCONCLUSIVE else [],
+                           "memory_payload": {**(cs.get("memory_payload") or {}),
+                                              "answers": {k: v["answer"] for k, v in q.items()}},
+                           "decision": answer}
+    return out

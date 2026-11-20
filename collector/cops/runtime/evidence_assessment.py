@@ -62,7 +62,8 @@ REQUIRED, WHEN_APPLICABLE, OPTIONAL = "REQUIRED", "REQUIRED_WHEN_APPLICABLE", "O
 ACTION_TYPES = signal_metrics.CALL_TYPES | signal_metrics.CALL_REQUESTS | signal_metrics.CALL_RESULTS
 
 PACKAGES = os.path.join(HERE, "cops", "packages")
-PACKAGED = ("runtime_monitoring", "interaction_discovery", "audit_traceability", "policy_enforcement")
+PACKAGED = ("runtime_monitoring", "interaction_discovery", "audit_traceability", "policy_enforcement",
+            "anomaly_detection")
 
 
 def load_package(cop):
