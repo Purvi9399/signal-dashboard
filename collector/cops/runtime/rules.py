@@ -35,7 +35,8 @@ from .contracts import (Claim, CLAIM_METRIC_STATE, CLAIM_METRIC_VALUE, CLAIM_TOO
                         SUBSTANTIVE, MISSING_DEPENDENCY, ATTENTION_STATES)
 from ..interpret import EVIDENCE_LEVEL
 from ..specs import BY_KEY, SPEC_CONSUMES
-from .cop_package import aggregate_runtime_monitoring, decide_interaction_discovery, CEILING
+from .cop_package import aggregate_runtime_monitoring, decide_audit_traceability, decide_interaction_discovery, \
+    CEILING
 
 _RI = RuleInterpreter()
 HOT = ("EXCEPTION", "CRITICAL")
@@ -48,7 +49,7 @@ DETERMINISTIC_TOOLS = {
     "resource_management": ("compute_consumption", "get_quota"),
     "behavior_analytics": ("compute_sequence_statistics", "compare_behaviour_history"),
     "recovery_resilience": ("get_recovery_records", "validate_checkpoints"),
-    "audit_traceability": ("reconstruct_trace", "check_decision_linkage"),
+    "audit_traceability": ("reconstruct_trace", "check_decision_linkage", "assess_audit_questions"),
     "agent_lifecycle_management": ("get_agent_registry", "detect_configuration_changes"),
     # LLM COPs: the tools their computational baseline reads, so it is
     # computed from the same sources the model can ask for.
@@ -571,102 +572,66 @@ def recovery_resilience(ctx):
              f"{len(full)}/{len(out)} restores fully passed", claims, "MEDIUM")
 
 
-def _audit_meaning(ctx, out, tr, linkage_broken=()):
-    """Audit labels by what the evidence means; severity is assessed separately.
-
-    PARTIAL         audit information is incomplete, but the essential chain can
-                    still be reconstructed (for example steps without a turn id).
-    BROKEN_TRACE    an essential causal or provenance link is broken: an effect no
-                    step accounts for, a sub-agent lane with no parent step, a
-                    decision citing evidence the record cannot produce, sources that
-                    disagree about what happened, or an upstream COP that could not
-                    judge an action that is in the record.
-    UNATTRIBUTABLE  the responsible actor cannot be established.
-
-    Severity comes from the attribution metrics' own states and never chooses the
-    label. Applied only when the trace tool returned a result; otherwise the rule
-    baseline stands, and a record whose attribution measures could not be judged
-    stays INCONCLUSIVE."""
-    if not tr or tr.get("missing_dependency") or out["interpretation"] == INCONCLUSIVE:
-        return out, []
-    m = {e.metric_id: e for e in ctx["events"]}
-    states = [m[k].state for k in ("insights.unattributed", "telemetry.turn_linkage",
-                                   "telemetry.lane_linkage", "telemetry.source_agreement") if k in m]
-    # Severity: the worst attribution-metric state, or the baseline's own severity,
-    # whichever is higher. It is reported beside the label and does not choose it.
-    sev = max([SEV.get(x, "NONE") for x in states] + [out.get("severity") or "NONE"], key=RANK.get)
-    claims = []
-
-    no_actor = tr.get("effects_without_actor") or []
-    no_actor_n = len(no_actor) + (tr.get("actions_without_actor") or 0)
-    if no_actor_n:
-        claims.append(tclaim(ctx["tools"], "reconstruct_trace", "effects_without_actor", no_actor,
-                             f"{no_actor_n} actions or effects carry no session or operator, so the "
-                             f"responsible actor cannot be established"))
-        return {**out, "interpretation": "UNATTRIBUTABLE", "action": "ALERT", "severity": sev,
-                "action_reason": "the responsible actor cannot be established"}, claims
-
-    broken = []
-    un = tr.get("unattributed_effects") or []
-    if un:
-        broken.append("effects no step accounts for")
-        claims.append(tclaim(ctx["tools"], "reconstruct_trace", "unattributed_effects", un,
-                             f"{len(un)} of {tr.get('disk_changes')} disk changes are attributed to no "
-                             f"step; the actor ({tr['actor'].get('operator')}, session "
-                             f"{tr['actor'].get('session_id')}) is known, the causal link is not"))
-    orphans = tr.get("lanes_without_parent") or []
-    if orphans:
-        broken.append("sub-agent lanes with no parent step")
-        claims.append(tclaim(ctx["tools"], "reconstruct_trace", "lanes_without_parent", orphans,
-                             f"{len(orphans)} sub-agent lanes have no parent step"))
-    if linkage_broken:
-        broken.append("decisions citing evidence the record cannot produce")
-    sa = m.get("telemetry.source_agreement")
-    if sa is not None and sa.state in ("EXCEPTION", "CRITICAL"):
-        broken.append("sources disagree about what happened")
-        claims.append(mclaim(sa))
-    if any(getattr(v, "decision_status", None) == "BLOCKED_BY_EVIDENCE"
-           for v in _legacy_up(ctx["upstream"]).values()):
-        broken.append("an upstream COP could not judge an action in the record")
-    if broken:
-        return {**out, "interpretation": "BROKEN_TRACE", "action": "ALERT", "severity": sev,
-                "action_reason": "an essential causal or provenance link is broken: " + "; ".join(broken)}, claims
-
-    gaps = []
-    if tr.get("steps_without_turn"):
-        gaps.append(f"{tr['steps_without_turn']} steps have no turn id")
-        claims.append(tclaim(ctx["tools"], "reconstruct_trace", "steps_without_turn",
-                             tr["steps_without_turn"], f"{tr['steps_without_turn']} steps have no turn "
-                             f"id; their order still reconstructs the chain"))
-    soft = [k for k in ("insights.unattributed", "telemetry.turn_linkage", "telemetry.lane_linkage",
-                        "telemetry.source_agreement") if k in m and m[k].state in ATTENTION_STATES]
-    if gaps or soft or out["interpretation"] in ("PARTIAL", "BROKEN_TRACE", "UNATTRIBUTABLE"):
-        # Includes a baseline that reached BROKEN_TRACE or UNATTRIBUTABLE on metric
-        # severity alone while the actor and every causal link are on record.
-        return {**out, "interpretation": "PARTIAL", "action": "WATCH", "severity": sev,
-                "action_reason": "incomplete audit information; the essential chain is still "
-                                 "reconstructable" + (f" ({'; '.join(gaps + soft)})" if gaps or soft else "")}, claims
-    return out, claims
-
-
 def audit_traceability(ctx):
-    out = _RI.audit_traceability(ctx["events"], _legacy_up(ctx["upstream"]), {},
-                                 evidence_conf(ctx["upstream"]))
-    link = result(ctx["tools"], "check_decision_linkage")
-    tr = result(ctx["tools"], "reconstruct_trace")
-    extra = []
-    broken = [d for d in link.get("decisions", []) if d["refs"] and d["resolvable"] < d["refs"]]
-    if broken:
-        extra.append(tclaim(ctx["tools"], "check_decision_linkage", "decisions[unresolvable]",
-                            len(broken), f"{len(broken)} upstream decisions cite evidence that does "
-                            f"not resolve to a row in this case"))
-        if out["interpretation"] == INCONCLUSIVE:
-            out = {**out, "interpretation": "BROKEN_TRACE", "action": "ALERT", "severity": "MEDIUM",
-                   "action_reason": "a decision cites evidence the record cannot produce"}
-    out, more = _audit_meaning(ctx, out, tr, broken)
-    extra += more
-    f = _from_legacy(ctx, out, extra)
-    f["cop_specific"].update({"trace": tr, "decision_linkage": link.get("decisions", [])})
+    """Audit & Traceability's five answers decide its label (cop_package.decide_audit_traceability)."""
+    t = ctx["tools"]
+    link = result(t, "check_decision_linkage")
+    tr = result(t, "reconstruct_trace")
+    res = result(t, "assess_audit_questions")
+    if not res.get("questions"):
+        why = res.get("missing_dependency") or (t.get("assess_audit_questions") or {}).get("status")
+        return F(INCONCLUSIVE, 0.0, "WATCH", "the audit questions could not be assessed",
+                 f"question assessment unavailable: {why}", status=MISSING_DEPENDENCY,
+                 cop_specific={"trace": tr, "decision_linkage": link.get("decisions", [])})
+    d = decide_audit_traceability(res["questions"], evidence_conf(ctx["upstream"]) / EVIDENCE_LEVEL["SUFFICIENT"])
+    q = d["questions"]
+    claims = [tclaim(t, "assess_audit_questions", f"questions.{qid}.answer.outcome", x["answer"],
+                     f"{qid} answered {x['answer']}: {x['explanation']}"[:240]) for qid, x in q.items()]
+    if q["AT-1"]["answer"] == "ACTOR_NOT_ESTABLISHED":
+        claims.append(tclaim(t, "reconstruct_trace", "effects_without_actor", tr.get("effects_without_actor"),
+                             q["AT-1"]["explanation"][:240]))
+    if tr.get("unattributed_effects"):
+        claims.append(tclaim(t, "reconstruct_trace", "unattributed_effects", tr["unattributed_effects"],
+                             f"{len(tr['unattributed_effects'])} disk changes are attributed to no step"))
+    if tr.get("lanes_without_parent"):
+        claims.append(tclaim(t, "reconstruct_trace", "lanes_without_parent", tr["lanes_without_parent"],
+                             f"{len(tr['lanes_without_parent'])} sub-agent lanes have no parent step"))
+    if tr.get("steps_without_turn"):
+        claims.append(tclaim(t, "reconstruct_trace", "steps_without_turn", tr["steps_without_turn"],
+                             f"{tr['steps_without_turn']} steps have no turn id; their order still reconstructs "
+                             f"the chain"))
+    unres = q["AT-4"]["basis"].get("unresolvable") if q["AT-4"]["answer"] != INCONCLUSIVE else None
+    if unres:
+        claims.append(tclaim(t, "check_decision_linkage", "decisions[unresolvable]", len(unres),
+                             f"{len(unres)} upstream decisions cite evidence that does not resolve to a row in "
+                             f"this case"))
+    claims += [mclaim(e) for e in ctx["events"] if e.state in ATTENTION_STATES]
+    claims += [Claim(f"{e.metric_id} is {e.value}", CLAIM_METRIC_VALUE, metric_id=e.metric_id, asserted_value=e.value,
+                     evidence_refs=[f"metric:{e.metric_id}"], origin=ORIGIN_RULES)
+               for e in ctx["events"] if e.value is not None]
+    five = q["AT-5"]["basis"]
+    for rid in five.get("memory_records", []):
+        claims.append(Claim(f"trace gap record {rid} records {', '.join(five['recurring'])} before",
+                            CLAIM_MEMORY_PRECEDENT, record_id=rid, evidence_refs=[f"memory:{rid}"],
+                            origin=ORIGIN_RULES))
+    used = []
+    for cop, how in (("runtime_monitoring", "evidence confidence, AT-2 RM-3 linkage and AT-3 reliability"),
+                     ("interaction_discovery", "AT-2 ID-2 reconstruction and AT-5 ID-5 identities"),
+                     ("policy_enforcement", "AT-4 decision evidence linkage")):
+        f_ = verified(ctx["upstream"], cop)
+        if f_:
+            claims.append(uclaim(cop, f_))
+            used.append({"cop": cop, "label": f_["label"], "finding_id": f_.get("finding_id"), "counted_as": how})
+    why = "; ".join(f"{x} {q[x]['answer']}" for x in d["drivers"])
+    rationale = f"{d['label']} from {why}" + (f"; also {', '.join(d['also_held'])}" if d["also_held"] else "")
+    f = F(d["label"], d["confidence"], d["action"], d["action_reason"], rationale, claims, d["severity"],
+          "INCONCLUSIVE" if d["label"] == INCONCLUSIVE else SUBSTANTIVE,
+          cop_specific={"trace": tr, "decision_linkage": link.get("decisions", []), "questions": q,
+                           "drivers": d["drivers"], "also_held": d["also_held"], "contrary": d["contrary"],
+                        "recipients": d["recipients"], "memory_payload": {"gaps": d["gap_codes"]}},
+          upstream_used=used)
+    if d["label"] == INCONCLUSIVE:
+        f["reason_codes"] = ["MISSING_EVIDENCE"]
     return f
 
 

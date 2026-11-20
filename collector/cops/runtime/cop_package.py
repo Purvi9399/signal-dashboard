@@ -609,6 +609,24 @@ ID_LABELS = {
 ID_GRAPH = ("ID-1", "ID-2", "ID-4", "ID-5")
 
 
+def _question_trace(questions, explain, drivers):
+    """Each question's answer with its explanation, metrics, evidence and reasons, as the finding carries it."""
+    trace = {}
+    for qid, q in questions.items():
+        a, an = q["assessment"], q["answer"]
+        trace[qid] = {
+            "question": a["question"], "answer": an["outcome"], "sufficiency": a["sufficiency"]["status"],
+            "explanation": explain(qid, an), "basis": an["basis"],
+            "metrics": [{"metric": x["requirement"], "kind": x["kind"], "state": x["state"], "value": x["value"],
+                         "metric_state": x["metric_state"]} for x in a["presence"]["items"]],
+            "checks_consumed": a["reliability"]["verified_checks"] + a["reliability"]["blocking_checks"],
+            "raw_evidence_refs": _refs(a)[:20],
+            "sufficiency_reasons": [{k: r.get(k) for k in ("code", "requirement", "check", "detail")}
+                                    for r in a["sufficiency"]["reasons"]],
+            "not_assessed": an.get("not_assessed", []), "drives_label": qid in drivers}
+    return trace
+
+
 def decide_interaction_discovery(questions, evidence_scale=1.0):
     """The COP decision from the five answers (INTERPRETATION.md).
 
@@ -641,19 +659,7 @@ def decide_interaction_discovery(questions, evidence_scale=1.0):
         sev = max([SEV[s] for s in hot] + ["NONE"], key=RANK.get)
     else:
         sev = "NONE"
-    trace = {}
-    for qid, q in questions.items():
-        a, an = q["assessment"], q["answer"]
-        trace[qid] = {
-            "question": a["question"], "answer": an["outcome"], "sufficiency": a["sufficiency"]["status"],
-            "explanation": _explain(qid, an), "basis": an["basis"],
-            "metrics": [{"metric": x["requirement"], "kind": x["kind"], "state": x["state"], "value": x["value"],
-                         "metric_state": x["metric_state"]} for x in a["presence"]["items"]],
-            "checks_consumed": a["reliability"]["verified_checks"] + a["reliability"]["blocking_checks"],
-            "raw_evidence_refs": _refs(a)[:20],
-            "sufficiency_reasons": [{k: r.get(k) for k in ("code", "requirement", "check", "detail")}
-                                    for r in a["sufficiency"]["reasons"]],
-            "not_assessed": an.get("not_assessed", []), "drives_label": qid in drivers}
+    trace = _question_trace(questions, _explain, drivers)
     contrary = [f"{q}: {x['check']} {x['detail']}" for q, v in questions.items() for x in v["answer"].get("findings", [])]
     if ans["ID-4"].get("basis", {}).get("depth_conflict"):
         contrary.append(f"ID-4: {ans['ID-4']['basis']['depth_conflict']}")
@@ -661,3 +667,358 @@ def decide_interaction_discovery(questions, evidence_scale=1.0):
     return {"label": label, "confidence": round(base * min(1.0, evidence_scale), 3), "severity": sev,
             "action": action, "action_reason": reason, "recipients": list(recipients),
             "drivers": drivers, "also_held": held[1:], "contrary": contrary, "questions": trace}
+
+
+# ---------------------------------------------------------------- Audit & Traceability
+
+AT = "audit_traceability"
+AT_CLEAN = ("ATTRIBUTED", "FULLY_RECONSTRUCTED", "RELIABLE", "TRACEABLE", "DEFENSIBLE")
+# Answers that mean an essential causal or provenance link is broken (BROKEN_TRACE).
+AT_BROKEN = ("CAUSE_NOT_ATTRIBUTED", "SEQUENCE_BROKEN", "UNRELIABLE", "NOT_TRACEABLE", "NOT_DEFENSIBLE")
+# Answers that leave audit information incomplete while the chain still reconstructs (PARTIAL).
+AT_GAP = ("RECONSTRUCTED_WITH_GAPS", "DEGRADED", "PARTIALLY_TRACEABLE", "IMPAIRED")
+# Metrics whose states give the severity, as the former rules._audit_meaning did: the specs.py metric_keys.
+AT_SEVERITY = ("insights.unattributed", "telemetry.turn_linkage", "telemetry.lane_linkage",
+               "telemetry.source_agreement")
+AT_NOT_BUILT = ("audit_decision_evidence_linkage", "audit_intervention_traceability",
+                "audit_policy_version_traceability", "audit_verifier_coverage", "audit_evidence_sufficiency")
+
+
+def _answers(f):
+    return {q: t.get("answer") for q, t in (((f or {}).get("cop_specific") or {}).get("questions") or {}).items()}
+
+
+def _upstream_view(f, *qids):
+    if not f:
+        return None
+    ans = _answers(f) if f.get("cop") != "runtime_monitoring" else _rm_answers(f)
+    return {"label": f.get("label"), "verified": f.get("verified"), "finding_id": f.get("finding_id"),
+            **{q: ans.get(q) for q in qids}}
+
+
+def _actor_without_effects(a, trace):
+    """AT-1 is answered when only disk-change attribution is unassessed and actions are on record with no
+    operator: the actor is not established whatever the disk changes show."""
+    missing = a["sufficiency"]["missing_requirements"]
+    return missing == ["insights.unattributed"] and (trace.get("actions_without_actor") or 0) > 0 \
+        and not [r for r in a["sufficiency"]["reasons"] if r.get("check")]
+
+
+def _at1(a, trace):
+    un, rate, act, mcp = (_item(a, m) for m in ("insights.unattributed", "audit_actor_attribution_rate",
+                                                "audit_action_attribution_rate", "interaction.mcp_servers"))
+    no_actor = list(trace.get("effects_without_actor") or [])
+    actions = trace.get("actions_without_actor") or 0
+    unaccounted = un["value"] if un["state"] == EA.PRESENT else None
+    basis = {"actor": trace.get("actor"), "effects_without_actor": no_actor, "actions_without_actor": actions,
+             "effects_without_step": unaccounted, "effect_refs": list(trace.get("unattributed_effects") or []),
+             "disk_changes": trace.get("disk_changes"), "disk_changes_attributed": trace.get("disk_changes_attributed"),
+             "rows_naming_operator": rate["value"], "rows": rate["features"].get("rows"),
+             "action_attribution_rate": act["value"] if act["state"] == EA.PRESENT else None,
+             "mcp_servers": (mcp["features"].get("servers") or {}) if mcp["state"] == EA.PRESENT else None,
+             "not_judged": ["audit_actor_attribution_rate: a row without an operator belongs to its session's "
+                            "operator (tools._actor_known); reported, not judged"],
+             "unassessed": _unassessed(a, "audit_action_attribution_rate", "interaction.mcp_servers")}
+    if un["state"] != EA.PRESENT:
+        basis["note"] = f"disk-change attribution not assessed ({un['state']}: {un['reason']})"
+    if no_actor or actions:
+        return "ACTOR_NOT_ESTABLISHED", basis
+    return ("CAUSE_NOT_ATTRIBUTED" if unaccounted else "ATTRIBUTED"), basis
+
+
+def _at2(a, trace, rm=None, idf=None):
+    comp, recon, lanes = (_item(a, m) for m in ("audit_trace_completeness", "audit_execution_reconstruction_rate",
+                                                "interaction.subagent_lanes"))
+    turn, lane, tn = (_present(a, m) for m in ("telemetry.turn_linkage", "telemetry.lane_linkage",
+                                              "path.transition_novelty"))
+    broken, gaps, contrary = [], [], []
+    orphans = list(trace.get("lanes_without_parent") or [])
+    if orphans:
+        broken.append(f"{len(orphans)} subagent lane(s) have no parent step: {', '.join(orphans)}")
+    steps = comp["features"].get("steps") or 0
+    uncited = steps - round(comp["value"] * steps) if steps else 0
+    if uncited:
+        gaps.append(f"{uncited} of {steps} steps cite no observable")
+    placed = recon["features"].get("reconstructable")
+    if placed is not None and placed < (recon["features"].get("steps") or 0):
+        gaps.append(f"{recon['features']['steps'] - placed} of {recon['features']['steps']} steps cannot be placed "
+                    "in a turn and a linked lane")
+    if trace.get("steps_without_turn"):
+        gaps.append(f"{trace['steps_without_turn']} steps have no turn id; their order still reconstructs the chain")
+    unlinked = [x for x in (lane["features"].get("unlinked", []) if lane else []) if x not in orphans]
+    if unlinked:
+        gaps.append(f"subagent lanes {', '.join(unlinked)} are not linked to a handoff")
+    rm3 = _rm_answers(rm).get("RM-3") if rm else None
+    if rm3 in RM_UNLINKED:
+        gaps.append(f"Runtime Monitoring RM-3: {rm3}")
+    id2 = _answers(idf).get("ID-2") if idf else None
+    if id2 == "NOT_RECONSTRUCTABLE":
+        broken.append("Interaction Discovery ID-2: NOT_RECONSTRUCTABLE")
+    elif id2 == "PARTIALLY_RECONSTRUCTED":
+        gaps.append("Interaction Discovery ID-2: PARTIALLY_RECONSTRUCTED")
+    if broken and id2 == "FULLY_RECONSTRUCTED":
+        contrary.append("Interaction Discovery ID-2 answered FULLY_RECONSTRUCTED")
+    if broken and rm3 == "ALL_ACTIONS_LINKED":
+        contrary.append("Runtime Monitoring RM-3 answered ALL_ACTIONS_LINKED")
+    basis = {"steps": trace.get("steps"), "lanes": trace.get("lanes"), "lanes_without_parent": orphans,
+             "steps_without_turn": trace.get("steps_without_turn"), "trace_completeness": comp["value"],
+             "execution_reconstruction_rate": recon["value"], "subagent_lanes": lanes["features"].get("lanes", []),
+             "turn_linkage": turn["value"] if turn else None, "lane_linkage": lane["value"] if lane else None,
+             "transition_novelty": tn["value"] if tn else None, "broken": broken, "gaps": gaps,
+             "contrary": contrary, "upstream": {"runtime_monitoring": _upstream_view(rm, "RM-3"),
+                                                "interaction_discovery": _upstream_view(idf, "ID-2")},
+             "unassessed": _unassessed(a, "path.transition_novelty", "audit_reconstruction_confidence")}
+    return ("SEQUENCE_BROKEN" if broken else "RECONSTRUCTED_WITH_GAPS" if gaps else "FULLY_RECONSTRUCTED"), basis
+
+
+AT3_CHECKS = (EA.CONFLICTING_SOURCES, EA.INCOMPARABLE_TIMESTAMPS, EA.TIMESTAMP_ORDER)
+
+
+def _at3(a, states, rm=None):
+    from .contracts import ATTENTION_STATES
+    cov, unk = _item(a, "telemetry.collector_coverage"), _item(a, "telemetry.unknown_share")
+    agr, turn, lane, order = (_present(a, m) for m in ("telemetry.source_agreement", "telemetry.turn_linkage",
+                                                       "telemetry.lane_linkage", "audit_event_ordering_consistency"))
+    unreliable, degraded = [], []
+    if agr and agr["metric_state"] in states:
+        unreliable.append(f"sources disagree about what happened: telemetry.source_agreement {agr['value']} is "
+                          f"{agr['metric_state']}")
+    elif agr and agr["metric_state"] != "NORMAL":
+        degraded.append(f"telemetry.source_agreement {agr['value']} is {agr['metric_state']}")
+    if cov["features"].get("missing"):
+        degraded.append(f"expected collectors missing: {', '.join(cov['features']['missing'])}")
+    if unk["metric_state"] != "NORMAL":
+        degraded.append(f"telemetry.unknown_share {unk['value']} is {unk['metric_state']}")
+    for x in (turn, lane):
+        if x and x["metric_state"] in ATTENTION_STATES:
+            degraded.append(f"{x['requirement']} {x['value']} is {x['metric_state']}")
+    checks = {c: _check(a, c) for c in AT3_CHECKS}
+    for c in (EA.INCOMPARABLE_TIMESTAMPS, EA.TIMESTAMP_ORDER):
+        if checks[c]["outcome"] == EA.VERIFIED_FAILED:
+            degraded.append(checks[c]["detail"])
+    if order and order["features"].get("out_of_order"):
+        degraded.append(f"{order['features']['out_of_order']} of {order['features']['pairs']} rows are out of "
+                        "sequence order in time")
+    if rm and rm.get("verified") and rm.get("label") != "SUFFICIENT":
+        degraded.append(f"Runtime Monitoring reads the telemetry {rm['label']}")
+    basis = {"collector_coverage": cov["value"], "missing_collectors": cov["features"].get("missing"),
+             "unknown_share": unk["value"], "unknown_share_state": unk["metric_state"],
+             "source_agreement": agr["value"] if agr else None, "turn_linkage": turn["value"] if turn else None,
+             "lane_linkage": lane["value"] if lane else None, "ordering_consistency": order["value"] if order else None,
+             "checks": {c: {"outcome": x["outcome"], "detail": x["detail"]} for c, x in checks.items()},
+             "unreliable": unreliable, "degraded": degraded,
+             "upstream": {"runtime_monitoring": _upstream_view(rm, "RM-3")},
+             "unassessed": _unassessed(a, "audit_timestamp_integrity", "audit_event_ordering_consistency")
+             + [{"check": c, "state": x["outcome"], "reason": x["detail"]} for c, x in checks.items()
+                if x["outcome"] not in (EA.VERIFIED_OK, EA.VERIFIED_FAILED)]}
+    return ("UNRELIABLE" if unreliable else "DEGRADED" if degraded else "RELIABLE"), basis
+
+
+def _at4(a, linkage):
+    mel = _present(a, "audit_metric_evidence_linkage")
+    decisions = list((linkage or {}).get("decisions") or [])
+    unresolvable = [d for d in decisions if d["refs"] and d["resolvable"] < d["refs"]]
+    gaps = []
+    if mel and mel["value"] < 1:
+        bad = mel["features"].get("unresolved") or []
+        gaps.append(f"{len(bad)} of {mel['features'].get('refs')} metric evidence refs do not resolve to a row in "
+                    "the record")
+    basis = {"decisions": decisions, "unresolvable": [{"cop": d["cop"], "refs": d["refs"], "resolvable": d["resolvable"],
+                                                      "unresolvable": d["unresolvable"]} for d in unresolvable],
+             "metric_evidence_linkage": mel["value"] if mel else None,
+             "unresolved_metric_refs": (mel["features"].get("unresolved") or []) if mel else [], "gaps": gaps,
+             "not_traced": [f"{m}: not built" for m in AT_NOT_BUILT],
+             "unassessed": _unassessed(a, "audit_metric_evidence_linkage", *AT_NOT_BUILT)}
+    if "missing_dependency" in (linkage or {}) or linkage is None:
+        basis["limitation"] = "the decision linkage could not be checked"
+    elif not decisions:
+        basis["limitation"] = "no upstream decision was available to trace"
+    return ("NOT_TRACEABLE" if unresolvable else "PARTIALLY_TRACEABLE" if gaps else "TRACEABLE"), basis
+
+
+def at_gap_codes(answers):
+    """Stable codes for the gaps a session's answers show: what a trace_gap record remembers."""
+    return sorted(f"{q}:{v['outcome']}" for q, v in answers.items() if v["outcome"] not in AT_CLEAN)
+
+
+def _trace_memory(memory):
+    def gaps(bucket):
+        return {g: rec["record_id"] for rec in (memory or {}).get(bucket, [])
+                for g in (rec.get("payload") or {}).get("gaps", [])}
+    return gaps("established"), gaps("verified_pending")
+
+
+def _at5(a, earlier, upstream=None, memory=None):
+    from .rules import SUBSTANTIVE
+    upstream = upstream or {}
+    own_broken, own_impaired, from_questions = [], [], []
+    for qid, ans in earlier.items():
+        if ans["outcome"] == INCONCLUSIVE:
+            from_questions.append(f"{qid} could not be answered ({ans['sufficiency']})")
+        elif ans["outcome"] not in AT_CLEAN:
+            from_questions.append(f"{qid}: {ans['outcome']}")
+    blocked = sorted(k for k, f in upstream.items() if f.get("verified") and f.get("status") == SUBSTANTIVE
+                     and f.get("decision_status") == "BLOCKED_BY_EVIDENCE")
+    if blocked:
+        own_broken.append(f"{', '.join(blocked)} could not judge an action that is in the record")
+    act = _check(a, EA.CONFLICTING_ACTION_SOURCES)
+    if act["outcome"] == EA.VERIFIED_FAILED:
+        own_impaired.append(f"conflicting action records: {act['detail']}")
+    me, ur, pv, cr = (_present(a, m) for m in ("audit_missing_event_rate", "audit_unverifiable_record_rate",
+                                               "audit_source_provenance_completeness", "audit_conflicting_record_rate"))
+    if me and me["value"]:
+        own_impaired.append(f"{me['features']['without_result']} of {me['features']['requests']} calls have no result")
+    if ur and ur["value"]:
+        own_impaired.append(f"{ur['value']:.1%} of rows are inferred and name no source rows")
+    if pv and pv["features"]["with_collector"] < pv["features"]["rows"]:
+        own_impaired.append(f"{pv['features']['rows'] - pv['features']['with_collector']} of {pv['features']['rows']} "
+                            "rows name no collector")
+    idf = upstream.get("interaction_discovery")
+    id5 = _answers(idf).get("ID-5") if idf and idf.get("verified") else None
+    if id5 == "RECONSTRUCTION_IMPAIRED":
+        own_impaired.append("Interaction Discovery ID-5: RECONSTRUCTION_IMPAIRED")
+    prov = [c for c in a["reliability"]["checks"] if c["check"] == EA.UNVERIFIABLE_PROVENANCE]
+    established, pending = _trace_memory(memory)
+    codes = at_gap_codes(earlier)
+    recurring = sorted(g for g in codes if g in established)
+    basis = {"own_broken": own_broken, "own_impaired": own_impaired, "from_questions": from_questions,
+             "blocked_upstream": blocked, "conflicting_records": cr["value"] if cr else None,
+             "missing_event_rate": me["value"] if me else None, "unverifiable_record_rate": ur["value"] if ur else None,
+             "provenance": [{"outcome": c["outcome"], "detail": c["detail"]} for c in prov],
+             "gap_codes": codes, "recurring": recurring, "memory_records": sorted({established[g] for g in recurring}),
+             "pending_in_memory": sorted(g for g in codes if g in pending and g not in established),
+             "memory_supplied": memory is not None,
+             "unassessed": _unassessed(a, "audit_missing_event_rate", "audit_conflicting_record_rate",
+                                       "audit_unverifiable_record_rate", "audit_source_provenance_completeness",
+                                       "audit_raw_reference_resolution_rate", "audit_evidence_integrity",
+                                       "audit_evidence_retention_coverage")}
+    broken_q = [x for x in from_questions if x.split(": ")[-1] in AT_BROKEN + ("ACTOR_NOT_ESTABLISHED",)]
+    if own_broken or broken_q:
+        return "NOT_DEFENSIBLE", basis
+    return ("IMPAIRED" if own_impaired or from_questions else "DEFENSIBLE"), basis
+
+
+def observe_audit_traceability(assessments, trace=None, linkage=None, memory=None, upstream=None):
+    """{question_id: assessment} -> {question_id: answer}. trace: tools.t_reconstruct_trace; linkage:
+    tools.t_check_decision_linkage; memory: the trace_gap view (established, verified_pending); upstream:
+    {cop: published finding}."""
+    from .rules import verified
+    pkg = EA.load_package(AT)
+    states = tuple(pkg["unreliable_states"])
+    trace = trace or {}
+    rm, idf = verified(upstream, "runtime_monitoring"), verified(upstream, "interaction_discovery")
+    out = {}
+    for qid, q in pkg["questions"].items():
+        a = assessments[qid]
+        suf = a["sufficiency"]["status"]
+        if suf != "SUFFICIENT" and not (qid == "AT-1" and _actor_without_effects(a, trace)):
+            out[qid] = {"outcome": INCONCLUSIVE, "sufficiency": suf, "basis": {},
+                        "because": a["sufficiency"]["reasons"]}
+            continue
+        outcome, basis = {"AT-1": lambda: _at1(a, trace), "AT-2": lambda: _at2(a, trace, rm, idf),
+                          "AT-3": lambda: _at3(a, states, rm), "AT-4": lambda: _at4(a, linkage),
+                          "AT-5": lambda: _at5(a, {k: out[k] for k in q.get("depends_on", [])}, upstream,
+                                               memory)}[qid]()
+        if outcome not in q["outcomes"]:
+            raise ValueError(f"{qid}: outcome {outcome} is not in METRICS.yaml")
+        out[qid] = {"outcome": outcome, "sufficiency": suf, "basis": basis,
+                    "findings": a["findings"], "not_assessed": a["sufficiency"]["not_assessed"]}
+    return out
+
+
+def assess_audit_traceability(rows, session_id, cfg=None, computed_at=None, trace=None, linkage=None,
+                              memory=None, upstream=None, raw_events=None, native=None):
+    """The five questions for one session: each assessment with its answer."""
+    cfg = cfg or EA.signal_metrics.load_config()
+    events, srows = EA.session_inputs(rows, session_id, cfg, computed_at)
+    assessments = {qid: EA.assess(AT, qid, events, srows, cfg, computed_at, raw_events, native)
+                   for qid in EA.QUESTIONS[AT]}
+    answers = observe_audit_traceability(assessments, trace, linkage, memory, upstream)
+    return {qid: {"assessment": assessments[qid], "answer": answers[qid]} for qid in assessments}
+
+
+def _explain_at(qid, ans):
+    b = ans["basis"]
+    if ans["outcome"] == INCONCLUSIVE:
+        return _explain(qid, ans)
+    if qid == "AT-1":
+        actor = b["actor"] or {}
+        if ans["outcome"] == "ACTOR_NOT_ESTABLISHED":
+            n = len(b["effects_without_actor"]) + b["actions_without_actor"]
+            return f"{n} actions or effects carry no session or operator, so the responsible actor cannot be established"
+        s = f"actor {actor.get('operator')} (session {actor.get('session_id')})"
+        if ans["outcome"] == "CAUSE_NOT_ATTRIBUTED":
+            return (f"{b['effects_without_step']} of {b['disk_changes']} disk changes are attributed to no step; "
+                    f"the {s} is known, the causal link is not")
+        return s + " is recorded and every disk change is attributed to a step" + \
+            (f"; {b['note']}" if b.get("note") else "")
+    if qid == "AT-2":
+        if b["broken"] or b["gaps"]:
+            return "; ".join(b["broken"] + b["gaps"])
+        return f"{b['steps']} steps, each in a turn and a linked lane"
+    if qid == "AT-3":
+        found = b["unreliable"] + b["degraded"]
+        return "; ".join(found) if found else "sources agree, every expected collector reported, links hold"
+    if qid == "AT-4":
+        if b["unresolvable"]:
+            return "; ".join(f"{d['cop']} cites {d['refs'] - d['resolvable']} of {d['refs']} evidence refs that do "
+                             "not resolve to a row in this case" for d in b["unresolvable"])
+        if b["gaps"]:
+            return "; ".join(b["gaps"])
+        return b.get("limitation") or f"every evidence ref of {len(b['decisions'])} upstream decision(s) resolves"
+    causes = b["own_broken"] + b["own_impaired"] + b["from_questions"]
+    s = "; ".join(causes) if causes else "no missing, conflicting or unverifiable record stands in the way"
+    return s + (f"; recurring, per validated memory: {', '.join(b['recurring'])}" if b["recurring"] else "")
+
+
+# What each label proposes, carried over from cops/interpret.py:_audit_traceability and the former rules._audit_meaning:
+# base confidence before the evidence scale, action, why, and who is told.
+AT_LABELS = {
+    "UNATTRIBUTABLE": (0.85, "ALERT", "the responsible actor cannot be established", ("governance_architecture",)),
+    "BROKEN_TRACE": (0.8, "ALERT", "an essential causal or provenance link is broken", ("governance_architecture",)),
+    "PARTIAL": (0.75, "WATCH", "incomplete audit information; the essential chain is still reconstructable", ()),
+    "COMPLETE": (0.85, "NONE", "", ()),
+    INCONCLUSIVE: (0.0, "WATCH", "who acted or what happened could not be judged, so completeness is not concluded",
+                   ()),
+}
+# Questions without which who acted and what happened are unknown.
+AT_CORE = ("AT-1", "AT-2")
+
+
+def decide_audit_traceability(questions, evidence_scale=1.0):
+    """The COP decision from the five answers (INTERPRETATION.md). Labels keep their 2026-11-04 meanings:
+    UNATTRIBUTABLE when the actor cannot be established, BROKEN_TRACE when an essential link is broken,
+    PARTIAL when information is incomplete but the chain reconstructs. Severity never chooses the label."""
+    from ..interpret import SEV, RANK
+    ans = {q: v["answer"] for q, v in questions.items()}
+    out = lambda q: ans[q]["outcome"]                                       # noqa: E731
+    five = ans["AT-5"]["basis"] if out("AT-5") != INCONCLUSIVE else {}
+    unattr = out("AT-1") == "ACTOR_NOT_ESTABLISHED"
+    broken = [q for q in ("AT-1", "AT-2", "AT-3", "AT-4") if out(q) in AT_BROKEN] + \
+        (["AT-5"] if five.get("own_broken") else [])
+    undecided = [q for q in AT_CORE if out(q) == INCONCLUSIVE]
+    partial = [q for q in ("AT-2", "AT-3", "AT-4") if out(q) in AT_GAP or out(q) == INCONCLUSIVE and q not in AT_CORE] \
+        + (["AT-5"] if five.get("own_impaired") or out("AT-5") == INCONCLUSIVE else [])
+    held = [l for l, on in (("UNATTRIBUTABLE", unattr), ("BROKEN_TRACE", bool(broken)),
+                            (INCONCLUSIVE, bool(undecided)), ("PARTIAL", bool(partial))) if on]
+    label = held[0] if held else "COMPLETE"
+    drivers = {"UNATTRIBUTABLE": ["AT-1"], "BROKEN_TRACE": broken, INCONCLUSIVE: undecided, "PARTIAL": partial,
+               "COMPLETE": list(ans)}[label]
+    base, action, reason, recipients = AT_LABELS[label]
+    if label == "BROKEN_TRACE":
+        reason += ": " + "; ".join(_explain_at(q, ans[q]) for q in broken)
+    if label in ("UNATTRIBUTABLE", "BROKEN_TRACE", "PARTIAL"):
+        states = [x["metric_state"] for q in questions.values() for x in q["assessment"]["presence"]["items"]
+                  if x["requirement"] in AT_SEVERITY and x["state"] == EA.PRESENT]
+        floor = ["MEDIUM"] if label == "BROKEN_TRACE" and "AT-4" in broken else []
+        sev = max([SEV.get(s, "NONE") for s in states] + floor + ["NONE"], key=RANK.get)
+    else:
+        sev = "NONE"
+    trace = _question_trace(questions, _explain_at, drivers)
+    contrary = [f"{q}: {x['check']} {x['detail']}" for q, v in questions.items() for x in v["answer"].get("findings", [])]
+    contrary += [f"AT-2: {c}" for c in ans["AT-2"]["basis"].get("contrary", [])] if out("AT-2") != INCONCLUSIVE else []
+    contrary += [f"{l} also holds" for l in held[1:]]
+    return {"label": label, "confidence": round(base * min(1.0, evidence_scale), 3), "severity": sev,
+            "action": action, "action_reason": reason, "recipients": list(recipients),
+            "drivers": drivers, "also_held": held[1:], "contrary": contrary, "questions": trace,
+            "gap_codes": at_gap_codes(ans)}

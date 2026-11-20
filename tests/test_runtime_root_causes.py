@@ -211,7 +211,19 @@ def test_classification_without_a_taxonomy_stops_before_any_model_call():
     assert {"MISSING_EVIDENCE", "PRECHECK_STOPPED"} <= set(f["reason_codes"])
 
 
-@pytest.mark.parametrize("cid", ["behavior_analytics:missing", "audit_traceability:missing"])
+def test_audit_on_thin_telemetry_is_inconclusive_from_its_own_attribution_question():
+    from cops.runtime.llm import UnavailableProvider
+    c = _case("audit_traceability:missing")
+    o, rt, err, _ = TB.run_investigation(c, UnavailableProvider())
+    f = o["results"][c["cop"]]["finding"]
+    ds = next(r for r in o["results"][c["cop"]]["verifier_results"] if r["check_id"] == "DS-01")
+    assert f["label"] == "INCONCLUSIVE" and f["status"] == "INCONCLUSIVE" and "gated_label" not in f
+    assert f["reason_codes"] == ["MISSING_EVIDENCE"] and f["cop_specific"]["drivers"] == ["AT-1"]
+    assert f["cop_specific"]["questions"]["AT-1"]["answer"] == "INCONCLUSIVE"
+    assert ds["result"] != "FAIL"
+
+
+@pytest.mark.parametrize("cid", ["behavior_analytics:missing"])
 def test_deterministic_quiet_label_on_insufficient_telemetry_is_withheld_by_the_cop_not_the_verifier(cid):
     """Before the fixes DS-01 had to reject these; now the COP holds back itself, and
     DS-01 still runs and agrees."""
@@ -297,15 +309,10 @@ def test_audit_severity_does_not_choose_the_label():
     unattr = _at_run(lambda sid: _at_session(sid, operator=None, unaccounted=3))
     assert broken["label"] != unattr["label"] and broken["severity"] == unattr["severity"]
     # and a severe metric with the actor and every link on record is not UNATTRIBUTABLE
-    from cops.runtime.rules import _audit_meaning
-    import types
-    ctx = {"events": [types.SimpleNamespace(metric_id="telemetry.turn_linkage", state="CRITICAL")],
-           "upstream": {}, "tools": {}}
-    tr = {"steps": 5, "steps_without_turn": 0, "lanes_without_parent": [], "unattributed_effects": [],
-          "effects_without_actor": [], "actions_without_actor": 0, "disk_changes": 1,
-          "actor": {"operator": S.OPS, "session_id": "x"}}
-    out, _ = _audit_meaning(ctx, {"interpretation": "UNATTRIBUTABLE", "severity": "HIGH"}, tr)
-    assert out["interpretation"] == "PARTIAL" and out["severity"] == "HIGH"
+    f = _at_run(lambda sid: _at_session(sid, turnless=4))
+    q = f["cop_specific"]["questions"]
+    assert q["AT-1"]["answer"] == "ATTRIBUTED" and q["AT-3"]["answer"] == "DEGRADED"
+    assert q["AT-3"]["basis"]["turn_linkage"] == 0.5 and f["label"] == "PARTIAL" and f["severity"] == "MEDIUM"
 
 
 def test_event_metadata_distinguishes_examined_and_empty_from_unavailable():

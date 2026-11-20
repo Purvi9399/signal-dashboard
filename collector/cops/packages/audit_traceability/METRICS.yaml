@@ -1,0 +1,145 @@
+# Audit & Traceability: machine-readable question contract.
+# Loaded by collector/cops/runtime/cop_package.py and validated by
+# tests/test_cop_package_audit_traceability.py. The Markdown files beside it
+# explain this file; where they differ, this file is what the runtime uses.
+
+cop: audit_traceability
+contract: cop_metrics/1
+version: 2026-11-20.1
+
+sources:
+  questions: >-
+    AT-1 to AT-5: COPS- implementation 1.xlsx, sheet COMPLETE_DELEGATION_DATA, row 101. The workbook lists
+    no fields for AT-3 and AT-4; their field lists are empty.
+  metric_mapping: >-
+    COPS_METRIC_MAPPING.md (collector/metric_registry.json, consumers = audit_traceability). The registry
+    assigns metrics to the COP, not to questions; each metric's question below is assigned from its
+    registry definition.
+
+mapping:
+  insights.unattributed: {used_by: [AT-1]}
+  audit_actor_attribution_rate: {used_by: [AT-1]}
+  audit_action_attribution_rate: {used_by: [AT-1]}
+  interaction.mcp_servers: {used_by: [AT-1]}
+  audit_trace_completeness: {used_by: [AT-2]}
+  audit_execution_reconstruction_rate: {used_by: [AT-2]}
+  interaction.subagent_lanes: {used_by: [AT-2]}
+  telemetry.turn_linkage: {used_by: [AT-2, AT-3]}
+  telemetry.lane_linkage: {used_by: [AT-2, AT-3]}
+  path.transition_novelty: {used_by: [AT-2]}
+  audit_reconstruction_confidence: {used_by: [AT-2], note: not built; reported NOT_CALCULATED}
+  telemetry.collector_coverage: {used_by: [AT-3]}
+  telemetry.unknown_share: {used_by: [AT-3]}
+  telemetry.source_agreement: {used_by: [AT-3]}
+  audit_timestamp_integrity: {used_by: [AT-3]}
+  audit_event_ordering_consistency: {used_by: [AT-3]}
+  audit_metric_evidence_linkage: {used_by: [AT-4]}
+  audit_decision_evidence_linkage: {used_by: [AT-4], note: not built; reported NOT_CALCULATED}
+  audit_intervention_traceability: {used_by: [AT-4], note: not built; reported NOT_CALCULATED}
+  audit_policy_version_traceability: {used_by: [AT-4], note: not built; reported NOT_CALCULATED}
+  audit_verifier_coverage: {used_by: [AT-4], note: not built; reported NOT_CALCULATED}
+  audit_evidence_sufficiency: {used_by: [AT-4], note: not built; reported NOT_CALCULATED}
+  audit_missing_event_rate: {used_by: [AT-5]}
+  audit_conflicting_record_rate: {used_by: [AT-5]}
+  audit_unverifiable_record_rate: {used_by: [AT-5]}
+  audit_source_provenance_completeness: {used_by: [AT-5]}
+  audit_raw_reference_resolution_rate: {used_by: [AT-5], note: not built; needs the source events as an input}
+  audit_evidence_integrity: {used_by: [AT-5], note: not built; the registry asks what integrity means}
+  audit_evidence_retention_coverage: {used_by: [AT-5], note: not built; reported NOT_CALCULATED}
+
+questions:
+  AT-1:
+    question: Can every relevant action be attributed to the correct agent, operator, tool or system?
+    fields: [observable_id, observable_type, collector, session_id, turn_id, agent_id, agent_type, parent_agent_id,
+             is_multi_agent, multi_agent_source, operator_id, operator_username, operator_email, org_id, team_id,
+             hostname, machine_id, tool_use_id, tool_name, tool_category, mcp_server, mcp_tool, raw_ref]
+    requires:
+      - {metric: insights.unattributed, kind: REQUIRED}
+      - {metric: audit_actor_attribution_rate, kind: REQUIRED}
+      - {metric: audit_action_attribution_rate, kind: OPTIONAL}
+      - {metric: interaction.mcp_servers, kind: OPTIONAL}
+    verified: []
+    blocking: []
+    outcomes: [ATTRIBUTED, CAUSE_NOT_ATTRIBUTED, ACTOR_NOT_ESTABLISHED]
+
+  AT-2:
+    question: Can the complete execution sequence be reconstructed from available traces and observables?
+    fields: [observable_id, observable_type, collector, session_id, turn_id, turn_count, agent_id, parent_agent_id,
+             delegation_depth, tool_use_id, tool_name, tool_arguments, tool_result, tool_duration_ms, command,
+             file_path, file_change_kind, plan_item, plan_status, response_index, response_is_final, success,
+             status, error_type, stop_reason, raw_ref]
+    requires:
+      - {metric: audit_trace_completeness, kind: REQUIRED}
+      - {metric: audit_execution_reconstruction_rate, kind: REQUIRED}
+      - {metric: interaction.subagent_lanes, kind: REQUIRED}
+      - {metric: telemetry.turn_linkage, kind: REQUIRED_WHEN_APPLICABLE}
+      - {metric: telemetry.lane_linkage, kind: REQUIRED_WHEN_APPLICABLE}
+      - {metric: path.transition_novelty, kind: OPTIONAL}
+      - {metric: audit_reconstruction_confidence, kind: OPTIONAL}
+    verified: []
+    blocking: []
+    outcomes: [FULLY_RECONSTRUCTED, RECONSTRUCTED_WITH_GAPS, SEQUENCE_BROKEN]
+
+  AT-3:
+    question: Are telemetry sources, timestamps, turn links and execution-lane relationships sufficiently reliable?
+    fields: []
+    requires:
+      - {metric: telemetry.collector_coverage, kind: REQUIRED}
+      - {metric: telemetry.unknown_share, kind: REQUIRED}
+      - {metric: telemetry.source_agreement, kind: REQUIRED_WHEN_APPLICABLE}
+      - {metric: telemetry.turn_linkage, kind: REQUIRED_WHEN_APPLICABLE}
+      - {metric: telemetry.lane_linkage, kind: REQUIRED_WHEN_APPLICABLE}
+      - {metric: audit_timestamp_integrity, kind: OPTIONAL}
+      - {metric: audit_event_ordering_consistency, kind: OPTIONAL}
+    verified: []
+    blocking: []
+    outcomes: [RELIABLE, DEGRADED, UNRELIABLE]
+
+  AT-4:
+    question: Can each governance finding, decision and intervention be traced back to its supporting evidence?
+    fields: []
+    requires:
+      - {metric: audit_metric_evidence_linkage, kind: REQUIRED_WHEN_APPLICABLE}
+      - {metric: audit_decision_evidence_linkage, kind: OPTIONAL}
+      - {metric: audit_intervention_traceability, kind: OPTIONAL}
+      - {metric: audit_policy_version_traceability, kind: OPTIONAL}
+      - {metric: audit_verifier_coverage, kind: OPTIONAL}
+      - {metric: audit_evidence_sufficiency, kind: OPTIONAL}
+    verified: []
+    blocking: []
+    outcomes: [TRACEABLE, PARTIALLY_TRACEABLE, NOT_TRACEABLE]
+
+  AT-5:
+    question: Are missing, conflicting or unverifiable records preventing a defensible audit of the event?
+    fields: [observable_id, observable_type, collector, raw_ref, session_id, turn_id, agent_id, parent_agent_id,
+             is_multi_agent, multi_agent_source, tool_use_id, tool_name, tool_arguments, tool_result, success,
+             status, error_type, error_message, content_hash, file_path]
+    requires:
+      - {metric: audit_missing_event_rate, kind: OPTIONAL}
+      - {metric: audit_conflicting_record_rate, kind: OPTIONAL}
+      - {metric: audit_unverifiable_record_rate, kind: OPTIONAL}
+      - {metric: audit_source_provenance_completeness, kind: OPTIONAL}
+      - {metric: audit_raw_reference_resolution_rate, kind: OPTIONAL}
+      - {metric: audit_evidence_integrity, kind: OPTIONAL}
+      - {metric: audit_evidence_retention_coverage, kind: OPTIONAL}
+    verified: []
+    blocking: []
+    depends_on: [AT-1, AT-2, AT-3, AT-4]
+    outcomes: [DEFENSIBLE, IMPAIRED, NOT_DEFENSIBLE]
+
+# Metric states that make a source disagreement break the trace (AT-3 UNRELIABLE). They are the states
+# the former rules._audit_meaning used for "sources disagree about what happened"; the thresholds are
+# metrics_config.json's.
+unreliable_states: [EXCEPTION, CRITICAL]
+
+operations:
+  compute_metrics: {by: deterministic, code: collector/signal_metrics.py:compute}
+  assess_evidence: {by: deterministic, code: collector/cops/runtime/evidence_assessment.py:assess}
+  reconstruct_trace: {by: deterministic, code: collector/cops/runtime/tools.py:t_reconstruct_trace}
+  decision_linkage: {by: deterministic, code: collector/cops/runtime/tools.py:t_check_decision_linkage}
+  observe_questions: {by: deterministic, code: collector/cops/runtime/cop_package.py:observe_audit_traceability}
+  cop_label: {by: deterministic, code: collector/cops/runtime/cop_package.py:decide_audit_traceability}
+  verify_finding: {by: deterministic, code: collector/cops/runtime/verifiers.py}
+  select_action: {by: deterministic, code: collector/cops/runtime/triage.py}
+  memory_write: {by: deterministic, code: collector/cops/runtime/graph.py:validate_memory_update}
+  decision_record: {by: deterministic, code: collector/cops/runtime/decision.py:build}

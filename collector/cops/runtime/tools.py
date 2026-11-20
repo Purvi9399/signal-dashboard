@@ -1122,6 +1122,22 @@ def t_check_decision_linkage(case, a, ctx):
     return {"decisions": out}
 
 
+
+def t_assess_audit_questions(case, a, ctx):
+    """The five Audit & Traceability questions for the case session (cop_package), read against the trace,
+    the upstream decisions' evidence links, validated trace_gap memory and the upstream findings."""
+    if not case.session:
+        return missing("session", "audit question assessment", "the case session")
+    mem = _memory_lookup(ctx, "trace_gap") if ctx.get("memory") else None
+    memory = None if mem is None or "missing_dependency" in mem else \
+        {k: mem[k] for k in ("established", "verified_pending")}
+    q = cop_package.assess_audit_traceability(
+        case.rows, case.session_id, case.cfg, case.computed_at, t_reconstruct_trace(case, a, ctx),
+        t_check_decision_linkage(case, a, ctx), memory, ctx.get("upstream"), case.artifact("source_events"),
+        case.artifact("native_transcripts"))
+    return {"questions": q, "memory_supplied": memory is not None,
+            "upstream_supplied": sorted((ctx.get("upstream") or {})), "evaluated_at": case.computed_at}
+
 # ---------------------------------------------------------------- registry
 
 def _arr(name, max_len):
@@ -1190,6 +1206,7 @@ TOOLS = {
     "build_interaction_graph": (t_build_interaction_graph, {}),
     "compare_known_routes": (t_compare_known_routes, {}),
     "assess_interaction_questions": (t_assess_interaction_questions, {}),
+    "assess_audit_questions": (t_assess_audit_questions, {}),
     "get_agent_registry": (t_get_agent_registry, {}),
     "detect_configuration_changes": (t_detect_configuration_changes, {}),
     "compute_consumption": (t_compute_consumption, {}),
