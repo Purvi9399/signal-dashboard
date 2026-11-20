@@ -162,3 +162,64 @@ def test_every_finding_carries_a_valid_decision_record_with_five_question_findin
             continue
         d = res["cop"]["result"]["decision"]
         assert [x["id"] for x in d["question_findings"]] == [f"AD-{i}" for i in range(1, 6)], name
+
+
+# ---------------------------------------------------------------- U-AD2, U-AD3: scoped to Anomaly Detection
+
+def test_the_legitimacy_recheck_and_warning_qualification_belong_to_anomaly_detection_only():
+    from cops.runtime import support as SUP
+    assert set(P.LEGITIMACY) == {COP}
+    for cop in BY_KEY:
+        flagged = [c["name"] for c in SUP.profile(cop) if c.get("explainable") or c.get("warning_is_partial")
+                   or c["kind"] == "legitimacy"]
+        assert flagged == ([] if cop != COP else ["deviation_metrics", "legitimacy_context"]), cop
+
+
+def test_a_warning_still_opposes_another_cops_quiet_label():
+    from cops.runtime import support as SUP
+    comp = SUP.C("m", "metrics", "direct", "all", "telemetry", metrics=("insights.token_outlier",))
+    ctx = {"rows": [{"metric": "insights.token_outlier", "evidence": "OBSERVED", "state": "WARNING", "value": 4.0}],
+           "telemetry_reliability": 1.0}
+    assert SUP._metrics(ctx, comp, "quiet", "X")["direction"] == "opposes"
+    flagged = dict(comp, warning_is_partial=True)
+    assert SUP._metrics(ctx, flagged, "quiet", "NORMAL")["direction"] == "supports"
+
+
+def test_ds03_is_unchanged_for_other_cops(bench):
+    from cops.runtime import live_eval as L
+    r = L.run_one(next(c for c in L.CASES if c["id"] == "knowledge_policy_management:abnormal"), L.offline_provider(), None)
+    assert r["status"] == "REJECTED_BY_VERIFIER" and "DS-03" in r["verifier_fail"]
+
+
+def test_one_explained_deviation_does_not_conceal_another(bench):
+    res = bench["results"]["explained_tokens_unexplained_retries"]
+    ctx = {x["metric"]: x["explained"] for x in res["cop"]["finding"]["cop_specific"]["questions"]["AD-5"]["basis"]["context"]}
+    assert ctx["insights.token_outlier"] is True and ctx["insights.retry"] is False
+    assert res["cop"]["finding"]["label"] == "INCONCLUSIVE"
+
+
+@pytest.mark.parametrize("name,label", [("unsupported_legitimacy_claim", "INCONCLUSIVE"),
+                                        ("false_normal_against_task_class_peers", "INCONCLUSIVE"),
+                                        ("fabricated_context_citation", "INCONCLUSIVE"),
+                                        ("unvalidated_legitimate_precedent", "INCONCLUSIVE"),
+                                        ("false_anomaly_over_explained_deviation", "INCONCLUSIVE"),
+                                        ("legitimate_variation_task_class", "NORMAL"),
+                                        ("validated_legitimate_precedent", "NORMAL"),
+                                        ("genuine_anomaly_despite_task_class", "ANOMALOUS")])
+def test_false_normal_and_false_anomalous_readings(bench, name, label):
+    assert bench["results"][name]["cop"]["finding"]["label"] == label
+
+
+def test_a_verified_legitimate_variation_is_remembered_for_review():
+    rows = H._class_world()
+    rt = E.make_runtime("t-ad-remember", "s1", rows, {"task_classes": H._classes(rows)},
+                        FX.Script({COP: H.SCRIPTS["legitimate_variation_task_class"]()}))
+    r = G.run_case(rt, cops=["runtime_monitoring", COP])["results"][COP]
+    assert r["finding"]["label"] == "NORMAL" and r["memory_write"]["written"] is True
+
+
+def test_self_inclusion_is_pinned_not_endorsed(bench):
+    """U-AD7: today's behaviour where the leave-one-out comparison differs (LOO_COMPARISON.json)."""
+    a = answers(bench["results"]["baseline_contamination_half_estate"]["cop"]["finding"])
+    b = answers(bench["results"]["baseline_minimum_counts_self"]["cop"]["finding"])
+    assert a["AD-2"] == "COMPARABLE" and b["AD-2"] == "SIGNIFICANTLY_DIFFERENT"
