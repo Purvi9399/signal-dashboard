@@ -147,6 +147,42 @@ The analysis behind these decisions, as presented for the review:
   writes nothing.
 - **Recommendation.** No change.
 
+## ID-4 consistency check (2026-11-20, 09:32Z)
+
+| # | Decision | Alternatives considered | Rationale |
+|---|---|---|---|
+| D17 | ID-4 judges only the propagation measures (`propagation_measures` in METRICS.yaml: `interaction.subagent_lanes` and `interaction.mcp_servers`) against their approved thresholds. `insights.outside` moves to `boundary_observations`, with its value, state, evidence refs and owner (Policy Enforcement). It is not judged, so an edit to /etc/hosts alone no longer gives BEYOND_APPROVED_BOUNDS or PROPAGATING | keep judging `insights.outside` (the legacy rule `cops/interpret.py:_interaction_discovery` did this); make ID-4 INCONCLUSIVE whenever depth or breadth is unjudged | See below |
+
+**Rationale for D17:**
+
+- **The question.** ID-4 asks how deeply and widely activity propagates across agents, tools and services.
+- **The metric.** `insights.outside` is "Work outside the workspace" (`signal_metrics.m_outside`): file actions
+  outside the workspace. Its approved threshold in `metrics_config.json` (exception 1) is for that workspace
+  condition, which Policy Enforcement reads as a boundary crossing. It is not a limit on propagation.
+- **Ownership.** The registry does not assign `insights.outside` to Interaction Discovery. It reaches this COP only
+  through `specs.py` metric_keys (a code-only pair).
+- **The approved measures.** The two propagation measures count the agents and services that activity reached,
+  are assigned to this COP by the registry, and have approved thresholds (5/15/50 and 3/6/12).
+- **No vocabulary change.** The question, outcome names and label order are unchanged.
+- **Unjudged depth and breadth.** ID-4 keeps WITHIN_APPROVED_BOUNDS when the approved measures are within their
+  bounds. The unjudged depth and breadth stay LIMIT_NOT_APPROVED limitations, which is where purvi's U3
+  decision placed them. Making ID-4 INCONCLUSIVE instead would make every session PATH_PARTIAL, through the
+  accepted label order, and would change what the labels mean. purvi may still choose that.
+
+**Effects (all tested):**
+
+- **propagating_outside_workspace** was ID-4 BEYOND / PROPAGATING. It is now ID-4 WITHIN / CONTAINED. Its expectations
+  were changed before the corrected code was run, and the change is marked in GROUND_TRUTH.yaml.
+- **downstream_policy_outside_workspace** (new): Policy Enforcement reads `insights.outside` itself. With no policy
+  store, its candidate VIOLATION is rejected by its graded verification (VS-01) and gives INCONCLUSIVE with
+  `policy_store` missing.
+  - That is Policy Enforcement's existing behaviour.
+  - My first expectation for this scenario said VIOLATION and was wrong about that gate. The first run showed it,
+    and the expectation was corrected and marked.
+- **several_concerns** (new): a new route, sixteen subagent lanes (EXCEPTION) and inferred links all hold at once.
+  - The label is NEW_ROUTE, and `also_held` is [PROPAGATING, PATH_PARTIAL] in the accepted order.
+  - All five answers stay in the decision record, each with its explanation, basis, metrics and evidence.
+
 ## Remaining limitations
 
 - On real data, provenance stays unverified: the raw event store is not supplied, and the meaning of `raw_ref` is

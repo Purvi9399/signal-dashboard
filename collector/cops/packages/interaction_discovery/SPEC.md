@@ -80,9 +80,15 @@ routes.
 ### ID-4 How deeply and widely is activity propagating across agents, tools and services?
 
 `interaction_propagation_depth`, `interaction.subagent_lanes` (required); `interaction_propagation_breadth`
-(when applicable); `interaction.mcp_servers`, `insights.outside` (optional). BEYOND_APPROVED_BOUNDS when a judged
-measure is EXCEPTION or CRITICAL against its approved threshold; depth and breadth have no approved threshold and
-are reported, not judged. A reported `delegation_depth` that disagrees with the linked structure is recorded.
+(when applicable); `interaction.mcp_servers`, `insights.outside` (optional).
+
+- BEYOND_APPROVED_BOUNDS when a propagation measure (`propagation_measures`: `interaction.subagent_lanes`,
+  `interaction.mcp_servers`) is EXCEPTION or CRITICAL against its approved threshold.
+- Depth and breadth have no approved threshold. They are reported, not judged, and recorded as LIMIT_NOT_APPROVED
+  limitations.
+- `insights.outside` counts file work outside the workspace. That is a workspace boundary, not propagation, so it
+  is kept in `boundary_observations` with its value, state and evidence refs, and is not judged here (D17).
+  Policy Enforcement reads the same metric itself. A reported `delegation_depth` that disagrees with the linked structure is recorded.
 
 ### ID-5 Are missing agent identities, lane links or interaction records preventing reliable reconstruction?
 

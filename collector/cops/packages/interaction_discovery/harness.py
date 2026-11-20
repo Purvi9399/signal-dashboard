@@ -124,6 +124,8 @@ BUILD = {
     + session(subagents=SUBS, parent="main"),
     "downstream_audit_traceability_inferred": lambda: history(subagents=SUBS) + session(subagents=SUBS),
     "downstream_resource_attribution_inferred": lambda: E._estate(heavy_delegation("s1", parent=None)),
+    "downstream_policy_outside_workspace": lambda: history() + session(outside=True),
+    "several_concerns": lambda: history() + session(subagents=tuple(f"sub-{i}" for i in range(16)), mcp="github"),
     "downstream_lifecycle": lambda: history() + session(mcp="github"),
     "downstream_lifecycle_no_route": lambda: history() + session(),
 }
@@ -133,6 +135,7 @@ DOWNSTREAM = {"downstream_policy": "policy_enforcement", "downstream_resource_at
               "downstream_audit_traceability_clean": "audit_traceability",
               "downstream_audit_traceability_inferred": "audit_traceability",
               "downstream_resource_attribution_inferred": "resource_management",
+              "downstream_policy_outside_workspace": "policy_enforcement",
               "downstream_lifecycle": "agent_lifecycle_management",
               "downstream_lifecycle_no_route": "agent_lifecycle_management"}
 
@@ -240,8 +243,33 @@ CHECKS = {
     "memory_written_with_routes": lambda r: (
         (_r(r)["memory_write"] or {}).get("written") is True
         and "mcp:github" in _f(r)["cop_specific"]["memory_payload"]["routes"], _r(r)["memory_write"]),
-    "id4_names_outside": lambda r: ([x["metric"] for x in _q(r, "ID-4")["basis"]["beyond"]] == ["insights.outside"],
-                                    _q(r, "ID-4")["basis"]["beyond"]),
+    "id4_outside_observed_not_judged": lambda r: (
+        _q(r, "ID-4")["basis"]["beyond"] == []
+        and [(x["metric"], x["state"], x["owner"], x["judged_here"]) for x in _q(r, "ID-4")["basis"]["boundary_observations"]]
+        == [("insights.outside", "EXCEPTION", "policy_enforcement", False)]
+        and _q(r, "ID-4")["basis"]["boundary_observations"][0]["evidence_refs"],
+        _q(r, "ID-4")["basis"]["boundary_observations"]),
+    "policy_reads_outside": lambda r: (
+        "insights.outside is EXCEPTION" in json.dumps(_down(r, "policy_enforcement")["claims"], default=str)
+        and _down(r, "policy_enforcement")["rationale"].startswith("candidate VIOLATION rejected by VS-01")
+        and _down(r, "policy_enforcement")["label"] == "INCONCLUSIVE"
+        and "policy_store" in [m["dependency"] for m in _down(r, "policy_enforcement")["missing_dependencies"]]
+        and _q(r, "ID-4")["basis"]["boundary_observations"][0]["metric"] == "insights.outside",
+        (_down(r, "policy_enforcement")["label"], _down(r, "policy_enforcement")["rationale"])),
+    "lower_readings_kept_in_order": lambda r: (
+        _f(r)["cop_specific"]["also_held"] == ["PROPAGATING", "PATH_PARTIAL"]
+        and _decision(r)["contrary_evidence"]["cop_reported"][-2:] == ["PROPAGATING also holds",
+                                                                      "PATH_PARTIAL also holds"],
+        _f(r)["cop_specific"]["also_held"]),
+    "every_answer_kept_with_evidence": lambda r: (
+        {x["id"]: x["answer"] for x in _decision(r)["question_findings"]}
+        == {"ID-1": "ENTITIES_IDENTIFIED", "ID-2": "PARTIALLY_RECONSTRUCTED", "ID-3": "NEW_ROUTES_APPEARED",
+            "ID-4": "BEYOND_APPROVED_BOUNDS", "ID-5": "RECONSTRUCTION_IMPAIRED"}
+        and all(x["explanation"] and x["basis"] and x["metrics"] for x in _decision(r)["question_findings"]),
+        [(x["id"], x["answer"], x["drives_conclusion"]) for x in _decision(r)["question_findings"]]),
+    "id4_names_lanes": lambda r: (
+        [(x["metric"], x["state"]) for x in _q(r, "ID-4")["basis"]["beyond"]]
+        == [("interaction.subagent_lanes", "EXCEPTION")], _q(r, "ID-4")["basis"]["beyond"]),
     "severity_medium": lambda r: (_f(r)["severity"] == "MEDIUM", _f(r)["severity"]),
     "id5_names_orphans": lambda r: (any("no known parent" in c for c in _q(r, "ID-5")["basis"]["causes"]),
                                     _q(r, "ID-5")["basis"]["causes"]),

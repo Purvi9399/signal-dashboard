@@ -486,10 +486,10 @@ def _id3(a, memory=None, known=None, links=None):
     return ("NEW_ROUTES_APPEARED" if basis["new_route_count"] > 0 or new_servers else "NO_NEW_ROUTES"), basis
 
 
-def _id4(a, states):
+def _id4(a, states, measures, observations):
     depth = _item(a, "interaction_propagation_depth")
     breadth = _present(a, "interaction_propagation_breadth")
-    judged = [_item(a, m) for m in ("interaction.subagent_lanes", "interaction.mcp_servers", "insights.outside")]
+    judged = [_item(a, m) for m in measures]
     beyond = [x for x in judged if x["state"] == EA.PRESENT and x["metric_state"] in states]
     basis = {"depth": depth["value"], "structural_depth": depth["features"].get("structural"),
              "reported_depth": depth["features"].get("reported"),
@@ -501,7 +501,11 @@ def _id4(a, states):
                         for x in judged if x["state"] == EA.PRESENT and x not in beyond],
              "not_judged": ["interaction_propagation_depth: no approved threshold",
                             "interaction_propagation_breadth: no approved threshold"],
-             "unassessed": _unassessed(a, "interaction.mcp_servers", "insights.outside")}
+             "boundary_observations": [
+                 {"metric": m, "value": x["value"], "state": x["metric_state"], "owner": o["owner"], "why": o["why"],
+                  "evidence_refs": x.get("evidence_refs", []), "judged_here": False}
+                 for m, o in observations.items() for x in [_item(a, m)] if x["state"] == EA.PRESENT],
+             "unassessed": _unassessed(a, "interaction.mcp_servers", *observations)}
     return ("BEYOND_APPROVED_BOUNDS" if beyond else "WITHIN_APPROVED_BOUNDS"), basis
 
 
@@ -627,7 +631,9 @@ def observe_interaction_discovery(assessments, graph=None, memory=None, known=No
                         "because": a["sufficiency"]["reasons"]}
             continue
         outcome, basis = {"ID-1": lambda: _id1(a, graph, links), "ID-2": lambda: _id2(a, links),
-                          "ID-3": lambda: _id3(a, memory, known, links), "ID-4": lambda: _id4(a, states),
+                          "ID-3": lambda: _id3(a, memory, known, links),
+                          "ID-4": lambda: _id4(a, states, pkg["propagation_measures"],
+                                               pkg.get("boundary_observations") or {}),
                           "ID-5": lambda: _id5(a, {k: out[k] for k in q.get("depends_on", [])}, rm,
                                                delegation)}[qid]()
         if outcome not in q["outcomes"]:

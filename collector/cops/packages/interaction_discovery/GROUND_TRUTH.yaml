@@ -75,15 +75,21 @@ scenarios:
     world: >-
       As normal, plus one Edit of /etc/hosts flagged outside the workspace. insights.outside = 1, which is
       EXCEPTION against its approved threshold (exception 1).
+    # ID-4 consistency check, 2026-11-20 09:32Z (DECISIONS D17), written before the correction was run.
+    # Was ID-4 BEYOND_APPROVED_BOUNDS, label PROPAGATING, action PASS_TO_COP, checks
+    # [id4_names_outside, severity_medium]. insights.outside counts file work outside the workspace: a
+    # workspace boundary, not propagation across agents, tools or services. Its threshold is approved for
+    # that condition, which Policy Enforcement reads, and is no propagation limit. One agent, no subagent
+    # and no MCP server: nothing propagated.
     questions:
       ID-1: ENTITIES_IDENTIFIED
       ID-2: FULLY_RECONSTRUCTED
       ID-3: NO_NEW_ROUTES
-      ID-4: BEYOND_APPROVED_BOUNDS
+      ID-4: WITHIN_APPROVED_BOUNDS
       ID-5: RECONSTRUCTION_RELIABLE
-    cop_label: [PROPAGATING]
-    action: PASS_TO_COP
-    checks: [id4_names_outside, severity_medium]
+    cop_label: [CONTAINED]
+    action: NONE
+    checks: [id4_outside_observed_not_judged]
 
   unlinked_subagents:
     world: >-
@@ -362,3 +368,35 @@ scenarios:
       As downstream_resource_attribution, but no row names a parent. The links are inferred, ID-2 is
       partial, and Resource Management does not attribute consumption through Interaction Discovery.
     checks: [resource_unattributed_inferred]
+
+  # Added 2026-11-20 (09:32Z) for the ID-4 consistency check, before the correction was run.
+
+  downstream_policy_outside_workspace:
+    world: >-
+      The rows of propagating_outside_workspace, run with Runtime Monitoring, Interaction Discovery and
+      Policy Enforcement, with no policy store. Policy Enforcement reads insights.outside itself and reads the
+      boundary crossing as a candidate VIOLATION from detected conditions. Interaction Discovery passes the
+      observation on in ID-4's basis without judging it.
+    # As first written, this expected Policy Enforcement's final label to be VIOLATION. The first run showed that
+    # its graded verification (VS-01) rejects a VIOLATION when no policy was evaluated, which gives
+    # INCONCLUSIVE with policy_store as the missing dependency. That is Policy Enforcement's existing,
+    # approved behaviour, and not this COP's to change. The check was corrected to that behaviour and is
+    # recorded in DECISIONS D17.
+    cop_label: [CONTAINED]
+    checks: [policy_reads_outside]
+
+  several_concerns:
+    world: >-
+      Seven normal earlier sessions. s1 opens sixteen subagents with recorded handoffs and no parent_agent_id,
+      and calls the github MCP server, which no earlier session used. interaction.subagent_lanes = 16 is
+      EXCEPTION against its approved threshold (exception 15). Three concerns hold at once: a new route, more
+      subagent lanes than approved, and links inferred from timing.
+    questions:
+      ID-1: ENTITIES_IDENTIFIED
+      ID-2: PARTIALLY_RECONSTRUCTED
+      ID-3: NEW_ROUTES_APPEARED
+      ID-4: BEYOND_APPROVED_BOUNDS
+      ID-5: RECONSTRUCTION_IMPAIRED
+    cop_label: [NEW_ROUTE]
+    action: PASS_TO_COP
+    checks: [lower_readings_kept_in_order, every_answer_kept_with_evidence, id4_names_lanes]

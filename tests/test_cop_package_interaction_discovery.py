@@ -106,17 +106,38 @@ def test_depth_and_breadth_come_from_the_linked_lane_structure():
     assert (b["depth"], b["structural_depth"], b["breadth"], b["children"]) == (1, 1, 2, {"main": 2})
 
 
-def test_outside_workspace_is_judged_by_its_approved_threshold():
-    b = questions("propagating_outside_workspace")["ID-4"]["answer"]["basis"]
-    th = EA.signal_metrics.load_config()["thresholds"]["insights.outside"]
-    assert b["beyond"] == [{"metric": "insights.outside", "value": 1, "state": "EXCEPTION"}] and th["exception"] == 1
+def test_outside_workspace_is_observed_for_policy_enforcement_not_judged_as_propagation():
+    """D17: a workspace boundary crossing is not propagation across agents, tools or services."""
+    q = questions("propagating_outside_workspace")
+    b = q["ID-4"]["answer"]["basis"]
+    assert q["ID-4"]["answer"]["outcome"] == "WITHIN_APPROVED_BOUNDS" and b["beyond"] == []
+    o = b["boundary_observations"]
+    assert [(x["metric"], x["value"], x["state"], x["owner"]) for x in o] == [
+        ("insights.outside", 1, "EXCEPTION", "policy_enforcement")] and o[0]["evidence_refs"]
+    assert P.decide_interaction_discovery(q)["label"] == "CONTAINED"
 
 
-def test_unthresholded_measures_are_reported_not_judged():
+def test_only_approved_propagation_measures_are_judged():
     b = questions("known_delegation")["ID-4"]["answer"]["basis"]
-    assert {m["metric"] for m in b["beyond"] + b["within"]} == {"interaction.subagent_lanes",
-                                                                 "interaction.mcp_servers", "insights.outside"}
+    assert {m["metric"] for m in b["beyond"] + b["within"]} == set(EA.load_package(COP)["propagation_measures"]) \
+        == {"interaction.subagent_lanes", "interaction.mcp_servers"}
     assert len(b["not_judged"]) == 2
+
+
+def test_more_subagent_lanes_than_approved_is_propagation():
+    q = questions("several_concerns")
+    assert [(x["metric"], x["value"], x["state"]) for x in q["ID-4"]["answer"]["basis"]["beyond"]] == [
+        ("interaction.subagent_lanes", 16, "EXCEPTION")]
+
+
+def test_several_concerns_keep_every_answer_and_follow_the_label_order(bench):
+    r = bench["results"]["several_concerns"]
+    f, d = r["cop"]["finding"], r["cop"]["result"]["decision"]
+    assert (f["label"], f["cop_specific"]["also_held"]) == ("NEW_ROUTE", ["PROPAGATING", "PATH_PARTIAL"])
+    by = {x["id"]: x for x in d["question_findings"]}
+    assert [by[q]["answer"] for q in ("ID-3", "ID-4", "ID-2")] == [
+        "NEW_ROUTES_APPEARED", "BEYOND_APPROVED_BOUNDS", "PARTIALLY_RECONSTRUCTED"]
+    assert by["ID-3"]["drives_conclusion"] and by["ID-4"]["basis"]["beyond"] and by["ID-2"]["basis"]["gaps"]
 
 
 def test_one_fact_changes_the_answer_and_the_label():

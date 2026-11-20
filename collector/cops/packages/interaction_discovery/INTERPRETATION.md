@@ -19,14 +19,15 @@ Every step is deterministic. No model is called.
 | Order | Label | When | Action |
 |---|---|---|---|
 | 1 | NEW_ROUTE | ID-3 is NEW_ROUTES_APPEARED | PASS_TO_COP (Policy Enforcement, Audit & Traceability) |
-| 2 | PROPAGATING | ID-4 is BEYOND_APPROVED_BOUNDS | PASS_TO_COP (Policy Enforcement, Risk Mitigation) |
+| 2 | PROPAGATING | ID-4 is BEYOND_APPROVED_BOUNDS: more subagent lanes or MCP servers than approved (D17) | PASS_TO_COP (Policy Enforcement, Risk Mitigation) |
 | 3 | PATH_PARTIAL | any of ID-1, ID-2, ID-4, ID-5 is INCONCLUSIVE or partial | WATCH (Audit & Traceability) |
 | 4 | INCONCLUSIVE | ID-3 is INCONCLUSIVE | WATCH |
 | 5 | CONTAINED | none of the above | NONE |
 
 A new route or propagation beyond bounds is positive evidence and stands on a partial graph. An incomplete graph
 stops only CONTAINED (D2). Every lower reading that also holds is kept in `also_held` and in the decision's
-contrary evidence. Missing history leaves novelty undecided, not the graph partial (D4).
+contrary evidence. All five answers, with their bases and evidence, stay in the decision record whichever one
+sets the label (scenario several_concerns). Missing history leaves novelty undecided, not the graph partial (D4).
 
 The proposed action is the COP's. Triage then selects the final action under its own approved rules: for
 PATH_PARTIAL and INCONCLUSIVE with no actionable gap it selects NONE ("no automatic WATCH").

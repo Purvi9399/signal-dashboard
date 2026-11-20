@@ -5,7 +5,7 @@
 
 cop: interaction_discovery
 contract: cop_metrics/1
-version: 2026-11-20.1
+version: 2026-11-20.2
 
 sources:
   questions: >-
@@ -30,7 +30,7 @@ mapping:
   path.transition_novelty: {used_by: [ID-3]}
   interaction_propagation_depth: {used_by: [ID-4]}
   interaction_propagation_breadth: {used_by: [ID-4]}
-  insights.outside: {used_by: [ID-4], code_only: true}
+  insights.outside: {used_by: [ID-4], code_only: true, note: observed in ID-4 and not judged (D17)}
   telemetry.collector_coverage: {used_by: [ID-5]}
   telemetry.unknown_share: {used_by: [ID-5]}
   telemetry.source_agreement: {used_by: [ID-5]}
@@ -121,6 +121,13 @@ questions:
 # cops/interpret.py:_interaction_discovery already used for PROPAGATING; the thresholds
 # themselves are metrics_config.json's.
 propagation_states: [EXCEPTION, CRITICAL]
+
+# The measures ID-4 judges against their approved thresholds: how many agents and services activity
+# reached (2026-11-20, D17). insights.outside is a workspace boundary, not propagation; ID-4 reports it as
+# an observation for Policy Enforcement, which reads the same metric, and does not judge it.
+propagation_measures: [interaction.subagent_lanes, interaction.mcp_servers]
+boundary_observations:
+  insights.outside: {owner: policy_enforcement, why: file work outside the workspace, a workspace boundary}
 
 operations:
   compute_metrics: {by: deterministic, code: collector/signal_metrics.py:compute}
