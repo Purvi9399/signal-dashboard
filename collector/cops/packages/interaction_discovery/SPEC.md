@@ -84,8 +84,12 @@ routes.
 
 - BEYOND_APPROVED_BOUNDS when a propagation measure (`propagation_measures`: `interaction.subagent_lanes`,
   `interaction.mcp_servers`) is EXCEPTION or CRITICAL against its approved threshold.
-- Depth and breadth have no approved threshold. They are reported, not judged, and recorded as LIMIT_NOT_APPROVED
-  limitations.
+- WITHIN_APPROVED_BOUNDS only when both propagation measures were evaluated (PRESENT with a threshold state) and
+  neither is beyond its threshold (D18). The answer covers those two limits only: `evaluated_limits` names them.
+- A propagation measure that could not be evaluated, such as `interaction.mcp_servers` with no MCP-capable
+  collector, leaves ID-4 INCONCLUSIVE with reason NOT_EVALUATED, unless the other measure is already beyond.
+- Depth and breadth have no approved threshold. They are measured and listed in `not_evaluated` with status
+  NOT_EVALUATED, never judged, and recorded as LIMIT_NOT_APPROVED limitations with reason code NOT_EVALUATED.
 - `insights.outside` counts file work outside the workspace. That is a workspace boundary, not propagation, so it
   is kept in `boundary_observations` with its value, state and evidence refs, and is not judged here (D17).
   Policy Enforcement reads the same metric itself. A reported `delegation_depth` that disagrees with the linked structure is recorded.

@@ -183,6 +183,28 @@ The analysis behind these decisions, as presented for the review:
   - The label is NEW_ROUTE, and `also_held` is [PROPAGATING, PATH_PARTIAL] in the accepted order.
   - All five answers stay in the decision record, each with its explanation, basis, metrics and evidence.
 
+## Approval and ID-4 scope (2026-11-20, 09:40Z)
+
+purvi approved D17 and accepted Interaction Discovery's corrected implementation. Interaction Discovery is
+accepted.
+
+| # | Decision | Status |
+|---|---|---|
+| D17 | ID-4 judges only the propagation measures; `insights.outside` is a boundary observation for Policy Enforcement | APPROVED by purvi 2026-11-20 09:40Z |
+| D18 | WITHIN_APPROVED_BOUNDS is scoped to the dimensions evaluated. It holds only when `interaction.subagent_lanes` and `interaction.mcp_servers` were both evaluated and satisfied, and `evaluated_limits` names them. Depth and breadth are measured and listed in `not_evaluated` as NOT_EVALUATED (no approved threshold), with LIMIT_NOT_APPROVED limitations, reason code NOT_EVALUATED. If an approved count limit cannot be evaluated and the other is not beyond, ID-4 is INCONCLUSIVE with reason NOT_EVALUATED | As instructed by purvi 2026-11-20 09:40Z |
+
+- **Both count limits belong to the canonical contract.** Both are in this package's `mapping` and `propagation_measures`,
+  in `specs.py` metric_keys for interaction_discovery, in the registry with this COP as consumer (IMPLEMENTED_EXISTING),
+  and are built in `signal_metrics.METRIC_IDS` with approved thresholds in `metrics_config.json` (5/15/50 and
+  3/6/12). The test `test_within_bounds_covers_only_the_two_evaluated_count_limits` checks the first three.
+- **Effect.** Before D18, an unevaluated `interaction.mcp_servers` (no MCP-capable collector) still allowed
+  WITHIN_APPROVED_BOUNDS on the lane count alone. **mcp_unobservable** now has ID-4 INCONCLUSIVE. Its label was
+  already PATH_PARTIAL and is unchanged. The expectation was changed before the code was run and is marked in
+  GROUND_TRUTH.yaml.
+- **Unchanged.** The label order NEW_ROUTE > PROPAGATING > PATH_PARTIAL > INCONCLUSIVE > CONTAINED, and every
+  simultaneous question-level answer, explanation and evidence in the decision record (`several_concerns`).
+- **Regression.** ID harness 204/204, AT and RM harnesses, full suite and bench (see the completion report).
+
 ## Remaining limitations
 
 - On real data, provenance stays unverified: the raw event store is not supplied, and the meaning of `raw_ref` is

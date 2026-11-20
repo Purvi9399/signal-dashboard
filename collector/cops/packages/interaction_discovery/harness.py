@@ -267,6 +267,14 @@ CHECKS = {
             "ID-4": "BEYOND_APPROVED_BOUNDS", "ID-5": "RECONSTRUCTION_IMPAIRED"}
         and all(x["explanation"] and x["basis"] and x["metrics"] for x in _decision(r)["question_findings"]),
         [(x["id"], x["answer"], x["drives_conclusion"]) for x in _decision(r)["question_findings"]]),
+    "id4_scoped_to_evaluated_limits": lambda r: (
+        _q(r, "ID-4")["basis"]["evaluated_limits"] == ["interaction.subagent_lanes", "interaction.mcp_servers"]
+        and [(x["metric"], x["status"]) for x in _q(r, "ID-4")["basis"]["not_evaluated"]]
+        == [("interaction_propagation_depth", "NOT_EVALUATED")]
+        and "NOT_EVALUATED" in _q(r, "ID-4")["explanation"]
+        and any(x["subject"] == "interaction_propagation_depth" and x["reason_code"] == "NOT_EVALUATED"
+                for x in _decision(r)["uncertainty"]["limitations"]),
+        (_q(r, "ID-4")["basis"]["evaluated_limits"], _q(r, "ID-4")["basis"]["not_evaluated"])),
     "id4_names_lanes": lambda r: (
         [(x["metric"], x["state"]) for x in _q(r, "ID-4")["basis"]["beyond"]]
         == [("interaction.subagent_lanes", "EXCEPTION")], _q(r, "ID-4")["basis"]["beyond"]),

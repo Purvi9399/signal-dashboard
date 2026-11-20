@@ -124,6 +124,25 @@ def test_only_approved_propagation_measures_are_judged():
     assert len(b["not_judged"]) == 2
 
 
+def test_within_bounds_covers_only_the_two_evaluated_count_limits():
+    b = questions("known_delegation")["ID-4"]["answer"]
+    assert b["outcome"] == "WITHIN_APPROVED_BOUNDS"
+    assert b["basis"]["evaluated_limits"] == ["interaction.subagent_lanes", "interaction.mcp_servers"]
+    assert {x["metric"]: x["status"] for x in b["basis"]["not_evaluated"]} == {
+        "interaction_propagation_depth": "NOT_EVALUATED", "interaction_propagation_breadth": "NOT_EVALUATED"}
+    pkg = EA.load_package(COP)
+    assert set(b["basis"]["evaluated_limits"]) == set(pkg["propagation_measures"]) <= set(pkg["mapping"])
+    assert set(pkg["propagation_measures"]) <= set(BY_KEY[COP].metric_keys)
+    assert set(pkg["propagation_measures"]) <= set(EA.signal_metrics.METRIC_IDS)
+
+
+def test_an_approved_limit_that_cannot_be_evaluated_leaves_id4_inconclusive():
+    a = questions("mcp_unobservable")["ID-4"]["answer"]
+    assert a["outcome"] == "INCONCLUSIVE" and a["sufficiency"] == "SUFFICIENT"
+    assert [x["requirement"] for x in a["because"]] == ["interaction.mcp_servers"]
+    assert a["basis"]["evaluated_limits"] == ["interaction.subagent_lanes"]
+
+
 def test_more_subagent_lanes_than_approved_is_propagation():
     q = questions("several_concerns")
     assert [(x["metric"], x["value"], x["state"]) for x in q["ID-4"]["answer"]["basis"]["beyond"]] == [

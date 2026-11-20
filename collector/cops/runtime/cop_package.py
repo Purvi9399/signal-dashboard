@@ -382,6 +382,8 @@ def _provenance_view(a):
 
 
 ID_TEMPORAL = (EA.INCOMPARABLE_TIMESTAMPS, EA.TIMESTAMP_ORDER)
+# Metric states in which an approved limit was not evaluated (no basis, or nothing to judge).
+NOT_EVALUATED_STATES = ("UNKNOWN", "NOT_APPLICABLE")
 
 
 def _id1(a, graph=None, links=None):
@@ -490,7 +492,9 @@ def _id4(a, states, measures, observations):
     depth = _item(a, "interaction_propagation_depth")
     breadth = _present(a, "interaction_propagation_breadth")
     judged = [_item(a, m) for m in measures]
-    beyond = [x for x in judged if x["state"] == EA.PRESENT and x["metric_state"] in states]
+    evaluated = [x for x in judged if x["state"] == EA.PRESENT and x["metric_state"] not in NOT_EVALUATED_STATES]
+    beyond = [x for x in evaluated if x["metric_state"] in states]
+    unevaluated = [x for x in judged if x not in evaluated]
     basis = {"depth": depth["value"], "structural_depth": depth["features"].get("structural"),
              "reported_depth": depth["features"].get("reported"),
              "depth_conflict": depth["features"].get("conflict"),
@@ -498,7 +502,14 @@ def _id4(a, states, measures, observations):
              "children": breadth["features"].get("children") if breadth else None,
              "beyond": [{"metric": x["requirement"], "value": x["value"], "state": x["metric_state"]} for x in beyond],
              "within": [{"metric": x["requirement"], "value": x["value"], "state": x["metric_state"]}
-                        for x in judged if x["state"] == EA.PRESENT and x not in beyond],
+                        for x in evaluated if x not in beyond],
+             "evaluated_limits": [x["requirement"] for x in evaluated],
+             "unevaluated_limits": [{"metric": x["requirement"], "state": x["state"], "reason": x["reason"]}
+                                    for x in unevaluated],
+             "not_evaluated": [{"metric": m, "value": v, "status": "NOT_EVALUATED", "reason": "no approved threshold"}
+                               for m, v in (("interaction_propagation_depth", depth["value"]),
+                                            ("interaction_propagation_breadth", breadth["value"] if breadth else None))
+                               if v is not None],
              "not_judged": ["interaction_propagation_depth: no approved threshold",
                             "interaction_propagation_breadth: no approved threshold"],
              "boundary_observations": [
@@ -506,7 +517,15 @@ def _id4(a, states, measures, observations):
                   "evidence_refs": x.get("evidence_refs", []), "judged_here": False}
                  for m, o in observations.items() for x in [_item(a, m)] if x["state"] == EA.PRESENT],
              "unassessed": _unassessed(a, "interaction.mcp_servers", *observations)}
-    return ("BEYOND_APPROVED_BOUNDS" if beyond else "WITHIN_APPROVED_BOUNDS"), basis
+    if beyond:
+        return "BEYOND_APPROVED_BOUNDS", basis
+    if unevaluated:
+        basis["interpretation_reasons"] = [
+            {"code": "NOT_EVALUATED", "requirement": x["requirement"], "check": None,
+             "detail": f"approved limit for {x['requirement']} could not be evaluated: {x['reason'] or x['state']}"}
+            for x in unevaluated]
+        return INCONCLUSIVE, basis
+    return "WITHIN_APPROVED_BOUNDS", basis
 
 
 def _rm_answers(rm):
@@ -636,11 +655,13 @@ def observe_interaction_discovery(assessments, graph=None, memory=None, known=No
                                                pkg.get("boundary_observations") or {}),
                           "ID-5": lambda: _id5(a, {k: out[k] for k in q.get("depends_on", [])}, rm,
                                                delegation)}[qid]()
-        if outcome not in q["outcomes"]:
+        if outcome not in q["outcomes"] and not (outcome == INCONCLUSIVE and basis.get("interpretation_reasons")):
             raise ValueError(f"{qid}: outcome {outcome} is not in METRICS.yaml")
         _missing_inputs(pkg, basis)
         out[qid] = {"outcome": outcome, "sufficiency": suf, "basis": basis,
                     "findings": a["findings"], "not_assessed": a["sufficiency"]["not_assessed"]}
+        if outcome == INCONCLUSIVE:
+            out[qid]["because"] = basis["interpretation_reasons"]
     return out
 
 
@@ -686,7 +707,10 @@ def _explain(qid, ans):
         if b["beyond"]:
             return s + "; beyond approved bounds: " + ", ".join(f"{x['metric']}={x['value']} ({x['state']})"
                                                                for x in b["beyond"])
-        return s + "; every judged measure is within its approved threshold"
+        if b.get("interpretation_reasons"):
+            return s + "; " + "; ".join(x["detail"] for x in b["interpretation_reasons"])
+        return (s + "; within the approved limits evaluated (" + ", ".join(b["evaluated_limits"])
+                + "); depth and breadth measured, NOT_EVALUATED: no approved threshold")
     return "; ".join(b["causes"]) if b["causes"] else "no missing identity, link or record affects the network"
 
 
@@ -719,7 +743,8 @@ def _question_trace(questions, explain, drivers):
             "checks_consumed": a["reliability"]["verified_checks"] + a["reliability"]["blocking_checks"],
             "raw_evidence_refs": _refs(a)[:20],
             "sufficiency_reasons": [{k: r.get(k) for k in ("code", "requirement", "check", "detail")}
-                                    for r in a["sufficiency"]["reasons"]],
+                                    for r in a["sufficiency"]["reasons"] + (an.get("basis") or {}).get(
+                                        "interpretation_reasons", [])],
             "not_assessed": an.get("not_assessed", []), "drives_label": qid in drivers}
     return trace
 
@@ -785,7 +810,7 @@ def _id_limitations(ans):
             for c, x in id2.get("temporal_checks", {}).items() if x["outcome"] not in done]
     for m, key in (("interaction_propagation_depth", "depth"), ("interaction_propagation_breadth", "breadth")):
         if id4.get(key) is not None:
-            out.append(D.limitation(D.LIMIT_NOT_APPROVED, "ID-4", m, D.LIMIT_NOT_APPROVED,
+            out.append(D.limitation(D.LIMIT_NOT_APPROVED, "ID-4", m, "NOT_EVALUATED",
                                     f"measured {id4[key]}; no threshold is approved, so it is reported, not judged, "
                                     "and cannot make the label PROPAGATING"))
     return out

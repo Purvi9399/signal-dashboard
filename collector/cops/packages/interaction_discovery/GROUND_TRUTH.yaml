@@ -38,7 +38,7 @@ scenarios:
       ID-5: RECONSTRUCTION_RELIABLE
     cop_label: [CONTAINED]
     action: NONE
-    checks: [decision_contract_valid, five_question_findings, verified]
+    checks: [decision_contract_valid, five_question_findings, verified, id4_scoped_to_evaluated_limits]
 
   known_delegation:
     world: >-
@@ -123,11 +123,14 @@ scenarios:
     world: >-
       Only the CLI wrapper reported. No collector able to see MCP traffic ran, and the expected
       collectors local_hooks and otel are missing. Seven earlier sessions are fully instrumented.
+    # 2026-11-20 09:40Z purvi: WITHIN_APPROVED_BOUNDS only when both approved count limits were evaluated and
+    # satisfied. interaction.mcp_servers cannot be evaluated here, so ID-4 was WITHIN_APPROVED_BOUNDS and is now
+    # INCONCLUSIVE (changed before the code was run). The label was already PATH_PARTIAL.
     questions:
       ID-1: ENTITIES_PARTIALLY_IDENTIFIED
       ID-2: FULLY_RECONSTRUCTED
       ID-3: NO_NEW_ROUTES
-      ID-4: WITHIN_APPROVED_BOUNDS
+      ID-4: INCONCLUSIVE
       ID-5: RECONSTRUCTION_IMPAIRED
     cop_label: [PATH_PARTIAL]
     action: WATCH
