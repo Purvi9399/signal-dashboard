@@ -1,6 +1,6 @@
 # Interaction Discovery: decisions
 
-## Made in this package (proposed; awaiting your review)
+## Made in this package (D2 and D3 accepted by purvi 2026-11-20; the rest proposed)
 
 | # | Decision | Alternatives considered | Rationale |
 |---|---|---|---|
@@ -19,7 +19,6 @@
 
 | # | Question | Options |
 |---|---|---|
-| U1 | Confirm D2 and D3 (label precedence, thin telemetry as PATH_PARTIAL) | accept; restore legacy precedence |
 | U2 | `interaction_unattributed_edges`: the registry says its definition is unconfirmed | define it; drop it from the mapping |
 | U3 | Approved thresholds for depth and breadth | leave reported only; supply values |
 | U4 | Should a CONTAINED session write a route record, so routes become known from memory as well as history? | no (current); yes |
