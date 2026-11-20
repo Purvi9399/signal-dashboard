@@ -15,17 +15,27 @@
 | D9 | `route_record` payloads carry `routes`; Resource Management reads ID-2 | none | Without routes the memory read was empty; without ID-2 a NEW_ROUTE on a partial graph would have been used for attribution |
 | D10 | A depth conflict (reported `delegation_depth` against the linked structure) impairs ID-5 | record only | Two records of the same delegation disagree |
 
-## Made on 2026-11-20, reviewed by purvi at 08:52Z
+## Acceptance
 
-purvi asked that D11 to D16 be kept, with their rationale and alternatives recorded. Those that need her explicit
-architectural choice are marked, and none of the six is treated as approved by default.
+On 2026-11-20 at 09:23Z, purvi approved Interaction Discovery as COP 2.
+
+| Item | Detail |
+|---|---|
+| Commits | `a1050d6`, `3ac8d10`, `f774037`, `cacbead`, and the commit that records this decision |
+| Harness at approval | 192 of 192 expectations |
+| Full suite at review | 788 passed, 1 skipped |
+| Her decisions | D13 approved, D14 approved; U2, U3, U4 and U6 kept as they are |
+
+The decisions are recorded below.
+
+## Made on 2026-11-20, reviewed by purvi at 08:52Z and decided at 09:23Z
 
 | # | Decision | Alternatives considered | Rationale | Status |
 |---|---|---|---|---|
 | D11 | Every delegation and MCP link carries its basis: RECORDED, INFERRED, INFERRED_AGAINST_TIME_ORDER or UNLINKED (`cop_package.interaction_links`). An inferred link also names the handoff it was joined to and the agent that handoff names | report only the ratios | A relationship that can be inferred is not a verified one. The basis says which it is, and the handoff stays visible as an observed event | Reporting only. Kept |
 | D12 | Superseded by U5 below. As first built, an INFERRED link was only a limitation and did not change ID-2 | as U5 | | Replaced |
-| D13 | A failed TIMESTAMP_ORDER or INCOMPARABLE_TIMESTAMPS check is a gap in ID-2. When there is no evidence it is a limitation, not a gap | ignore the checks; block ID-2 on them | The checks compare a row's own timestamps and need no approved limit. STALE and INGEST_LATENCY are not read here, because no limit is approved | **Needs your choice.** It changes ID-2 answers, and through them the label (PATH_PARTIAL) |
-| D14 | `limitations` is a field of the shared decision record (`decision.py`: `uncertainty.cop_limitations`), and is empty for any COP that does not set it | an extension field per COP | A decision record must show what it rests on without verifying it, in one place for every consumer | **Needs your choice.** It changes the record contract for all 18 COPs (the field is additive, and no COP's label reads it) |
+| D13 | A failed TIMESTAMP_ORDER or INCOMPARABLE_TIMESTAMPS check is a gap in ID-2. When there is no evidence it is a limitation, not a gap | ignore the checks; block ID-2 on them | The checks compare a row's own timestamps and need no approved limit. STALE and INGEST_LATENCY are not read here, because no limit is approved | **Approved 2026-11-20.** A timestamp-order failure prevents ID-2 from being FULLY_RECONSTRUCTED |
+| D14 | A structured `uncertainty.limitations` field in the shared decision record for all 18 COPs (`decision.py`). Each entry has `kind`, `question`, `subject`, `reason_code`, `detail`, `evidence_refs` and `source`, and `kind` is MISSING_EVIDENCE, NOT_CALCULATED, LIMIT_NOT_APPROVED or INFERRED_RELATIONSHIP. An inferred relationship always carries `verified: false`. A COP may report entries itself (`cop_specific.limitations`), and the record also derives entries for every COP from each question's unassessed metrics and checks and from `missing_evidence` | free text per COP (as first built); an extension field per COP | One place, in one shape, where every consumer can see what a decision rests on without having it, with the four cases kept apart | **Approved 2026-11-20.** It is additive: a record without the field still validates, `cop_limitations` keeps the COP's entries as text, and no label reads the field. The tests cover serialization, validation, downstream consumption and the four kinds |
 | D15 | ID-3 reports cross-session continuity: whether an operator was recorded, the tool, and the number of earlier sessions | none | The comparison was implicit in `interaction_route_novelty` | Reporting only. Kept |
 | D16 | The missing-input note of a NOT_CALCULATED metric comes from shared code (`cop_package._missing_inputs`), used by ID and by Audit & Traceability | a copy in each COP | Same behaviour in both | Refactor, no change in behaviour. Kept |
 
@@ -60,7 +70,16 @@ Consequences, all tested:
 - Before the ground truth was updated, the harness was run once on the old expectations with the new code. It
   showed the 18 expectations listed above moving, and no others.
 
-## Needs your decision
+## Decided on 2026-11-20 (09:23Z)
+
+| # | Decision | Alternatives | Reason |
+|---|---|---|---|
+| U6 | **Keep the fallback; the collector is not changed.** A link that comes from the fallback is INFERRED, with relationship INFERRED, reason code FIRST_HANDOFF_FALLBACK, its handoff and lane timestamps, and step refs. Its limitation has `verified: false`. It is never reported as verified | remove the fallback; join by the agent the handoff names | Removing it loses nothing that is evidenced, but the alternatives are collector changes, and those are deferred |
+| U2 | **Keep `interaction_unattributed_edges` NOT_CALCULATED,** in the mapping, with its missing definition documented. No substitute is used | define it; drop it | The registry definition is unconfirmed |
+| U3 | **Keep depth and breadth thresholds unapproved.** The measurements are kept in ID-4's basis. Each is a LIMIT_NOT_APPROVED limitation saying it is reported, not judged, and cannot make PROPAGATING | supply values | No value is approved, and none may be invented |
+| U4 | **Keep the existing quiet-session behaviour.** A CONTAINED finding writes no route record. Its execution evidence and decision record are still produced for audit | a route record for every quiet session | It adds review work and breaks the shared quiet-label rule |
+
+The analysis behind these decisions, as presented for the review:
 
 **U6, the first-handoff fallback in `signal_traces.link_lanes`. Evidence only; the collector is unchanged.**
 
@@ -127,6 +146,16 @@ Consequences, all tested:
   reviewer validates it, so it would add review work. It would also break the shared rule that a quiet label
   writes nothing.
 - **Recommendation.** No change.
+
+## Remaining limitations
+
+- On real data, provenance stays unverified: the raw event store is not supplied, and the meaning of `raw_ref` is
+  not defined.
+- Delegation links are likely to be inferred on real data, unless the collectors record `parent_agent_id`. That
+  makes ID-2 partial, and Resource Management will not attribute those sessions' consumption.
+- Depth and breadth are not judged (U3). STALE and INGEST_LATENCY are not read, because no limits are approved.
+- `interaction_unattributed_edges` is NOT_CALCULATED (U2).
+- How often the first-handoff fallback fires on real data has not been measured (U6).
 
 ## Not done, by instruction
 

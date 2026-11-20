@@ -377,8 +377,8 @@ def _missing_inputs(pkg, basis):
 
 
 def _provenance_view(a):
-    return [{"outcome": c["outcome"], "detail": c["detail"]} for c in a["reliability"]["checks"]
-            if c["check"] == EA.UNVERIFIABLE_PROVENANCE]
+    return [{"outcome": c["outcome"], "detail": c["detail"], "because": c.get("not_executed_because")}
+            for c in a["reliability"]["checks"] if c["check"] == EA.UNVERIFIABLE_PROVENANCE]
 
 
 ID_TEMPORAL = (EA.INCOMPARABLE_TIMESTAMPS, EA.TIMESTAMP_ORDER)
@@ -433,7 +433,8 @@ def _id2(a, links=None):
              "gaps": gaps, "orphan_refs": orphan["evidence_refs"] if orphan else [],
              "links": ls, "recorded_links": [x["link"] for x in ls if x["basis"] == "RECORDED"],
              "inferred_links": [x["link"] for x in ls if x["basis"].startswith("INFERRED")],
-             "temporal_checks": {c: {"outcome": x["outcome"], "detail": x["detail"]} for c, x in temporal.items()},
+             "temporal_checks": {c: {"outcome": x["outcome"], "detail": x["detail"],
+                                     "because": x.get("not_executed_because")} for c, x in temporal.items()},
              "provenance": _provenance_view(a)}
     if comp and comp["value"] == 0:
         return "NOT_RECONSTRUCTABLE", basis
@@ -576,6 +577,7 @@ def interaction_links(session):
         first = lane_steps[0] if lane_steps else {}
         if parents:
             out.append({"link": f"{parents[0]}>{lane}", "kind": "delegation", "basis": "RECORDED",
+                        "reason_code": "PARENT_AGENT_ID_RECORDED",
                         "refs": [f"observable:{r['observable_id']}" for r in mine
                                  if sm.has(r.get("parent_agent_id"))][:5]})
         elif sm.linked(lane_steps):
@@ -584,18 +586,21 @@ def interaction_links(session):
             late = bool(a and b and (a.tzinfo is None) == (b.tzinfo is None) and a > b)
             out.append({"link": f"main>{lane}", "kind": "delegation",
                         "basis": "INFERRED_AGAINST_TIME_ORDER" if late else "INFERRED",
+                        "relationship": "INFERRED",
+                        "reason_code": "FIRST_HANDOFF_FALLBACK" if late else "LATEST_PRIOR_HANDOFF",
                         "handoff": h.get("step_id"), "handoff_at": h.get("started_at"),
                         "handoff_names_agent": h.get("agent_id"),
                         "lane_started_at": first.get("started_at"),
                         "refs": [f"step:{h.get('step_id')}", f"step:{first.get('step_id')}"]})
         else:
-            out.append({"link": f"?>{lane}", "kind": "delegation", "basis": "UNLINKED",
+            out.append({"link": f"?>{lane}", "kind": "delegation", "basis": "UNLINKED", "reason_code": "NO_HANDOFF",
                         "refs": [f"observable:{r['observable_id']}" for r in mine][:5]})
     mcp = {}
     for r in rows:
         if sm.has(r.get("mcp_server")):
             mcp.setdefault(f"{sm.lane_of(r)}>mcp:{r['mcp_server']}", []).append(f"observable:{r['observable_id']}")
-    out += [{"link": k, "kind": "mcp", "basis": "RECORDED", "refs": v[:5]} for k, v in sorted(mcp.items())]
+    out += [{"link": k, "kind": "mcp", "basis": "RECORDED", "reason_code": "MCP_SERVER_RECORDED", "refs": v[:5]}
+            for k, v in sorted(mcp.items())]
     tools = {}
     for r in session.actions:
         if r.get("tool_name"):
@@ -750,20 +755,34 @@ def decide_interaction_discovery(questions, evidence_scale=1.0):
     if ans["ID-4"].get("basis", {}).get("depth_conflict"):
         contrary.append(f"ID-4: {ans['ID-4']['basis']['depth_conflict']}")
     contrary += [f"{l} also holds" for l in held[1:]]
-    id2 = ans["ID-2"].get("basis") or {}
-    limitations = []
-    if id2.get("inferred_links"):
-        limitations.append(f"ID-2: {len(id2['inferred_links'])} delegation link(s) are inferred from timing, not "
-                           f"recorded, and are not verified: {', '.join(id2['inferred_links'])}")
-    limitations += [f"{q}: provenance {p['outcome']}: {p['detail']}" for q in ("ID-1", "ID-2")
-                    for p in (ans[q].get("basis") or {}).get("provenance", [])
-                    if p["outcome"] not in (EA.VERIFIED_OK, EA.VERIFIED_FAILED)]
-    limitations += [f"ID-2: {c} {x['outcome']}: {x['detail']}" for c, x in id2.get("temporal_checks", {}).items()
-                    if x["outcome"] not in (EA.VERIFIED_OK, EA.VERIFIED_FAILED)]
     return {"label": label, "confidence": round(base * min(1.0, evidence_scale), 3), "severity": sev,
             "action": action, "action_reason": reason, "recipients": list(recipients),
             "drivers": drivers, "also_held": held[1:], "contrary": contrary, "questions": trace,
-            "limitations": limitations}
+            "limitations": _id_limitations(ans)}
+
+
+def _id_limitations(ans):
+    """What the answers rest on without having it (decision.LIMITATION_KINDS)."""
+    from . import decision as D
+    id2, id4 = (ans[q].get("basis") or {} for q in ("ID-2", "ID-4"))
+    out = [D.limitation(D.INFERRED_RELATIONSHIP, "ID-2", x["link"], x["reason_code"],
+                        f"parent-child link inferred from the timing of handoff {x.get('handoff')} "
+                        f"({x.get('handoff_at')}) and the lane's first step ({x.get('lane_started_at')}); "
+                        "no row records parent_agent_id", x["refs"])
+           for x in id2.get("links", []) if x.get("relationship") == "INFERRED"]
+    done = (EA.VERIFIED_OK, EA.VERIFIED_FAILED)
+    out += [D.limitation(D.MISSING_EVIDENCE, q, EA.UNVERIFIABLE_PROVENANCE, p.get("because") or p["outcome"],
+                         p["detail"])
+            for q in ("ID-1", "ID-2") for p in (ans[q].get("basis") or {}).get("provenance", [])
+            if p["outcome"] not in done]
+    out += [D.limitation(D.MISSING_EVIDENCE, "ID-2", c, x.get("because") or x["outcome"], x["detail"])
+            for c, x in id2.get("temporal_checks", {}).items() if x["outcome"] not in done]
+    for m, key in (("interaction_propagation_depth", "depth"), ("interaction_propagation_breadth", "breadth")):
+        if id4.get(key) is not None:
+            out.append(D.limitation(D.LIMIT_NOT_APPROVED, "ID-4", m, D.LIMIT_NOT_APPROVED,
+                                    f"measured {id4[key]}; no threshold is approved, so it is reported, not judged, "
+                                    "and cannot make the label PROPAGATING"))
+    return out
 
 
 # ---------------------------------------------------------------- Audit & Traceability
@@ -908,8 +927,8 @@ def _at3(a, states, rm=None):
              "unreliable": unreliable, "degraded": degraded,
              "upstream": {"runtime_monitoring": _upstream_view(rm, "RM-3")},
              "unassessed": _unassessed(a, "audit_timestamp_integrity", "audit_event_ordering_consistency")
-             + [{"check": c, "state": x["outcome"], "reason": x["detail"]} for c, x in checks.items()
-                if x["outcome"] not in (EA.VERIFIED_OK, EA.VERIFIED_FAILED)]}
+             + [{"check": c, "state": x["outcome"], "reason": x["detail"], "because": x.get("not_executed_because")}
+                for c, x in checks.items() if x["outcome"] not in (EA.VERIFIED_OK, EA.VERIFIED_FAILED)]}
     return ("UNRELIABLE" if unreliable else "DEGRADED" if degraded else "RELIABLE"), basis
 
 

@@ -33,7 +33,8 @@ through triage and the authority check (`triage.py`, `graph.authority_check`); n
   Monitoring).
 - Output: the finding, with `cop_specific.questions` (each question's answer, explanation, metrics, basis and
   evidence refs), `drivers`, `also_held`, `contrary`, `limitations`, `edges` and `new_routes`; and the common
-  decision record (`cops/runtime/decision.py`), where `limitations` appear as `uncertainty.cop_limitations`.
+  decision record (`cops/runtime/decision.py`), where `limitations` appear as structured entries in
+  `uncertainty.limitations` (D14), and as text in `uncertainty.cop_limitations`.
 
 ## The five questions
 

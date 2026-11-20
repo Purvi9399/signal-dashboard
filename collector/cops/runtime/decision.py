@@ -12,6 +12,12 @@ from ..specs import BY_KEY, CONSUMES, consumers
 
 VERSION = "cops-decision/1"
 INCONCLUSIVE_LABEL = "INCONCLUSIVE"
+# uncertainty.limitations: what a decision rests on without having it. Additive to cops-decision/1; a record
+# without the field still validates.
+MISSING_EVIDENCE, NOT_CALCULATED = "MISSING_EVIDENCE", "NOT_CALCULATED"
+LIMIT_NOT_APPROVED, INFERRED_RELATIONSHIP = "LIMIT_NOT_APPROVED", "INFERRED_RELATIONSHIP"
+LIMITATION_KINDS = (MISSING_EVIDENCE, NOT_CALCULATED, LIMIT_NOT_APPROVED, INFERRED_RELATIONSHIP)
+MISSING_STATES = ("MISSING_DATA", "NOT_OBSERVED", "EVIDENCE_MISSING", "INSUFFICIENT_HISTORY")
 CORE = ("decision_contract", "cop", "case", "questions_assessed", "metrics", "question_findings",
         "upstream_considered", "memory_used", "conclusion", "severity", "supporting_evidence",
         "contrary_evidence", "uncertainty", "recommendation", "authority", "recipients", "provenance",
@@ -37,6 +43,51 @@ def _question_finding(qid, t):
             "evidence_refs": t.get("raw_evidence_refs", []),
             "reasons": t.get("sufficiency_reasons", []), "not_assessed": t.get("not_assessed", []),
             "drives_conclusion": t.get("drives_label", t.get("label_ceiling") not in (None, "SUFFICIENT"))}
+
+
+def limitation(kind, question, subject, reason_code, detail, evidence_refs=(), source="cop"):
+    out = {"kind": kind, "question": question, "subject": subject, "reason_code": reason_code, "detail": detail,
+           "evidence_refs": list(evidence_refs), "source": source}
+    if kind == INFERRED_RELATIONSHIP:
+        out["verified"] = False
+    return out
+
+
+def _derived_limitations(findings, f):
+    """Limitations read from what every record already holds: each question's unassessed metrics and checks,
+    and the finding's missing evidence."""
+    out = []
+    for x in findings:
+        for u in (x.get("basis") or {}).get("unassessed", []):
+            subject, state = u.get("metric") or u.get("check"), u.get("state")
+            if state == NOT_CALCULATED:
+                out.append(limitation(NOT_CALCULATED, x["id"], subject, NOT_CALCULATED,
+                                      u.get("missing_inputs") or u.get("reason", ""), source="derived"))
+            elif u.get("because") == LIMIT_NOT_APPROVED:
+                out.append(limitation(LIMIT_NOT_APPROVED, x["id"], subject, LIMIT_NOT_APPROVED, u.get("reason", ""),
+                                      source="derived"))
+            elif state in MISSING_STATES or u.get("because"):
+                out.append(limitation(MISSING_EVIDENCE, x["id"], subject, u.get("because") or state,
+                                      u.get("reason", ""), source="derived"))
+    for m in f.get("missing_evidence") or []:
+        out.append(limitation(MISSING_EVIDENCE, None, m if isinstance(m, str) else str(m), MISSING_EVIDENCE,
+                              m if isinstance(m, str) else str(m), source="derived"))
+    return out
+
+
+def _limitations(cop_reported, findings, f):
+    out, seen = [], set()
+    for x in [c for c in cop_reported if isinstance(c, dict)] + _derived_limitations(findings, f):
+        key = (x["kind"], x["question"], x["subject"], x["reason_code"])
+        if key not in seen:
+            seen.add(key)
+            out.append(x)
+    return out
+
+
+def _statement(x):
+    return (f"{x['question'] + ': ' if x['question'] else ''}{x['kind']} {x['subject']}: {x['detail']}"
+            + (" (not verified)" if x.get("verified") is False else ""))
 
 
 def build(state, rt):
@@ -70,6 +121,7 @@ def build(state, rt):
               for r in vr if r["result"] in (FAIL, "WARN")]
     inconclusive_q = [{"id": x["id"], "reasons": x["reasons"]} for x in findings if x["answer"] == INCONCLUSIVE_LABEL]
 
+    limits = _limitations(cs.get("limitations") or [], findings, f)
     deferred = f["status"] != SUBSTANTIVE
     llm = state.get("llm_invocations") or []
     return {
@@ -103,7 +155,8 @@ def build(state, rt):
         "uncertainty": {"confidence": f["confidence"], "confidence_basis": tri.get("confidence"),
                         "missing_evidence": f.get("missing_evidence", []),
                         "missing_dependencies": f.get("missing_dependencies", []),
-                        "inconclusive_questions": inconclusive_q, "cop_limitations": cs.get("limitations", [])},
+                        "inconclusive_questions": inconclusive_q, "limitations": limits,
+                        "cop_limitations": [_statement(x) for x in limits if x["source"] == "cop"]},
         "recommendation": {"action": pa.get("action"), "typed_action": pa.get("typed_action"),
                            "reason": pa.get("reason", ""), "execution_status": pa.get("execution_status"),
                            "deferred": deferred,
@@ -160,6 +213,13 @@ def validate(d):
             probs.append("question_findings do not cover every question in the contract")
     elif "question_findings" not in d["absent"]:
         probs.append("no question findings and no reason given")
+    for x in (d["uncertainty"].get("limitations") or []):
+        if x.get("kind") not in LIMITATION_KINDS:
+            probs.append(f"limitation kind {x.get('kind')} is not one of {', '.join(LIMITATION_KINDS)}")
+        elif not x.get("detail"):
+            probs.append(f"limitation {x['kind']} {x.get('subject')} has no detail")
+        elif x["kind"] == INFERRED_RELATIONSHIP and x.get("verified") is not False:
+            probs.append(f"inferred relationship {x.get('subject')} is not marked unverified")
     for m in d["metrics"]:
         if not m.get("metric"):
             probs.append("a metric entry has no metric id")

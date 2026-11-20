@@ -43,9 +43,13 @@ state beyond bounds; PATH_PARTIAL the worst judged state among the partial quest
 - A question without sufficient evidence is INCONCLUSIVE with each reason kept.
 - Optional measures that could not be observed are listed as unassessed or unidentified, never counted as zero.
 - `interaction_unattributed_edges` is not built and is reported NOT_CALCULATED with its missing input.
-- `limitations` lists what the answers rest on without verifying: delegation links inferred from timing,
-  provenance checks that were not executed or had no evidence, and timestamp checks with no evidence. They are
-  published as `uncertainty.cop_limitations` and never change the label.
+- `limitations` lists, as structured entries (decision.py, D14), what the answers rest on without having it:
+  - INFERRED_RELATIONSHIP: each delegation link inferred from timing, with its reason code
+    (LATEST_PRIOR_HANDOFF or FIRST_HANDOFF_FALLBACK) and `verified: false`;
+  - MISSING_EVIDENCE: provenance and timestamp checks with no evidence;
+  - LIMIT_NOT_APPROVED: depth and breadth, which are measured but have no approved threshold.
+  The record adds NOT_CALCULATED entries for metrics that are not built. The entries are published as
+  `uncertainty.limitations` and never change the label.
 - Unvalidated route records are shown as pending and never treated as known.
 
 ## Thresholds

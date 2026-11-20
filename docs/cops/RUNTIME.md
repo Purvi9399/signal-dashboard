@@ -103,6 +103,32 @@ With a `SqliteSaver` checkpointer, an approval interrupt inside a COP survives a
 
 INVALID rows are withheld from rules. A COP concludes only from OBSERVED rows or tool observations. NOT_APPLICABLE alone never supports an attention label.
 
+### Decision record
+
+Each COP publishes a decision record built by `cops/runtime/decision.py` (`cops-decision/1`), and
+`decision.validate` checks it.
+
+On 2026-11-20 purvi approved a structured `uncertainty.limitations` field for all 18 COPs (Interaction Discovery,
+DECISIONS.md D14). Each entry has `kind`, `question`, `subject`, `reason_code`, `detail`, `evidence_refs` and
+`source`, and the `kind` is one of four:
+
+- MISSING_EVIDENCE
+- NOT_CALCULATED
+- LIMIT_NOT_APPROVED
+- INFERRED_RELATIONSHIP, which always carries `verified: false`
+
+Where the entries come from:
+
+- A COP may report entries itself, in `cop_specific.limitations`.
+- The record also derives entries for every COP, from each question's unassessed metrics and checks and from the
+  finding's `missing_evidence`.
+
+The field is additive:
+
+- A record without it still validates.
+- `uncertainty.cop_limitations` keeps the COP-reported entries as text.
+- No label reads the field.
+
 ### Verifier registry
 
 `runtime/verifiers.py`, `REGISTRY_VERSION = "2026-10-29.1"`. Each result carries a check id, version, category, result, effect, reason code, detail and evidence references.

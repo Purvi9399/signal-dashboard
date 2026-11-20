@@ -209,8 +209,10 @@ def _links(r):
     return [x for x in _q(r, "ID-2")["basis"]["links"] if x["kind"] == "delegation"]
 
 
-def _limits(r):
-    return _decision(r)["uncertainty"]["cop_limitations"]
+def _inferred(r):
+    """{link: reason_code} of the structured INFERRED_RELATIONSHIP limitations, all marked unverified."""
+    xs = [x for x in _decision(r)["uncertainty"]["limitations"] if x["kind"] == "INFERRED_RELATIONSHIP"]
+    return {x["subject"]: x["reason_code"] for x in xs if x["verified"] is False and x["evidence_refs"]}
 
 
 def _down(r, cop):
@@ -300,20 +302,21 @@ CHECKS = {
         _down(r, "resource_management")["cop_specific"]["attribution"]),
     "links_inferred_not_verified": lambda r: (
         [x["basis"] for x in _links(r)] == ["INFERRED", "INFERRED"]
-        and any("not verified" in x and "main>sub-a" in x for x in _limits(r)), (_links(r), _limits(r))),
+        and _inferred(r) == {"main>sub-a": "LATEST_PRIOR_HANDOFF", "main>sub-b": "LATEST_PRIOR_HANDOFF"},
+        (_links(r), _inferred(r))),
     "continuity_reported": lambda r: (
         _q(r, "ID-3")["basis"]["continuity"]["operator_recorded"] is True
         and _q(r, "ID-3")["basis"]["continuity"]["earlier_sessions"] == 7, _q(r, "ID-3")["basis"]["continuity"]),
     "links_recorded": lambda r: (
         [x["basis"] for x in _links(r)] == ["RECORDED", "RECORDED"] and _q(r, "ID-2")["basis"]["inferred_links"] == [],
         _links(r)),
-    "no_link_limitation": lambda r: (not any("delegation link" in x for x in _limits(r)), _limits(r)),
+    "no_link_limitation": lambda r: (_inferred(r) == {}, _inferred(r)),
     "id2_names_late_link": lambda r: (
         {x["link"]: x["basis"] for x in _links(r)} == {"main>sub-a": "INFERRED_AGAINST_TIME_ORDER",
                                                        "main>sub-b": "INFERRED"}
         and any("after the lane began: main>sub-a" in g for g in _q(r, "ID-2")["basis"]["gaps"]),
         (_links(r), _q(r, "ID-2")["basis"]["gaps"])),
-    "late_link_limitation": lambda r: (any("not verified" in x and "main>sub-a" in x for x in _limits(r)), _limits(r)),
+    "late_link_limitation": lambda r: (_inferred(r).get("main>sub-a") == "FIRST_HANDOFF_FALLBACK", _inferred(r)),
     "id2_names_timestamp_order": lambda r: (
         _q(r, "ID-2")["basis"]["temporal_checks"]["TIMESTAMP_ORDER"]["outcome"] == "VERIFIED_FAILED"
         and any("captured before they occurred" in g for g in _q(r, "ID-2")["basis"]["gaps"]),

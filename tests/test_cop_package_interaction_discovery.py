@@ -231,7 +231,7 @@ def test_every_cop_publishes_a_valid_decision_record():
     for cop, r in out["results"].items():
         d = r["decision"]
         assert r["decision_problems"] == [], cop
-        assert set(D.CORE) <= set(d)
+        assert set(D.CORE) <= set(d) and isinstance(d["uncertainty"]["limitations"], list), cop
         if cop in EA.PACKAGED:
             assert d["question_findings"] and "question_findings" not in d["absent"], cop
         else:
@@ -282,15 +282,19 @@ def test_a_link_inferred_from_timing_is_not_verified_and_leaves_id2_partial():
         "PARTIALLY_RECONSTRUCTED", "FULLY_RECONSTRUCTED")
     assert (P.decide_interaction_discovery(inferred)["label"], P.decide_interaction_discovery(recorded)["label"]) == (
         "PATH_PARTIAL", "CONTAINED")
-    lim = P.decide_interaction_discovery(inferred)["limitations"]
-    assert any("not verified: main>sub-a, main>sub-b" in x for x in lim)
-    assert not any("delegation link" in x for x in P.decide_interaction_discovery(recorded)["limitations"])
+    kinds = [[x["subject"] for x in P.decide_interaction_discovery(q)["limitations"]
+              if x["kind"] == D.INFERRED_RELATIONSHIP and x["verified"] is False] for q in (inferred, recorded)]
+    assert kinds == [["main>sub-a", "main>sub-b"], []]
 
 
 def test_a_handoff_recorded_after_the_lane_began_is_a_gap():
     """Only the order of sub-a's first call and its handoff differs from known_delegation."""
     q = questions("handoff_after_lane_start")
     assert _links(q) == {"main>sub-a": "INFERRED_AGAINST_TIME_ORDER", "main>sub-b": "INFERRED"}
+    lim = {x["subject"]: x for x in P.decide_interaction_discovery(q)["limitations"]
+           if x["kind"] == D.INFERRED_RELATIONSHIP}
+    assert lim["main>sub-a"]["reason_code"] == "FIRST_HANDOFF_FALLBACK" and lim["main>sub-a"]["verified"] is False
+    assert lim["main>sub-a"]["evidence_refs"] and lim["main>sub-b"]["reason_code"] == "LATEST_PRIOR_HANDOFF"
     assert q["ID-2"]["answer"]["outcome"] == "PARTIALLY_RECONSTRUCTED"
     assert P.decide_interaction_discovery(q)["label"] == "PATH_PARTIAL"
 
@@ -300,7 +304,8 @@ def test_timestamps_out_of_order_are_a_gap_and_missing_ones_a_limitation():
     assert bad["ID-2"]["answer"]["basis"]["temporal_checks"]["TIMESTAMP_ORDER"]["outcome"] == EA.VERIFIED_FAILED
     assert (bad["ID-2"]["answer"]["outcome"], plain["ID-2"]["answer"]["outcome"]) == (
         "PARTIALLY_RECONSTRUCTED", "FULLY_RECONSTRUCTED")
-    assert any("TIMESTAMP_ORDER EVIDENCE_MISSING" in x for x in P.decide_interaction_discovery(plain)["limitations"])
+    assert any(x["kind"] == D.MISSING_EVIDENCE and x["subject"] == "TIMESTAMP_ORDER"
+               for x in P.decide_interaction_discovery(plain)["limitations"])
 
 
 def test_tools_are_associated_with_the_lane_that_called_them():
@@ -320,6 +325,69 @@ def test_limitations_reach_the_decision_record(bench):
     d = bench["results"]["known_delegation"]["cop"]["result"]["decision"]
     assert any("not verified" in x for x in d["uncertainty"]["cop_limitations"])
     assert "limitations" not in d["extensions"][COP]
+
+
+def test_the_four_kinds_of_limitation_are_kept_apart(bench):
+    """D14: missing evidence, an uncalculated metric, an unapproved limit and an inferred relationship."""
+    lim = bench["results"]["known_delegation"]["cop"]["result"]["decision"]["uncertainty"]["limitations"]
+    by = {}
+    for x in lim:
+        by.setdefault(x["kind"], set()).add(x["subject"])
+    assert set(by) == set(D.LIMITATION_KINDS)
+    assert by[D.NOT_CALCULATED] == {"interaction_unattributed_edges"}
+    assert by[D.LIMIT_NOT_APPROVED] == {"interaction_propagation_depth", "interaction_propagation_breadth"}
+    assert by[D.INFERRED_RELATIONSHIP] == {"main>sub-a", "main>sub-b"}
+    assert {"UNVERIFIABLE_PROVENANCE", "TIMESTAMP_ORDER"} <= by[D.MISSING_EVIDENCE]
+
+
+def test_unapproved_depth_and_breadth_never_make_propagating(bench):
+    """U3: the measurements are kept and reported; with no approved threshold they are not judged."""
+    f = bench["results"]["known_delegation"]["cop"]["finding"]
+    b = f["cop_specific"]["questions"]["ID-4"]["basis"]
+    assert (b["depth"], b["breadth"], f["label"]) == (1, 2, "PATH_PARTIAL")
+    assert f["cop_specific"]["questions"]["ID-4"]["answer"] == "WITHIN_APPROVED_BOUNDS"
+
+
+def test_the_record_with_limitations_serializes_and_validates(bench):
+    import json
+    for name, r in bench["results"].items():
+        d = (r.get("cop") or {}).get("result", {}).get("decision")
+        if d:
+            again = json.loads(json.dumps(d, default=str))
+            assert again["uncertainty"]["limitations"] == d["uncertainty"]["limitations"], name
+            assert D.validate(again) == [], name
+
+
+def test_a_record_without_limitations_still_validates(bench):
+    d = copy.deepcopy(bench["results"]["normal"]["cop"]["result"]["decision"])
+    del d["uncertainty"]["limitations"], d["uncertainty"]["cop_limitations"]
+    assert D.validate(d) == []
+
+
+def test_the_validator_rejects_a_malformed_limitation(bench):
+    d = copy.deepcopy(bench["results"]["known_delegation"]["cop"]["result"]["decision"])
+    x = next(x for x in d["uncertainty"]["limitations"] if x["kind"] == D.INFERRED_RELATIONSHIP)
+    x["verified"] = True
+    d["uncertainty"]["limitations"].append(dict(x, kind="PROBABLY_FINE"))
+    probs = D.validate(d)
+    assert "inferred relationship main>sub-a is not marked unverified" in probs
+    assert any(p.startswith("limitation kind PROBABLY_FINE") for p in probs)
+
+
+def test_downstream_receives_the_limitations_and_they_do_not_change_its_decision(bench):
+    r = bench["results"]["downstream_audit_traceability_inferred"]
+    idf = r["cop"]["finding"]
+    assert any(x["kind"] == D.INFERRED_RELATIONSHIP for x in idf["cop_specific"]["limitations"])
+    rows = H.BUILD["downstream_audit_traceability_inferred"]()
+    up = G.run_case(E.make_runtime("lim-up", "s1", copy.deepcopy(rows), {}), cops=["runtime_monitoring", COP])
+    seen = up["findings"]
+    stripped = copy.deepcopy(seen)
+    stripped[COP]["cop_specific"]["limitations"] = []
+    at = [G.run_cop(E.make_runtime(f"lim-{i}", "s1", copy.deepcopy(rows), {}), "audit_traceability", upstream=u)
+          ["finding"] for i, u in enumerate((seen, stripped))]
+    assert [a["label"] for a in at] == ["PARTIAL", "PARTIAL"]
+    assert {q: v["answer"] for q, v in at[0]["cop_specific"]["questions"].items()} \
+        == {q: v["answer"] for q, v in at[1]["cop_specific"]["questions"].items()}
 
 
 # ---------------------------------------------------------------- downstream use changes with the evidence

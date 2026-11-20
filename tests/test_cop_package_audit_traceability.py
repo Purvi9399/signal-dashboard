@@ -211,3 +211,9 @@ def test_governance_architecture_reads_what_the_evidence_changed(bench):
     assert clean["cop_specific"]["gap_levels"]["audit"]["unclean_answers"] == {}
     assert broken["label"] == clean["label"]
     assert [u["cop"] for u in broken["upstream_used"]] == [COP]
+
+
+def test_unapproved_limits_and_unbuilt_metrics_are_structured_limitations(bench):
+    lim = bench["results"]["normal"]["cop"]["result"]["decision"]["uncertainty"]["limitations"]
+    assert {(x["question"], x["subject"]) for x in lim if x["kind"] == D.LIMIT_NOT_APPROVED} == {("AT-3", "STALE")}
+    assert {x["subject"] for x in lim if x["kind"] == D.NOT_CALCULATED} == set(NOT_BUILT)
