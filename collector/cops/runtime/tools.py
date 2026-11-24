@@ -137,8 +137,9 @@ def evaluate_operation(version, op, agent="*"):
 def t_get_metric_rows(case, a, ctx):
     spec = BY_KEY[ctx["cop"]]
     ids = [m for m in a.get("metric_ids", spec.metric_keys) if m in spec.metric_keys]
-    return {"rows": [e.brief() | {"evidence_refs": list(e.evidence_refs[:10])}
-                     for e in case.case_events(ids)]}
+    ev = (cop_package.ad_case_events(case, ids) if ctx["cop"] == "anomaly_detection" and hasattr(case, "sessions")
+          else case.case_events(ids))
+    return {"rows": [e.brief() | {"evidence_refs": list(e.evidence_refs[:10])} for e in ev]}
 
 
 # ---- Workflow Orchestration
@@ -244,6 +245,8 @@ def t_compare_versioned_baseline(case, a, ctx):
             and e["state"] not in ("UNKNOWN", "NOT_APPLICABLE")]
     cur = next((e for e in case.events if e["session_id"] == case.session_id
                 and e["metric_id"] == mid), None)
+    if cur and ctx.get("cop") == "anomaly_detection" and mid in cop_package.AD_SELF_INCLUDING and case.session:
+        cur = cop_package.ad_leave_one_out(case.sessions, case.session, case.cfg, [cur])[0]
     vals = sorted(float(e["value"]) for e in hist)
     version = f"{cur['metric_version'] if cur else '?'}#" + _sha(sorted(e["session_id"] for e in hist))[:10]
     out = {"metric_id": mid, "baseline_version": version, "sessions_in_baseline": len(vals),

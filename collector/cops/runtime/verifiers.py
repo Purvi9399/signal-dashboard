@@ -187,7 +187,9 @@ def _same(a, b):
 # Written independently of signal_metrics.py: it reads raw rows and the
 # estate, and shares only the thresholds file (configuration, not logic).
 
-def _raw(case, metric_id):
+def _raw(case, metric_id, method=None):
+    """method: the baseline method the metric row declares (features.baseline_method). leave_one_out@1
+    compares the session with the other sessions only."""
     s = case.session
     if s is None:
         return None
@@ -204,7 +206,8 @@ def _raw(case, metric_id):
         return float(sum(1 for r in rows if r.get("success") is False))
     if metric_id == "insights.token_outlier":
         toks = lambda x: sum(float(r.get("total_tokens") or 0) for r in x.rows)
-        est = [toks(x) for x in case.sessions if toks(x) > 0]
+        est = [toks(x) for x in case.sessions if toks(x) > 0
+               and not (method == "leave_one_out@1" and x.id == s.id)]
         if len(est) < case.cfg["min_sessions_for_baseline"]:
             return None
         med = statistics.median(est)
@@ -339,8 +342,8 @@ def verify_finding(ctx):
         m = x.get("metric_id")
         if not m or x.get("kind") not in (CLAIM_METRIC_STATE, CLAIM_METRIC_VALUE):
             continue
-        raw = _raw(case, m)
         ev = events.get(m)
+        raw = _raw(case, m, (ev.features or {}).get("baseline_method") if ev else None)
         if raw is None or ev is None or ev.value is None:
             continue
         checked.append(m)

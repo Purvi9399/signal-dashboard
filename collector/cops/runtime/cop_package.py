@@ -1625,6 +1625,42 @@ NO_WINDOW = ("no approved baseline window: every session of the fetched estate w
              "(metrics_config.json has no window)")
 
 
+# The measures whose comparison group contains the judged session. Anomaly Detection reads them leave-one-out:
+# the same signal_metrics function against signal_metrics.estate of the other sessions (purvi, 2026-11-24, U-AD7).
+AD_SELF_INCLUDING = ("insights.token_outlier", "insights.duration_outlier", "activity.action_rate_ratio")
+AD_BASELINE_METHOD = "leave_one_out@1"
+
+
+def ad_leave_one_out(sessions, s, cfg, events):
+    """The session's metric_event dicts, with each self-including measure re-read by signal_metrics.metric_event
+    against the estate without the session. The self-including reading stays in features.self_inclusive."""
+    sm = EA.signal_metrics
+    est = sm.estate([x for x in sessions if x.id != s.id])
+    entries = {m[0]: m for m in sm.METRICS}
+    out = []
+    for e in events:
+        if e["metric_id"] in AD_SELF_INCLUDING:
+            x = sm.metric_event(s, entries[e["metric_id"]], est, cfg, e["computed_at"])
+            x["features"] = {**x["features"], "baseline_method": AD_BASELINE_METHOD,
+                             "self_inclusive": {"value": e["value"], "state": e["state"]}}
+            x["source"] = f"{x['source']}/{AD_BASELINE_METHOD}"
+            e = x
+        out.append(e)
+    return out
+
+
+def ad_case_events(case, metric_ids=None):
+    """CaseData.case_events as Anomaly Detection reads them: the package, its picture (VS-01, DS-03, the rule
+    baseline) and its metric tools all see the same leave-one-out rows. Other COPs keep case.case_events."""
+    from ..models import MetricEvent
+    s = case.session
+    if s is None:
+        return case.case_events(metric_ids)
+    mine = [e for e in case.events if e["session_id"] == case.session_id
+            and (metric_ids is None or e["metric_id"] in metric_ids)]
+    return [MetricEvent.from_row(e) for e in ad_leave_one_out(case.sessions, s, case.cfg, mine)]
+
+
 def _version(cfg, ids):
     import hashlib
     return f"{cfg.get('metric_version')}#" + hashlib.sha256(json.dumps(sorted(ids)).encode()).hexdigest()[:10]
@@ -1632,37 +1668,47 @@ def _version(cfg, ids):
 
 def _ad_baselines(sessions, s, cfg):
     """Which comparison each baseline-dependent measure uses, how large it is, and whether it meets the
-    minimum, read from signal_metrics.estate as the metrics computed it. Nothing is recomputed here."""
+    minimum, read from signal_metrics.estate as the metrics computed it. Nothing is recomputed here. The
+    self-including measures are compared with the other sessions only (AD_BASELINE_METHOD); the self-including
+    comparison is recorded beside them."""
     sm = EA.signal_metrics
-    e = sm.estate(sessions)
+    others = [x for x in sessions if x.id != s.id]
+    e, e_all = sm.estate(others), sm.estate(sessions)
     need, need_t = cfg["min_sessions_for_baseline"], cfg["min_transitions_for_novelty"]
-    with_tokens = [x.id for x in sessions if x.tokens > 0]
-    with_steps = [x.id for x in sessions if any(sm.num(st.get("duration_ms")) > 0 for st in x.steps)]
+    with_tokens = [x.id for x in others if x.tokens > 0]
+    with_steps = [x.id for x in others if any(sm.num(st.get("duration_ms")) > 0 for st in x.steps)]
     same_tool = [x.id for x in sessions if x.tool == s.tool]
+    other_tool = [x for x in same_tool if x != s.id]
     earlier = [x.id for x in sessions if x.operator == s.operator and (x.start or "") < (s.start or "")]
     servers = sorted({r["mcp_server"] for r in s.rows if sm.has(r.get("mcp_server"))})
     rate = e["median_rate_by_tool"].get(s.tool)
     trans = len(s.transitions())
+
+    def loo(ids, **incl):
+        return {"method": AD_BASELINE_METHOD, "version": f"{_version(cfg, ids)}/{AD_BASELINE_METHOD}",
+                "self_inclusive": incl}
     return {
         "insights.token_outlier": {
-            "comparison": "every session of the fetched estate with token counts, this one included",
+            "comparison": "every other session of the fetched estate with token counts, this one left out",
             "sessions": len(with_tokens), "needed": need, "median": e["median_tokens"], "this_session": s.tokens,
-            "version": _version(cfg, with_tokens),
+            **loo(with_tokens, sessions=e_all["sessions_with_tokens"], median=e_all["median_tokens"]),
             "sufficient": bool(e["median_tokens"]) and e["sessions_with_tokens"] >= need,
             "gap": None if e["median_tokens"] and e["sessions_with_tokens"] >= need else
-            f"{len(with_tokens)} sessions with token counts; {need} needed (min_sessions_for_baseline)"},
+            f"{len(with_tokens)} other sessions with token counts; {need} needed (min_sessions_for_baseline)"},
         "insights.duration_outlier": {
-            "comparison": "every timed step of the fetched estate, this session's included",
+            "comparison": "every timed step of the other sessions of the fetched estate, this session's left out",
             "sessions": len(with_steps), "needed": None, "median_step_ms": e["median_duration_ms"],
             "limit_ms": (e["median_duration_ms"] or 0) * cfg["duration_outlier_multiple"],
-            "version": _version(cfg, with_steps), "sufficient": bool(e["median_duration_ms"]),
-            "gap": None if e["median_duration_ms"] else "no step in the estate has a recorded duration"},
+            **loo(with_steps, median_step_ms=e_all["median_duration_ms"]),
+            "sufficient": bool(e["median_duration_ms"]),
+            "gap": None if e["median_duration_ms"] else "no step of another session has a recorded duration"},
         "activity.action_rate_ratio": {
-            "comparison": f"sessions of {s.tool}, this one included", "sessions": len(same_tool), "needed": need,
-            "median_actions_per_min": rate, "version": _version(cfg, same_tool),
-            "sufficient": bool(rate) and len(same_tool) >= need,
-            "gap": None if rate and len(same_tool) >= need else
-            f"{len(same_tool)} sessions of {s.tool}; {need} needed (min_sessions_for_baseline)"},
+            "comparison": f"the other sessions of {s.tool}, this one left out", "sessions": len(other_tool),
+            "needed": need, "median_actions_per_min": rate,
+            **loo(other_tool, sessions=len(same_tool), median_actions_per_min=e_all["median_rate_by_tool"].get(s.tool)),
+            "sufficient": bool(rate) and len(other_tool) >= need,
+            "gap": None if rate and len(other_tool) >= need else
+            f"{len(other_tool)} other sessions of {s.tool}; {need} needed (min_sessions_for_baseline)"},
         "path.transition_novelty": {
             "comparison": f"transitions of the other sessions of {s.tool}", "sessions": len(same_tool) - 1,
             "needed": need, "session_transitions": trans, "transitions_needed": need_t,
@@ -1886,6 +1932,7 @@ def assess_anomaly_detection(rows, session_id, cfg=None, computed_at=None, upstr
     events, srows = EA.session_inputs(rows, session_id, cfg, computed_at)
     sessions = EA._computed(rows, cfg, computed_at)[1]
     s = next(x for x in sessions if x.id == session_id)
+    events = {e["metric_id"]: e for e in ad_leave_one_out(sessions, s, cfg, list(events.values()))}
     base = _ad_baselines(sessions, s, cfg)
     assessments = {qid: EA.assess(AD, qid, events, srows, cfg, computed_at, raw_events, native)
                    for qid in EA.QUESTIONS[AD]}

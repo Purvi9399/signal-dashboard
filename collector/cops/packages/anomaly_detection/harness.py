@@ -121,6 +121,8 @@ WORLDS.update({
     + session(tokens=40000),
     "baseline_minimum_counts_self": lambda: history(4) + session(tokens=40000),
 })
+WORLDS["baseline_contamination_interpreted"] = WORLDS["baseline_contamination_false_normal"] = \
+    WORLDS["baseline_contamination_half_estate"]
 CLASSED = ("legitimate_variation_task_class", "legitimacy_with_too_few_peers", "explained_tokens_unexplained_retries",
            "false_anomaly_over_explained_deviation", "genuine_anomaly_despite_task_class",
            "false_normal_against_task_class_peers", "fabricated_context_citation")
@@ -216,6 +218,9 @@ SCRIPTS = {
     "simultaneous_findings_interpreted": lambda: anomalous(
         ["insights.token_outlier", "insights.retry", "insights.repetition", "access.first_seen_mcp"]),
     "memory_precedent_interpreted": lambda: anomalous(["insights.token_outlier"]),
+    "baseline_contamination_interpreted": lambda: anomalous(["insights.token_outlier"]),
+    "baseline_contamination_false_normal": lambda: legitimate_cited(
+        ["insights.token_outlier"], "recent sessions use the same tokens"),
 }
 
 
@@ -380,7 +385,7 @@ CHECKS = {
          _m(r, "AD-2", "insights.token_outlier")["baseline"]["median"],
          _m(r, "AD-3", "activity.action_rate_ratio")["baseline"]["sessions"],
          _m(r, "AD-4", "path.transition_novelty")["baseline"]["sessions"],
-         _m(r, "AD-4", "access.first_seen_mcp")["baseline"]["sessions"]) == (8, 5, 1000.0, 8, 7, 7)
+         _m(r, "AD-4", "access.first_seen_mcp")["baseline"]["sessions"]) == (7, 5, 1000.0, 7, 7, 7)
         and all(_m(r, q, m)["baseline"]["version"] for q, m in (("AD-2", "insights.token_outlier"),
                                                                ("AD-3", "activity.action_rate_ratio"))),
         [_m(r, q, m)["baseline"] for q, m in (("AD-2", "insights.token_outlier"), ("AD-3", "activity.action_rate_ratio"),
@@ -426,8 +431,8 @@ CHECKS = {
     "interpretation_rejection_recorded": lambda r: ("INTERPRETATION_REJECTED" in _codes(r, "AD-5"), _codes(r, "AD-5")),
     "baseline_gaps_named": lambda r: (
         _m(r, "AD-2", "insights.token_outlier")["verdict"] == "NO_BASELINE"
-        and "3 sessions with token counts; 5 needed" in _m(r, "AD-2", "insights.token_outlier")["reason"]
-        and "3 sessions of claude-code; 5 needed" in _m(r, "AD-3", "activity.action_rate_ratio")["reason"]
+        and "2 other sessions with token counts; 5 needed" in _m(r, "AD-2", "insights.token_outlier")["reason"]
+        and "2 other sessions of claude-code; 5 needed" in _m(r, "AD-3", "activity.action_rate_ratio")["reason"]
         and "2 other sessions of claude-code; 5 needed" in _m(r, "AD-4", "path.transition_novelty")["reason"],
         [_m(r, q, m).get("reason") for q, m in (("AD-2", "insights.token_outlier"), ("AD-3", "activity.action_rate_ratio"),
                                                 ("AD-4", "path.transition_novelty"))]),
@@ -455,8 +460,9 @@ CHECKS = {
         (_b(r, "AD-5")["upstream"]["runtime_monitoring"] or {}).get("label") == "INSUFFICIENT"
         and "Runtime Monitoring" in _b(r, "AD-5")["because"], _b(r, "AD-5").get("upstream")),
     "baseline_shift_recorded": lambda r: (
-        _m(r, "AD-2", "insights.token_outlier")["baseline"]["median"] == 40000.0
-        and _m(r, "AD-2", "insights.token_outlier")["baseline"]["sessions"] == 15
+        _m(r, "AD-2", "insights.token_outlier")["baseline"]["median"] == 20500.0
+        and _m(r, "AD-2", "insights.token_outlier")["baseline"]["sessions"] == 14
+        and _m(r, "AD-2", "insights.token_outlier")["baseline"]["self_inclusive"] == {"sessions": 15, "median": 40000.0}
         and _q(r, "AD-2", r["earlier_estate"])["answer"] == "SIGNIFICANTLY_DIFFERENT"
         and _m(r, "AD-2", "insights.token_outlier", r["earlier_estate"])["baseline"]["median"] == 1000.0
         and _m(r, "AD-2", "insights.token_outlier")["baseline"]["version"]
@@ -519,9 +525,18 @@ CHECKS = {
         _vr(r)["VS-01"]["result"] in ("PASS", "WARN")
         and "WARNING, within the deviation limit" in _comp(r, "deviation_metrics")["item"]["basis"],
         (_vr(r)["VS-01"], _comp(r, "deviation_metrics")["item"]["basis"])),
-    "self_inclusion_recorded": lambda r: (
-        "this one included" in _m(r, "AD-2", "insights.token_outlier")["baseline"]["comparison"],
+    "leave_one_out_recorded": lambda r: (
+        all(_m(r, q, m)["baseline"]["method"] == "leave_one_out@1"
+            and _m(r, q, m)["baseline"]["version"].endswith("/leave_one_out@1")
+            and _m(r, q, m)["baseline"]["self_inclusive"]
+            for q, m in (("AD-2", "insights.token_outlier"), ("AD-3", "activity.action_rate_ratio")))
+        and "left out" in _m(r, "AD-2", "insights.token_outlier")["baseline"]["comparison"],
         _m(r, "AD-2", "insights.token_outlier")["baseline"]),
+    "minimum_counts_others": lambda r: (
+        _m(r, "AD-2", "insights.token_outlier")["baseline"]["sessions"] == 4
+        and _m(r, "AD-2", "insights.token_outlier")["baseline"]["self_inclusive"]["sessions"] == 5
+        and _m(r, "AD-2", "insights.token_outlier")["verdict"] == "NO_BASELINE",
+        _m(r, "AD-2", "insights.token_outlier")),
 }
 
 

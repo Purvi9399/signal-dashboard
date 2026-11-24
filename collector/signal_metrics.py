@@ -1691,5 +1691,33 @@ def catalogue_summary(events):
         print(f"{mid:<42}" + "".join(f"{avail[mid][k]:>13}" for k in kinds))
 
 
+
+def metric_event(s, entry, est, cfg, computed_at):
+    """One METRICS entry for one session against the estate est, exactly as compute() reads it (a test holds the
+    two equal). For a caller that needs another comparison group, such as a leave-one-out estate."""
+    mid, name, fn, basis, fields, applies = entry
+    t = cfg["thresholds"].get(mid, {})
+    could_fire = approvals_visible(s, cfg) if basis == "approvals" else B[basis](s)
+    if not A[applies](s):
+        return event(s, mid, name, None, t, "NOT_APPLICABLE", {"reason": f"did not arise: {applies}"}, [], None,
+                     fields, basis, could_fire, cfg, computed_at, None)
+    try:
+        value, feats, ev, trace_id = fn(s, est, cfg)
+        err = None
+    except Exception as ex:
+        value, feats, ev, trace_id, err = None, {}, [], None, f"{type(ex).__name__}: {ex}"
+    state = judge(value, t)
+    if err:
+        state = "UNKNOWN"
+    elif "_state" in feats:
+        state = feats.pop("_state")
+    elif state == "NORMAL" and not could_fire and not value:
+        state = "UNKNOWN"
+        feats = {**feats, "reason": f"basis absent: {basis}"}
+    return event(s, mid, name, value, t, state, feats, ev, trace_id, fields, basis, could_fire, cfg, computed_at,
+                 err)
+
+
 if __name__ == "__main__":
     main()
+

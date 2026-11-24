@@ -218,8 +218,64 @@ def test_a_verified_legitimate_variation_is_remembered_for_review():
     assert r["finding"]["label"] == "NORMAL" and r["memory_write"]["written"] is True
 
 
-def test_self_inclusion_is_pinned_not_endorsed(bench):
-    """U-AD7: today's behaviour where the leave-one-out comparison differs (LOO_COMPARISON.json)."""
-    a = answers(bench["results"]["baseline_contamination_half_estate"]["cop"]["finding"])
+def test_leave_one_out_reads_the_session_against_the_others(bench):
+    """U-AD7, adopted 2026-11-24: the self-including reading is recorded beside the one that decides."""
+    f = bench["results"]["baseline_contamination_half_estate"]["cop"]["finding"]
+    m = next(x for x in f["cop_specific"]["questions"]["AD-2"]["basis"]["measures"]
+             if x["metric"] == "insights.token_outlier")
+    assert answers(f)["AD-2"] == "SIGNIFICANTLY_DIFFERENT" and m["value"] == 40.0 and m["state"] == "CRITICAL"
+    assert m["baseline"]["median"] == 1000.0 and m["baseline"]["self_inclusive"] == {"sessions": 8, "median": 20500.0}
     b = answers(bench["results"]["baseline_minimum_counts_self"]["cop"]["finding"])
-    assert a["AD-2"] == "COMPARABLE" and b["AD-2"] == "SIGNIFICANTLY_DIFFERENT"
+    assert b["AD-2"] == b["AD-3"] == "BASELINE_INSUFFICIENT" and b["AD-5"] == "UNDETERMINED"
+
+
+def test_leave_one_out_rows_record_the_self_including_reading_and_a_versioned_method():
+    rt = E.make_runtime("t-ad-loo", "s1", H.WORLDS["baseline_contamination_half_estate"]())
+    loo = {e.metric_id: e for e in P.ad_case_events(rt.case)}
+    incl = {e.metric_id: e for e in rt.case.case_events()}
+    t = loo["insights.token_outlier"]
+    assert (t.value, t.state) == (40.0, "CRITICAL") and incl["insights.token_outlier"].value == 1.95
+    assert t.features["baseline_method"] == P.AD_BASELINE_METHOD
+    assert t.features["self_inclusive"] == {"value": 1.95, "state": "NORMAL"}
+    assert t.source.endswith("/" + P.AD_BASELINE_METHOD)
+    # every measure the package does not read leave-one-out is the case's own row, unchanged
+    assert all(loo[k] == incl[k] for k in incl if k not in P.AD_SELF_INCLUDING)
+    v1 = H.run_scenario("baseline_contamination_half_estate", None)
+    v2 = H.run_scenario("baseline_contamination_half_estate", None)
+    ver = lambda r: next(x for x in r["cop"]["finding"]["cop_specific"]["questions"]["AD-2"]["basis"]["measures"]
+                         if x["metric"] == "insights.token_outlier")["baseline"]["version"]
+    assert ver(v1) == ver(v2) and ver(v1).endswith("/" + P.AD_BASELINE_METHOD)
+
+
+def test_other_cops_keep_the_self_including_reading():
+    from cops.runtime import tools as T
+    rows = H.WORLDS["baseline_contamination_half_estate"]()
+    rt = E.make_runtime("t-ad-scope", "s1", rows)
+    for cop in ("risk_mitigation", "resource_management", "workload_optimization"):
+        assert "insights.token_outlier" in BY_KEY[cop].metric_keys
+        got = {r["metric"]: r["value"] for r in T.t_get_metric_rows(rt.case, {"metric_ids": ["insights.token_outlier"]},
+                                                                    {"cop": cop})["rows"]}
+        assert got == {"insights.token_outlier": 1.95}
+        assert [e.value for e in G._events(rt, cop) if e.metric_id == "insights.token_outlier"] == [1.95]
+    assert [e.value for e in G._events(rt, COP) if e.metric_id == "insights.token_outlier"] == [40.0]
+
+
+def test_mc01_recomputes_with_the_method_the_row_declares():
+    from cops.runtime import verifiers as V
+    rt = E.make_runtime("t-ad-mc01", "s1", H.WORLDS["baseline_contamination_half_estate"]())
+    assert V._raw(rt.case, "insights.token_outlier") == 1.95
+    assert V._raw(rt.case, "insights.token_outlier", P.AD_BASELINE_METHOD) == 40.0
+    rt4 = E.make_runtime("t-ad-mc01-4", "s1", H.WORLDS["baseline_minimum_counts_self"]())
+    assert V._raw(rt4.case, "insights.token_outlier", P.AD_BASELINE_METHOD) is None
+
+
+def test_compute_reads_each_metric_through_metric_event():
+    import signal_metrics as SM
+    rows = H.WORLDS["normal"]()
+    cfg = SM.load_config()
+    events, sessions = SM.compute(rows, cfg, computed_at="2026-10-29T00:00:00Z")
+    s = next(x for x in sessions if x.id == "s1")
+    est = SM.estate(sessions)
+    mine = {e["metric_id"]: e for e in events if e["session_id"] == "s1"}
+    for entry in SM.METRICS:
+        assert SM.metric_event(s, entry, est, cfg, "2026-10-29T00:00:00Z") == mine[entry[0]]

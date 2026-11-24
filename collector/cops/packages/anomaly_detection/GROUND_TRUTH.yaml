@@ -367,6 +367,16 @@ post_run_corrections:
       Behaviour Analytics reads a failing command run five times as POOR_RECOVERY, one of the two labels
       rules.anomaly_detection reads from it. The expectation about Anomaly Detection (recorded, not counted) is
       unchanged.
+  C-AD4:
+    scenario: [normal, insufficient_baseline_history, baseline_shift]
+    was: {checks: "baseline counts and medians with the session included (8 sessions; '3 sessions'; median 40000 of 15)"}
+    now: {checks: "the same counts over the other sessions (7; '2 other sessions'; median 20500 of 14), the self-including figures recorded beside them"}
+    why: >-
+      R-AD3 (leave-one-out) was written before the code but did not restate the numeric constants three
+      existing checks hold for the baseline's size and median. The first leave-one-out run failed only those
+      three checks; every question answer and label of the three scenarios is unchanged. In baseline_shift s1
+      still reads COMPARABLE (1.95 against the 20500 median of the other 14 sessions, where it read 1.0
+      against 40000 with itself included).
 
 design_revisions:
   R-AD1:
