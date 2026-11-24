@@ -58,9 +58,9 @@ deviation leaves AD-5 and the label INCONCLUSIVE.
 
 | Measure | Comparison group | Minimum | Direction judged |
 |---|---|---|---|
-| `insights.token_outlier` | every session of the fetched estate with token counts, this one included; estate median | 5 sessions (`min_sessions_for_baseline`) | above only |
-| `insights.duration_outlier` | every timed step of the estate; a step over 10x the median step (`duration_outlier_multiple`) | none configured | above only |
-| `activity.action_rate_ratio` | sessions of the same agent tool, this one included; median actions per minute | 5 sessions | above only |
+| `insights.token_outlier` | every other session of the fetched estate with token counts (leave-one-out); their median | 5 other sessions (`min_sessions_for_baseline`) | above only |
+| `insights.duration_outlier` | every timed step of the other sessions (leave-one-out); a step over 10x the median step (`duration_outlier_multiple`) | none configured | above only |
+| `activity.action_rate_ratio` | the other sessions of the same agent tool (leave-one-out); median actions per minute | 5 other sessions | above only |
 | `path.transition_novelty` | transitions of the other sessions of the same agent tool | 5 sessions and 5 transitions in this session (`min_transitions_for_novelty`) | above only |
 | `access.first_seen_mcp` | earlier sessions of the same operator | one earlier session (with none, every server is new by definition) | above only |
 | `insights.repetition`, `insights.retry`, `insights.failed` | none: approved absolute thresholds per session | none | above only |
@@ -68,8 +68,12 @@ deviation leaves AD-5 and the label INCONCLUSIVE.
 Not taken into account, because no approved specification asks for it or no definition exists: a temporal window
 (every session of the fetched estate weighs the same; limitation `baseline_window`), the model, agent or task class
 (`task_adjusted_anomaly_score` is NOT_CALCULATED), and a per-agent tool distribution (`tool_use_deviation_per_agent`
-is NOT_CALCULATED). The token and rate baselines include the session judged, as `signal_metrics` computes them; the
-measured effect and a leave-one-out proposal are in DECISIONS.md (U-AD7). Task-class peers are compared leave-one-out,
+is NOT_CALCULATED). The token, duration and rate measures are read leave-one-out (`cop_package.AD_BASELINE_METHOD`,
+`leave_one_out@1`, approved by purvi 2026-11-24, U-AD7): the same `signal_metrics` function
+(`signal_metrics.metric_event`) against `signal_metrics.estate` of the other sessions. The self-including reading
+`signal_metrics.compute` gives every other COP is kept beside it (`features.self_inclusive`, baseline
+`self_inclusive`), and the baseline version names the method. Only Anomaly Detection reads them so (DECISIONS.md
+D-AD21 to D-AD24). Task-class peers are compared leave-one-out,
 and only as legitimacy context.
 
 ## The five questions

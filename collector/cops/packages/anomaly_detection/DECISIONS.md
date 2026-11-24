@@ -1,8 +1,10 @@
 # Anomaly Detection: decisions
 
 Proposed on 2026-11-20. D-AD1 approved by purvi at 12:13Z; revision 2 (D-AD15 to D-AD20, U-AD2, U-AD3, U-AD7) made
-at her request (12:13Z, 12:24Z) and awaiting her review. No label name, behavioural question or threshold, and
-not the metrics engine, is changed.
+at her request (12:13Z, 12:24Z); revision 2 accepted and leave-one-out adopted (revision 3, D-AD21 to D-AD24) on
+2026-11-24 08:17Z, awaiting her final review. No label name, behavioural question or threshold is changed; the
+metrics engine gains `signal_metrics.metric_event` (one metric for one session against a given estate) and
+`compute` is unchanged.
 
 ## Shared architecture
 
@@ -88,7 +90,7 @@ uses `signal_metrics.estate` and the metric functions on the estate without the 
 - With five or more other sessions and the spike rare, the two agree (minimum_estate_5_others). Path novelty
   already excludes the session.
 
-Proposal for purvi:
+Proposal for purvi (adopted 2026-11-24 as Revision 3 below):
 - Record a versioned leave-one-out reading beside each self-including measure in `_ad_baselines`, using the same
   functions. Let it decide only once approved.
 - Count the minimum over other sessions.
@@ -102,17 +104,47 @@ Proposal for purvi:
 - `test_evidence_assessment.py`: `support.py` and `verifiers.py` read the package (the legitimacy re-check).
 - Bench: unchanged at 48 PASS, 1 FAIL, 5 INCONCLUSIVE; no label moved in this revision.
 
+## Acceptance (purvi, 2026-11-24 08:17Z)
+
+| # | purvi's decision | Where it stands |
+|---|---|---|
+| A-AD1 | U-AD2 direction APPROVED, subject to independent verification and other COPs' contracts | D-AD15 to D-AD18 kept as built. The re-check is recomputed from the case rows, the task-class record and validated memory, never the model's text (`cop_package.ad_legitimacy`); SC-01 fails a fabricated citation. Only COPs in `cop_package.LEGITIMACY` (Anomaly Detection) are affected: `test_ds03_is_unchanged_for_other_cops`, `test_the_legitimacy_recheck_and_warning_qualification_belong_to_anomaly_detection_only` |
+| A-AD2 | U-AD3 direction APPROVED, same condition | D-AD19 kept as built. `warning_is_partial` is set on Anomaly Detection's quiet component only: `test_a_warning_still_opposes_another_cops_quiet_label` |
+| A-AD3 | U-AD7: adopt leave-one-out baselines if the comparison shows more independent baselines without regressions; keep versioning and reproducibility | Adopted as D-AD21 to D-AD24 below. Comparison: no harness, evaluation, live-case or bench label moves except the two scenarios that pinned self-inclusion; the one other measured change is listed under "Effects" |
+| A-AD4 | Record acceptance if Revision 2 is correct; otherwise make only the necessary corrections | Revision 2 needed no correction. The leave-one-out work needed one verifier alignment (D-AD23) and three check constants (C-AD4) |
+
+## Revision 3 (purvi 2026-11-24 08:17Z): leave-one-out baselines (U-AD7)
+
+Ground truth first (d8f436b, design revision R-AD3): baseline_contamination_half_estate and
+baseline_minimum_counts_self restated; baseline_contamination_interpreted and baseline_contamination_false_normal
+added.
+
+| # | Decision | Alternatives considered | Rationale and consequence |
+|---|---|---|---|
+| D-AD21 | Anomaly Detection reads `insights.token_outlier`, `insights.duration_outlier` and `activity.action_rate_ratio` against `signal_metrics.estate` of the other sessions (`cop_package.AD_SELF_INCLUDING`, `ad_leave_one_out`), through `signal_metrics.metric_event`, which applies the same metric function and state rules as `compute` (`test_compute_reads_each_metric_through_metric_event`). The minimum is counted over the other sessions | change `signal_metrics.compute` for every COP; record leave-one-out beside the current reading without letting it decide | purvi approved adoption. Changing `compute` would change Risk Mitigation, Resource Management and Workload Optimization, which read the same metrics; that needs their review. `metric_event` is added after `compute` and `compute` is untouched, so `activation.py`'s `code_ref` line numbers and the governed mapping version (`map-4d9303c348c9f5cf`) stay the same |
+| D-AD22 | Versioning and reproducibility: each leave-one-out row keeps the self-including reading (`features.self_inclusive`), names the method (`features.baseline_method` = `leave_one_out@1`, `source` suffix), and each baseline records `method`, `self_inclusive` (size and median) and a version over the member session ids with the method appended (`.../leave_one_out@1`) | a new version field only | the same rows give the same version (tested), and the method is in the version, so a reading can be traced to its comparison group |
+| D-AD23 | Every surface Anomaly Detection judges from reads the same rows: the package (`assess_anomaly_detection`), its picture for VS-01, DS-03 and the rule baseline (`graph._events`), and its tools (`t_get_metric_rows`, `t_compare_versioned_baseline`). MC-01 (`verifiers._raw`) recomputes the token outlier from raw rows by the method the metric row declares | leave the verifiers on the self-including reading | first run: MC-01 rejected a correct ANOMALOUS in baseline_contamination_interpreted ("metric row 40.0, raw recompute 1.95"). MC-01 stays its own raw implementation; it now excludes the session only when the row says `leave_one_out@1`. No other COP's row declares it |
+| D-AD24 | Other COPs keep `CaseData.case_events` and the self-including reading | extend leave-one-out to them | `test_other_cops_keep_the_self_including_reading`. Consequence: in a contaminated estate Anomaly Detection and Resource Management can read the same session's token outlier differently; both readings are recorded |
+
+### Effects (every one measured)
+
+- Leave-one-out comparison re-run on the new code: `/mnt/project-files/pr4/verification/anomaly_detection/LOO_COMPARISON_2026-11-24.json`, 168 measures on 42 worlds, 11 state differences, all in worlds built for self-inclusion (the two restated scenarios and the two added on the same world, minimum_estate_4_others, two_spikes_among_5, half_estate_shifted, rate_at_minimum). No other harness world, evaluation case or live-evaluation case changes state.
+- Harness labels that moved: baseline_contamination_half_estate NORMAL -> INCONCLUSIVE (AD-2 COMPARABLE -> SIGNIFICANTLY_DIFFERENT; 40 against the other sessions' median 1000, where it read 1.95 against 20500 with itself included); baseline_minimum_counts_self INCONCLUSIVE -> INDETERMINATE (four other sessions: tokens and rate BASELINE_INSUFFICIENT, decided without the model).
+- Activation scenario `missing_evidence` (a tenant with one session): `insights.duration_outlier` no longer compares the session's steps with themselves and is UNKNOWN ("no recorded durations in estate"). Its support quotient moved 0.488 -> 0.467 (initial) and 0.481 -> 0.459 (revised); label INCONCLUSIVE and decision INSUFFICIENT_EVIDENCE unchanged. `docs/cops/evaluation/scenario/missing_evidence.json` regenerated by `python3 -m cops.runtime.scenario`; the other four traces were left as they were.
+- C-AD4: three checks held the self-including baseline sizes and medians as constants (normal, insufficient_baseline_history, baseline_shift); restated, with no answer or label change.
+- Bench unchanged at 48 PASS, 1 FAIL, 5 INCONCLUSIVE, line for line. Evaluation 25/25.
+
 ## For purvi's decision
 
 | # | Question |
 |---|---|
 | U-AD1 | Approved 12:13Z (D-AD1) |
-| U-AD2 | Resolved by D-AD15 to D-AD18; for review. Still open inside it: an approved record of an authorised workload change or of a task's expected volume, so that either can be accepted as context |
-| U-AD3 | Resolved by D-AD19; for review |
+| U-AD2 | ACCEPTED 2026-11-24 (A-AD1). Still open inside it: an approved record of an authorised workload change or of a task's expected volume, so that either can be accepted as context |
+| U-AD3 | ACCEPTED 2026-11-24 (A-AD2) |
 | U-AD4 | Kept: lower limits for tokens and action rate are not approved; the low direction stays NOT_EVALUATED |
 | U-AD5 | Kept: no approved baseline window; limitation `baseline_window` |
 | U-AD6 | Kept: first-seen MCP needs one earlier session of the operator; `min_sessions_for_baseline` is not applied to it without approval |
-| U-AD7 | Measured (above): self-inclusion changes the reading in two patterns. Proposal: versioned leave-one-out beside the current reading, decisive only once approved |
+| U-AD7 | ADOPTED 2026-11-24 (A-AD3, D-AD21 to D-AD24). Open: whether Risk Mitigation, Resource Management and Workload Optimization should read leave-one-out too (their owners' review) |
 | U-AD8 | Kept: the comparison group is the estate or the agent tool; task-class peers are used only as legitimacy context (D-AD15), not as the baseline |
 | U-AD9 | Open: redesign the contradictory scenario variant, or keep it as the package's catch |
 | U-AD10 | Kept: `task_adjusted_anomaly_score` and `tool_use_deviation_per_agent` NOT_CALCULATED, needing a task-class baseline definition and an approved distance method |
