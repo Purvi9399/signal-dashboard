@@ -301,23 +301,44 @@ scenarios:
 
   baseline_contamination_half_estate:
     description: >-
-      known_limitation U-AD7. Four 1000-token sessions, three of 40000 and s1 at 40000. The estate median
-      includes s1 and is 20500, so s1 reads 1.95 (NORMAL); left out, the median is 1000 and s1 reads 40
-      (CRITICAL). Today's behaviour is pinned, not endorsed
+      U-AD7, leave-one-out (design revision R-AD3). Four 1000-token sessions, three of 40000 and s1 at 40000.
+      Without s1 the median is 1000, so s1 reads 40 (CRITICAL); the self-including reading (median 20500,
+      1.95, NORMAL) is recorded beside it, not used. No model is available
     estate: base1 to base4 (1000), new1 to new3 (40000), s1 (40000)
-    questions: {AD-2: COMPARABLE, AD-5: NO_DEVIATION}
-    cop_label: [NORMAL]
-    checks: [self_inclusion_recorded]
+    questions: {AD-1: NOT_UNUSUAL, AD-2: SIGNIFICANTLY_DIFFERENT, AD-3: RATE_WITHIN_BASELINE, AD-4: FAMILIAR,
+                AD-5: INCONCLUSIVE}
+    cop_label: [INCONCLUSIVE]
+    checks: [model_was_needed, leave_one_out_recorded, never_a_violation]
 
   baseline_minimum_counts_self:
     description: >-
-      known_limitation U-AD7. Four earlier sessions and s1 at 40000 tokens: five sessions with token counts,
-      the minimum, only because s1 counts itself; left out, there would be no baseline. Today's behaviour is
-      pinned, not endorsed; no model
+      U-AD7, leave-one-out (R-AD3). Four earlier sessions and s1 at 40000 tokens. The minimum (5) is counted
+      over the other sessions only: four, so tokens and action rate have no baseline. Nothing deviates and
+      not every question is answered, so the package decides INDETERMINATE without the model
     estate: base1 to base4 (1000), s1 (40000)
+    questions: {AD-1: NOT_UNUSUAL, AD-2: BASELINE_INSUFFICIENT, AD-3: BASELINE_INSUFFICIENT,
+                AD-4: BASELINE_INSUFFICIENT, AD-5: UNDETERMINED}
+    cop_label: [INDETERMINATE]
+    checks: [decided_without_model, no_model_call, leave_one_out_recorded, minimum_counts_others]
+
+  baseline_contamination_interpreted:
+    description: >-
+      the baseline_contamination_half_estate world; the simulated model concludes ANOMALOUS citing the token
+      outlier. VS-01 reads the same leave-one-out metric row as the package, so the reading is supported
+    estate: as baseline_contamination_half_estate
+    questions: {AD-2: SIGNIFICANTLY_DIFFERENT, AD-5: MEANINGFUL_ANOMALY}
+    cop_label: [ANOMALOUS]
+    checks: [verified, simulated_model, leave_one_out_recorded]
+
+  baseline_contamination_false_normal:
+    description: >-
+      the baseline_contamination_half_estate world; the simulated model concludes NORMAL, saying recent
+      sessions use the same tokens. There is no task-class record and no validated precedent, so no checkable
+      context explains the deviation and the NORMAL is rejected
+    estate: as baseline_contamination_half_estate
     questions: {AD-2: SIGNIFICANTLY_DIFFERENT, AD-5: INCONCLUSIVE}
     cop_label: [INCONCLUSIVE]
-    checks: [self_inclusion_recorded]
+    checks: [normal_rejected, legitimacy_not_established_named]
 
 post_run_corrections:
   C-AD1:
@@ -364,3 +385,14 @@ design_revisions:
       Neither world has checkable context for its deviation (retries have no context source; there is no
       task-class record), so under the legitimacy contract both NORMAL readings stay rejected, now with the
       reason named. Labels and answers unchanged.
+  R-AD3:
+    scenario: [baseline_contamination_half_estate, baseline_minimum_counts_self]
+    was:
+      baseline_contamination_half_estate: {AD-2: COMPARABLE, AD-5: NO_DEVIATION, cop_label: [NORMAL]}
+      baseline_minimum_counts_self: {AD-2: SIGNIFICANTLY_DIFFERENT, AD-5: INCONCLUSIVE, cop_label: [INCONCLUSIVE]}
+    now: as in scenarios; added baseline_contamination_interpreted and baseline_contamination_false_normal
+    why: >-
+      purvi approved leave-one-out baselines on 2026-11-24 08:17Z, conditional on the comparison showing more
+      independent baselines and no regressions (LOO_COMPARISON.json: no other harness, evaluation or live-case
+      world changes state). Both scenarios had pinned the self-including behaviour without endorsing it.
+      Written before the leave-one-out code.
