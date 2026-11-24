@@ -1,0 +1,137 @@
+Section,Column,Type,Claude Code source,Cursor source,Antigravity,Copilot,Note
+identity of this record,observable_id,uuid primary key default gen_random_uuid(),,,,,
+,schema_version,text        not null default 'signal-obs-v1',,,,,
+,occurred_at,timestamptz not null,,,,,when it happened
+,captured_at,timestamptz not null default now(),,,,,
+,ingested_at,timestamptz not null default now(),,,,,
+,sequence_num,bigint,OpenTelemetry,derived,,,"OTel event.sequence. Cursor has none, order by timestamp."
+what tool,tool,signal_tool not null,,,,,
+,tool_version,text,OpenTelemetry,local hooks,,,"MIRROR AGAIN. CC service.version in OTel, Cursor cursor_version on hooks."
+,surface,signal_surface,,,,,
+correlation keys,session_id,text not null,local hooks ,local hooks ,,,"CC session_id, Cursor conversation_id. Verified equal across hooks and OTel."
+,conversation_id,text,local hooks,local hooks,,,"CC reuses session_id. Cursor sends both, same value."
+,turn_id,text,local hooks,local hooks,,,"CC prompt_id, verified identical to OTel prompt.id. Cursor generation_id."
+,message_id,text,local hooks,—,,,MessageDisplay.message_id. No Cursor equivalent.
+,tool_use_id,text,local hooks ,local hooks,,,Joins a tool request to its result.
+,request_id,text,,,,,
+agent identity,agent_id,text,local hooks ,—,,,CC on most payloads. Cursor has no agent identity at all.
+,agent_type,text,local hooks,—,,,"SubagentStart.agent_type, observed value 'fork'."
+,parent_agent_id,text,OpenTelemetry ,—,,,OTel beta traces. Otherwise derive from nesting.
+,is_multi_agent,boolean,derived,derived,,,Derived by signal_agents.py from four independent clues.
+,multi_agent_source,text,,,,,platform_determined | human_determined
+,delegation_depth,smallint default 0,derived,derived,,,Derived from agent_id nesting.
+operator and org,operator_email,text,OpenTelemetry,local hooks,,,"MIRROR IMAGE. CC only in OTel, Cursor on every hook payload."
+,operator_id,text,OpenTelemetry,—,,,OTel user.account_id.
+,operator_username,text,CLI wrapper ,CLI wrapper ,,,OS username from the collector.
+,org_id,text,OpenTelemetry,—,,,OTel organization.id. Cursor needs the admin API.
+,team_id,text,OpenTelemetry,—,,,Only because we inject it via OTEL_RESOURCE_ATTRIBUTES.
+,hostname,text,CLI wrapper,CLI wrapper,,,Collector environment.
+,machine_id,text,,,,,
+where,workspace,text,local hooks,local hooks,,,"CC cwd, Cursor workspace_roots[0]."
+,cwd,text,local hooks ,local hooks,,,
+,repo_name,text,,,,,
+,git_branch,text,FS watcher ,FS watcher ,,,Neither tool reports it. Read from .git or a git command.
+,git_commit,text,FS watcher ,FS watcher ,,,Watcher or webhook.
+what happened,observable_type,signal_observable_type not null,,,,,
+,status,text,,,,,ok | error | denied | timeout | blocked
+,success,boolean,,,,,
+,error_type,text,,,,,
+,error_message,text,,,,,
+,latency_ms,integer,,,,,
+prompt and conversation,prompt_text,text,local hooks ,local hooks ,,,"Hooks always. OTel redacts it by default, verified as <REDACTED>."
+,prompt_length,integer,OpenTelemetry ,derived,,,OTel gives it even when redacted.
+,prompt_word_count,integer,derived,derived,,,From the text.
+,response_text,text,local hooks ,local hooks ,,,"CC MessageDisplay.delta in parts, or Stop.last_assistant_message whole."
+,response_index,smallint,local hooks,—,,,"CC streams responses, Cursor does not."
+,response_is_final,boolean,local hooks,—,,,
+,reasoning_text,text,FS watcher,local hooks,,,CC thinking blocks live in the transcript. Cursor emits afterAgentThought.
+,attachment_count,smallint,—,local hooks,,,Cursor only.
+,composer_mode,text,—,local hooks,,,"Cursor only: agent, ask or edit."
+,slash_command,text,OpenTelemetry ,derived,,,"OTel command_name, verified."
+,mentions_files,boolean,,,,,
+model call,model,text,local hooks ,local hooks,,,CC SessionStart.model.
+,model_id,text,OpenTelemetry,local hooks,,,
+,input_tokens,integer,FS watcher ,local hooks,,,"THE KEY ASYMMETRY. CC in the transcript, Cursor in the hook payload."
+,output_tokens,integer,FS watcher ,local hooks,,,Same.
+,cache_read_tokens,integer,FS watcher ,local hooks,,,Same.
+,cache_write_tokens,integer,FS watcher ,local hooks,,,Same.
+,total_tokens,integer,Ope,local hooks ,,,Sum if not given.
+,cost_usd,"numeric(12,6)",OpenTelemetry,derived,,,"CC emits claude_code.cost.usage. Cursor has no cost field, must estimate."
+,cost_is_estimated,boolean default false,,,,,
+,request_latency_ms,integer,OpenTelemetry,—,,,OTel api_request.duration_ms.
+,time_to_first_token,integer,OpenTelemetry,—,,,OTel only.
+,stop_reason,text,OpenTelemetry,local hooks,,,Cursor stop.status.
+,thinking_blocks,smallint,FS watcher,derived,,,Counted from the transcript.
+,sampling_params,jsonb,—,local hooks,,,Cursor model_params on afterAgentThought. CC does not expose it.
+,effort_level,text,local hooks,—,,,"effort.level, an object not a string."
+tool call,tool_name,text,local hooks ,local hooks,,,
+,tool_category,text,,,,,shell | filesystem | web | mcp | subagent
+,tool_is_builtin,boolean,derived,derived,,,Tool name against the built-in set.
+,tool_arguments,jsonb,local hooks ,local hooks ,,,Hooks give the full input. Proxy is the fallback for MCP.
+,tool_result,jsonb,local hooks ,local hooks ,,,"CC tool_response object. Cursor tool_output, a JSON string."
+,tool_result_size,integer,OpenTelemetry ,derived,,,
+,tool_duration_ms,integer,local hooks,local hooks,,,"CC duration_ms on PostToolUse, Cursor duration. Both verified."
+,tool_interrupted,boolean,local hooks,—,,,tool_response.interrupted.
+,tool_timeout_ms,integer,—,local hooks,,,Cursor tool_input.timeout.
+,batch_size,smallint,local hooks,—,,,PostToolBatch.tool_calls. CC only.
+mcp,mcp_server,text,MCP proxy ,MCP proxy ,,,
+,mcp_tool,text,MCP proxy ,MCP proxy ,,,
+,mcp_transport,text,MCP proxy,MCP proxy,,,Known at deploy time really.
+,mcp_server_version,text,MCP proxy,MCP proxy,,,From the initialize handshake.
+,mcp_tools_available,text[],MCP proxy,MCP proxy,,,"Proxy only. The full menu the agent could reach, not just what it used."
+shell,command,text,local hooks ,local hooks ,,,
+,command_cwd,text,,,,,
+,exit_code,integer,CLI wrapper ,local hooks,,,Cursor puts exitCode inside tool_output. CC needs the wrapper or stderr.
+,stdout,text,local hooks ,local hooks ,,,CC tool_response.stdout. Cursor afterShellExecution.output.
+,stderr,text,local hooks ,CLI wrapper,,,CC separates them. Cursor merges into output.
+,output_size,integer,,,,,
+,sandboxed,boolean,—,local hooks,,,"Cursor only, and it explains why no permission events fire."
+,risk_markers,text[],derived,derived,,,Pattern match on the command.
+,hung_seconds,"numeric(8,2)",CLI wrapper,CLI wrapper,,,WRAPPER ONLY. Nothing else can see silence while a process is alive.
+,is_developer_command,boolean,CLI wrapper,CLI wrapper,,,"WRAPPER ONLY. Commands the human ran, which the agent never saw."
+files,file_path,text,local hooks ,local hooks ,,,"Cursor routes file work through Shell, so often inside the command."
+,file_extension,text,,,,,
+,file_change_kind,text,FS watcher ,FS watcher ,,,Watcher is ground truth.
+,file_size,bigint,FS watcher,FS watcher,,,
+,content_hash,text,FS watcher,FS watcher,,,Watcher only.
+,old_content,text,FS watcher,local hooks ,,,"Cursor afterFileEdit gives it directly, but only on the native edit path."
+,new_content,text,FS watcher,local hooks ,,,Same.
+,lines_added,integer,OpenTelemetry ,derived,,,"OTel claude_code.lines_of_code.count, verified."
+,lines_removed,integer,OpenTelemetry ,derived,,,Same.
+,chars_added,integer,derived,local hooks ,,,
+,chars_removed,integer,derived,local hooks ,,,
+,reverted_to_earlier,boolean,FS watcher,FS watcher,,,WATCHER ONLY. Hash returning to an earlier state is an undo.
+,outside_workspace,boolean,derived,derived,,,Path against workspace root.
+,is_config_file,boolean,FS watcher ,FS watcher ,,,
+,is_dependency_manifest,boolean,FS watcher,FS watcher,,,
+,is_lockfile,boolean,FS watcher,FS watcher,,,
+,is_binary,boolean,FS watcher,FS watcher,,,
+permission and human oversight,permission_mode,text,local hooks,—,,,On most CC payloads.
+,permission_decision,text,OpenTelemetry ,—,,,OTel tool_decision. Hooks fire the request but never the denial. Cursor fires nothing at all in sandbox mode.
+,permission_source,text,OpenTelemetry ,—,,,"Verified value user_temporary, meaning approved once not always."
+,permission_scope,text,local hooks ,—,,,once | always
+,permission_options,jsonb,local hooks,—,,,permission_suggestions. Shows what escalation was offered.
+,denial_reason,text,—,—,,,NOT OBTAINABLE on either tool. The most valuable oversight signal.
+agent behaviour,turn_count,integer,derived,derived,,,Distinct turn_id per session.
+,loop_count,integer,derived,local hooks,,,Cursor stop.loop_count.
+,plan_item,text,—,—,,,TaskCreated and TaskCompleted registered but never fire.
+,plan_status,text,,,,,
+,background_tasks,smallint,local hooks,—,,,Stop.background_tasks.
+,scheduled_jobs,smallint,local hooks,—,,,Stop.session_crons.
+,compaction_reason,text,local hooks,local hooks,,,Neither fired in testing.
+,instructions_loaded,text[],local hooks ,FS watcher,,,InstructionsLoaded never fired. Watch CLAUDE.md instead.
+risk,sensitivity_tier,smallint default 1 check (sensitivity_tier between 1 and 3),derived,derived,,,Computed at capture from paths and args.
+,violation_count,smallint default 0,derived,derived,,,Classifier.
+,escalation_flag,boolean default false,derived ,derived,,,
+,secret_detected,boolean default false,derived,derived,,,"Shape match on values, not the word 'token' in a sentence."
+,injection_markers,text[],derived,derived,,,Over tool results from the proxy.
+,policy_rule_matched,text,,,,,
+provenance,collector,signal_collector not null,,,,,the winning source
+,contributing,signal_collector[],,,,,everything that reported it
+,collectors_agree,boolean,,,,,false is itself a signal
+,disagreement,jsonb,,,,,"what each said, when they differ"
+,attribution,signal_attribution default 'unknown',,,,,
+,confidence,signal_confidence not null,,,,,
+,derived_from,uuid[],,,,,source observable ids
+,raw_ref,text,local hooks ,local hooks ,,,transcript_path is on every payload for both tools.
+,extra,jsonb default '{}'::jsonb,,,,,

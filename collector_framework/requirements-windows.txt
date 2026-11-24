@@ -1,0 +1,15 @@
+# Windows-only dependency. See GitHub Issue #1: the three real cli_wrapper
+# collectors (claude_code, copilot, antigravity) need a PTY implementation to
+# wrap their target CLIs the same way pty.openpty()/os.fork() do on POSIX --
+# neither has a stdlib equivalent on Windows. pywinpty wraps the native
+# ConPTY API and is the closest behavioral match (a real pseudo-terminal, not
+# a plain pipe, so the wrapped CLI still sees isatty() == True).
+#
+# This is the project's first non-stdlib dependency. Everything else in
+# collector_framework is stdlib-only by design (see package/build_exe.py's
+# docstring) -- this file exists specifically because POSIX has no
+# equivalent gap to fill.
+#
+# Install only on Windows, e.g.:
+#   python -m pip install -r requirements-windows.txt
+pywinpty>=2.0

@@ -1,0 +1,137 @@
+Section,Column,Type,Antigravity,Copilot,Codex,Note (new agents)
+identity of this record,observable_id,uuid primary key default gen_random_uuid(),,,,
+,schema_version,text        not null default 'signal-obs-v1',,,,
+,occurred_at,timestamptz not null,,,,
+,captured_at,timestamptz not null default now(),,,,
+,ingested_at,timestamptz not null default now(),,,,
+,sequence_num,bigint,,,,
+what tool,tool,signal_tool not null,,,,
+,tool_version,text,CLI: CLI Wrapper; IDE: Hooks + Local Hooks,CLI: OTel; VS Code Chat: Hooks + Local Hooks; VS Code → CLI: OTel,CLI: OTel + CLI Wrapper; IDE Extension: Hooks + Local Hooks,[Codex] IDE Extension — Local Hooks (confirmed — bundles SEPARATE binary version 0.146.0-alpha.3.1)
+,surface,signal_surface,,,,
+correlation keys,session_id,text not null,CLI: Hooks + CLI Wrapper; IDE: Hooks + Local Hooks,CLI: Hooks; VS Code Chat: Hooks + Local Hooks; VS Code → CLI: Hooks; Cloud Agent: Hooks,CLI: Hooks + FS Watcher; IDE Extension: Hooks + FS Watcher,"[Codex] IDE Extension — FS Watcher (rollout, source=vscode) — Hooks blocked by silent trust gate"
+,conversation_id,text,CLI: Hooks + CLI Wrapper; IDE: Hooks,CLI: Hooks; VS Code Chat: Hooks + Local Hooks; VS Code → CLI: Hooks; Cloud Agent: Hooks,CLI: Hooks + FS Watcher; IDE Extension: FS Watcher,
+,turn_id,text,CLI: Hooks; IDE: Hooks,CLI: OTel; VS Code → CLI: OTel,CLI: Hooks,[Codex] CLI — Hooks (turn_id — confirmed missing on some events e.g. SessionEnd)
+,message_id,text,,,,
+,tool_use_id,text,CLI: Hooks; IDE: Hooks,CLI: Hooks + OTel; VS Code → CLI: Hooks + OTel; Cloud Agent: Hooks,CLI: Hooks + MCP Proxy,
+,request_id,text,—,CLI: OTel; VS Code → CLI: OTel,—,
+agent identity,agent_id,text,CLI: Hooks; IDE: Hooks + FS Watcher,CLI: Hooks; VS Code → CLI: Hooks; Cloud Agent: Hooks,CLI: Hooks + MCP Proxy + FS Watcher,"Matched via our 'subagent id' signal. [Codex] CLI — Hooks (confirmed) + MCP Proxy (agent_id tag on tools/call, cross-validated) + FS Watcher (2nd rollout file)"
+,agent_type,text,CLI: Hooks; IDE: Hooks,CLI: Hooks + OTel; VS Code → CLI: Hooks + OTel; Cloud Agent: Hooks,CLI: Hooks,
+,parent_agent_id,text,CLI: Hooks; IDE: Hooks,CLI: OTel; VS Code → CLI: OTel,CLI: Hooks + MCP Proxy,
+,is_multi_agent,boolean,CLI: Hooks + FS Watcher; IDE: Hooks + FS Watcher,CLI: Hooks + OTel; VS Code → CLI: Hooks + OTel; Cloud Agent: Hooks,CLI: Hooks + MCP Proxy + FS Watcher,"Inferred from whether 'subagent spawned' was ever observed. [Antigravity] CLI — Hooks (confirmed — invoke_subagent PreToolUse) + FS Watcher (confirmed, ~42ms) || [Codex] CLI — Hooks (SubagentStart, confirmed) + MCP Proxy (confirmed — tools/call visible, unlike Antigravity) + FS Watcher (2nd rollout)"
+,multi_agent_source,text,,,,
+,delegation_depth,smallint default 0,CLI: Derive; IDE: Derive,CLI: OTel; VS Code → CLI: OTel,CLI: Derive,
+operator and org,operator_email,text,—,CLI: OTel; VS Code → CLI: OTel,CLI: OTel,"[Codex] CLI — OTel (CONFIRMED — real account email+ID leaked into every log record, independent of privacy toggle)"
+,operator_id,text,—,CLI: OTel; VS Code → CLI: OTel,CLI: OTel,"[Codex] CLI — OTel (CONFIRMED — real account email+ID leaked into every log record, independent of privacy toggle)"
+,operator_username,text,CLI: CLI Wrapper; IDE: Hooks + Local Hooks,CLI: CLI Wrapper; VS Code Chat: Hooks + Local Hooks; VS Code Inline: Hooks + Local Hooks; VS Code → CLI: CLI Wrapper,CLI: CLI Wrapper; IDE Extension: Hooks + Local Hooks,
+,org_id,text,—,CLI: OTel; VS Code → CLI: OTel,—,
+,team_id,text,—,CLI: OTel; VS Code → CLI: OTel,—,
+,hostname,text,CLI: CLI Wrapper; IDE: Hooks + Local Hooks,CLI: CLI Wrapper; VS Code Chat: Hooks + Local Hooks; VS Code Inline: Hooks + Local Hooks; VS Code → CLI: CLI Wrapper,CLI: CLI Wrapper; IDE Extension: Hooks + Local Hooks,
+,machine_id,text,—,—,—,
+where,workspace,text,CLI: Hooks; IDE: Hooks + Local Hooks,VS Code Chat: Hooks + Local Hooks; VS Code Inline: Hooks + Local Hooks; VS Code → CLI: Hooks + Local Hooks,CLI: Hooks; IDE Extension: Hooks + Local Hooks,
+,cwd,text,CLI: Hooks; IDE: Hooks + Local Hooks,VS Code Chat: Hooks + Local Hooks; VS Code Inline: Hooks + Local Hooks; VS Code → CLI: Hooks + Local Hooks,CLI: Hooks; IDE Extension: Hooks + Local Hooks,
+,repo_name,text,CLI: CLI Wrapper,CLI: CLI Wrapper; VS Code → CLI: CLI Wrapper,CLI: CLI Wrapper,
+,git_branch,text,CLI: CLI Wrapper; IDE: Hooks + Local Hooks,CLI: Hooks; VS Code Chat: Hooks + Local Hooks; VS Code → CLI: Hooks + Local Hooks,CLI: CLI Wrapper; IDE Extension: Hooks + Local Hooks,
+,git_commit,text,—,—,—,
+what happened,observable_type,signal_observable_type not null,,,,
+,status,text,,,,
+,success,boolean,CLI: Hooks; IDE: Hooks,CLI: Hooks + OTel; VS Code → CLI: Hooks + OTel; Cloud Agent: Hooks,CLI: OTel; IDE Extension: Untested — likely inherits TUI-mode fail,"[Antigravity] CLI — Hooks (error field) — CAVEAT: failing sub-commands don't always flip exit code, must inspect tool_info.output || [Codex] CLI — CONFIRMED MODE-DEPENDENT: codex exec --json gives clean exit_code/status (the ONLY clean signal in this whole 3-agent project); codex exec plain-text also clean; interactive TUI silently collapses failures into content-free UI, OTel's codex.tool_result.success is HARDCODED true regardless of real outcome | IDE Extension — Untested — likely inherits TUI-mode failure blindness given shared app-server architecture"
+,error_type,text,CLI: Hooks; IDE: Hooks,CLI: OTel; VS Code → CLI: OTel,CLI: Hooks,[Copilot] CLI — OTel (verify vs exit code — PostToolUse reports success on failed cmds) | VS Code → CLI — OTel (verify vs exit code — PostToolUse reports success on failed cmds)
+,error_message,text,CLI: Hooks; IDE: Hooks,CLI: OTel; VS Code → CLI: OTel,CLI: Hooks,[Copilot] CLI — OTel (verify vs exit code — PostToolUse reports success on failed cmds) | VS Code → CLI — OTel (verify vs exit code — PostToolUse reports success on failed cmds)
+,latency_ms,integer,CLI: CLI Wrapper,CLI: OTel; VS Code → CLI: OTel,CLI: OTel,
+prompt and conversation,prompt_text,text,CLI: Hooks + FS Watcher; IDE: Hooks + FS Watcher,CLI: Hooks; VS Code → CLI: Hooks; Cloud Agent: Hooks,CLI: Hooks + FS Watcher; IDE Extension: FS Watcher,
+,prompt_length,integer,CLI: Derive; IDE: Derive,CLI: Hooks + OTel; VS Code → CLI: Hooks + OTel; Cloud Agent: Hooks,CLI: Derive; IDE Extension: Derive,
+,prompt_word_count,integer,CLI: Derive; IDE: Derive,CLI: Derive; VS Code → CLI: Derive; Cloud Agent: Derive,CLI: Derive; IDE Extension: Derive,
+,response_text,text,CLI: FS Watcher; IDE: FS Watcher,CLI: OTel; VS Code → CLI: OTel,CLI: FS Watcher; IDE Extension: FS Watcher,
+,response_index,smallint,,,,
+,response_is_final,boolean,,,,
+,reasoning_text,text,CLI: CLI Wrapper,CLI: OTel; VS Code → CLI: OTel,CLI: OTel,
+,attachment_count,smallint,CLI: Hooks; IDE: Hooks,CLI: Hooks; VS Code → CLI: Hooks; Cloud Agent: Hooks,CLI: Hooks,
+,composer_mode,text,—,CLI: Hooks; VS Code → CLI: Hooks,CLI: Hooks,
+,slash_command,text,CLI: Hooks; IDE: Hooks,CLI: OTel; VS Code → CLI: OTel,CLI: Hooks,
+,mentions_files,boolean,CLI: Hooks; IDE: Hooks,CLI: Hooks; VS Code → CLI: Hooks; Cloud Agent: Hooks,CLI: Hooks,
+model call,model,text,CLI: Hooks; IDE: Hooks,CLI: OTel; VS Code → CLI: OTel,CLI: OTel + CLI Wrapper,[Codex] CLI — OTel (confirmed) — missing from CLI Wrapper's --json stream specifically
+,model_id,text,CLI: Hooks; IDE: Hooks,CLI: OTel; VS Code → CLI: OTel,CLI: OTel + CLI Wrapper,[Codex] CLI — OTel (confirmed) — missing from CLI Wrapper's --json stream specifically
+,input_tokens,integer,CLI: CLI Wrapper,CLI: OTel; VS Code → CLI: OTel,CLI: OTel + CLI Wrapper,"[Codex] CLI — OTel (confirmed, 154 real metric points in exec mode alone) + CLI Wrapper (plain terminal print, redundant)"
+,output_tokens,integer,CLI: CLI Wrapper,CLI: OTel; VS Code → CLI: OTel,CLI: OTel + CLI Wrapper,"[Codex] CLI — OTel (confirmed, 154 real metric points in exec mode alone) + CLI Wrapper (plain terminal print, redundant)"
+,cache_read_tokens,integer,CLI: CLI Wrapper,CLI: OTel; VS Code → CLI: OTel,CLI: OTel + CLI Wrapper,"[Codex] CLI — OTel (confirmed, 154 real metric points in exec mode alone) + CLI Wrapper (plain terminal print, redundant)"
+,cache_write_tokens,integer,—,CLI: OTel; VS Code → CLI: OTel,CLI: OTel + CLI Wrapper,"[Codex] CLI — OTel (confirmed, 154 real metric points in exec mode alone) + CLI Wrapper (plain terminal print, redundant)"
+,total_tokens,integer,CLI: CLI Wrapper,CLI: OTel; VS Code → CLI: OTel,CLI: OTel + CLI Wrapper,"[Codex] CLI — OTel (confirmed, 154 real metric points in exec mode alone) + CLI Wrapper (plain terminal print, redundant)"
+,cost_usd,"numeric(12,6)",CLI: Derive,CLI: OTel; VS Code → CLI: OTel,CLI: OTel + CLI Wrapper + Derive; IDE Extension: Derive,[Codex] CLI — Derive (no dollar-cost field found anywhere — confirmed across OTel + CLI Wrapper)
+,cost_is_estimated,boolean default false,CLI: Derive,CLI: OTel; VS Code → CLI: OTel,CLI: OTel + CLI Wrapper + Derive; IDE Extension: Derive,[Codex] CLI — Derive (no dollar-cost field found anywhere — confirmed across OTel + CLI Wrapper)
+,request_latency_ms,integer,CLI: CLI Wrapper,CLI: OTel; VS Code → CLI: OTel,CLI: OTel,
+,time_to_first_token,integer,—,CLI: OTel; VS Code → CLI: OTel,—,
+,stop_reason,text,CLI: Hooks; IDE: Hooks,CLI: OTel; VS Code → CLI: OTel,CLI: Hooks + OTel,"[Antigravity] CLI — Hooks (confirmed — terminationReason, real value 'NO_TOOL_CALL' not matching docs)"
+,thinking_blocks,smallint,CLI: CLI Wrapper,CLI: OTel; VS Code → CLI: OTel,CLI: OTel,
+,sampling_params,jsonb,—,CLI: OTel; VS Code → CLI: OTel,—,
+,effort_level,text,—,CLI: OTel; VS Code → CLI: OTel,CLI: MCP Proxy,[Codex] CLI — MCP Proxy (confirmed — reasoning_effort leaked in _meta.x-codex-turn-metadata to EVERY configured MCP server)
+tool call,tool_name,text,CLI: Hooks; IDE: Hooks,CLI: Hooks + OTel; VS Code → CLI: Hooks + OTel; Cloud Agent: Hooks,CLI: Hooks,
+,tool_category,text,CLI: MCP Proxy; IDE: Same,CLI: Hooks; VS Code → CLI: Hooks; Cloud Agent: Hooks,CLI: MCP Proxy,"Our data confirms built-in vs MCP split only, not the full shell|filesystem|web|mcp|subagent taxonomy. [Antigravity] CLI — Confirmed via MCP Proxy — native tools wrapped in call_mcp_tool, real MCP tools separate"
+,tool_is_builtin,boolean,CLI: MCP Proxy; IDE: Same,CLI: Hooks; VS Code → CLI: Hooks; Cloud Agent: Hooks,CLI: MCP Proxy,"[Antigravity] CLI — Confirmed via MCP Proxy — native tools wrapped in call_mcp_tool, real MCP tools separate"
+,tool_arguments,jsonb,CLI: Hooks; IDE: Hooks,CLI: MCP Proxy; VS Code → CLI: MCP Proxy,CLI: Hooks + MCP Proxy,"[Antigravity] CLI — Hooks (confirmed — PascalCase keys e.g. TargetFile, CommandLine) || [Copilot] CLI — MCP Proxy (confirmed; content + structuredContent both visible) | VS Code → CLI — MCP Proxy (confirmed; content + structuredContent both visible)"
+,tool_result,jsonb,CLI: Hooks; IDE: Hooks,CLI: MCP Proxy; VS Code → CLI: MCP Proxy,CLI: Hooks,[Antigravity] CLI — Hooks (confirmed enriched — toolAction/toolSummary added post-execution) || [Copilot] CLI — MCP Proxy (confirmed; content + structuredContent both visible) | VS Code → CLI — MCP Proxy (confirmed; content + structuredContent both visible) || [Codex] CLI — Hooks — CAVEAT: tool_response has NO exit-code/success field at all (confirmed gap)
+,tool_result_size,integer,CLI: CLI Wrapper; IDE: Hooks,CLI: OTel; VS Code → CLI: OTel,CLI: CLI Wrapper,
+,tool_duration_ms,integer,CLI: CLI Wrapper; IDE: Hooks,CLI: OTel; VS Code → CLI: OTel,CLI: CLI Wrapper,
+,tool_interrupted,boolean,CLI: Hooks; IDE: Hooks,CLI: Hooks + OTel; VS Code → CLI: Hooks + OTel; Cloud Agent: Hooks,CLI: OTel; IDE Extension: Untested — likely inherits TUI-mode fail,"No direct match — related evidence from our 'tool success or failure' testing carried over as context. [Antigravity] CLI — Hooks (error field) — CAVEAT: failing sub-commands don't always flip exit code, must inspect tool_info.output || [Codex] CLI — CONFIRMED MODE-DEPENDENT: codex exec --json gives clean exit_code/status (the ONLY clean signal in this whole 3-agent project); codex exec plain-text also clean; interactive TUI silently collapses failures into content-free UI, OTel's codex.tool_result.success is HARDCODED true regardless of real outcome | IDE Extension — Untested — likely inherits TUI-mode failure blindness given shared app-server architecture"
+,tool_timeout_ms,integer,CLI: CLI Wrapper,CLI: CLI Wrapper; VS Code → CLI: CLI Wrapper,CLI: CLI Wrapper,"Matched via 'command duration', which is elapsed time, not a configured timeout value. [Antigravity] CLI — CLI Wrapper (confirmed — plain-text mode captures cleanly, no ANSI noise in -p mode) || [Codex] CLI — CLI Wrapper (confirmed clean in exec modes; TUI mode LOSES failure info — auto-collapses into generic UI element)"
+,batch_size,smallint,CLI: Derive; IDE: Derive,CLI: Hooks; VS Code → CLI: Hooks,CLI: Derive,
+mcp,mcp_server,text,CLI: MCP Proxy; IDE: MCP Proxy,CLI: Hooks + MCP Proxy; VS Code → CLI: Hooks + MCP Proxy,CLI: MCP Proxy,"[Codex] CLI — MCP Proxy (confirmed) — codex mcp add config mechanism worked exactly as documented, first agent where this was true"
+,mcp_tool,text,CLI: CLI Wrapper + MCP Proxy; IDE: MCP Proxy,CLI: MCP Proxy; VS Code → CLI: MCP Proxy,CLI: MCP Proxy,"[Antigravity] CLI — MCP Proxy (confirmed, full schemas) + CLI Wrapper (stream-json init event lists all 52 tools)"
+,mcp_transport,text,CLI: Known at deploy-time (not wire-observed); IDE: Same,CLI: Known at deploy-time (not wire-observed); VS Code → CLI: Known at deploy-time (not wire-observed),CLI: Known at deploy-time (not wire-observed),[Antigravity] CLI — Known at deploy-time (not wire-observed) — same pattern as Copilot
+,mcp_server_version,text,CLI: MCP Proxy; IDE: MCP Proxy,CLI: MCP Proxy; VS Code → CLI: MCP Proxy,CLI: MCP Proxy,"[Antigravity] CLI — MCP Proxy (present, author-supplied — same caveat as Copilot)"
+,mcp_tools_available,text[],CLI: CLI Wrapper + MCP Proxy; IDE: MCP Proxy,CLI: MCP Proxy; VS Code → CLI: MCP Proxy,CLI: MCP Proxy,"[Antigravity] CLI — MCP Proxy (confirmed, full schemas) + CLI Wrapper (stream-json init event lists all 52 tools)"
+shell,command,text,CLI: Hooks + CLI Wrapper; IDE: Hooks,CLI: Hooks + CLI Wrapper; VS Code → CLI: Hooks + CLI Wrapper; Cloud Agent: Hooks,CLI: Hooks + CLI Wrapper,
+,command_cwd,text,CLI: Hooks + CLI Wrapper; IDE: Hooks,CLI: CLI Wrapper; VS Code → CLI: CLI Wrapper,CLI: Hooks + CLI Wrapper,
+,exit_code,integer,CLI: CLI Wrapper,CLI: CLI Wrapper; VS Code → CLI: CLI Wrapper,CLI: CLI Wrapper,"[Antigravity] CLI — CLI Wrapper (confirmed — plain-text mode captures cleanly, no ANSI noise in -p mode) || [Codex] CLI — CLI Wrapper (confirmed clean in exec modes; TUI mode LOSES failure info — auto-collapses into generic UI element)"
+,stdout,text,CLI: CLI Wrapper,CLI: CLI Wrapper; VS Code → CLI: CLI Wrapper,CLI: CLI Wrapper,"[Antigravity] CLI — CLI Wrapper (confirmed — plain-text mode captures cleanly, no ANSI noise in -p mode) || [Codex] CLI — CLI Wrapper (confirmed clean in exec modes; TUI mode LOSES failure info — auto-collapses into generic UI element)"
+,stderr,text,CLI: CLI Wrapper,CLI: CLI Wrapper; VS Code → CLI: CLI Wrapper,CLI: CLI Wrapper,"[Antigravity] CLI — CLI Wrapper (confirmed — plain-text mode captures cleanly, no ANSI noise in -p mode) || [Codex] CLI — CLI Wrapper (confirmed clean in exec modes; TUI mode LOSES failure info — auto-collapses into generic UI element)"
+,output_size,integer,CLI: CLI Wrapper,CLI: CLI Wrapper; VS Code → CLI: CLI Wrapper,CLI: CLI Wrapper,"[Antigravity] CLI — CLI Wrapper (confirmed — plain-text mode captures cleanly, no ANSI noise in -p mode) || [Codex] CLI — CLI Wrapper (confirmed clean in exec modes; TUI mode LOSES failure info — auto-collapses into generic UI element)"
+,sandboxed,boolean,CLI: Hooks + FS Watcher; IDE: Hooks + Local Hooks,CLI: Hooks; VS Code Chat: Hooks + Local Hooks; VS Code → CLI: Hooks + Local Hooks; Cloud Agent: Hooks,CLI: Hooks + FS Watcher; IDE Extension: Hooks + Local Hooks,"Matched via 'access outside the workspace boundary' — related concept, not identical. [Antigravity] CLI — Hooks (workspacePaths) + FS Watcher (confirmed — real file landed outside watched dir)"
+,risk_markers,text[],,,,
+,hung_seconds,"numeric(8,2)",CLI: CLI Wrapper,CLI: CLI Wrapper; VS Code → CLI: CLI Wrapper,CLI: CLI Wrapper,
+,is_developer_command,boolean,CLI: CLI Wrapper,CLI: CLI Wrapper; VS Code → CLI: CLI Wrapper,CLI: CLI Wrapper,
+files,file_path,text,CLI: Hooks; IDE: Hooks + Local Hooks,CLI: Hooks; VS Code Chat: Hooks + Local Hooks; VS Code → CLI: Hooks + Local Hooks; Cloud Agent: Hooks,CLI: Hooks + FS Watcher; IDE Extension: Hooks + Local Hooks,[Codex] CLI — Hooks (apply_patch toolCall args) + FS Watcher (confirmed real-time)
+,file_extension,text,CLI: Hooks; IDE: Hooks + Local Hooks,CLI: Hooks; VS Code Chat: Hooks + Local Hooks; VS Code → CLI: Hooks + Local Hooks; Cloud Agent: Hooks,CLI: Hooks + FS Watcher; IDE Extension: Hooks + Local Hooks,[Codex] CLI — Hooks (apply_patch toolCall args) + FS Watcher (confirmed real-time)
+,file_change_kind,text,CLI: FS Watcher; IDE: Hooks + FS Watcher + Local Hooks,CLI: Derive; VS Code Chat: Hooks + Local Hooks; VS Code → CLI: Hooks + Local Hooks + Derive; Cloud Agent: Derive,CLI: FS Watcher; IDE Extension: Hooks + Local Hooks,"Combined from our separate 'file created' and 'file deleted' signals. [Codex] CLI — FS Watcher (confirmed real-time — NO staging/scratch split unlike Antigravity, working dir IS the real location)"
+,file_size,bigint,CLI: Derive; IDE: Derive,CLI: Derive; VS Code Chat: Derive; VS Code → CLI: Derive,CLI: Derive; IDE Extension: Derive,
+,content_hash,text,,,,
+,old_content,text,CLI: FS Watcher; IDE: FS Watcher,CLI: Hooks; VS Code Chat: Hooks + Local Hooks; VS Code Inline: Hooks + Local Hooks; VS Code → CLI: Hooks + Local Hooks; Cloud Agent: Hooks,CLI: FS Watcher; IDE Extension: FS Watcher,[Antigravity] CLI — FS Watcher (confirmed — transcript.jsonl has TargetContent/ReplacementContent) || [Codex] CLI — FS Watcher (confirmed — rollout transcript has real diff content)
+,new_content,text,CLI: FS Watcher; IDE: FS Watcher,CLI: Hooks; VS Code Chat: Hooks + Local Hooks; VS Code Inline: Hooks + Local Hooks; VS Code → CLI: Hooks + Local Hooks; Cloud Agent: Hooks,CLI: FS Watcher; IDE Extension: FS Watcher,[Antigravity] CLI — FS Watcher (confirmed — transcript.jsonl has TargetContent/ReplacementContent) || [Codex] CLI — FS Watcher (confirmed — rollout transcript has real diff content)
+,lines_added,integer,CLI: Hooks + FS Watcher; IDE: Hooks + Local Hooks,CLI: Hooks; VS Code Chat: Hooks + Local Hooks; VS Code Inline: Hooks + Local Hooks; VS Code → CLI: Hooks + Local Hooks; Cloud Agent: Hooks,CLI: FS Watcher; IDE Extension: Hooks + Local Hooks,
+,lines_removed,integer,CLI: Hooks + FS Watcher; IDE: Hooks + Local Hooks,CLI: Hooks; VS Code Chat: Hooks + Local Hooks; VS Code Inline: Hooks + Local Hooks; VS Code → CLI: Hooks + Local Hooks; Cloud Agent: Hooks,CLI: FS Watcher; IDE Extension: Hooks + Local Hooks,
+,chars_added,integer,CLI: Hooks + FS Watcher; IDE: Hooks + Local Hooks,CLI: Hooks; VS Code Chat: Hooks + Local Hooks; VS Code Inline: Hooks + Local Hooks; VS Code → CLI: Hooks + Local Hooks; Cloud Agent: Hooks,CLI: FS Watcher; IDE Extension: Hooks + Local Hooks,
+,chars_removed,integer,CLI: Hooks + FS Watcher; IDE: Hooks + Local Hooks,CLI: Hooks; VS Code Chat: Hooks + Local Hooks; VS Code Inline: Hooks + Local Hooks; VS Code → CLI: Hooks + Local Hooks; Cloud Agent: Hooks,CLI: FS Watcher; IDE Extension: Hooks + Local Hooks,
+,reverted_to_earlier,boolean,IDE: Hooks + Local Hooks,VS Code Chat: Hooks + Local Hooks; VS Code Inline: Hooks + Local Hooks; VS Code → CLI: Hooks + Local Hooks,IDE Extension: Hooks + Local Hooks,[Antigravity] IDE — Local Hooks (heuristic exists but N/A — no inline-accept path to undo from) || [Codex] IDE Extension — Local Hooks (CONFIRMED — probable_accept -> accept_correlation -> probable_undo fired cleanly)
+,outside_workspace,boolean,CLI: Hooks + FS Watcher; IDE: Hooks + Local Hooks,CLI: Hooks; VS Code Chat: Hooks + Local Hooks; VS Code → CLI: Hooks + Local Hooks; Cloud Agent: Derive,CLI: Hooks + FS Watcher; IDE Extension: Hooks + Local Hooks,[Antigravity] CLI — Hooks (workspacePaths list) + FS Watcher (confirmed — real output landed OUTSIDE watched brain/ dir)
+,is_config_file,boolean,CLI: Hooks; IDE: Hooks + Local Hooks,CLI: Hooks; VS Code Chat: Hooks + Local Hooks; VS Code → CLI: Hooks + Local Hooks; Cloud Agent: Hooks,CLI: Hooks; IDE Extension: Hooks + Local Hooks,
+,is_dependency_manifest,boolean,CLI: Derive; IDE: Derive,CLI: Derive; VS Code Chat: Derive; VS Code → CLI: Derive; Cloud Agent: Derive,CLI: Derive; IDE Extension: Derive,
+,is_lockfile,boolean,CLI: Derive; IDE: Derive,CLI: Derive; VS Code Chat: Derive; VS Code → CLI: Derive,CLI: Derive; IDE Extension: Derive,
+,is_binary,boolean,CLI: Derive; IDE: Derive,CLI: Derive; VS Code Chat: Derive; VS Code → CLI: Derive; Cloud Agent: Derive,CLI: Derive; IDE Extension: Derive,
+permission and human oversight,permission_mode,text,—,CLI: Hooks; VS Code → CLI: Hooks,CLI: Hooks,
+,permission_decision,text,CLI: Hooks; IDE: Hooks,CLI: Hooks; VS Code → CLI: Hooks,CLI: Hooks; IDE Extension: Untested (blocked by same silent trust g,"[Antigravity] CLI — Hooks (confirmed — agent revealed permission ACL during MCP conn-fail diagnosis) || [Codex] CLI — Hooks (PermissionRequest — CONFIRMED NEVER FIRES from codex exec, approval always 'never')"
+,permission_source,text,,,,
+,permission_scope,text,CLI: Hooks; IDE: Hooks,CLI: Hooks + OTel; VS Code → CLI: Hooks + OTel,CLI: Hooks,"[Antigravity] CLI — Hooks (confirmed — mcp_config.json write requires confirmation by default) || [Codex] CLI — Hooks (permission_mode field — confirmed, ported verbatim from Claude Code vocabulary)"
+,permission_options,jsonb,CLI: Hooks; IDE: Hooks,CLI: Hooks; VS Code → CLI: Hooks,CLI: Hooks; IDE Extension: Untested (blocked by same silent trust g,"Matched via 'permission requested' — confirms the request happened, not the specific escalation options offered. [Antigravity] CLI — Hooks (confirmed — agent revealed permission ACL during MCP conn-fail diagnosis) || [Codex] CLI — Hooks (PermissionRequest — CONFIRMED NEVER FIRES from codex exec, approval always 'never')"
+,denial_reason,text,—,CLI: Hooks; VS Code → CLI: Hooks,—,
+agent behaviour,turn_count,integer,CLI: Derive; IDE: Derive,CLI: OTel; VS Code → CLI: OTel,CLI: Derive; IDE Extension: Derive,
+,loop_count,integer,CLI: Hooks; IDE: Hooks,CLI: Hooks; VS Code → CLI: Hooks,CLI: Hooks,
+,plan_item,text,CLI: FS Watcher; IDE: FS Watcher,CLI: Hooks; VS Code → CLI: Hooks,CLI: FS Watcher; IDE Extension: FS Watcher,
+,plan_status,text,CLI: FS Watcher; IDE: FS Watcher,CLI: Hooks; VS Code → CLI: Hooks,CLI: FS Watcher; IDE Extension: FS Watcher,
+,background_tasks,smallint,,,,
+,scheduled_jobs,smallint,,,,
+,compaction_reason,text,—,CLI: OTel; VS Code → CLI: OTel,CLI: Hooks,"[Codex] CLI — Hooks (PreCompact/PostCompact registered but NOT triggered in testing — honestly untested, not confirmed absent)"
+,instructions_loaded,text[],—,CLI: OTel; VS Code → CLI: OTel,—,
+risk,sensitivity_tier,smallint default 1 check (sensitivity_tier between 1 and 3),,,,
+,violation_count,smallint default 0,,,,
+,escalation_flag,boolean default false,,,,
+,secret_detected,boolean default false,CLI: Hooks + MCP Proxy; IDE: Hooks,CLI: Hooks + MCP Proxy; VS Code → CLI: Hooks + MCP Proxy; Cloud Agent: Hooks,CLI: Hooks + MCP Proxy,
+,injection_markers,text[],CLI: Derive; IDE: Derive,CLI: Derive; VS Code → CLI: Derive; Cloud Agent: Derive,CLI: Derive; IDE Extension: Derive,
+,policy_rule_matched,text,,,,
+provenance,collector,signal_collector not null,,,,
+,contributing,signal_collector[],,,,
+,collectors_agree,boolean,,,,
+,disagreement,jsonb,,,,
+,attribution,signal_attribution default 'unknown',—,—,—,
+,confidence,signal_confidence not null,,,,
+,derived_from,uuid[],,,,
+,raw_ref,text,CLI: FS Watcher; IDE: FS Watcher,CLI: Derive; VS Code Chat: Derive; VS Code → CLI: Derive; Cloud Agent: Derive,CLI: FS Watcher; IDE Extension: FS Watcher,"[Antigravity] CLI — FS Watcher (confirmed — transcript.jsonl, real content matching prompts) || [Codex] CLI — FS Watcher (confirmed — sessions/ rollout files, real content)"
+,extra,jsonb default '{}'::jsonb,,,,
