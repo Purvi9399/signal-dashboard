@@ -79,8 +79,8 @@ not_calculated:
     incident family; Incident Response decides incidents, this COP does not.
   classification_confidence: >-
     NOT_CALCULATED as a metric. No registry metric. The finding's confidence is the legacy rule's formula,
-    not a calibrated classification confidence; calibration needs validated classification_example records
-    with reviewer outcomes, which do not exist yet.
+    not a calibrated classification confidence. Missing input: validated classification_example records with
+    reviewer outcomes to calibrate against, which do not exist yet.
 
 questions:
   CT-1:

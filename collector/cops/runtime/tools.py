@@ -1201,6 +1201,23 @@ def t_assess_resource_questions(case, a, ctx):
             "upstream_supplied": sorted((ctx.get("upstream") or {})), "evaluated_at": case.computed_at}
 
 
+def t_assess_classification_questions(case, a, ctx):
+    """The five Classification & Tagging questions for the case session (cop_package), read against the
+    approved taxonomy (t_query_taxonomy), validated classification_example memory and the upstream findings."""
+    if not case.session:
+        return missing("session", "classification question assessment", "the case session")
+    mem = _memory_lookup(ctx, "classification_example") if ctx.get("memory") else None
+    memory = {k: mem[k] for k in ("established", "verified_pending")} if mem and "missing_dependency" not in mem \
+        else None
+    tax = t_query_taxonomy(case, a, ctx)
+    q = cop_package.assess_classification_tagging(case.rows, case.session_id, case.cfg, case.computed_at, tax,
+                                                  ctx.get("upstream"), memory, case.artifact("source_events"),
+                                                  case.artifact("native_transcripts"))
+    return {"questions": q, "taxonomy_supplied": "missing_dependency" not in tax,
+            "memory_supplied": memory is not None, "upstream_supplied": sorted((ctx.get("upstream") or {})),
+            "evaluated_at": case.computed_at}
+
+
 TOOLS = {
     # name: (fn, schema {arg: spec})
     "get_metric_rows": (t_get_metric_rows, {"metric_ids": _arr("metric_ids", 25)}),
@@ -1271,6 +1288,7 @@ TOOLS = {
     "compute_consumption": (t_compute_consumption, {}),
     "get_quota": (t_get_quota, {}),
     "assess_resource_questions": (t_assess_resource_questions, {}),
+    "assess_classification_questions": (t_assess_classification_questions, {}),
     "compute_sequence_statistics": (t_compute_sequence_statistics, {}),
     "compare_behaviour_history": (t_compare_behaviour_history, {}),
     "get_recovery_records": (t_get_recovery_records, {}),
@@ -1283,8 +1301,8 @@ TOOLS = {
 
 # Baseline tools added after the recorded live run (2026-11-02). They take no place in the call sequence,
 # so the model's tool-call ids, and the recorded replies that cite them, stay as they were
-# (packages/anomaly_detection/DECISIONS.md, D-AD9).
-UNSEQUENCED = frozenset({"assess_anomaly_questions"})
+# (packages/anomaly_detection/DECISIONS.md, D-AD9; packages/classification_tagging/DECISIONS.md, D-CT16).
+UNSEQUENCED = frozenset({"assess_anomaly_questions", "assess_classification_questions"})
 
 class ToolGateway:
     def __init__(self, case, allowlists, memory=None):

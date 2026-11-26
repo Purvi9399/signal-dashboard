@@ -36,7 +36,7 @@ from .contracts import (Claim, CLAIM_METRIC_STATE, CLAIM_METRIC_VALUE, CLAIM_TOO
 from ..interpret import EVIDENCE_LEVEL
 from ..specs import BY_KEY, SPEC_CONSUMES
 from .cop_package import aggregate_runtime_monitoring, decide_audit_traceability, decide_interaction_discovery, \
-    decide_policy_enforcement, decide_anomaly_detection, decide_resource_management, AT_CLEAN, CEILING, DECIDED_WITHOUT_MODEL
+    decide_policy_enforcement, decide_anomaly_detection, decide_resource_management, decide_classification_tagging, AT_CLEAN, CEILING, DECIDED_WITHOUT_MODEL
 
 _RI = RuleInterpreter()
 HOT = ("EXCEPTION", "CRITICAL")
@@ -58,7 +58,7 @@ DETERMINISTIC_TOOLS = {
     "context_memory": ("get_context_snapshots", "compare_instruction_versions",
                        "inspect_context_references", "verify_context_provenance"),
     "incident_response": ("check_exposure",),
-    "classification_tagging": ("query_taxonomy", "inspect_event_metadata"),
+    "classification_tagging": ("query_taxonomy", "inspect_event_metadata", "assess_classification_questions"),
     "risk_mitigation": ("read_risk_register", "calculate_risk_components"),
     "governance_intelligence": ("query_aggregate_report",),
     "workload_optimization": ("calculate_usage_rates", "inspect_repeated_operations"),
@@ -806,7 +806,37 @@ def classification_tagging(ctx):
         f["missing_dependencies"] = [tax["missing_dependency"]]
     else:
         f["cop_specific"]["taxonomy_version"] = tax.get("version")
+    _ct_questions(ctx, f)
     return f
+
+
+def _ct_questions(ctx, f):
+    """Classification & Tagging's five answers (cop_package.decide_classification_tagging). One candidate family,
+    no family, or too little evidence: CT-5 decides the label and the finding says it needs no model. Two or more
+    candidate families: the legacy precedence reading above stays the computational baseline and the model
+    interprets the event against the approved taxonomy (INTERPRETATION.md)."""
+    t = ctx["tools"]
+    res = result(t, "assess_classification_questions")
+    if not res.get("questions"):
+        why = res.get("missing_dependency") or (t.get("assess_classification_questions") or {}).get("status")
+        f["cop_specific"]["question_assessment"] = f"unavailable: {why}"
+        return
+    d = decide_classification_tagging(res["questions"], evidence_conf(ctx["upstream"]) / EVIDENCE_LEVEL["SUFFICIENT"])
+    q = d["questions"]
+    f["cop_specific"].update(questions=q, drivers=d["drivers"], contrary=d["contrary"], limitations=d["limitations"],
+                             recipients=d["recipients"], memory_payload=d["memory_payload"],
+                             decided_without_model=d["decided"], decision=d["decision"])
+    if not d["decided"]:
+        return
+    claims = [tclaim(t, "assess_classification_questions", f"questions.{qid}.answer.outcome", x["answer"],
+                     f"{qid} answered {x['answer']}: {x['explanation']}"[:240]).to_dict() for qid, x in q.items()]
+    why = "; ".join(f"{x} {q[x]['answer']}" for x in d["drivers"])
+    status = SUBSTANTIVE if d["label"] != INCONCLUSIVE else "INCONCLUSIVE"
+    f.update(label=d["label"], confidence=d["confidence"], action=d["action"], severity=d["severity"],
+             action_reason=d["action_reason"], status=status, claims=claims + f["claims"],
+             rationale=(f"{d['label']} from {why}; kind only, severity and response belong elsewhere; "
+                        f"threshold reading: {f['rationale']}")[:600])
+    f["cop_specific"]["stop_reason"] = DECIDED_WITHOUT_MODEL
 
 
 def context_memory(ctx):

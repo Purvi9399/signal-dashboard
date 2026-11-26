@@ -2685,3 +2685,424 @@ def decide_resource_management(questions, evidence_scale=1.0):
             "action_reason": reason, "recipients": recipients, "drivers": drivers, "also_held": [],
             "contrary": contrary, "questions": trace, "limitations": _rs_limitations(ans),
             "memory_payload": _rs_payload(ans), "decision": five}
+
+
+# ---------------------------------------------------------------- Classification & Tagging
+
+CT = "classification_tagging"
+CT_FAMILY_QUESTIONS = ("CT-1", "CT-2", "CT-3")
+CT_OBSERVED = {"CT-1": ("access.first_seen_mcp",),
+               "CT-2": ("insights.no_oversight", "oversight.fast_approvals", "oversight.declined_inferred")}
+CT_CONCERNS = ("insights.failed", "insights.repetition", "insights.retry", "insights.stalled", "insights.reverted",
+               "insights.lockfile", "insights.token_outlier", "insights.duration_outlier", "path.transition_novelty",
+               "activity.action_rate_ratio", "interaction.subagent_lanes", "interaction.mcp_servers")
+CT_TELEMETRY = ("insights.unattributed", "telemetry.collector_coverage", "telemetry.source_agreement",
+                "telemetry.turn_linkage", "telemetry.lane_linkage", "telemetry.unknown_share")
+# The canonical upstream (specs.SPEC_CONSUMES) and the three purvi named on 2026-11-26 (TOPOLOGY_CONSUMES).
+CT_UPSTREAM = ("anomaly_detection", "agent_lifecycle_management", "policy_enforcement", "interaction_discovery",
+               "resource_management")
+CT_UNMAPPED = ("no approved rule maps a behavioural, execution or resource concern to LOOPS, OUTCOME or COST "
+               "(cops/specs.py interpretations); the concern is recorded and does not classify the event")
+CT_ENTITY_FIELDS = ("observable_type", "collector", "session_id", "turn_id", "agent_id", "parent_agent_id",
+                    "operator_id", "tool_use_id", "tool_name", "file_path", "command", "mcp_server", "mcp_tool",
+                    "raw_ref")
+CT_REASON = {INCONCLUSIVE: "the event could not be classified: see the question answers"}
+OUTSIDE_CANDIDATES = "INTERPRETATION_OUTSIDE_CANDIDATES"
+
+
+def _ct_family_of(pkg):
+    return {fam: d["question"] for fam, d in pkg["families"].items()}
+
+
+def _ct_measures(a, metrics, states):
+    return [_ad_measure(a, m, {}, states) for m in metrics]
+
+
+def _ct_family(qid, a, pkg, states):
+    """CT-1 to CT-3: whether the question's family is indicated by its counted metrics (pkg families). A counted
+    metric in a deviation state indicates the family even when another is unobserved (positive evidence stands);
+    nothing indicated with a counted metric unobserved leaves the question unanswered (workbook row 11)."""
+    fam = next(f for f, d in pkg["families"].items() if d["question"] == qid)
+    counted = _ct_measures(a, pkg["families"][fam]["metrics"], states)
+    observed = _ct_measures(a, CT_OBSERVED.get(qid, ()), states)
+    basis = {"family": fam, "measures": counted, "indicating": [m["metric"] for m in counted if m["verdict"] == DEVIATES],
+             "observed_not_counted": [dict(m, counted=False, why="assigned to this question and observed; only "
+                                                                 "cops/specs.py metric_keys indicate a family")
+                                      for m in observed],
+             "warnings": [m["metric"] for m in counted if m.get("warning")]}
+    if basis["indicating"]:
+        return "FAMILY_INDICATED", basis
+    open_ = [m for m in counted if m["verdict"] not in (WITHIN, DOES_NOT_APPLY)]
+    if not open_:
+        return "NOT_INDICATED", basis
+    basis["interpretation_reasons"] = [
+        {"code": EA.MISSING_DATA, "requirement": m["metric"], "check": None,
+         "detail": f"{m['metric']} {m['reason']}: whether the event is {fam} is not evaluated (missing metadata degrades "
+                   f"classification, workbook row 11)"} for m in open_]
+    return INCONCLUSIVE, basis
+
+
+def _ct_upstream(upstream):
+    """Each consumed COP's finding as context: present or absent, verified or not, and whether its lineage is
+    independent of this COP's counted metrics (rules.independent_upstream). Upstream findings never indicate a
+    family and are never counted."""
+    from .rules import independent_upstream
+    from ..specs import BY_KEY as _BY
+    up = upstream or {}
+    own = set(_BY[CT].metric_keys)
+    split = independent_upstream(own, {k: up[k] for k in CT_UPSTREAM if k in up})
+    corr = {x["cop"]: x["why"] for x in split["correlated"]}
+    # a producer whose own counted metrics are this COP's reads the same evidence, whatever its lineage records
+    # (Policy Enforcement's lineage holds tool calls; its metric_keys hold the four counted metrics)
+    for k in CT_UPSTREAM:
+        same = sorted(set(_BY[k].metric_keys) & own)
+        if k in up and same and k not in corr:
+            corr[k] = f"its metric_keys share {same}"
+    out = {}
+    for k in CT_UPSTREAM:
+        f = up.get(k)
+        if f is None:
+            out[k] = {"present": False, "used": False, "why": "no finding in this case"}
+            continue
+        ok = bool(f.get("verified")) and f.get("status") == "SUBSTANTIVE"
+        out[k] = {"present": True, "label": f.get("label"), "finding_id": f.get("finding_id"),
+                  "verified": bool(f.get("verified")), "status": f.get("status"),
+                  "lineage": sorted(f.get("lineage") or []), "used": ok,
+                  "counted_as": ("not used: not a verified substantive finding" if not ok else
+                                 f"context, not counted: correlated ({corr[k]})" if k in corr else
+                                 "context, not counted: independent lineage, but upstream findings never "
+                                 "indicate a family")}
+    return out
+
+
+def _ct4(a, states, upstream_view):
+    ms = _ct_measures(a, CT_CONCERNS, states)
+    concerns = [m for m in ms if m["verdict"] == DEVIATES]
+    up = [{"cop": k, "label": v["label"], "finding_id": v["finding_id"], "counted_as": v["counted_as"]}
+          for k, v in upstream_view.items() if k in ("anomaly_detection", "resource_management") and v["used"]
+          and v["label"] not in ("NORMAL", "INCONCLUSIVE")]
+    basis = {"measures": ms, "concerns": [m["metric"] for m in concerns],
+             "warnings": [m["metric"] for m in ms if m.get("warning")],
+             "unobserved": [m["metric"] for m in ms if m["verdict"] in (UNOBSERVED, NO_BASELINE)],
+             "upstream_concerns": up, "counted": False,
+             "baselines": "insights.token_outlier, insights.duration_outlier and activity.action_rate_ratio are read "
+                          "as signal_metrics computes them (self-inclusive); they are observed, never counted",
+             "unmapped": CT_UNMAPPED if concerns or up else None}
+    return ("CONCERNS_OBSERVED" if concerns or up else "NONE_OBSERVED"), basis
+
+
+def _ct_lane_links(upstream):
+    """(recorded delegation lanes, why not) from a verified Interaction Discovery finding: only a RECORDED link
+    on an answered, FULLY_RECONSTRUCTED ID-2 associates a subagent lane with its parent (as RS-4)."""
+    from .rules import verified
+    idf = verified(upstream, "interaction_discovery")
+    if idf is None:
+        return set(), "no verified Interaction Discovery finding"
+    id2q = (((idf.get("cop_specific") or {}).get("questions") or {}).get("ID-2")) or {}
+    if id2q.get("answer") is None:
+        return set(), "Interaction Discovery's finding carries no ID-2 answer, so no relationship is verified"
+    links = [x for x in ((id2q.get("basis") or {}).get("links") or []) if x.get("kind") == "delegation"]
+    rec = {x["link"].split(">", 1)[-1]: x["link"] for x in links if x["basis"] == "RECORDED"}
+    if id2q["answer"] != "FULLY_RECONSTRUCTED" or idf["label"] == "PATH_PARTIAL":
+        return set(), f"Interaction Discovery reports the interaction path as partial (ID-2 {id2q['answer']})"
+    return rec, None
+
+
+def _ct_entities(s, refs, upstream):
+    """The actors, resources and evidence the event is associated with: the rows the indicating metrics cite,
+    their recorded fields, and whether a subagent lane is linked to its parent through a recorded link."""
+    sm = EA.signal_metrics
+    want = set(refs)
+    rows = [r for r in s.rows if f"observable:{r.get('observable_id')}" in want]
+    rec, why = _ct_lane_links(upstream)
+    ents = []
+    for r in rows:
+        lane = r.get("agent_id") or "main"
+        e = {"ref": f"observable:{r['observable_id']}", **{k: r.get(k) for k in CT_ENTITY_FIELDS if sm.has(r.get(k))},
+             "lane": lane, "missing_fields": [k for k in ("agent_id", "tool_name", "raw_ref") if not sm.has(r.get(k))]}
+        if lane == "main":
+            e["linkage"] = {"status": "MAIN_LANE"}
+        elif lane in rec:
+            e["linkage"] = {"status": "RECORDED", "link": rec[lane], "through": "interaction_discovery"}
+        else:
+            e["linkage"] = {"status": "NOT_LINKED", "reason": why or f"no recorded delegation link for lane {lane}"}
+        ents.append(e)
+    st = "NO_ENTITIES" if not ents else \
+        ("LINKED" if all(e["linkage"]["status"] in ("MAIN_LANE", "RECORDED") for e in ents) else "PARTIAL")
+    return ents, st
+
+
+def _ct5(a, s, states, deps, pkg, taxonomy, upstream_view, upstream, memory):
+    fam_q = _ct_family_of(pkg)
+    tel = _ct_measures(a, CT_TELEMETRY, states)
+    tax_ok = bool(taxonomy) and "missing_dependency" not in taxonomy
+    defined = {x["id"] for x in (taxonomy or {}).get("families", [])} if tax_ok else set()
+    indicated = [f for f in pkg["precedence"] if deps[fam_q[f]]["outcome"] == "FAMILY_INDICATED"]
+    undefined = [f for f in indicated if f not in defined]
+    cands = [f for f in indicated if f in defined]
+    unanswered = [q for q in CT_FAMILY_QUESTIONS if deps[q]["outcome"] == INCONCLUSIVE]
+    judged = [m for q in CT_FAMILY_QUESTIONS for m in (deps[q]["basis"] or {}).get("measures", [])
+              if m["verdict"] in (WITHIN, DEVIATES)]
+    refs = sorted({r for f in cands for m in deps[fam_q[f]]["basis"]["measures"] if m["verdict"] == DEVIATES
+                   for r in m["evidence_refs"]})
+    ents, link = _ct_entities(s, refs, upstream)
+    basis = {"taxonomy": {"version": (taxonomy or {}).get("version") if tax_ok else None,
+                          "status": "APPROVED" if tax_ok else "NOT_SUPPLIED", "families": sorted(defined)},
+             "indicated": indicated, "candidates": cands, "undefined": undefined,
+             "families_not_evaluated": [next(f for f, q in fam_q.items() if q == x) for x in unanswered],
+             "precedence_reading": cands[0] if cands else None,
+             "entities": ents, "linkage": link, "telemetry": tel,
+             "telemetry_deviating": [m["metric"] for m in tel if m["verdict"] == DEVIATES],
+             "upstream": upstream_view, "precedents": _rs_precedents(memory),
+             "not_calculated": [{"metric": k, "state": EA.NOT_CALCULATED, "missing_inputs": " ".join(v.split())}
+                                for k, v in pkg["not_calculated"].items()]}
+    basis["evidence_status"] = {
+        "observed": [f"{m['metric']}@{m['state']}" for q in CT_FAMILY_QUESTIONS
+                     for m in (deps[q]["basis"] or {}).get("measures", []) if m["verdict"] == DEVIATES],
+        "inferred": None, "insufficient": []}
+    if not tax_ok:
+        basis["evidence_status"]["insufficient"].append("no approved taxonomy")
+        basis["interpretation_reasons"] = [{"code": EA.MISSING_REFERENCE, "requirement": "taxonomy", "check": None,
+                                            "detail": "no approved, versioned taxonomy: no family can be named"}]
+        return "UNDETERMINED", basis
+    if len(cands) == 1:
+        basis["evidence_status"]["inferred"] = {"family": cands[0], "by": "package rule (one candidate family)"}
+        return "CLASSIFIED", basis
+    if len(cands) > 1:
+        basis["evidence_status"]["inferred"] = {"family": None, "by": "model interpretation required",
+                                                "candidates": cands}
+        basis["interpretation_reasons"] = [{"code": INTERPRETATION_REQUIRED, "requirement": "interpretation",
+                                            "check": None, "detail": f"{len(cands)} candidate families "
+                                            f"({', '.join(cands)}): which describes the event is read against the "
+                                            f"taxonomy's definitions"}]
+        return "AMBIGUOUS", basis
+    why = ([("FAMILY_NOT_IN_TAXONOMY", f, f"{f} is indicated but not defined in taxonomy "
+                                         f"{basis['taxonomy']['version']}") for f in undefined]
+           + [(EA.MISSING_DATA, r["requirement"], f"{q} not answered: {r['detail']}")
+              for q in unanswered for r in deps[q].get("because") or []]
+           + ([] if judged else [(EA.MISSING_DATA, "classification", "no counted metric could be judged")]))
+    if why:
+        basis["evidence_status"]["insufficient"] = [w[2] for w in why]
+        basis["interpretation_reasons"] = [{"code": c, "requirement": req, "check": None, "detail": d}
+                                           for c, req, d in why]
+        return "UNDETERMINED", basis
+    return "UNCLASSIFIED", basis
+
+
+def observe_classification_tagging(assessments, session, taxonomy=None, upstream=None, memory=None):
+    """{question_id: assessment} -> {question_id: answer}. taxonomy: tools.query_taxonomy's result; memory:
+    {established, verified_pending} classification_example records."""
+    pkg = EA.load_package(CT)
+    states = tuple(pkg["deviation_states"])
+    view = _ct_upstream(upstream)
+    out = {}
+    for qid, q in pkg["questions"].items():
+        a = assessments[qid]
+        suf = a["sufficiency"]["status"]
+        if qid in CT_FAMILY_QUESTIONS:
+            outcome, basis = _ct_family(qid, a, pkg, states)
+        elif qid == "CT-4":
+            outcome, basis = _ct4(a, states, view)
+        else:
+            outcome, basis = _ct5(a, session, states, {k: out[k] for k in q["depends_on"]}, pkg, taxonomy, view,
+                                  upstream, memory)
+        if outcome not in q["outcomes"] and outcome != INCONCLUSIVE:
+            raise ValueError(f"{qid}: outcome {outcome} is not in METRICS.yaml")
+        out[qid] = {"outcome": outcome, "sufficiency": suf, "basis": basis, "findings": a["findings"],
+                    "not_assessed": a["sufficiency"]["not_assessed"]}
+        if outcome == INCONCLUSIVE or basis.get("interpretation_reasons"):
+            out[qid]["because"] = basis.get("interpretation_reasons", [])
+    return out
+
+
+def assess_classification_tagging(rows, session_id, cfg=None, computed_at=None, taxonomy=None, upstream=None,
+                                  memory=None, raw_events=None, native=None):
+    """The five questions for one session: each assessment with its answer."""
+    cfg = cfg or EA.signal_metrics.load_config()
+    events, srows = EA.session_inputs(rows, session_id, cfg, computed_at)
+    sessions = EA._computed(rows, cfg, computed_at)[1]
+    s = next(x for x in sessions if x.id == session_id)
+    assessments = {qid: EA.assess(CT, qid, events, srows, cfg, computed_at, raw_events, native)
+                   for qid in EA.QUESTIONS[CT]}
+    answers = observe_classification_tagging(assessments, s, taxonomy, upstream, memory)
+    return {qid: {"assessment": assessments[qid], "answer": answers[qid]} for qid in assessments}
+
+
+def _explain_ct(qid, ans):
+    b = ans["basis"] or {}
+    o = ans["outcome"]
+    if qid in CT_FAMILY_QUESTIONS:
+        if o == INCONCLUSIVE:
+            return _explain(qid, ans)
+        if o == "FAMILY_INDICATED":
+            s = f"{b['family']} indicated by " + _measures_text([m for m in b["measures"] if m["verdict"] == DEVIATES])
+        else:
+            s = f"{b['family']} not indicated: " + _measures_text(b["measures"])
+        seen = [m for m in b["observed_not_counted"] if m["verdict"] == DEVIATES]
+        return s + (f"; observed, not counted: {_measures_text(seen)}" if seen else "")
+    if qid == "CT-4":
+        if o == "NONE_OBSERVED":
+            s = "no behavioural, execution or resource measure in a deviation state"
+        else:
+            s = "concerns observed, not counted: " + ", ".join(
+                b["concerns"] + [f"{u['cop']} {u['label']}" for u in b["upstream_concerns"]])
+        return s + (f"; unobserved: {', '.join(b['unobserved'])}" if b["unobserved"] else "")
+    s = {"CLASSIFIED": lambda: f"one candidate family: {b['candidates'][0]}",
+         "AMBIGUOUS": lambda: f"candidate families {', '.join(b['candidates'])}: interpretation against taxonomy "
+                              f"{b['taxonomy']['version']} required (precedence reading {b['precedence_reading']})",
+         "UNCLASSIFIED": lambda: f"no family indicated; every counted metric judged against taxonomy "
+                                 f"{b['taxonomy']['version']}",
+         "UNDETERMINED": lambda: "not classified: " + "; ".join(b["evidence_status"]["insufficient"]),
+         INCONCLUSIVE: lambda: b.get("interpretation_text") or "not answered"}[o]()
+    if b.get("entities"):
+        s += f"; {len(b['entities'])} associated event(s), linkage {b['linkage']}"
+    return s
+
+
+def _ct_limitations(ans):
+    from . import decision as D
+    out = []
+    five = ans["CT-5"].get("basis") or {}
+    for f in five.get("undefined", []):
+        out.append(D.limitation(D.MISSING_EVIDENCE, "CT-5", f, "FAMILY_NOT_IN_TAXONOMY",
+                                f"{f} is indicated but taxonomy {five['taxonomy']['version']} does not define it: it "
+                                f"is not named"))
+    for f in five.get("families_not_evaluated", []):
+        out.append(D.limitation(D.MISSING_EVIDENCE, _ct_family_q(f), f, EA.MISSING_DATA,
+                                f"whether the event is also {f} is not evaluated: its metadata is missing"))
+    four = ans["CT-4"].get("basis") or {}
+    if four.get("unmapped"):
+        out.append(D.limitation(D.LIMIT_NOT_APPROVED, "CT-4", "LOOPS/OUTCOME/COST", D.LIMIT_NOT_APPROVED,
+                                four["unmapped"]))
+    for e in five.get("entities", []):
+        if e["linkage"]["status"] == "NOT_LINKED":
+            out.append(D.limitation(D.INFERRED_RELATIONSHIP, "CT-5", f"lane {e['lane']}", "LANE_NOT_LINKED",
+                                    f"{e['ref']} was made in lane {e['lane']}; its parent is not associated: "
+                                    f"{e['linkage']['reason']}", [e["ref"]]))
+    for m in five.get("telemetry_deviating", []):
+        out.append(D.limitation(D.MISSING_EVIDENCE, "CT-5", m, "TELEMETRY_QUALITY",
+                                f"{m} reads {next(x['state'] for x in five['telemetry'] if x['metric'] == m)}: the "
+                                f"classification stands on the indicators observed"))
+    if ans["CT-5"]["outcome"] not in (INCONCLUSIVE,):
+        for x in five.get("not_calculated", []):
+            out.append(D.limitation(D.NOT_CALCULATED, "CT-5", x["metric"], D.NOT_CALCULATED, x["missing_inputs"]))
+    return out
+
+
+def _ct_family_q(family):
+    return EA.load_package(CT)["families"][family]["question"]
+
+
+def _ct_payload(ans, decided_by):
+    five = ans["CT-5"].get("basis") or {}
+    return {"answers": {q: x["outcome"] for q, x in ans.items()}, "candidates": five.get("candidates", []),
+            "indicated": five.get("indicated", []), "taxonomy_version": (five.get("taxonomy") or {}).get("version"),
+            "decided_by": decided_by, "entities": [e["ref"] for e in five.get("entities", [])],
+            "precedents_read": [p["record_id"] for p in five.get("precedents", [])]}
+
+
+def decide_classification_tagging(questions, evidence_scale=1.0):
+    """The COP decision from the five answers (INTERPRETATION.md). CT-5 gives the label: CLASSIFIED is the one
+    candidate family; UNCLASSIFIED the quiet reading; UNDETERMINED is INCONCLUSIVE. AMBIGUOUS is not decided here:
+    the model interprets it and interpreted_classification_tagging reads its verified label back. Confidence and
+    severity are the legacy rule's formulas over the classified family's indicating measures; the action is NONE."""
+    from ..interpret import SEV, RANK
+    pkg = EA.load_package(CT)
+    ans = {q: v["answer"] for q, v in questions.items()}
+    five = ans["CT-5"]["outcome"]
+    b5 = ans["CT-5"].get("basis") or {}
+    fam_q = _ct_family_of(pkg)
+    decided = five in ("CLASSIFIED", "UNCLASSIFIED", "UNDETERMINED")
+    label, conf, sev, reason, drivers = INCONCLUSIVE, 0.0, "NONE", CT_REASON[INCONCLUSIVE], list(ans)
+    if five == "CLASSIFIED":
+        label = b5["candidates"][0]
+        hot = [m for m in ans[fam_q[label]]["basis"]["measures"] if m["verdict"] == DEVIATES]
+        conf = min(0.9, 0.65 + 0.1 * len(hot))
+        sev = max((SEV[m["state"]] for m in hot), key=RANK.get)
+        reason, drivers = "", [fam_q[label], "CT-5"]
+    elif five == "UNCLASSIFIED":
+        label, conf, reason, drivers = "UNCLASSIFIED", 0.7, "", list(CT_FAMILY_QUESTIONS) + ["CT-5"]
+    elif five == "AMBIGUOUS":
+        drivers = [fam_q[f] for f in b5["candidates"]] + ["CT-5"]
+    trace = _question_trace(questions, _explain_ct, drivers)
+    contrary = [f"{q}: {x['check']} {x['detail']}" for q, v in questions.items()
+                for x in v["answer"].get("findings", [])]
+    if five == "CLASSIFIED" and len(b5["indicated"]) > 1:
+        contrary += [f"CT-5: {f} is also indicated and not named: not in taxonomy {b5['taxonomy']['version']}"
+                     for f in b5["undefined"]]
+    four = ans["CT-4"].get("basis") or {}
+    contrary += [f"CT-4: {m} in a deviation state, recorded and not counted: {CT_UNMAPPED}" for m in four.get("concerns", [])]
+    for q in CT_FAMILY_QUESTIONS:
+        for m in (ans[q].get("basis") or {}).get("observed_not_counted", []):
+            if m["verdict"] == DEVIATES:
+                contrary.append(f"{q}: {m['metric']} {m['value']} ({m['state']}), observed and not counted")
+    contrary += [f"CT-5: {m} in a deviation state; the classification stands on the indicators observed"
+                 for m in b5.get("telemetry_deviating", [])]
+    for k, v in (b5.get("upstream") or {}).items():
+        if v["used"] and k == "policy_enforcement" and label in pkg["families"]:
+            contrary.append(f"CT-5: Policy Enforcement reads {v['label']}: whether the event is permitted is its "
+                            f"question; the kind is {label} either way ({v['counted_as']})")
+    return {"label": label, "confidence": round(conf * evidence_scale, 3), "severity": sev, "action": "NONE",
+            "action_reason": reason, "recipients": ["governance_intelligence"] if label in pkg["families"] else [],
+            "drivers": drivers, "also_held": [], "contrary": contrary, "questions": trace,
+            "limitations": _ct_limitations(ans), "decided": decided,
+            "memory_payload": _ct_payload(ans, "package" if decided else "model"), "decision": five}
+
+
+def interpreted_classification_tagging(f, baseline):
+    """CT-5 after verification, for a finding the model concluded on an ambiguous event: its verified label read
+    back as CT-5's answer when it is one of the candidate families, otherwise INCONCLUSIVE with why. A model label
+    outside the candidates is not a classification: the finding becomes INCONCLUSIVE and the label is kept as the
+    rejected candidate. CT-1 to CT-4 are the package's, unchanged. A finding the package decided is returned as
+    it is."""
+    import copy
+    from .contracts import ORIGIN_LLM
+    cs = (baseline or {}).get("cop_specific") or {}
+    if f.get("origin") != ORIGIN_LLM or not cs.get("questions"):
+        return f
+    q = copy.deepcopy(cs["questions"])
+    five = q["CT-5"]
+    cands = (five.get("basis") or {}).get("candidates") or []
+    reasons = [r for r in five.get("sufficiency_reasons", []) if r.get("code") != INTERPRETATION_REQUIRED]
+    detail = (f.get("cop_specific") or {}).get("detail") or {}
+    interp = {"by": "llm", "verified": bool(f.get("verified")), "status": f["status"], "label": f["label"],
+              "candidates": cands, "model_candidate_families": detail.get("candidate_families", []),
+              "rejected_families": detail.get("rejected_families", {}),
+              "taxonomy_version": detail.get("taxonomy_version"), "entities": detail.get("entities", [])}
+    out = dict(f)
+    if f["status"] == "SUBSTANTIVE" and f["label"] in cands:
+        answer = "CLASSIFIED"
+        text = (f"model interpretation {f['label']} ({'verified' if f.get('verified') else 'not verified'}), one of "
+                f"{', '.join(cands)}" + (f"; rejected: " + "; ".join(f"{k} ({v})" for k, v in
+                                                                   interp["rejected_families"].items())
+                                          if interp["rejected_families"] else ""))
+    else:
+        answer = INCONCLUSIVE
+        if f["status"] == "SUBSTANTIVE":
+            r = {"code": OUTSIDE_CANDIDATES, "requirement": "interpretation", "check": None,
+                 "detail": f"model interpretation {f['label']} is not one of the candidate families "
+                           f"({', '.join(cands)}) the indicators support"}
+            out.update(label=INCONCLUSIVE, status="INCONCLUSIVE", confidence=0.0,
+                       rejected_candidate={"label": f["label"], "confidence": f.get("confidence"),
+                                           "reason": r["detail"]},
+                       rationale=f"INCONCLUSIVE: {r['detail']}; model rationale: {f.get('rationale', '')}"[:600])
+        else:
+            cand = (f.get("rejected_candidate") or {}).get("label")
+            r = ({"code": "INTERPRETATION_REJECTED", "requirement": "interpretation", "check": None,
+                  "detail": f"model interpretation {cand} rejected: {f.get('rationale', '')[:240]}"} if cand else
+                 {"code": "NO_INTERPRETATION", "requirement": "interpretation", "check": None,
+                  "detail": "no verified model interpretation: "
+                            + str((f.get("cop_specific") or {}).get("stop_reason") or f.get("rationale", ""))[:200]})
+        reasons.append(r)
+        text = "not answered: " + r["detail"]
+    five.update(answer=answer, explanation=text, sufficiency_reasons=reasons, drives_label=True)
+    five["basis"] = {**(five["basis"] or {}), "interpretation": interp, "interpretation_text": text,
+                     "evidence_status": {**((five["basis"] or {}).get("evidence_status") or {}),
+                                         "inferred": {"family": f["label"] if answer == "CLASSIFIED" else None,
+                                                      "by": "model interpretation", "candidates": cands}}}
+    pay = {**(cs.get("memory_payload") or {}), "answers": {k: v["answer"] for k, v in q.items()}, "decided_by": "model"}
+    out["cop_specific"] = {**(f.get("cop_specific") or {}), "questions": q, "drivers": cs.get("drivers", []),
+                           "limitations": cs.get("limitations", []), "contrary": cs.get("contrary", []),
+                           "recipients": ["governance_intelligence"] if answer == "CLASSIFIED" else [],
+                           "memory_payload": pay, "decision": answer}
+    return out

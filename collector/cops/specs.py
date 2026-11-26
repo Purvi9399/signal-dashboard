@@ -259,6 +259,9 @@ SPEC_CONSUMES = {
 TOPOLOGY_CONSUMES = {
     "resource_management": ("interaction_discovery",),
     "incident_response":   ("classification_tagging", "resource_management"),
+    # purvi, 2026-11-26 (COP 7): Classification & Tagging consumes these three as well. Context only: no
+    # upstream finding indicates a family (cops/packages/classification_tagging/CONNECTIONS.md).
+    "classification_tagging": ("policy_enforcement", "interaction_discovery", "resource_management"),
 }
 
 # The runtime's current-cycle graph: a COP runs after these and reads their

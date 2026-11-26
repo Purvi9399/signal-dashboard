@@ -561,8 +561,12 @@ def test_root_causes_can_co_occur_and_use_the_defined_codes(bench):
 def test_cases_fixed_without_a_new_call_are_the_ones_the_analysis_predicts(bench):
     cases, before = bench
     fixed = sorted(c["id"] for c in cases if before["cases"][c["id"]]["verdict"] != "PASS" and c["verdict"] == "PASS")
-    assert fixed == ["audit_traceability:abnormal", "governance_intelligence:abnormal",
-                     "governance_intelligence:normal", "risk_mitigation:normal"]
+    # classification_tagging:normal (COP 7, 2026-11-26): the package now classifies a session with no family
+    # indicated as UNCLASSIFIED without the model (packages/classification_tagging/DECISIONS.md, D-CT4), where
+    # the recorded reply was inconclusive. No recorded reply is replayed for it any more.
+    assert fixed == ["audit_traceability:abnormal", "classification_tagging:normal",
+                     "governance_intelligence:abnormal", "governance_intelligence:normal",
+                     "risk_mitigation:normal"]
 
 
 def test_dashboard_embeds_exactly_the_results_file():

@@ -375,6 +375,8 @@ def test_only_the_packaged_cops_and_shared_runtime_use_the_assessment():
                    and not p.endswith(("evidence_assessment.py", "cop_package.py")))
     assert users == [os.path.join("cops", "packages", "anomaly_detection", "harness.py"),
                      os.path.join("cops", "packages", "audit_traceability", "harness.py"),
+                     # COP 7 (2026-11-26): the Classification & Tagging harness reads the package's answers
+                     os.path.join("cops", "packages", "classification_tagging", "harness.py"),
                      os.path.join("cops", "packages", "interaction_discovery", "harness.py"),
                      os.path.join("cops", "packages", "runtime_monitoring", "harness.py"),
                      os.path.join("cops", "runtime", "decision.py"),
