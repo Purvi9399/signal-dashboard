@@ -7,7 +7,7 @@ Read only when verified and substantive (`rules.verified`).
 | Producer | Reads | Effect |
 |---|---|---|
 | Runtime Monitoring | label | its evidence level scales every confidence (`rules.evidence_conf`); INSUFFICIENT makes a quiet RS-5 UNDETERMINED (INDETERMINATE) and is contrary evidence beside a positive reading; recorded in `upstream_used` as evidence quality, not corroboration |
-| Interaction Discovery | ID-2 answer, ID-2 `basis.links` (RECORDED, INFERRED, INFERRED_AGAINST_TIME_ORDER, UNLINKED), `edges`, label | RS-4 attribution. Only RECORDED delegation links (parent_agent_id on the lane's rows) attribute; a link inferred from timing, an unlinked lane, ID-2 not FULLY_RECONSTRUCTED, PATH_PARTIAL or no verified finding leave consumption UNATTRIBUTED and discount the confidence. A verified interaction finding is a claim and an `upstream_used` entry only when it attributed |
+| Interaction Discovery | ID-2 answer, ID-2 `basis.links` (RECORDED, INFERRED, INFERRED_AGAINST_TIME_ORDER, UNLINKED), `edges`, label | RS-4 attribution. Only RECORDED delegation links (parent_agent_id on the lane's rows) attribute; a link inferred from timing, an unlinked lane, a lane with no recorded link, an absent ID-2 answer, ID-2 not FULLY_RECONSTRUCTED, PATH_PARTIAL or no verified finding leave consumption UNATTRIBUTED and discount the confidence. A verified interaction finding is a claim and an `upstream_used` entry only when it attributed |
 | Workload Optimization (earlier cycle) | its verified finding | `cop_specific.advisory`, `applied: False`; changes nothing (unchanged) |
 
 ## Downstream

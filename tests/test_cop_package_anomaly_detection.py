@@ -251,13 +251,19 @@ def test_other_cops_keep_the_self_including_reading():
     from cops.runtime import tools as T
     rows = H.WORLDS["baseline_contamination_half_estate"]()
     rt = E.make_runtime("t-ad-scope", "s1", rows)
-    for cop in ("risk_mitigation", "resource_management", "workload_optimization"):
+    # Resource Management joined the leave-one-out reading when purvi approved U-RS1 (2026-11-26, D-RS17);
+    # the other COPs that read the measure keep the self-including reading
+    for cop in ("risk_mitigation", "workload_optimization"):
         assert "insights.token_outlier" in BY_KEY[cop].metric_keys
         got = {r["metric"]: r["value"] for r in T.t_get_metric_rows(rt.case, {"metric_ids": ["insights.token_outlier"]},
                                                                     {"cop": cop})["rows"]}
         assert got == {"insights.token_outlier": 1.95}
         assert [e.value for e in G._events(rt, cop) if e.metric_id == "insights.token_outlier"] == [1.95]
-    assert [e.value for e in G._events(rt, COP) if e.metric_id == "insights.token_outlier"] == [40.0]
+    for cop in (COP, "resource_management"):
+        assert [e.value for e in G._events(rt, cop) if e.metric_id == "insights.token_outlier"] == [40.0]
+        got = {r["metric"]: r["value"] for r in T.t_get_metric_rows(rt.case, {"metric_ids": ["insights.token_outlier"]},
+                                                                    {"cop": cop})["rows"]}
+        assert got == {"insights.token_outlier": 40.0}
 
 
 def test_mc01_recomputes_with_the_method_the_row_declares():

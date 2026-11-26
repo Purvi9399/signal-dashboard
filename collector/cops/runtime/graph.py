@@ -54,7 +54,7 @@ from .evidence import assess, usable
 from .requirements import assess_requirements, required_unavailable, precheck as evidence_precheck_fn
 from .memory import MemoryAccessDenied, POLICIES, VERIFIED
 from .rules import RULES, DETERMINISTIC_TOOLS, evidence_conf
-from .cop_package import DECIDED_WITHOUT_MODEL, interpreted_anomaly_detection, ad_case_events
+from .cop_package import DECIDED_WITHOUT_MODEL, interpreted_anomaly_detection, ad_case_events, LEAVE_ONE_OUT_COPS
 from . import decision
 from .tools import TOOLS, scan
 from .verifiers import (R, au01, verify_finding, verify_action, verify_memory_update, blocking,
@@ -198,7 +198,7 @@ def timed(name):
 
 def _events(rt, cop, picture=None):
     spec = BY_KEY[cop]
-    ev = (ad_case_events(rt.case, spec.metric_keys) if cop == "anomaly_detection"
+    ev = (ad_case_events(rt.case, spec.metric_keys) if cop in LEAVE_ONE_OUT_COPS
           else rt.case.case_events(spec.metric_keys))
     return usable(ev, picture) if picture else ev
 

@@ -33,8 +33,11 @@ second.
 ## The entitlement source
 
 Only the quota record: case artifact `quotas`, read by `tools.get_quota` (the agent scope's entry, or `*`),
-field `token_budget`. It carries no period, so the session's tokens are compared with it, as `rules.py` did
-before this package (limitation `quota_period`). Memory, upstream findings, metric states and the estate
+field `token_budget`. It carries no period, scope or measure, so the session's tokens are compared with it
+per session, as `rules.py` did before this package. purvi kept this per-session reading provisionally on
+2026-11-26 (U-RS4 stays open): the registry's `budgets_and_quotas` contract has scope, measure, period and limit,
+none of which the record carries, so no per-period or cross-session comparison is made and no utilisation is
+calculated (limitation `quota_period`). Memory, upstream findings, metric states and the estate
 baseline are never an entitlement. With no quota, permission is NOT_EVALUATED and `requirements.py` withholds
 NORMAL (status MISSING_DEPENDENCY, `gated_label` NORMAL), unchanged.
 
@@ -62,10 +65,14 @@ elevated). The other 27 assigned metrics are observed, reported or NOT_CALCULATE
 
 ## Baselines
 
-Self-inclusive, as `signal_metrics` computes the three estate-relative measures (the session is part of its own
-estate). Each RS-1 and RS-2 measure records its comparison (`baseline`: method `self_inclusive`, sessions,
-median, version) and, beside it, the leave-one-out reading `cop_package.ad_leave_one_out` gives
-(`basis.leave_one_out`, `used: self_inclusive`). The leave-one-out reading decides nothing (U-RS1).
+Leave-one-out, with Anomaly Detection's shared method (purvi approved U-RS1 on 2026-11-26): the three
+estate-relative measures are re-read by `cop_package.ad_leave_one_out` against `signal_metrics.estate` of the
+other sessions, and `cop_package._ad_baselines` records each comparison (`baseline`: method `leave_one_out@1`,
+sessions, median, needed, sufficient, gap, and `version` = metric_version, a hash of the baseline session ids,
+and the method). The same rows give the same version and reading in any order. `cop_package.LEAVE_ONE_OUT_COPS`
+makes the picture, VS-01 and the metric tools read the same rows. The self-inclusive reading used before
+U-RS1 is kept beside each RS-1 and RS-2 measure in `basis.leave_one_out` (`used: leave_one_out@1`, and
+`self_inclusive` with its own value, state, version and sufficiency); it decides nothing.
 
 ## Authority
 

@@ -12,7 +12,7 @@ the common payload, `cop_specific.memory_payload` adds:
 
 - `answers`: the five answers;
 - `counted`: the hot and elevated measures, as `metric@state`;
-- `baselines`: each judged measure's baseline version, as `metric@version/self_inclusive`;
+- `baselines`: each judged measure's baseline version, as `metric@version/leave_one_out@1`;
 - `permitted`: RS-1's quota status (WITHIN_QUOTA, ABOVE_QUOTA, NOT_EVALUATED);
 - `attribution`: RS-4's attribution status;
 - `precedents_read`: the validated records this decision listed.

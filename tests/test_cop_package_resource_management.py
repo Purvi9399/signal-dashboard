@@ -200,17 +200,32 @@ def test_a_missing_meter_is_not_thrift(bench):
 
 # ---------------------------------------------------------------- baseline methodology (U-RS1)
 
-def test_the_baseline_stays_self_inclusive_and_the_leave_one_out_reading_is_recorded(bench):
+def test_the_baseline_is_leave_one_out_and_the_self_inclusive_reading_is_recorded(bench):
+    """U-RS1, approved 2026-11-26: the decision reads leave-one-out; the earlier reading stays beside it."""
+    assert P.RS_BASELINE_METHOD == P.AD_BASELINE_METHOD and "resource_management" in P.LEAVE_ONE_OUT_COPS
     for name, r in bench["results"].items():
         b = r["cop"]["finding"]["cop_specific"]["questions"]["RS-1"]["basis"]
         if "measures" not in b:
             continue
         m = b["measures"][0]
         if m.get("baseline"):
-            assert m["baseline"]["method"] == "self_inclusive", name
+            assert m["baseline"]["method"] == P.AD_BASELINE_METHOD, name
+            assert m["baseline"]["version"].endswith("/" + P.AD_BASELINE_METHOD), name
         lo = b.get("leave_one_out")
         if lo:
-            assert lo["used"] == "self_inclusive" and lo["leave_one_out"]["method"] == P.AD_BASELINE_METHOD, name
+            assert lo["used"] == P.AD_BASELINE_METHOD and lo["leave_one_out"]["method"] == P.AD_BASELINE_METHOD, name
+            assert lo["self_inclusive"]["method"] == "self_inclusive", name
+            assert lo["self_inclusive"]["version"].endswith("/self_inclusive"), name
+            assert m["value"] == lo["leave_one_out"]["value"], name
+
+
+def test_the_baseline_reading_is_reproducible():
+    rows = H.history(4) + H.history(3, tokens=40000, prefix="new", day0=5) + H.session(tokens=40000)
+    a = P.assess_resource_management(rows, "s1", computed_at="2026-01-10T00:00:00Z")
+    b = P.assess_resource_management(list(reversed(rows)), "s1", computed_at="2026-01-10T00:00:00Z")
+    pick = lambda q: q["RS-1"]["answer"]["basis"]["leave_one_out"]
+    assert pick(a) == pick(b)
+    assert a["RS-1"]["answer"]["outcome"] == b["RS-1"]["answer"]["outcome"] == "ABOVE_EXPECTED"
 
 
 def test_the_comparison_uses_anomaly_detections_shared_function():
@@ -233,6 +248,17 @@ def test_attribution_needs_every_delegation_link_recorded(bench):
                     "attribution_without_interaction_discovery")}
     assert st == {"attribution_verified": "ATTRIBUTED", "attribution_timing_inferred": "UNATTRIBUTED",
                   "attribution_mixed_links": "UNATTRIBUTED", "attribution_without_interaction_discovery": "UNATTRIBUTED"}
+
+
+def test_an_absent_id2_answer_never_attributes(bench):
+    """purvi, 2026-11-26: a verified finding without ID-2, or without a recorded link per lane, verifies no
+    relationship."""
+    r = bench["results"]["attribution_id2_absent"]
+    assert r["interaction_verified"] is True
+    at = r["cop"]["finding"]["cop_specific"]["attribution"]
+    assert at["status"] == "UNATTRIBUTED" and "no ID-2 answer" in at["reason"]
+    nl = r["no_links"]["finding"]["cop_specific"]["attribution"]
+    assert nl["status"] == "UNATTRIBUTED" and nl["reason"].startswith("no recorded delegation link")
 
 
 def test_an_inferred_link_in_a_complete_graph_still_does_not_attribute(bench):
@@ -267,7 +293,7 @@ def test_a_quiet_reading_writes_no_record_and_a_reading_above_bounds_writes_its_
     assert w["written"] and w["record_type"] == "usage_baseline"
     pay = bench["results"]["quota_exceeded"]["cop"]["finding"]["cop_specific"]["memory_payload"]
     assert pay["permitted"] == "ABOVE_QUOTA" and pay["answers"]["RS-5"] == "INTERVENTION_REQUIRED"
-    assert all(b.endswith("/self_inclusive") for b in pay["baselines"])
+    assert pay["baselines"] and all(b.endswith("/" + P.AD_BASELINE_METHOD) for b in pay["baselines"])
 
 
 # ---------------------------------------------------------------- downstream

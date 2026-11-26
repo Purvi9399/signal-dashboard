@@ -12,7 +12,7 @@ These are maintenance instructions for Claude Code. They are not the runtime's s
 - **Contract:** `METRICS.yaml`: the five questions RS-1 to RS-5 (workbook COMPLETE_DELEGATION_DATA rows 146-154, metric list row 156), the 31-metric mapping, `labels` (RS-5 answer to label), `burn` and `waste` (the four counted measures), `deviation_states`, `elevated_states` and operations. Unbuilt metrics stay in the mapping with a `note` naming the missing input.
 - **Explanations:** `SPEC.md`, `INTERPRETATION.md`, `MEMORY.md`, `CONNECTIONS.md`, `DECISIONS.md` in the same folder.
 - **Ground truth:** `GROUND_TRUTH.yaml`. The harness is `harness.py`.
-- **Answers and label:** `collector/cops/runtime/cop_package.py`, Resource Management section (`_rs_baselines`, `rs_baseline_comparison`, `_rs1` to `_rs5`, `observe_resource_management`, `decide_resource_management`). The rule `rules.resource_management` records claims, applies the attribution discount (`_attribute_consumption`) and publishes what the decision returns.
+- **Answers and label:** `collector/cops/runtime/cop_package.py`, Resource Management section (`_rs_self_inclusive`, `rs_baseline_comparison`, `_rs1` to `_rs5`, `observe_resource_management`, `decide_resource_management`). The rule `rules.resource_management` records claims, applies the attribution discount (`_attribute_consumption`) and publishes what the decision returns.
 - **Tools:** `compute_consumption`, `get_quota`, `assess_resource_questions` (`tools.py`, in this order in `rules.DETERMINISTIC_TOOLS`).
 - **Tests:** `tests/test_cop_package_resource_management.py`; `tests/test_cop_influence.py`; `tests/test_runtime_graph.py::test_resource_management_alternate_outcomes`; evaluation and bench cases for this COP.
 
@@ -22,8 +22,8 @@ These are maintenance instructions for Claude Code. They are not the runtime's s
 2. The quota record (`tools.get_quota`, `token_budget`) is the only entitlement source. UNAUTHORIZED only when tokens exceed it. High consumption against the estate is EXCESSIVE or INEFFICIENT, never UNAUTHORIZED (D-RS3).
 3. Only the four `specs.metric_keys` count toward the label (D-RS2). Do not change `specs.metric_keys` or `cops/interpret.py`: the legacy 4-COP runner reads them.
 4. The answers decide the label in the order INTERVENTION_REQUIRED, ATTENTION, UNDETERMINED (telemetry), UNDETERMINED (unanswered), NO_INTERVENTION. Positive evidence stands on partial evidence (D-RS8). Do not add a path that bypasses RS-5.
-5. Baselines are self-inclusive (D-RS11). Do not switch to leave-one-out without purvi's approval (U-RS1); the comparison is recorded beside each reading.
-6. Attribute consumption only through a verified Interaction Discovery finding with ID-2 FULLY_RECONSTRUCTED and every delegation link RECORDED (D-RS10). Keep the `cop_specific.attribution` field shape and the 0.6/0.9 discount.
+5. Baselines are leave-one-out through Anomaly Detection's shared `ad_leave_one_out` and `_ad_baselines` (U-RS1 approved, D-RS17; `LEAVE_ONE_OUT_COPS`). Keep the self-inclusive reading in `basis.leave_one_out` beside each RS-1 and RS-2 measure; it never decides.
+6. Attribute consumption only through a verified Interaction Discovery finding whose ID-2 answer is present and FULLY_RECONSTRUCTED, every delegation link RECORDED and every subagent lane with a RECORDED link (D-RS10, D-RS18). An absent ID-2 answer never attributes. Keep the `cop_specific.attribution` field shape and the 0.6/0.9 discount.
 7. Never edit GROUND_TRUTH.yaml to match an output. A correction after a run is marked in the file and in DECISIONS.md with why.
 8. Do not invent thresholds, quotas or references. An unbuilt metric is NOT_CALCULATED with its missing input, never a proxy.
 9. Memory: only VALIDATED usage_baseline records are listed, and a record never changes a decision or a baseline.

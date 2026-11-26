@@ -1,8 +1,15 @@
 # Resource Management: decisions
 
-Proposed on 2026-11-26 for purvi's review. Not yet accepted. Nothing here changes a label name, the behavioural
+Proposed on 2026-11-26 for purvi's review. Conditionally accepted by purvi on 2026-11-26 (A-RS1 below), with
+revision 1 (D-RS17 to D-RS19, R-RS1) awaiting her final review. Nothing here changes a label name, the behavioural
 question, a threshold, `specs.metric_keys`, the legacy rule in `cops/interpret.py`, the metrics engine, the
 requirements gate, VS-01, triage or shared architecture.
+
+## Acceptance
+
+| # | Date | What purvi decided |
+|---|---|---|
+| A-RS1 | 2026-11-26 | COP 6 conditionally accepted. U-RS1 approved: adopt leave-one-out baselines with the existing shared method, with baseline versioning and reproducibility, keeping the previous readings in the comparison record (D-RS17). U-RS2 and U-RS3 kept as implemented. The per-session quota interpretation kept provisionally, documenting the missing scope and period (D-RS19). RS-4: verify that ATTRIBUTED cannot come from an absent ID-2 answer and correct narrowly (D-RS18). Unavailable metrics and open limitations kept; no fabricated resource estimates, quotas or workload explanations. Final review before COP 7 |
 
 ## Made in this package
 
@@ -18,14 +25,29 @@ requirements gate, VS-01, triage or shared architecture.
 | D-RS8 | Positive evidence stands on partial evidence: a measure above bounds, or a quota exceeded, decides even when another question is unanswered or telemetry is INSUFFICIENT; the confidence is scaled by the evidence level and Runtime Monitoring's reading is contrary evidence | INDETERMINATE whenever anything is missing | the legacy rule judged whichever measures could be judged; Interaction Discovery D2 and Policy Enforcement D-PE10 do the same |
 | D-RS9 | Blocking checks: CONFLICTING_SOURCES for RS-1, CONFLICTING_ACTION_SOURCES for RS-2 to RS-4, as Anomaly Detection's token and action questions. A failed check leaves the question INCONCLUSIVE with its measures in `observed_not_judged` | no blocking check (the legacy rule ignored reliability) | consumption read from disagreeing collectors is not judged. Changes a label (unreliable_telemetry was EXCESSIVE 0.47) |
 | D-RS10 | Attribution (RS-4) is computed in the package (`cop_package._rs4`), moved from `rules._attribute_consumption`, with the same conditions, reason strings, field shape and 0.6/0.9 discount. It adds one condition: every delegation link in ID-2 `basis.links` must be RECORDED. An INFERRED, INFERRED_AGAINST_TIME_ORDER or UNLINKED link leaves consumption UNATTRIBUTED with an INFERRED_RELATIONSHIP limitation | the ID-2 answer alone | purvi: never attribute subagent consumption through an unverified parent-child relationship. ID-2 already reads such a graph as partial; the link check holds even if it did not (tested with a constructed finding) |
-| D-RS11 | Baselines stay self-inclusive, as the metrics compute them. The leave-one-out reading (`ad_leave_one_out`) is recorded beside each RS-1 and RS-2 measure and decides nothing | adopt leave-one-out now | purvi: do not silently change baseline methodology. Comparison below; U-RS1 |
+| D-RS11 | **Superseded by D-RS17 (2026-11-26).** Baselines stay self-inclusive, as the metrics compute them. The leave-one-out reading (`ad_leave_one_out`) is recorded beside each RS-1 and RS-2 measure and decides nothing | adopt leave-one-out now | purvi: do not silently change baseline methodology. Comparison below; U-RS1 |
 | D-RS12 | Confidence, severity, action and recipients are the legacy formulas over the counted measures; confidence is rounded to three places | two places (`interpret._out`) | as the other packages; 0.233 where the legacy gave 0.23 |
 | D-RS13 | The finding's rationale says what was compared: the tokens against `token_budget`, or that permission was not evaluated | keep the legacy rationale | the legacy rationale said "no quota configured" in every case, including when a quota was configured and compared; the interpret.py text itself is unchanged |
 | D-RS14 | usage_baseline precedents are listed in RS-5 and never decide | use them to adjust baselines | memory is not a measure or an entitlement; no self-validation |
 | D-RS15 | Runtime Monitoring is recorded in `upstream_used` as evidence quality, not a claim; Interaction Discovery is a claim only when it attributed | cite every verified upstream | extra claims add lineage and change other COPs' independence (D-PE12) |
 | D-RS16 | Every operation is deterministic | a model for "legitimate high workload" | the workbook's questions are settled by approved thresholds and the quota; legitimacy needs a workload record that does not exist (limitation `workload_record`), not a model |
+| D-RS17 | Revision 1. Baselines are leave-one-out with Anomaly Detection's shared method: `assess_resource_management` reads the events through `ad_leave_one_out` and the baselines through `_ad_baselines` (method `leave_one_out@1`; version = metric_version, a hash of the baseline session ids, and the method, so the same rows give the same version in any order). `LEAVE_ONE_OUT_COPS` (`anomaly_detection`, `resource_management`) makes `graph._events` (picture, VS-01, legacy rule baseline) and `tools.t_get_metric_rows` and `compute_baseline` read the same rows. `rs_baseline_comparison` keeps the self-inclusive reading (`_rs_self_inclusive`, renamed from `_rs_baselines`) beside each RS-1 and RS-2 measure with its value, state, version and sufficiency; `differs` is true when the state or the sufficiency differs, and the difference is contrary evidence. It decides nothing | a new Resource Management baseline function; drop the self-inclusive reading | purvi approved U-RS1 and asked for the shared method and for the earlier readings to be preserved. Changes two labels (below) |
+| D-RS18 | Revision 1, narrow RS-4 fix. `_rs4` attributes only when the verified Interaction Discovery finding has an ID-2 answer equal to FULLY_RECONSTRUCTED (was: FULLY_RECONSTRUCTED or absent), and every subagent lane has a RECORDED delegation link (new). Otherwise UNATTRIBUTED with reason "Interaction Discovery's finding carries no ID-2 answer, so no relationship is verified" or "no recorded delegation link for lane(s): ...". Field shape, the other reasons and the 0.6/0.9 discount are unchanged | leave as it was | purvi: attribution must require independently verified relationships or explicit recorded evidence. Before the fix, a verified finding with its ID-2 answer removed, or with ID-2 FULLY_RECONSTRUCTED and no delegation links, gave ATTRIBUTED (shown by running the new scenario against the be18839 `_rs4`). No existing scenario changed |
+| D-RS19 | The quota stays per session, provisionally: the session's tokens against `token_budget`. The record carries no scope, measure or period, while the registry's `budgets_and_quotas` contract has scope, measure, period and limit, so no per-period comparison, no utilisation and no cost comparison is made; `token_budget_utilization`, `cost_budget_utilization` and `resource_quota_compliance` stay NOT_CALCULATED and limitation `quota_period` is reported | compare per period | purvi kept the per-session reading provisionally; U-RS4 stays open for the approved contract |
 
-## Labels that changed
+## Labels that changed in revision 1 (D-RS17)
+
+Against be18839 (self-inclusive), running both harnesses on all 28 earlier scenarios. Every other scenario keeps
+its label, confidence and five answers exactly.
+
+| World | be18839 (self-inclusive) | Revision 1 (leave-one-out) | Why |
+|---|---|---|---|
+| baseline_contamination_half_estate | NORMAL 0.8; RS-1 WITHIN_LIMITS | EXCESSIVE 0.7, ALERT; RS-1 ABOVE_EXPECTED | s1 no longer moves its own median to 20500; against the other seven (median 1000) it reads 40 (CRITICAL) |
+| baseline_minimum_counts_self | EXCESSIVE 0.7; RS-1 ABOVE_EXPECTED | INDETERMINATE 0.2; RS-1 and RS-2 BASELINE_INSUFFICIENT, RS-5 UNDETERMINED | s1 no longer counts toward its own minimum: four other sessions, five needed |
+
+The new scenario attribution_id2_absent reads EXCESSIVE 0.467 with RS-4 UNATTRIBUTED.
+
+## Labels that changed against the legacy rule
 
 Against the rule this package replaces (`interpret.py` reading plus the `rules.py` quota override), on the
 harness worlds. Every other world keeps its label; confidences match to two places.
@@ -41,6 +63,9 @@ None of these was in an accepted test; every earlier Resource Management test, e
 keeps its expectation.
 
 ## Baseline methodology: self-inclusive and leave-one-out (U-AD7 follow-up)
+
+Written for be18839, before U-RS1 was approved. Kept as the record of the comparison purvi decided on; D-RS17
+adopted the leave-one-out column.
 
 Resource Management reads insights.token_outlier, insights.duration_outlier and activity.action_rate_ratio as
 `signal_metrics` computes them: against the estate with the evaluated session in it. Anomaly Detection reads the
@@ -61,16 +86,22 @@ Adopting it here would change these two readings and nothing else in the harness
 
 | # | Question | Current behaviour |
 |---|---|---|
-| U-RS1 | Adopt leave-one-out baselines for Resource Management, as approved for Anomaly Detection? It would make the two COPs read the same session the same way | self-inclusive; leave-one-out recorded in `basis.leave_one_out` and in contrary evidence when the states differ |
-| U-RS2 | Should repeated, retried or failed operations count as waste (workbook RS-3 names "repeated operations")? | observed, listed in RS-3 `not_counted` and contrary evidence, not counted (a retry EXCEPTION alone reads NORMAL) |
-| U-RS3 | Should a WARNING alone still read INEFFICIENT, when Anomaly Detection records WARNING without counting it? | INEFFICIENT, WATCH, LOW (legacy) |
-| U-RS4 | The quota record: `tools.get_quota` reads `{token_budget}` with no period, scope or measure, while the registry's `budgets_and_quotas` contract has scope, measure, period and limit. Which is approved, where it lives, and whether consumption is compared per session or per period across sessions (RS-5 external data)? Cost budgets likewise | per session against token_budget; cost not compared |
+| U-RS1 | **Resolved 2026-11-26 (A-RS1, D-RS17): leave-one-out adopted.** Adopt leave-one-out baselines for Resource Management, as approved for Anomaly Detection? | leave-one-out; the self-inclusive reading recorded in `basis.leave_one_out` and in contrary evidence when the readings differ |
+| U-RS2 | **Kept as implemented (A-RS1).** Should repeated, retried or failed operations count as waste (workbook RS-3 names "repeated operations")? | observed, listed in RS-3 `not_counted` and contrary evidence, not counted (a retry EXCEPTION alone reads NORMAL) |
+| U-RS3 | **Kept as implemented (A-RS1).** Should a WARNING alone still read INEFFICIENT, when Anomaly Detection records WARNING without counting it? | INEFFICIENT, WATCH, LOW (legacy) |
+| U-RS4 | **Per-session reading kept provisionally (A-RS1, D-RS19); still open.** The quota record: `tools.get_quota` reads `{token_budget}` with no period, scope or measure, while the registry's `budgets_and_quotas` contract has scope, measure, period and limit. Which is approved, where it lives, and whether consumption is compared per session or per period across sessions (RS-5 external data)? Cost budgets likewise | per session against token_budget; cost not compared |
 | U-RS5 | Registry questions for `token_quota_exceeded` (rate-limit errors?) and `resource_threshold_breach_count` (which thresholds?) | NOT_CALCULATED |
 | U-RS6 | Downstream influence is evidence only: Workload Optimization lists this COP in `specs.CONSUMES` but its rule does not read it; Risk Mitigation always counts it as correlated (both read insights.token_outlier); Incident Response's rule reading does not depend on it | unchanged; recorded in CONNECTIONS.md |
 | U-RS7 | INDETERMINATE is written to usage_baseline memory because it is substantive and not the quiet label (`graph.validate_memory_update`, shared). Should it be? | written, as before this package |
 | U-RS8 | Missing references: capacity data (no collector), an approved model registry, an approved limit-approach threshold, an approved session duration threshold | each NOT_EVALUATED with a limitation |
 | U-RS9 | Subagent token consumption: synthetic and most real rows record tokens on the main turn only, so `subagent_resource_consumption` is UNKNOWN and attribution is by call counts, not tokens | attribution reports calls per actor; tokens per lane not claimed |
 | U-RS10 | A legitimately heavy task reads EXCESSIVE (ALERT on a CRITICAL spike) because no workload record exists; Anomaly Detection has task-class context, this COP does not | EXCESSIVE with limitation `workload_record` |
+
+## Ground truth revision
+
+| # | Date | What | Why |
+|---|---|---|---|
+| R-RS1 | 2026-11-26 | GROUND_TRUTH.yaml revised and committed (d9714b8) before the revised package was run: normal_within_quota baseline checks expect leave_one_out@1 over 7 sessions with the self-inclusive reading (8) recorded; heavy_estate_baseline expects the leave-one-out median 20500 over 14 sessions (answers and label unchanged, 1.95 is below WARNING); baseline_contamination_half_estate expects EXCESSIVE, ALERT, 0.7; baseline_minimum_counts_self expects RS-1 and RS-2 BASELINE_INSUFFICIENT, RS-5 UNDETERMINED, INDETERMINATE, 0.2; new scenario attribution_id2_absent expects RS-4 UNATTRIBUTED with ID-2 removed and with no delegation links | purvi's decisions A-RS1 (U-RS1 and RS-4). Each expectation follows from the approved method and min_sessions_for_baseline, not from a run. First revised run: 196 of 196 |
 
 ## Harness corrections after the first run
 

@@ -1629,6 +1629,9 @@ NO_WINDOW = ("no approved baseline window: every session of the fetched estate w
 # the same signal_metrics function against signal_metrics.estate of the other sessions (purvi, 2026-11-24, U-AD7).
 AD_SELF_INCLUDING = ("insights.token_outlier", "insights.duration_outlier", "activity.action_rate_ratio")
 AD_BASELINE_METHOD = "leave_one_out@1"
+# The COPs that read the self-including measures leave-one-out: Anomaly Detection (U-AD7) and Resource
+# Management (purvi, 2026-11-26, U-RS1). Their pictures, rules and metric tools read ad_case_events.
+LEAVE_ONE_OUT_COPS = ("anomaly_detection", "resource_management")
 
 
 def ad_leave_one_out(sessions, s, cfg, events):
@@ -2141,18 +2144,20 @@ RS_ONE_SIDED = {"RS-1": ("insights.token_outlier", "lower token use than the est
 RS_ATTENTION = {"RS-1": ("ABOVE_EXPECTED", "ELEVATED"), "RS-2": ("OUTSIDE_THRESHOLDS", "ELEVATED"),
                 "RS-3": ("WASTE_OBSERVED", "ELEVATED")}
 RS_OPEN = (INCONCLUSIVE, "BASELINE_INSUFFICIENT")
-# Resource Management reads its baselines as signal_metrics computes them: the estate including the session.
-# The leave-one-out reading Anomaly Detection adopted (U-AD7) is recorded beside it and decides nothing (U-RS1).
-RS_BASELINE_METHOD = "self_inclusive"
+# Resource Management reads the self-including measures leave-one-out, with Anomaly Detection's shared method
+# (ad_leave_one_out, _ad_baselines; purvi approved U-RS1 on 2026-11-26). The self-inclusive reading it used
+# before is kept in the comparison record beside each reading and decides nothing.
+RS_BASELINE_METHOD = AD_BASELINE_METHOD
+RS_PREVIOUS_METHOD = "self_inclusive"
 NO_QUOTA_PERIOD = ("the quota record carries no period: the session's tokens are compared with token_budget, as "
                    "rules.py did before this package")
 NOT_UNAUTHORIZED = ("above the estate's own normal, not above an allowance: only the quota decides whether "
                     "consumption is permitted")
 
 
-def _rs_baselines(sessions, s, cfg):
-    """The comparison each baseline-dependent measure uses, as signal_metrics computed it: the estate with the
-    session included. Read from signal_metrics.estate; nothing is recomputed."""
+def _rs_self_inclusive(sessions, s, cfg):
+    """The comparison each baseline-dependent measure used before U-RS1, as signal_metrics computes it: the
+    estate with the session included. Read from signal_metrics.estate; recorded for comparison only."""
     sm = EA.signal_metrics
     e = sm.estate(sessions)
     need = cfg["min_sessions_for_baseline"]
@@ -2163,7 +2168,7 @@ def _rs_baselines(sessions, s, cfg):
     rate = e["median_rate_by_tool"].get(s.tool)
 
     def ver(ids):
-        return {"method": RS_BASELINE_METHOD, "version": f"{_version(cfg, ids)}/{RS_BASELINE_METHOD}"}
+        return {"method": RS_PREVIOUS_METHOD, "version": f"{_version(cfg, ids)}/{RS_PREVIOUS_METHOD}"}
     return {
         "insights.token_outlier": {
             "comparison": "every session of the fetched estate with token counts, this one included",
@@ -2188,23 +2193,28 @@ def _rs_baselines(sessions, s, cfg):
     }
 
 
-def rs_baseline_comparison(sessions, s, cfg, events):
-    """For each self-including measure, the reading Resource Management uses (self-inclusive) and the reading
-    the approved leave-one-out method would give (cop_package.ad_leave_one_out, Anomaly Detection's shared
-    function). Recorded only: the decision reads the self-inclusive one (DECISIONS.md, U-RS1)."""
-    mine = [events[m] for m in AD_SELF_INCLUDING if m in events]
-    loo = {e["metric_id"]: e for e in ad_leave_one_out(sessions, s, cfg, mine)}
-    lb = _ad_baselines(sessions, s, cfg)
+def rs_baseline_comparison(sessions, s, cfg, events, loo=None):
+    """For each self-including measure, the reading Resource Management uses (leave-one-out, Anomaly Detection's
+    shared ad_leave_one_out and _ad_baselines) and the self-inclusive reading it used before U-RS1, each with its
+    baseline method, version and sufficiency. events are the self-inclusive metric_event dicts; loo the same
+    rows re-read leave-one-out (computed here when not given). The self-inclusive reading decides nothing."""
+    if loo is None:
+        loo = {e["metric_id"]: e for e in ad_leave_one_out(sessions, s, cfg,
+                                                           [events[m] for m in AD_SELF_INCLUDING if m in events])}
+    lb, sb = _ad_baselines(sessions, s, cfg), _rs_self_inclusive(sessions, s, cfg)
     out = {}
     for m in AD_SELF_INCLUDING:
         si, lo = events.get(m), loo.get(m)
         if si is None or lo is None:
             continue
         out[m] = {"used": RS_BASELINE_METHOD,
-                  "self_inclusive": {"value": si["value"], "state": si["state"]},
-                  "leave_one_out": {"value": lo["value"], "state": lo["state"], "method": AD_BASELINE_METHOD,
+                  "leave_one_out": {"value": lo["value"], "state": lo["state"], "method": lb[m]["method"],
+                                    "version": lb[m]["version"], "sessions": lb[m]["sessions"],
                                     "baseline_sufficient": lb[m]["sufficient"], "gap": lb[m]["gap"]},
-                  "differs": si["state"] != lo["state"]}
+                  "self_inclusive": {"value": si["value"], "state": si["state"], "method": sb[m]["method"],
+                                     "version": sb[m]["version"], "sessions": sb[m]["sessions"],
+                                     "baseline_sufficient": sb[m]["sufficient"], "gap": sb[m]["gap"]},
+                  "differs": si["state"] != lo["state"] or lb[m]["sufficient"] != sb[m]["sufficient"]}
     return out
 
 
@@ -2324,7 +2334,8 @@ def _rs4(a, s, states, upstream):
     """Whether the session's consumption can be attributed to its lanes and MCP servers. Consumption metrics
     are session totals; they are attributed only through a verified Interaction Discovery finding whose ID-2
     answer is FULLY_RECONSTRUCTED and whose every delegation link is RECORDED (parent_agent_id on the lane's
-    rows). A link inferred from timing, or no link, never attributes."""
+    rows). A link inferred from timing, or no link, never attributes. A verified finding without an ID-2 answer
+    verifies no relationship, so it never attributes either (purvi, 2026-11-26)."""
     from .rules import verified
     sm = EA.signal_metrics
     lanes = sorted(l for l in s.trace["lanes"] if l != "main")
@@ -2355,12 +2366,17 @@ def _rs4(a, s, states, upstream):
                       "unlinked": [x["link"] for x in links if x["basis"] == "UNLINKED"],
                       "from": None if idf is None else idf.get("finding_id")}
     weak = basis["links"]["inferred"] + basis["links"]["unlinked"]
-    if idf is None or idf["label"] == "PATH_PARTIAL" or id2 not in (None, "FULLY_RECONSTRUCTED") or weak:
+    recorded = {x["link"].split(">", 1)[-1] for x in links if x["basis"] == "RECORDED"}
+    no_record = [l for l in lanes if l not in recorded]
+    if idf is None or idf["label"] == "PATH_PARTIAL" or id2 != "FULLY_RECONSTRUCTED" or weak or no_record:
         why = ("no verified Interaction Discovery finding" if idf is None else
+               "Interaction Discovery's finding carries no ID-2 answer, so no relationship is verified"
+               if id2 is None else
                f"Interaction Discovery reports the interaction path as partial (ID-2 {id2})"
-               if id2 not in (None, "FULLY_RECONSTRUCTED") else
+               if id2 != "FULLY_RECONSTRUCTED" else
                "Interaction Discovery reports the interaction path as partial" if idf["label"] == "PATH_PARTIAL" else
-               "delegation link(s) not recorded: " + ", ".join(weak))
+               "delegation link(s) not recorded: " + ", ".join(weak) if weak else
+               "no recorded delegation link for lane(s): " + ", ".join(no_record))
         basis["attribution"] = {"status": "UNATTRIBUTED", "reason": why, "subagent_lanes": len(lanes),
                                 "mcp_servers": len(servers)}
         return "UNATTRIBUTED", basis
@@ -2445,7 +2461,7 @@ def _rs5(a, deps, upstream, memory):
 
 def observe_resource_management(assessments, baselines, session, quota=None, upstream=None, memory=None,
                                 comparison=None):
-    """{question_id: assessment} -> {question_id: answer}. baselines: _rs_baselines; quota: tools.get_quota's
+    """{question_id: assessment} -> {question_id: answer}. baselines: _ad_baselines (leave-one-out); quota: tools.get_quota's
     result; memory: {established, verified_pending} usage_baseline records; comparison: rs_baseline_comparison."""
     pkg = EA.load_package(RS)
     states = tuple(pkg["deviation_states"])
@@ -2488,8 +2504,10 @@ def assess_resource_management(rows, session_id, cfg=None, computed_at=None, quo
     events, srows = EA.session_inputs(rows, session_id, cfg, computed_at)
     sessions = EA._computed(rows, cfg, computed_at)[1]
     s = next(x for x in sessions if x.id == session_id)
-    base = _rs_baselines(sessions, s, cfg)
-    cmp = rs_baseline_comparison(sessions, s, cfg, events)
+    loo = {e["metric_id"]: e for e in ad_leave_one_out(sessions, s, cfg, list(events.values()))}
+    cmp = rs_baseline_comparison(sessions, s, cfg, events, loo)
+    events = loo
+    base = _ad_baselines(sessions, s, cfg)
     assessments = {qid: EA.assess(RS, qid, events, srows, cfg, computed_at, raw_events, native)
                    for qid in EA.QUESTIONS[RS]}
     answers = observe_resource_management(assessments, base, s, quota, upstream, memory, cmp)
@@ -2657,9 +2675,12 @@ def decide_resource_management(questions, evidence_scale=1.0):
         lo = (ans[q].get("basis") or {}).get("leave_one_out") or {}
         for m, c in ({"insights.token_outlier": lo} if q == "RS-1" and lo else lo if q == "RS-2" else {}).items():
             if c and c.get("differs"):
-                contrary.append(f"{q}: {m} reads {c['self_inclusive']['state']} self-inclusive and "
-                                f"{c['leave_one_out']['state']} leave-one-out; the self-inclusive reading is used "
-                                f"(U-RS1)")
+                contrary.append(f"{q}: {m} reads {c['leave_one_out']['state']} leave-one-out (used) and "
+                                f"{c['self_inclusive']['state']} self-inclusive (the reading before U-RS1)"
+                                + ("" if c["leave_one_out"]["baseline_sufficient"] ==
+                                   c["self_inclusive"]["baseline_sufficient"] else
+                                   f"; the baseline is {'sufficient' if c['self_inclusive']['baseline_sufficient'] else 'insufficient'} "
+                                   f"only with this session counted in it"))
     return {"label": label, "confidence": round(conf * evidence_scale, 3), "severity": sev, "action": action,
             "action_reason": reason, "recipients": recipients, "drivers": drivers, "also_held": [],
             "contrary": contrary, "questions": trace, "limitations": _rs_limitations(ans),

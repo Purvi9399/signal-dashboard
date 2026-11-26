@@ -117,6 +117,7 @@ WORLDS = {
     "attribution_timing_inferred": (lambda: history() + delegated(parents={}), lambda: AMPLE),
     "attribution_mixed_links": (lambda: history() + delegated(parents={"sub-a": "main"}), lambda: AMPLE),
     "attribution_without_interaction_discovery": (lambda: history() + delegated(), lambda: AMPLE),
+    "attribution_id2_absent": (lambda: history() + delegated(), lambda: AMPLE),
     "baseline_contamination_half_estate": (
         lambda: history(4) + history(3, tokens=40000, prefix="new", day0=5) + session(tokens=40000), lambda: AMPLE),
     "baseline_minimum_counts_self": (lambda: history(4) + session(tokens=40000), lambda: AMPLE),
@@ -126,7 +127,8 @@ WORLDS = {
     "downstream_consumers": (lambda: history() + session(tokens=40000),
                              lambda: dict(AMPLE, risk_register=S.risk_register())),
 }
-COPS = {k: WITH_ID for k in ("attribution_verified", "attribution_timing_inferred", "attribution_mixed_links")}
+COPS = {k: WITH_ID for k in ("attribution_verified", "attribution_timing_inferred", "attribution_mixed_links",
+                            "attribution_id2_absent")}
 COPS["downstream_consumers"] = ["runtime_monitoring", COP, "risk_mitigation", "incident_response"]
 
 
@@ -187,6 +189,27 @@ def run_scenario(name, t):
         res["recorded"] = _case("recorded", history() + delegated(), AMPLE, cops=WITH_ID)["results"][COP]["finding"]
     if name == "attribution_without_interaction_discovery":
         res["recorded"] = _case("recorded", rows, AMPLE, cops=WITH_ID)["results"][COP]["finding"]
+    if name == "attribution_id2_absent":
+        res.update(_id2_altered(rows, art, out))
+    return res
+
+
+def _id2_altered(rows, art, out):
+    """Resource Management read again on its own, with the verified Interaction Discovery finding of this case
+    altered: once with its ID-2 answer removed, once with ID-2 FULLY_RECONSTRUCTED and no delegation links."""
+    up = {k: out["results"][k]["finding"] for k in ("runtime_monitoring", "interaction_discovery")}
+    res = {"interaction_verified": up["interaction_discovery"]["verified"]}
+    no_id2 = copy.deepcopy(up["interaction_discovery"])
+    no_id2["cop_specific"]["questions"].pop("ID-2", None)
+    no_links = copy.deepcopy(up["interaction_discovery"])
+    q = no_links["cop_specific"]["questions"]["ID-2"]
+    q["answer"] = "FULLY_RECONSTRUCTED"
+    q.setdefault("basis", {})["links"] = [x for x in (q.get("basis") or {}).get("links", [])
+                                          if x.get("kind") != "delegation"]
+    for key, idf in (("cop", no_id2), ("no_links", no_links)):
+        rt = E.make_runtime(f"rs-id2-{key}", "s1", copy.deepcopy(rows), art)
+        r = G.run_cop(rt, COP, upstream={**up, "interaction_discovery": idf})
+        res[key] = {"finding": r["result"]["finding"], "result": r["result"]}
     return res
 
 
@@ -249,14 +272,17 @@ CHECKS = {
     "quota_compared": lambda r: (
         _b(r, "RS-1")["permitted"]["status"] == "WITHIN_QUOTA" and _tool_claims(r, "tokens"),
         _b(r, "RS-1")["permitted"]),
-    "baseline_self_inclusive_recorded": lambda r: (
-        _measure(r, "RS-1", "insights.token_outlier")["baseline"]["method"] == "self_inclusive"
-        and _measure(r, "RS-1", "insights.token_outlier")["baseline"]["sessions"] == 8
-        and _measure(r, "RS-2", "activity.action_rate_ratio")["baseline"]["sessions"] == 8,
+    "baseline_leave_one_out_recorded": lambda r: (
+        _measure(r, "RS-1", "insights.token_outlier")["baseline"]["method"] == "leave_one_out@1"
+        and _measure(r, "RS-1", "insights.token_outlier")["baseline"]["version"].endswith("/leave_one_out@1")
+        and _measure(r, "RS-1", "insights.token_outlier")["baseline"]["sessions"] == 7
+        and _measure(r, "RS-2", "activity.action_rate_ratio")["baseline"]["sessions"] == 7,
         _measure(r, "RS-1", "insights.token_outlier")["baseline"]),
-    "leave_one_out_recorded_not_used": lambda r: (
-        _b(r, "RS-1")["leave_one_out"]["used"] == "self_inclusive"
-        and _b(r, "RS-1")["leave_one_out"]["leave_one_out"]["method"] == "leave_one_out@1"
+    "self_inclusive_recorded_not_used": lambda r: (
+        _b(r, "RS-1")["leave_one_out"]["used"] == "leave_one_out@1"
+        and _b(r, "RS-1")["leave_one_out"]["self_inclusive"]["method"] == "self_inclusive"
+        and _b(r, "RS-1")["leave_one_out"]["self_inclusive"]["sessions"] == 8
+        and _b(r, "RS-1")["leave_one_out"]["self_inclusive"]["version"].endswith("/self_inclusive")
         and set(_b(r, "RS-2")["leave_one_out"]) == {"insights.duration_outlier", "activity.action_rate_ratio"},
         _b(r, "RS-1")["leave_one_out"]),
     "not_calculated_named": lambda r: (
@@ -286,8 +312,9 @@ CHECKS = {
     "workload_legitimacy_not_evaluated": lambda r: (("RS-5", "workload_record", "MISSING_REFERENCE") in _limits(r),
                                                     sorted(_limits(r))),
     "baseline_shift_recorded": lambda r: (
-        _measure(r, "RS-1", "insights.token_outlier")["baseline"]["median"] == 40000
-        and _measure(r, "RS-1", "insights.token_outlier")["baseline"]["sessions"] == 15,
+        _measure(r, "RS-1", "insights.token_outlier")["baseline"]["median"] == 20500
+        and _measure(r, "RS-1", "insights.token_outlier")["baseline"]["sessions"] == 14
+        and _b(r, "RS-1")["leave_one_out"]["self_inclusive"]["sessions"] == 15,
         _measure(r, "RS-1", "insights.token_outlier")["baseline"]),
     "no_baseline_window_named": lambda r: (("RS-1", "baseline_window", "LIMIT_NOT_APPROVED") in _limits(r),
                                            sorted(_limits(r))),
@@ -364,15 +391,29 @@ CHECKS = {
     "no_interaction_finding_named": lambda r: (
         _f(r)["cop_specific"]["attribution"]["reason"] == "no verified Interaction Discovery finding",
         _f(r)["cop_specific"]["attribution"]),
-    "leave_one_out_differs_recorded": lambda r: (
+    "self_inclusive_differs_recorded": lambda r: (
         _b(r, "RS-1")["leave_one_out"]["differs"] is True
-        and _b(r, "RS-1")["leave_one_out"]["self_inclusive"]["state"] == "NORMAL"
         and _b(r, "RS-1")["leave_one_out"]["leave_one_out"]["state"] == "CRITICAL"
-        and any("leave-one-out" in c for c in _f(r)["cop_specific"]["contrary"]), _b(r, "RS-1")["leave_one_out"]),
-    "leave_one_out_insufficient_recorded": lambda r: (
+        and _b(r, "RS-1")["leave_one_out"]["self_inclusive"]["state"] == "NORMAL"
+        and _measure(r, "RS-1", "insights.token_outlier")["state"] == "CRITICAL"
+        and any("self-inclusive (the reading before U-RS1)" in c for c in _f(r)["cop_specific"]["contrary"]),
+        _b(r, "RS-1")["leave_one_out"]),
+    "self_inclusive_sufficiency_recorded": lambda r: (
         _b(r, "RS-1")["leave_one_out"]["leave_one_out"]["baseline_sufficient"] is False
+        and _b(r, "RS-1")["leave_one_out"]["self_inclusive"]["baseline_sufficient"] is True
         and _b(r, "RS-1")["leave_one_out"]["self_inclusive"]["state"] == "CRITICAL"
         and _b(r, "RS-1")["leave_one_out"]["differs"] is True, _b(r, "RS-1")["leave_one_out"]),
+    "id2_absent_not_attributed": lambda r: (
+        r["interaction_verified"] is True
+        and _f(r)["cop_specific"]["attribution"]["status"] == "UNATTRIBUTED"
+        and "no ID-2 answer" in _f(r)["cop_specific"]["attribution"]["reason"]
+        and not any(u["cop"] == "interaction_discovery" for u in _f(r)["upstream_used"]),
+        _f(r)["cop_specific"]["attribution"]),
+    "no_recorded_link_not_attributed": lambda r: (
+        r["no_links"]["finding"]["cop_specific"]["attribution"]["status"] == "UNATTRIBUTED"
+        and r["no_links"]["finding"]["cop_specific"]["attribution"]["reason"]
+        == "no recorded delegation link for lane(s): sub-a, sub-b",
+        r["no_links"]["finding"]["cop_specific"]["attribution"]),
     "precedent_listed": lambda r: (
         r["remembered"].get("written") is True
         and [p["record_id"] for p in _b(r, "RS-5")["precedents"]] == [r["remembered"]["record_id"]],
