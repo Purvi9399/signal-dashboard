@@ -2113,3 +2113,554 @@ def ad_legitimacy(case, memory_view, claims, tool_calls):
 
 
 LEGITIMACY = {AD: ad_legitimacy}
+
+
+# ---------------------------------------------------------------- Resource Management
+
+RS = "resource_management"
+RS_OBSERVED = ("RS-1", "RS-2", "RS-3", "RS-4")
+# The measures each question judges: the legacy rule's BURN and WASTE (cops/interpret.py), nothing else.
+RS_MEASURES = {"RS-1": ("insights.token_outlier",),
+               "RS-2": ("insights.duration_outlier", "activity.action_rate_ratio"),
+               "RS-3": ("insights.stalled",)}
+# Assigned to RS-3 and observed; the legacy rule does not count them as waste (DECISIONS.md, U-RS2).
+RS_NOT_COUNTED = {"RS-3": ("insights.repetition", "insights.retry", "insights.failed")}
+RS_REPORTED = {"RS-1": ("token_consumption_per_session", "token_consumption_per_turn", "cost_per_session",
+                        "resource_consumption_rate"),
+               "RS-2": ("execution_duration_per_session", "execution_duration_threshold_breach", "tool_timeout_rate"),
+               "RS-3": ("resource_stall_rate", "resource_redundant_execution_cost", "resource_concurrency_level"),
+               "RS-4": ("interaction.subagent_lanes", "interaction.mcp_servers", "subagent_resource_consumption"),
+               "RS-5": ("telemetry.collector_coverage", "telemetry.unknown_share")}
+RS_NOT_BUILT = {"RS-1": ("token_budget_utilization", "token_quota_exceeded", "cost_budget_utilization"),
+                "RS-3": ("resource_capacity_utilization",),
+                "RS-4": ("model_selection_compliance", "resource_quota_compliance"),
+                "RS-5": ("resource_limit_proximity", "resource_threshold_breach_count")}
+# The directions metrics_config.json approves no limit for: measured, never judged.
+RS_ONE_SIDED = {"RS-1": ("insights.token_outlier", "lower token use than the estate"),
+                "RS-2": ("activity.action_rate_ratio", "a lower action rate than the tool median")}
+RS_ATTENTION = {"RS-1": ("ABOVE_EXPECTED", "ELEVATED"), "RS-2": ("OUTSIDE_THRESHOLDS", "ELEVATED"),
+                "RS-3": ("WASTE_OBSERVED", "ELEVATED")}
+RS_OPEN = (INCONCLUSIVE, "BASELINE_INSUFFICIENT")
+# Resource Management reads its baselines as signal_metrics computes them: the estate including the session.
+# The leave-one-out reading Anomaly Detection adopted (U-AD7) is recorded beside it and decides nothing (U-RS1).
+RS_BASELINE_METHOD = "self_inclusive"
+NO_QUOTA_PERIOD = ("the quota record carries no period: the session's tokens are compared with token_budget, as "
+                   "rules.py did before this package")
+NOT_UNAUTHORIZED = ("above the estate's own normal, not above an allowance: only the quota decides whether "
+                    "consumption is permitted")
+
+
+def _rs_baselines(sessions, s, cfg):
+    """The comparison each baseline-dependent measure uses, as signal_metrics computed it: the estate with the
+    session included. Read from signal_metrics.estate; nothing is recomputed."""
+    sm = EA.signal_metrics
+    e = sm.estate(sessions)
+    need = cfg["min_sessions_for_baseline"]
+    with_tokens = [x.id for x in sessions if x.tokens > 0]
+    with_steps = [x.id for x in sessions if any(sm.num(st.get("duration_ms")) > 0 for st in x.steps)]
+    same_tool = [x.id for x in sessions if x.tool == s.tool]
+    n_tool = e["sessions_by_tool"].get(s.tool, 0)
+    rate = e["median_rate_by_tool"].get(s.tool)
+
+    def ver(ids):
+        return {"method": RS_BASELINE_METHOD, "version": f"{_version(cfg, ids)}/{RS_BASELINE_METHOD}"}
+    return {
+        "insights.token_outlier": {
+            "comparison": "every session of the fetched estate with token counts, this one included",
+            "sessions": e["sessions_with_tokens"], "needed": need, "median": e["median_tokens"],
+            "this_session": s.tokens, **ver(with_tokens),
+            "sufficient": bool(e["median_tokens"]) and e["sessions_with_tokens"] >= need,
+            "gap": None if e["median_tokens"] and e["sessions_with_tokens"] >= need else
+            f"{e['sessions_with_tokens']} sessions with token counts, this one included; {need} needed "
+            f"(min_sessions_for_baseline)"},
+        "insights.duration_outlier": {
+            "comparison": "every timed step of the fetched estate, this session's included",
+            "sessions": len(with_steps), "needed": None, "median_step_ms": e["median_duration_ms"],
+            "limit_ms": (e["median_duration_ms"] or 0) * cfg["duration_outlier_multiple"], **ver(with_steps),
+            "sufficient": bool(e["median_duration_ms"]),
+            "gap": None if e["median_duration_ms"] else "no step of the estate has a recorded duration"},
+        "activity.action_rate_ratio": {
+            "comparison": f"the sessions of {s.tool}, this one included", "sessions": n_tool, "needed": need,
+            "median_actions_per_min": rate, **ver(same_tool),
+            "sufficient": bool(rate) and n_tool >= need,
+            "gap": None if rate and n_tool >= need else
+            f"{n_tool} sessions of {s.tool}, this one included; {need} needed (min_sessions_for_baseline)"},
+    }
+
+
+def rs_baseline_comparison(sessions, s, cfg, events):
+    """For each self-including measure, the reading Resource Management uses (self-inclusive) and the reading
+    the approved leave-one-out method would give (cop_package.ad_leave_one_out, Anomaly Detection's shared
+    function). Recorded only: the decision reads the self-inclusive one (DECISIONS.md, U-RS1)."""
+    mine = [events[m] for m in AD_SELF_INCLUDING if m in events]
+    loo = {e["metric_id"]: e for e in ad_leave_one_out(sessions, s, cfg, mine)}
+    lb = _ad_baselines(sessions, s, cfg)
+    out = {}
+    for m in AD_SELF_INCLUDING:
+        si, lo = events.get(m), loo.get(m)
+        if si is None or lo is None:
+            continue
+        out[m] = {"used": RS_BASELINE_METHOD,
+                  "self_inclusive": {"value": si["value"], "state": si["state"]},
+                  "leave_one_out": {"value": lo["value"], "state": lo["state"], "method": AD_BASELINE_METHOD,
+                                    "baseline_sufficient": lb[m]["sufficient"], "gap": lb[m]["gap"]},
+                  "differs": si["state"] != lo["state"]}
+    return out
+
+
+def _rs_reported(a, qid):
+    return [{"metric": m, "value": _item(a, m)["value"], "state": _item(a, m)["metric_state"],
+             "presence": _item(a, m)["state"], "reason": _item(a, m)["reason"]} for m in RS_REPORTED.get(qid, ())]
+
+
+def _rs_permitted(a, quota):
+    """Whether the session's tokens are within the quota record's token_budget (tools.get_quota). The quota is
+    the only entitlement source; with no quota, permission is NOT_EVALUATED."""
+    tok = _present(a, "token_consumption_per_session")
+    tokens = tok["value"] if tok else None
+    base = {"source": "quotas (tools.get_quota)", "tokens": tokens}
+    if not quota or "missing_dependency" in quota:
+        why = ((quota or {}).get("missing_dependency") or {}).get("how_to_supply") or "no quota configured"
+        return dict(base, status="NOT_EVALUATED", requirement="budget_or_quota", reason=f"no quota record: {why}")
+    if quota.get("token_budget") is None:
+        return dict(base, status="NOT_EVALUATED", requirement="budget_or_quota",
+                    reason="the quota record has no token_budget")
+    base.update(token_budget=quota["token_budget"], period=quota.get("period") or NO_QUOTA_PERIOD)
+    if tokens is None:
+        return dict(base, status="NOT_EVALUATED", requirement="token_consumption_per_session",
+                    reason=f"tokens not measured ({_item(a, 'token_consumption_per_session')['reason']})")
+    return dict(base, status="ABOVE_QUOTA" if tokens > quota["token_budget"] else "WITHIN_QUOTA")
+
+
+def _rs_measured(qid, a, base, states):
+    ms = [_ad_measure(a, m, base, states) for m in RS_MEASURES.get(qid, ())]
+    basis = {"measures": ms, "deviating": [m["metric"] for m in ms if m["verdict"] == DEVIATES],
+             "warnings": [m["metric"] for m in ms if m.get("warning")],
+             "reported_not_judged": _rs_reported(a, qid), "unassessed": _unassessed(a, *RS_NOT_BUILT.get(qid, ()))}
+    if qid in RS_ONE_SIDED:
+        m, what = RS_ONE_SIDED[qid]
+        basis["not_evaluated"] = [{"metric": m, "direction": "below", "value": _item(a, m)["value"],
+                                   "detail": f"{what} is not judged: metrics_config.json approves an upper "
+                                             f"limit only"}]
+    return ms, basis
+
+
+def _rs_open(ms, basis):
+    open_ = [m for m in ms if m["verdict"] not in (WITHIN, DOES_NOT_APPLY)]
+    if open_ and all(m["verdict"] == NO_BASELINE for m in open_):
+        return "BASELINE_INSUFFICIENT"
+    basis["interpretation_reasons"] = [
+        {"code": EA.INSUFFICIENT_HISTORY if m["verdict"] == NO_BASELINE else EA.MISSING_DATA,
+         "requirement": m["metric"], "check": None, "detail": m["reason"]} for m in open_]
+    return INCONCLUSIVE
+
+
+def _rs1(a, base, states, quota, cmp):
+    ms, basis = _rs_measured("RS-1", a, base, states)
+    basis["permitted"] = p = _rs_permitted(a, quota)
+    basis["leave_one_out"] = cmp.get("insights.token_outlier")
+    m = ms[0]
+    if p["status"] == "ABOVE_QUOTA":
+        return "ABOVE_PERMITTED", basis
+    if m["verdict"] == DEVIATES:
+        basis["not_unauthorized"] = NOT_UNAUTHORIZED if p["status"] == "WITHIN_QUOTA" else \
+            NOT_UNAUTHORIZED + "; no quota is configured, so permission is not evaluated"
+        return "ABOVE_EXPECTED", basis
+    if m["verdict"] == WITHIN:
+        if m.get("warning"):
+            return "ELEVATED", basis
+        return ("WITHIN_LIMITS" if p["status"] == "WITHIN_QUOTA" else "WITHIN_EXPECTED"), basis
+    return _rs_open(ms, basis), basis
+
+
+def _rs2(a, base, states, cmp):
+    ms, basis = _rs_measured("RS-2", a, base, states)
+    basis["leave_one_out"] = {m: cmp[m] for m in RS_MEASURES["RS-2"] if m in cmp}
+    brk = _item(a, "execution_duration_threshold_breach")
+    if brk["state"] != EA.PRESENT:
+        basis.setdefault("not_evaluated", []).append(
+            {"metric": "execution_duration_threshold_breach", "detail": f"session duration is reported, not judged: "
+                                                                         f"{brk['reason'] or brk['state']}"})
+    if basis["deviating"]:
+        return "OUTSIDE_THRESHOLDS", basis
+    if basis["warnings"]:
+        return "ELEVATED", basis
+    if all(m["verdict"] in (WITHIN, DOES_NOT_APPLY) for m in ms):
+        return "WITHIN_THRESHOLDS", basis
+    return _rs_open(ms, basis), basis
+
+
+def _rs3(a, base, states):
+    ms, basis = _rs_measured("RS-3", a, base, states)
+    soft = tuple(EA.load_package(RS)["elevated_states"])
+    basis["not_counted"] = [
+        {"metric": m, "value": _item(a, m)["value"], "state": _item(a, m)["metric_state"],
+         "presence": _item(a, m)["state"], "beyond_threshold": _item(a, m)["metric_state"] in states + soft,
+         "why": "observed and reported; the legacy rule counts stalls and step durations as waste, not repeated "
+                "or failed operations (U-RS2)"} for m in RS_NOT_COUNTED["RS-3"]]
+    basis["repeated_operations_observed"] = [x["metric"] for x in basis["not_counted"] if x["beyond_threshold"]]
+    basis["capacity"] = {"status": "NOT_EVALUATED", "requirement": "resource_capacity_utilization",
+                         "detail": "no collector captures system capacity, concurrency limits or queue lengths, so "
+                                   "whether waste creates a capacity problem is not evaluated"}
+    if basis["deviating"]:
+        return "WASTE_OBSERVED", basis
+    if basis["warnings"]:
+        return "ELEVATED", basis
+    if all(m["verdict"] in (WITHIN, DOES_NOT_APPLY) for m in ms):
+        return "NO_WASTE_COUNTED", basis
+    return _rs_open(ms, basis), basis
+
+
+def _rs_spans(s):
+    spans = {}
+    for lane, steps in s.trace["lanes"].items():
+        t = [x for st in steps for x in (st.get("started_at"), st.get("ended_at")) if x]
+        if t:
+            spans[lane] = (min(t), max(t))
+    return spans
+
+
+def _rs4(a, s, states, upstream):
+    """Whether the session's consumption can be attributed to its lanes and MCP servers. Consumption metrics
+    are session totals; they are attributed only through a verified Interaction Discovery finding whose ID-2
+    answer is FULLY_RECONSTRUCTED and whose every delegation link is RECORDED (parent_agent_id on the lane's
+    rows). A link inferred from timing, or no link, never attributes."""
+    from .rules import verified
+    sm = EA.signal_metrics
+    lanes = sorted(l for l in s.trace["lanes"] if l != "main")
+    servers = sorted({r["mcp_server"] for r in s.rows if sm.has(r.get("mcp_server"))})
+    models = sorted({str(r.get("model") or r.get("model_id")) for r in s.rows if sm.has(r.get("model"))
+                     or sm.has(r.get("model_id"))})
+    sub = _item(a, "subagent_resource_consumption")
+    basis = {"subagent_lanes": lanes, "mcp_servers": servers, "reported_not_judged": _rs_reported(a, "RS-4"),
+             "breadth_beyond_limits": [{"metric": m, "value": _item(a, m)["value"], "state": _item(a, m)["metric_state"],
+                                        "counted": False, "why": "breadth of the interaction, not a consumption "
+                                                                 "measure; Interaction Discovery judges it"}
+                                       for m in ("interaction.subagent_lanes", "interaction.mcp_servers")
+                                       if _item(a, m)["metric_state"] in states],
+             "subagent_tokens": {"value": sub["value"], "presence": sub["state"], "reason": sub["reason"]},
+             "models_observed": models,
+             "model_selection": {"status": "NOT_EVALUATED", "requirement": "model_selection_compliance",
+                                 "detail": "no approved model registry (allowlists kind model)"},
+             "unassessed": _unassessed(a, *RS_NOT_BUILT["RS-4"])}
+    if not lanes and not servers:
+        basis["attribution"] = {"status": "NOT_NEEDED", "reason": "one lane and no MCP server"}
+        return "SINGLE_AGENT", basis
+    idf = verified(upstream, "interaction_discovery")
+    id2q = (((idf or {}).get("cop_specific") or {}).get("questions") or {}).get("ID-2") or {}
+    id2 = id2q.get("answer")
+    links = [x for x in ((id2q.get("basis") or {}).get("links") or []) if x.get("kind") == "delegation"]
+    basis["links"] = {"recorded": [x["link"] for x in links if x["basis"] == "RECORDED"],
+                      "inferred": [x["link"] for x in links if x["basis"].startswith("INFERRED")],
+                      "unlinked": [x["link"] for x in links if x["basis"] == "UNLINKED"],
+                      "from": None if idf is None else idf.get("finding_id")}
+    weak = basis["links"]["inferred"] + basis["links"]["unlinked"]
+    if idf is None or idf["label"] == "PATH_PARTIAL" or id2 not in (None, "FULLY_RECONSTRUCTED") or weak:
+        why = ("no verified Interaction Discovery finding" if idf is None else
+               f"Interaction Discovery reports the interaction path as partial (ID-2 {id2})"
+               if id2 not in (None, "FULLY_RECONSTRUCTED") else
+               "Interaction Discovery reports the interaction path as partial" if idf["label"] == "PATH_PARTIAL" else
+               "delegation link(s) not recorded: " + ", ".join(weak))
+        basis["attribution"] = {"status": "UNATTRIBUTED", "reason": why, "subagent_lanes": len(lanes),
+                                "mcp_servers": len(servers)}
+        return "UNATTRIBUTED", basis
+    edges = (idf.get("cop_specific") or {}).get("edges") or []
+    agents = sorted(e["to"][len("agent:"):] for e in edges if e["to"].startswith("agent:"))
+    work = [e for e in edges if not e["to"].startswith("agent:")]
+    by_actor = {}
+    for e in work:
+        by_actor[e["from"]] = by_actor.get(e["from"], 0) + e["count"]
+    mcp = {e["to"][len("mcp:"):]: e["count"] for e in work if e["to"].startswith("mcp:")}
+    total = sum(e["count"] for e in work)
+    spans = _rs_spans(s)
+    overlapping = sorted(x for x in agents if x in spans and any(
+        b not in (x, "main") and spans[b][0] <= spans[x][1] and spans[x][0] <= spans[b][1] for b in spans))
+    basis["attribution"] = {
+        "status": "ATTRIBUTED", "source_finding": idf.get("finding_id"), "interaction": idf["label"],
+        "subagent_lanes": agents, "parallel_lanes": overlapping, "calls_by_actor": by_actor,
+        "mcp_calls": mcp, "mcp_call_share": round(sum(mcp.values()) / total, 3) if total else None,
+        "subagent_call_share": round(sum(n for x, n in by_actor.items() if x != "main") / total, 3)
+        if total else None}
+    return "ATTRIBUTED", basis
+
+
+def _rs_precedents(memory):
+    return [{"record_id": x["record_id"], "label": (x.get("payload") or {}).get("label"), "status": x.get("status"),
+             "use": "comparison only, never proof"} for x in (memory or {}).get("established", [])][:10]
+
+
+def _rs_counted(deps):
+    """The judged measures in a deviation state (hot) and at WARNING (soft), from the questions that were
+    answered: the legacy rule's hot and soft lists."""
+    hot, soft = [], []
+    for q in ("RS-1", "RS-2", "RS-3"):
+        b = deps[q]["basis"] or {}
+        for m in b.get("measures", []):
+            x = {"question": q, "metric": m["metric"], "value": m["value"], "state": m["state"]}
+            if m["verdict"] == DEVIATES:
+                hot.append(x)
+            elif m.get("warning"):
+                soft.append(x)
+    return hot, soft
+
+
+def _rs5(a, deps, upstream, memory):
+    from .rules import verified
+    pkg = EA.load_package(RS)
+    rm = verified(upstream, "runtime_monitoring")
+    hot, soft = _rs_counted(deps)
+    attention = {q: deps[q]["outcome"] for q in RS_ATTENTION if deps[q]["outcome"] in RS_ATTENTION[q]}
+    open_ = {q: deps[q]["outcome"] for q in RS_OBSERVED if deps[q]["outcome"] in RS_OPEN}
+    basis = {"hot": hot, "elevated": soft, "burn": [x["metric"] for x in hot if x["metric"] in pkg["burn"]],
+             "waste": [x["metric"] for x in hot if x["metric"] in pkg["waste"]],
+             "attention": attention, "not_answered": [{"question": q, "answer": o} for q, o in open_.items()],
+             "permitted": (deps["RS-1"]["basis"] or {}).get("permitted"),
+             "attribution": ((deps["RS-4"]["basis"] or {}).get("attribution") or {}).get("status"),
+             "upstream": {"runtime_monitoring": None if not rm else {"label": rm["label"],
+                                                                     "finding_id": rm.get("finding_id")}},
+             "approaching": {"status": "NOT_EVALUATED", "requirement": "resource_limit_proximity",
+                             "detail": "no approved limit-approach threshold and no budgets_and_quotas reference; "
+                                       "only exceeding the quota's token_budget is evaluated"},
+             "reported_not_judged": _rs_reported(a, "RS-5"),
+             "precedents": _rs_precedents(memory), "unassessed": _unassessed(a, *RS_NOT_BUILT["RS-5"])}
+    if not rm:
+        basis["limitation"] = "no Runtime Monitoring finding was available to this run"
+    if deps["RS-1"]["outcome"] == "ABOVE_PERMITTED":
+        basis["because"] = "the session's tokens exceed the quota's token_budget"
+        return "INTERVENTION_REQUIRED", basis
+    if attention:
+        basis["because"] = "consumption above the approved bounds: " + ", ".join(
+            f"{x['metric']} {x['value']} ({x['state']})" for x in hot + soft)
+        return "ATTENTION", basis
+    if rm and rm["label"] == "INSUFFICIENT":
+        basis["because"] = ("Runtime Monitoring reads the telemetry INSUFFICIENT: consumption measures quiet on "
+                            "missing telemetry are not evidence of consumption within bounds")
+        return "UNDETERMINED", basis
+    if open_:
+        basis["because"] = "not every question could be answered: " + ", ".join(f"{q} {o}" for q, o in open_.items())
+        return "UNDETERMINED", basis
+    basis["because"] = "no judged consumption measure is above its approved bounds and no quota is exceeded"
+    return "NO_INTERVENTION", basis
+
+
+def observe_resource_management(assessments, baselines, session, quota=None, upstream=None, memory=None,
+                                comparison=None):
+    """{question_id: assessment} -> {question_id: answer}. baselines: _rs_baselines; quota: tools.get_quota's
+    result; memory: {established, verified_pending} usage_baseline records; comparison: rs_baseline_comparison."""
+    pkg = EA.load_package(RS)
+    states = tuple(pkg["deviation_states"])
+    cmp = comparison or {}
+    out = {}
+    for qid, q in pkg["questions"].items():
+        a = assessments[qid]
+        suf = a["sufficiency"]["status"]
+        if suf == "INCONCLUSIVE":
+            # a blocking reliability check failed or could not run: nothing observed here is judged
+            ms = [_ad_measure(a, m, baselines, states) for m in RS_MEASURES.get(qid, ())]
+            out[qid] = {"outcome": INCONCLUSIVE, "sufficiency": suf,
+                        "basis": {"observed_not_judged": ms, "deviating": []},
+                        "because": a["sufficiency"]["reasons"]}
+            continue
+        if qid == "RS-1":
+            outcome, basis = _rs1(a, baselines, states, quota, cmp)
+        elif qid == "RS-2":
+            outcome, basis = _rs2(a, baselines, states, cmp)
+        elif qid == "RS-3":
+            outcome, basis = _rs3(a, baselines, states)
+        elif qid == "RS-4":
+            outcome, basis = _rs4(a, session, states, upstream)
+        else:
+            outcome, basis = _rs5(a, {k: out[k] for k in q["depends_on"]}, upstream, memory)
+        if outcome not in q["outcomes"] and outcome != INCONCLUSIVE:
+            raise ValueError(f"{qid}: outcome {outcome} is not in METRICS.yaml")
+        _missing_inputs(pkg, basis)
+        out[qid] = {"outcome": outcome, "sufficiency": suf, "basis": basis,
+                    "findings": a["findings"], "not_assessed": a["sufficiency"]["not_assessed"]}
+        if outcome == INCONCLUSIVE:
+            out[qid]["because"] = basis["interpretation_reasons"]
+    return out
+
+
+def assess_resource_management(rows, session_id, cfg=None, computed_at=None, quota=None, upstream=None,
+                               memory=None, raw_events=None, native=None):
+    """The five questions for one session: each assessment with its answer."""
+    cfg = cfg or EA.signal_metrics.load_config()
+    events, srows = EA.session_inputs(rows, session_id, cfg, computed_at)
+    sessions = EA._computed(rows, cfg, computed_at)[1]
+    s = next(x for x in sessions if x.id == session_id)
+    base = _rs_baselines(sessions, s, cfg)
+    cmp = rs_baseline_comparison(sessions, s, cfg, events)
+    assessments = {qid: EA.assess(RS, qid, events, srows, cfg, computed_at, raw_events, native)
+                   for qid in EA.QUESTIONS[RS]}
+    answers = observe_resource_management(assessments, base, s, quota, upstream, memory, cmp)
+    return {qid: {"assessment": assessments[qid], "answer": answers[qid]} for qid in assessments}
+
+
+def _explain_rs(qid, ans):
+    b = ans["basis"] or {}
+    o = ans["outcome"]
+    if o == INCONCLUSIVE:
+        s = _explain(qid, ans)
+        seen = [m for m in b.get("observed_not_judged", []) if m["verdict"] == DEVIATES]
+        return s + (f"; observed, not judged: {_measures_text(seen)}" if seen else "")
+    if qid == "RS-5":
+        return b["because"]
+    if qid == "RS-4":
+        at = b["attribution"]
+        if o == "SINGLE_AGENT":
+            s = "one lane and no MCP server: nothing to attribute"
+        elif o == "ATTRIBUTED":
+            s = (f"attributed through Interaction Discovery ({at['interaction']}): {len(at['subagent_lanes'])} "
+                 f"subagent lane(s) on recorded links, {sum(at['mcp_calls'].values())} MCP call(s)")
+        else:
+            s = f"{at['subagent_lanes']} subagent lane(s) and {at['mcp_servers']} MCP server(s) not attributed: " \
+                f"{at['reason']}"
+        return s + "; model selection NOT_EVALUATED (no approved model registry)"
+    ms = b["measures"]
+    if o == "BASELINE_INSUFFICIENT":
+        s = "baseline insufficient: " + "; ".join(f"{m['metric']}: {m['reason']}" for m in ms
+                                                  if m["verdict"] == NO_BASELINE)
+    elif b["deviating"]:
+        s = "above the approved thresholds: " + _measures_text([m for m in ms if m["verdict"] == DEVIATES])
+    elif b["warnings"]:
+        s = "elevated (WARNING): " + _measures_text([m for m in ms if m.get("warning")])
+    elif ms and all(m["verdict"] in (WITHIN, DOES_NOT_APPLY) for m in ms):
+        s = "within the approved thresholds: " + _measures_text([m for m in ms if m["verdict"] == WITHIN])
+    else:
+        s = o
+    if qid == "RS-1":
+        p = b["permitted"]
+        s += (f"; quota: {p['tokens']} tokens against token_budget {p['token_budget']} ({p['status']})"
+              if p["status"] != "NOT_EVALUATED" else f"; permission NOT_EVALUATED: {p['reason']}")
+        if b.get("not_unauthorized"):
+            s += f"; {b['not_unauthorized']}"
+    if qid == "RS-3":
+        if b["repeated_operations_observed"]:
+            s += "; observed, not counted as waste (U-RS2): " + ", ".join(
+                f"{x['metric']} {x['value']} ({x['state']})" for x in b["not_counted"] if x["beyond_threshold"])
+        s += "; capacity effect NOT_EVALUATED (no capacity data)"
+    for x in b.get("not_evaluated", []):
+        s += f"; not evaluated: {x['detail']}"
+    return s
+
+
+# What each label proposes; the confidences, severities and actions are cops/interpret.py's resource_management.
+RS_REASON = {"ATTENTION": "cost and waste are governance concerns in themselves; whether the work was permitted is "
+                          "Policy Enforcement's question",
+             "UNAUTHORIZED": "consumption above the configured quota",
+             "INDETERMINATE": "whether consumption is within bounds cannot be judged on this evidence; a missing "
+                              "meter is not evidence of thrift",
+             INCONCLUSIVE: "the evidence needed to decide is missing"}
+
+
+def _rs_limitations(ans):
+    from . import decision as D
+    out = []
+    one = ans["RS-1"].get("basis") or {}
+    p = one.get("permitted") or {}
+    if ans["RS-1"]["outcome"] != INCONCLUSIVE and p.get("status") == "NOT_EVALUATED":
+        out.append(D.limitation(D.MISSING_EVIDENCE, "RS-1", p["requirement"],
+                                EA.MISSING_REFERENCE if p["requirement"] == "budget_or_quota" else EA.MISSING_DATA,
+                                f"whether consumption is permitted is not evaluated: {p['reason']}"))
+    if p.get("status") in ("WITHIN_QUOTA", "ABOVE_QUOTA") and p.get("period") == NO_QUOTA_PERIOD:
+        out.append(D.limitation(D.LIMIT_NOT_APPROVED, "RS-1", "quota_period", D.LIMIT_NOT_APPROVED, NO_QUOTA_PERIOD))
+    for q, (m, what) in RS_ONE_SIDED.items():
+        if ans[q]["outcome"] not in RS_OPEN:
+            out.append(D.limitation(D.LIMIT_NOT_APPROVED, q, f"{m} (below)", D.LIMIT_NOT_APPROVED,
+                                    f"{what} is measured and not judged: no lower limit is approved"))
+    for q in ("RS-1", "RS-2"):
+        if ans[q]["outcome"] not in RS_OPEN:
+            out.append(D.limitation(D.LIMIT_NOT_APPROVED, q, "baseline_window", D.LIMIT_NOT_APPROVED, NO_WINDOW))
+    if ans["RS-2"]["outcome"] != INCONCLUSIVE:
+        out.append(D.limitation(D.LIMIT_NOT_APPROVED, "RS-2", "execution_duration_threshold_breach",
+                                D.LIMIT_NOT_APPROVED, "no approved session duration threshold: the session's "
+                                                      "duration is reported, not judged"))
+    if ans["RS-3"]["outcome"] != INCONCLUSIVE:
+        out.append(D.limitation(D.MISSING_EVIDENCE, "RS-3", "resource_capacity_utilization", D.NOT_CALCULATED,
+                                ans["RS-3"]["basis"]["capacity"]["detail"]))
+    four = ans["RS-4"].get("basis") or {}
+    if ans["RS-4"]["outcome"] != INCONCLUSIVE:
+        out.append(D.limitation(D.MISSING_EVIDENCE, "RS-4", "model_selection_compliance", EA.MISSING_REFERENCE,
+                                four["model_selection"]["detail"]))
+    for link in (four.get("links") or {}).get("inferred", []):
+        out.append(D.limitation(D.INFERRED_RELATIONSHIP, "RS-4", link, "LINK_INFERRED_FROM_TIMING",
+                                "the parent-child relationship is inferred from handoff timing, not recorded; no "
+                                "consumption is attributed through it"))
+    five = ans["RS-5"].get("basis") or {}
+    if ans["RS-5"]["outcome"] != INCONCLUSIVE:
+        out.append(D.limitation(D.LIMIT_NOT_APPROVED, "RS-5", "resource_limit_proximity", D.LIMIT_NOT_APPROVED,
+                                five["approaching"]["detail"]))
+    if ans["RS-5"]["outcome"] == "ATTENTION" and five.get("burn"):
+        out.append(D.limitation(D.MISSING_EVIDENCE, "RS-5", "workload_record", EA.MISSING_REFERENCE,
+                                NO_WORKLOAD_RECORD + ": a legitimate larger workload is not distinguished from "
+                                                     "excessive consumption"))
+    return out
+
+
+def _rs_payload(ans):
+    five = ans["RS-5"].get("basis") or {}
+    return {"answers": {q: x["outcome"] for q, x in ans.items()},
+            "counted": [f"{x['metric']}@{x['state']}" for x in five.get("hot", []) + five.get("elevated", [])],
+            "baselines": sorted({f"{m['metric']}@{m['baseline']['version']}" for q in ("RS-1", "RS-2", "RS-3")
+                                 for m in (ans[q]["basis"] or {}).get("measures", []) if m.get("baseline")}),
+            "permitted": (five.get("permitted") or {}).get("status"),
+            "attribution": five.get("attribution"),
+            "precedents_read": [p["record_id"] for p in five.get("precedents", [])]}
+
+
+def decide_resource_management(questions, evidence_scale=1.0):
+    """The COP decision from the five answers (INTERPRETATION.md). RS-5's answer gives the label; ATTENTION is
+    EXCESSIVE when a burn measure is hot and INEFFICIENT otherwise. Confidence, severity, action and recipients
+    are the legacy rule's formulas over the counted measures."""
+    from ..interpret import SEV, RANK
+    pkg = EA.load_package(RS)
+    ans = {q: v["answer"] for q, v in questions.items()}
+    five = ans["RS-5"]["outcome"]
+    b5 = ans["RS-5"].get("basis") or {}
+    hot, soft = b5.get("hot", []), b5.get("elevated", [])
+    burn = [x for x in hot if x["metric"] in pkg["burn"]]
+    waste = [x for x in hot if x["metric"] in pkg["waste"]]
+    n = len(hot + soft)
+    reading = min(0.9, 0.6 + 0.1 * n) if n else 0.8
+    if five == "ATTENTION":
+        label = "EXCESSIVE" if burn else "INEFFICIENT"
+        loud = len(hot) >= 2 or any(x["state"] == "CRITICAL" for x in hot)
+        conf, action = reading, "ALERT" if loud else "WATCH"
+        sev = max((SEV[x["state"]] for x in hot or soft), key=RANK.get)
+        reason = RS_REASON["ATTENTION"]
+        drivers = list(b5["attention"]) + ["RS-5"]
+    else:
+        label = pkg["labels"][five]
+        conf, action, sev, reason = {
+            "UNAUTHORIZED": (reading, "ALERT", "HIGH", RS_REASON["UNAUTHORIZED"]),
+            "NORMAL": (0.8, "NONE", "NONE", ""),
+            "INDETERMINATE": (0.2, "WATCH", "NONE", RS_REASON["INDETERMINATE"]),
+            INCONCLUSIVE: (0.0, "WATCH", "NONE", RS_REASON[INCONCLUSIVE])}[label]
+        drivers = ["RS-1", "RS-5"] if label == "UNAUTHORIZED" else \
+            ([x["question"] for x in b5.get("not_answered", [])] or ["runtime_monitoring"]) + ["RS-5"] \
+            if label == "INDETERMINATE" else list(ans)
+    drivers = [d for d in drivers if d in ans]
+    recipients = (["risk_mitigation"] if burn else []) + (["workload_optimization"] if waste else [])
+    trace = _question_trace(questions, _explain_rs, drivers)
+    contrary = [f"{q}: {x['check']} {x['detail']}" for q, v in questions.items()
+                for x in v["answer"].get("findings", [])]
+    three = ans["RS-3"].get("basis") or {}
+    contrary += [f"RS-3: {x['metric']} {x['value']} ({x['state']}), recorded and not counted as waste (U-RS2)"
+                 for x in three.get("not_counted", []) if x["beyond_threshold"]]
+    contrary += [f"RS-4: {x['metric']} {x['value']} ({x['state']}), {x['why']}"
+                 for x in (ans["RS-4"].get("basis") or {}).get("breadth_beyond_limits", [])]
+    rm = (b5.get("upstream") or {}).get("runtime_monitoring")
+    if rm and rm["label"] == "INSUFFICIENT" and five in ("ATTENTION", "INTERVENTION_REQUIRED"):
+        contrary.append("RS-5: Runtime Monitoring reads the telemetry INSUFFICIENT; the reading stands on the "
+                        "measures observed and its confidence is scaled by the evidence level")
+    for q in ("RS-1", "RS-2"):
+        lo = (ans[q].get("basis") or {}).get("leave_one_out") or {}
+        for m, c in ({"insights.token_outlier": lo} if q == "RS-1" and lo else lo if q == "RS-2" else {}).items():
+            if c and c.get("differs"):
+                contrary.append(f"{q}: {m} reads {c['self_inclusive']['state']} self-inclusive and "
+                                f"{c['leave_one_out']['state']} leave-one-out; the self-inclusive reading is used "
+                                f"(U-RS1)")
+    return {"label": label, "confidence": round(conf * evidence_scale, 3), "severity": sev, "action": action,
+            "action_reason": reason, "recipients": recipients, "drivers": drivers, "also_held": [],
+            "contrary": contrary, "questions": trace, "limitations": _rs_limitations(ans),
+            "memory_payload": _rs_payload(ans), "decision": five}

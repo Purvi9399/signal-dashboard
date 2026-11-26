@@ -1184,6 +1184,22 @@ def t_assess_anomaly_questions(case, a, ctx):
             "upstream_supplied": sorted((ctx.get("upstream") or {})), "evaluated_at": case.computed_at}
 
 
+def t_assess_resource_questions(case, a, ctx):
+    """The five Resource Management questions for the case session (cop_package), read against the quota
+    record (t_get_quota), validated usage_baseline memory and the upstream findings."""
+    if not case.session:
+        return missing("session", "resource question assessment", "the case session")
+    mem = _memory_lookup(ctx, "usage_baseline") if ctx.get("memory") else None
+    memory = {k: mem[k] for k in ("established", "verified_pending")} if mem and "missing_dependency" not in mem \
+        else None
+    quota = t_get_quota(case, a, ctx)
+    q = cop_package.assess_resource_management(case.rows, case.session_id, case.cfg, case.computed_at, quota,
+                                               ctx.get("upstream"), memory, case.artifact("source_events"),
+                                               case.artifact("native_transcripts"))
+    return {"questions": q, "quota_supplied": "missing_dependency" not in quota, "memory_supplied": memory is not None,
+            "upstream_supplied": sorted((ctx.get("upstream") or {})), "evaluated_at": case.computed_at}
+
+
 TOOLS = {
     # name: (fn, schema {arg: spec})
     "get_metric_rows": (t_get_metric_rows, {"metric_ids": _arr("metric_ids", 25)}),
@@ -1253,6 +1269,7 @@ TOOLS = {
     "detect_configuration_changes": (t_detect_configuration_changes, {}),
     "compute_consumption": (t_compute_consumption, {}),
     "get_quota": (t_get_quota, {}),
+    "assess_resource_questions": (t_assess_resource_questions, {}),
     "compute_sequence_statistics": (t_compute_sequence_statistics, {}),
     "compare_behaviour_history": (t_compare_behaviour_history, {}),
     "get_recovery_records": (t_get_recovery_records, {}),

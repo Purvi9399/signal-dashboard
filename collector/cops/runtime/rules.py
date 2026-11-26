@@ -36,7 +36,7 @@ from .contracts import (Claim, CLAIM_METRIC_STATE, CLAIM_METRIC_VALUE, CLAIM_TOO
 from ..interpret import EVIDENCE_LEVEL
 from ..specs import BY_KEY, SPEC_CONSUMES
 from .cop_package import aggregate_runtime_monitoring, decide_audit_traceability, decide_interaction_discovery, \
-    decide_policy_enforcement, decide_anomaly_detection, AT_CLEAN, CEILING, DECIDED_WITHOUT_MODEL
+    decide_policy_enforcement, decide_anomaly_detection, decide_resource_management, AT_CLEAN, CEILING, DECIDED_WITHOUT_MODEL
 
 _RI = RuleInterpreter()
 HOT = ("EXCEPTION", "CRITICAL")
@@ -46,7 +46,7 @@ DETERMINISTIC_TOOLS = {
     "runtime_monitoring": ("get_collector_breakdown", "check_collector_expectations", "assess_runtime_evidence"),
     "interaction_discovery": ("build_interaction_graph", "compare_known_routes", "assess_interaction_questions"),
     "policy_enforcement": ("evaluate_session_operations", "check_entitlements", "assess_policy_questions"),
-    "resource_management": ("compute_consumption", "get_quota"),
+    "resource_management": ("compute_consumption", "get_quota", "assess_resource_questions"),
     "behavior_analytics": ("compute_sequence_statistics", "compare_behaviour_history"),
     "recovery_resilience": ("get_recovery_records", "validate_checkpoints"),
     "audit_traceability": ("reconstruct_trace", "check_decision_linkage", "assess_audit_questions"),
@@ -371,20 +371,44 @@ def policy_enforcement(ctx):
 
 
 def resource_management(ctx):
-    out = _RI.resource_management(ctx["events"], {}, {}, evidence_conf(ctx["upstream"]))
-    q = result(ctx["tools"], "get_quota")
-    use = result(ctx["tools"], "compute_consumption")
-    extra, miss = [], missing_of(ctx["tools"], "get_quota")
-    if "missing_dependency" not in q and q.get("token_budget") is not None and use.get("tokens") is not None:
-        if use["tokens"] > q["token_budget"]:
-            out = {**out, "interpretation": "UNAUTHORIZED", "action": "ALERT", "severity": "HIGH",
-                   "action_reason": "consumption above the configured quota"}
-        extra.append(tclaim(ctx["tools"], "compute_consumption", "tokens", use["tokens"],
-                            f"session used {use['tokens']} tokens against a quota of {q['token_budget']}"))
-    f = _from_legacy(ctx, out, extra)
-    f["missing_dependencies"] = miss
-    f["cop_specific"]["consumption"] = use
-    _attribute_consumption(ctx, f)
+    """Resource Management's five answers decide its label (cop_package.decide_resource_management). The quota
+    record is the only entitlement source: consumption above the estate's normal is EXCESSIVE or INEFFICIENT,
+    and UNAUTHORIZED only when the session's tokens exceed the quota's token_budget."""
+    t = ctx["tools"]
+    q_ = result(t, "get_quota")
+    use = result(t, "compute_consumption")
+    miss = missing_of(t, "get_quota")
+    res = result(t, "assess_resource_questions")
+    if not res.get("questions"):
+        why = res.get("missing_dependency") or (t.get("assess_resource_questions") or {}).get("status")
+        return F(INCONCLUSIVE, 0.0, "WATCH", "the resource questions could not be assessed",
+                 f"question assessment unavailable: {why}", status=MISSING_DEPENDENCY, missing_deps=miss)
+    d = decide_resource_management(res["questions"], evidence_conf(ctx["upstream"]) / EVIDENCE_LEVEL["SUFFICIENT"])
+    q = d["questions"]
+    claims = [tclaim(t, "assess_resource_questions", f"questions.{qid}.answer.outcome", x["answer"],
+                     f"{qid} answered {x['answer']}: {x['explanation']}"[:240]) for qid, x in q.items()]
+    claims += [mclaim(e) for e in ctx["events"] if e.state in ATTENTION_STATES]
+    if "missing_dependency" not in q_ and q_.get("token_budget") is not None and use.get("tokens") is not None:
+        claims.append(tclaim(t, "compute_consumption", "tokens", use["tokens"],
+                             f"session used {use['tokens']} tokens against a quota of {q_['token_budget']}"))
+    why = "; ".join(f"{x} {q[x]['answer']}" for x in d["drivers"])
+    p = (q["RS-1"]["basis"] or {}).get("permitted") or {}
+    rationale = f"{d['label']} from {why}" + (
+        f"; {p['tokens']} tokens against token_budget {p['token_budget']}" if p.get("status") in
+        ("WITHIN_QUOTA", "ABOVE_QUOTA") else "; permission not evaluated (no quota compared): a reading above the "
+                                            "estate's normal is not consumption above an allowance")
+    status = SUBSTANTIVE if d["label"] != INCONCLUSIVE else "INCONCLUSIVE"
+    f = F(d["label"], d["confidence"], d["action"], d["action_reason"], rationale, claims, d["severity"], status,
+          missing_deps=miss,
+          cop_specific={"questions": q, "drivers": d["drivers"], "also_held": d["also_held"],
+                        "contrary": d["contrary"], "limitations": d["limitations"], "recipients": d["recipients"],
+                        "memory_payload": d["memory_payload"], "decision": d["decision"], "consumption": use,
+                        "evidence_confidence": evidence_conf(ctx["upstream"])})
+    rm = verified(ctx["upstream"], "runtime_monitoring")
+    if rm:
+        f["upstream_used"].append({"cop": "runtime_monitoring", "label": rm["label"], "finding_id": rm.get("finding_id"),
+                                   "counted_as": "evidence quality, not corroboration"})
+    _attribute_consumption(ctx, f, (q["RS-4"]["basis"] or {}).get("attribution"))
     adv = ctx.get("feedback", {}).get("workload_optimization")
     if adv:
         f["cop_specific"]["advisory"] = {
@@ -399,68 +423,40 @@ def resource_management(ctx):
 CONSUMPTION_READINGS = ("EXCESSIVE", "INEFFICIENT", "UNAUTHORIZED")
 
 
-def _lane_spans(session):
-    spans = {}
-    for lane, steps in session.trace["lanes"].items():
-        t = [x for st in steps for x in (st.get("started_at"), st.get("ended_at")) if x]
-        if t:
-            spans[lane] = (min(t), max(t))
-    return spans
-
-
-def _attribute_consumption(ctx, f):
-    """Where the session's consumption sits, from Interaction Discovery's verified graph.
+def _attribute_consumption(ctx, f, at):
+    """Where the session's consumption sits: RS-4's attribution (cop_package._rs4), from Interaction
+    Discovery's verified graph and recorded links only.
 
     Consumption metrics are session totals. When the session has subagent lanes or MCP
     servers, a reading above bounds is attributable only through a verified, complete
-    interaction graph; without one the reading stands but its confidence is discounted
-    as for degraded evidence and the attribution is UNATTRIBUTED."""
-    s = ctx["case"].session
-    lanes = sorted(l for l in (s.trace["lanes"] if s else {}) if l != "main")
-    servers = sorted({r["mcp_server"] for r in (s.rows if s else []) if r.get("mcp_server")})
+    interaction graph whose delegation links are recorded; without one the reading stands but its
+    confidence is discounted as for degraded evidence and the attribution is UNATTRIBUTED."""
     cs = f["cop_specific"]
-    if not lanes and not servers:
-        cs["attribution"] = {"status": "NOT_NEEDED", "reason": "one lane and no MCP server"}
+    if at is None:
+        # RS-4 was not answered (a blocking check failed): nothing is attributed
+        cs["attribution"] = {"status": "NOT_ASSESSED", "reason": "RS-4 could not be answered"}
+        return
+    if at["status"] == "NOT_NEEDED":
+        cs["attribution"] = dict(at)
         return
     if f["label"] not in CONSUMPTION_READINGS:
         cs["attribution"] = {"status": "NOT_NEEDED", "reason": f"{f['label']}: nothing above bounds to attribute"}
         return
-    idf = verified(ctx["upstream"], "interaction_discovery")
-    id2 = (((idf or {}).get("cop_specific") or {}).get("questions") or {}).get("ID-2", {}).get("answer")
-    if idf is None or idf["label"] == "PATH_PARTIAL" or id2 not in (None, "FULLY_RECONSTRUCTED"):
-        why = ("no verified Interaction Discovery finding" if idf is None else
-               f"Interaction Discovery reports the interaction path as partial (ID-2 {id2})" if id2 else
-               "Interaction Discovery reports the interaction path as partial")
+    cs["attribution"] = dict(at)
+    if at["status"] == "UNATTRIBUTED":
         f["confidence"] = round(f["confidence"] * EVIDENCE_LEVEL["DEGRADED"] / EVIDENCE_LEVEL["SUFFICIENT"], 3)
-        cs["attribution"] = {"status": "UNATTRIBUTED", "reason": why, "subagent_lanes": len(lanes),
-                             "mcp_servers": len(servers)}
-        f["rationale"] += (f"; consumption spans {len(lanes)} subagent lane(s) and {len(servers)} MCP "
-                           f"server(s) and cannot be attributed: {why}")
+        f["rationale"] += (f"; consumption spans {at['subagent_lanes']} subagent lane(s) and {at['mcp_servers']} MCP "
+                           f"server(s) and cannot be attributed: {at['reason']}")
         return
-    edges = (idf.get("cop_specific") or {}).get("edges") or []
-    agents = sorted(e["to"][len("agent:"):] for e in edges if e["to"].startswith("agent:"))
-    work = [e for e in edges if not e["to"].startswith("agent:")]
-    by_actor = {}
-    for e in work:
-        by_actor[e["from"]] = by_actor.get(e["from"], 0) + e["count"]
-    mcp = {e["to"][len("mcp:"):]: e["count"] for e in work if e["to"].startswith("mcp:")}
-    total = sum(e["count"] for e in work)
-    spans = _lane_spans(s)
-    overlapping = sorted(a for a in agents if a in spans and any(
-        b not in (a, "main") and spans[b][0] <= spans[a][1] and spans[a][0] <= spans[b][1] for b in spans))
-    cs["attribution"] = {
-        "status": "ATTRIBUTED", "source_finding": idf.get("finding_id"), "interaction": idf["label"],
-        "subagent_lanes": agents, "parallel_lanes": overlapping, "calls_by_actor": by_actor,
-        "mcp_calls": mcp, "mcp_call_share": round(sum(mcp.values()) / total, 3) if total else None,
-        "subagent_call_share": round(sum(n for a, n in by_actor.items() if a != "main") / total, 3)
-        if total else None}
+    idf = verified(ctx["upstream"], "interaction_discovery")
     f["claims"].append(uclaim("interaction_discovery", idf).to_dict())
     f["upstream_used"] = list(f.get("upstream_used") or []) + [
         {"cop": "interaction_discovery", "label": idf["label"], "finding_id": idf.get("finding_id"),
          "counted_as": "attribution of consumption"}]
     f["rationale"] += (f"; attributed through Interaction Discovery ({idf['label']}): "
-                       f"{len(agents)} subagent lane(s), {len(overlapping)} running alongside another subagent, "
-                       f"{sum(mcp.values())} of {total} calls to MCP servers")
+                       f"{len(at['subagent_lanes'])} subagent lane(s), {len(at['parallel_lanes'])} running alongside "
+                       f"another subagent, {sum(at['mcp_calls'].values())} of "
+                       f"{sum(at['calls_by_actor'].values())} calls to MCP servers")
 
 
 def _with_pattern_persistence(rule):
