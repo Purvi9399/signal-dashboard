@@ -1,7 +1,7 @@
 # Resource Management: decisions
 
-Proposed on 2026-11-26 for purvi's review. Conditionally accepted by purvi on 2026-11-26 (A-RS1 below), with
-revision 1 (D-RS17 to D-RS19, R-RS1) awaiting her final review. Nothing here changes a label name, the behavioural
+Proposed on 2026-11-26 for purvi's review. Conditionally accepted by purvi on 2026-11-26 (A-RS1 below); revision 1
+(D-RS17 to D-RS19, R-RS1) accepted on 2026-11-26 (A-RS2). The open limitations below stay open. Nothing here changes a label name, the behavioural
 question, a threshold, `specs.metric_keys`, the legacy rule in `cops/interpret.py`, the metrics engine, the
 requirements gate, VS-01, triage or shared architecture.
 
@@ -10,6 +10,7 @@ requirements gate, VS-01, triage or shared architecture.
 | # | Date | What purvi decided |
 |---|---|---|
 | A-RS1 | 2026-11-26 | COP 6 conditionally accepted. U-RS1 approved: adopt leave-one-out baselines with the existing shared method, with baseline versioning and reproducibility, keeping the previous readings in the comparison record (D-RS17). U-RS2 and U-RS3 kept as implemented. The per-session quota interpretation kept provisionally, documenting the missing scope and period (D-RS19). RS-4: verify that ATTRIBUTED cannot come from an absent ID-2 answer and correct narrowly (D-RS18). Unavailable metrics and open limitations kept; no fabricated resource estimates, quotas or workload explanations. Final review before COP 7 |
+| A-RS2 | 2026-11-26 | Revision 1 accepted (d9714b8, d1d8e7f): final acceptance of COP 6. Open limitations preserved: U-RS4 (quota scope, measure, period; per-session reading provisional), U-RS5, U-RS6, U-RS7, U-RS8, U-RS9, U-RS10, and the 8 NOT_CALCULATED metrics. COP 7 authorized |
 
 ## Made in this package
 
