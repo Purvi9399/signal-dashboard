@@ -2,7 +2,7 @@
 
 Proposed on 2026-11-20. D-AD1 approved by purvi at 12:13Z; revision 2 (D-AD15 to D-AD20, U-AD2, U-AD3, U-AD7) made
 at her request (12:13Z, 12:24Z); revision 2 accepted and leave-one-out adopted (revision 3, D-AD21 to D-AD24) on
-2026-11-24 08:17Z, awaiting her final review. No label name, behavioural question or threshold is changed; the
+2026-11-24 08:17Z; the package formally accepted on 2026-11-25 06:18Z (A-AD5). No label name, behavioural question or threshold is changed; the
 metrics engine gains `signal_metrics.metric_event` (one metric for one session against a given estate) and
 `compute` is unchanged.
 
@@ -112,6 +112,12 @@ Proposal for purvi (adopted 2026-11-24 as Revision 3 below):
 | A-AD2 | U-AD3 direction APPROVED, same condition | D-AD19 kept as built. `warning_is_partial` is set on Anomaly Detection's quiet component only: `test_a_warning_still_opposes_another_cops_quiet_label` |
 | A-AD3 | U-AD7: adopt leave-one-out baselines if the comparison shows more independent baselines without regressions; keep versioning and reproducibility | Adopted as D-AD21 to D-AD24 below. Comparison: no harness, evaluation, live-case or bench label moves except the two scenarios that pinned self-inclusion; the one other measured change is listed under "Effects" |
 | A-AD4 | Record acceptance if Revision 2 is correct; otherwise make only the necessary corrections | Revision 2 needed no correction. The leave-one-out work needed one verifier alignment (D-AD23) and three check constants (C-AD4) |
+
+## Final acceptance (purvi, 2026-11-25 06:18Z)
+
+| # | purvi's decision | Where it stands |
+|---|---|---|
+| A-AD5 | Anomaly Detection (revision 2, with revision 3's leave-one-out baselines at e0e3bca) formally ACCEPTED; its unresolved limitations are preserved | No code change. Still open, behaviour unchanged: U-AD2's missing approved record of an authorised workload change or a task's expected volume; U-AD4 (no approved lower limits); U-AD5 (no baseline window); U-AD6 (first-seen MCP minimum); U-AD7's open question whether Risk Mitigation, Resource Management and Workload Optimization read leave-one-out; U-AD8 (comparison group); U-AD9 (contradictory scenario); U-AD10 (two NOT_CALCULATED metrics); MC-01 recomputes only the token outlier |
 
 ## Revision 3 (purvi 2026-11-24 08:17Z): leave-one-out baselines (U-AD7)
 
