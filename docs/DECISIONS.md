@@ -19,7 +19,8 @@ the three docs into Purvi's repo (via PR) and keep the decision log in sync in b
 **Why it matters:** cross-repo work needs shared context + one source of agreed decisions.
 
 ## D-0007 · Persist the `metric_events` (and `cop_decisions`) schema layer
-**Date:** 2026-11-20 · **Status:** Pending team
+**Date:** 2026-11-20 · **Status:** APPLIED 2026-11-25 (superset `cops_schema.sql` run on live DB;
+5 tables created with `deviation`/`context`/`lens` columns verified; `metric_events` empty, ready to populate)
 Metrics are currently computed in memory by `signal_metrics.py`; the live DB has only the 10
 observability tables. The `metric_events` and `cop_decisions` tables are **already designed** in
 `signal_cops/collector/cops_schema.sql` but not applied to the live project.
