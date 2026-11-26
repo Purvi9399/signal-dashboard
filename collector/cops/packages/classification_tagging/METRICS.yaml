@@ -1,0 +1,217 @@
+# Classification & Tagging: machine-readable question contract.
+# Loaded by collector/cops/runtime/cop_package.py and validated by
+# tests/test_cop_package_classification_tagging.py. The Markdown files beside it
+# explain this file; where they differ, this file is what the runtime uses.
+
+cop: classification_tagging
+contract: cop_metrics/1
+version: 2026-11-26.1
+
+sources:
+  questions: >-
+    CT-1 to CT-5: COPS- implementation 1.xlsx, sheet COMPLETE_DELEGATION_DATA, rows 107, 109, 111, 113, 115
+    (behavioural question row 107, column 1: "What kind of governance event has occurred, and how should it
+    be categorized?"); field lists in column 3 of each row; metric list row 117 (26 metrics); partial-input
+    rule row 11 ("Missing sensitivity/file metadata can degrade classification."). The workbook gives no
+    external data column for this COP. cops/specs.py keeps its own wording of the behavioural question
+    ("What kind of governance event is this, and which entities should remain associated with it?"),
+    unchanged: its second half is CT-5's entity association.
+  metric_mapping: >-
+    COPS_METRIC_MAPPING.md, sha256 5bd3c16f1ba26b297644259faaedfe75c1f219980e5c046a9bb56308c38e951e
+    (collector/metric_registry.json, consumers = classification_tagging: 26 metrics, all category E,
+    IMPLEMENTED_EXISTING). No code-only pair.
+  rule: >-
+    cops/interpret.py RuleInterpreter.classification_tagging: the family is decided by which metric is in
+    EXCEPTION or CRITICAL, in the order insights.outside (BOUNDARY), insights.sensitive_unasked (BOUNDARY),
+    insights.secrets (INTEGRITY), insights.blocked (OVERSIGHT); nothing judged is INCONCLUSIVE; judged and
+    none hot is UNCLASSIFIED; kind only, the only permitted action is NONE. The legacy 4-COP runner keeps
+    the interpret.py rule unchanged.
+  taxonomy: >-
+    The approved, versioned governance-event taxonomy (case artifact taxonomy, read by tools.query_taxonomy;
+    requirements.py: REQUIRED, gates every label). A family is labelled only when its id is in the approved
+    taxonomy. The taxonomy's definitions are read by the model for an ambiguous event; the package compares
+    family ids only.
+  labels: >-
+    cops/specs.py interpretations: UNCLASSIFIED, BOUNDARY, OVERSIGHT, LOOPS, OUTCOME, INTEGRITY, COST.
+    No approved rule maps any metric to LOOPS, OUTCOME or COST, so this package does not produce them.
+
+mapping:
+  insights.outside: {used_by: [CT-1]}
+  insights.sensitive_unasked: {used_by: [CT-1]}
+  access.first_seen_mcp: {used_by: [CT-1]}
+  insights.blocked: {used_by: [CT-2]}
+  insights.no_oversight: {used_by: [CT-2]}
+  oversight.fast_approvals: {used_by: [CT-2]}
+  oversight.declined_inferred: {used_by: [CT-2]}
+  insights.secrets: {used_by: [CT-3]}
+  insights.failed: {used_by: [CT-4]}
+  insights.repetition: {used_by: [CT-4]}
+  insights.retry: {used_by: [CT-4]}
+  insights.stalled: {used_by: [CT-4]}
+  insights.reverted: {used_by: [CT-4]}
+  insights.lockfile: {used_by: [CT-4]}
+  insights.token_outlier: {used_by: [CT-4]}
+  insights.duration_outlier: {used_by: [CT-4]}
+  path.transition_novelty: {used_by: [CT-4]}
+  activity.action_rate_ratio: {used_by: [CT-4]}
+  interaction.subagent_lanes: {used_by: [CT-4]}
+  interaction.mcp_servers: {used_by: [CT-4]}
+  insights.unattributed: {used_by: [CT-5]}
+  telemetry.collector_coverage: {used_by: [CT-5]}
+  telemetry.source_agreement: {used_by: [CT-5]}
+  telemetry.turn_linkage: {used_by: [CT-5]}
+  telemetry.lane_linkage: {used_by: [CT-5]}
+  telemetry.unknown_share: {used_by: [CT-5]}
+
+# cops/specs.py missing_metrics for this COP. They are not in the metric registry, so they are not
+# mapped above; CT-5 reports each as NOT_CALCULATED with the input it lacks. None is approximated.
+not_calculated:
+  actor_type: >-
+    NOT_CALCULATED. No registry metric. Missing input: an approved actor-type vocabulary (human, agent,
+    subagent, service) and a field that carries it; agent_type is recorded on some rows but no mapping from
+    it to an actor type is approved.
+  resource_type: >-
+    NOT_CALCULATED. No registry metric. Missing input: an approved resource classification (the workbook's
+    "resource classifications" external data for Policy Enforcement); file_path, mcp_server and command are
+    recorded as entities, not typed.
+  incident_family: >-
+    NOT_CALCULATED. No registry metric. Missing input: an approved mapping from governance-event family to
+    incident family; Incident Response decides incidents, this COP does not.
+  classification_confidence: >-
+    NOT_CALCULATED as a metric. No registry metric. The finding's confidence is the legacy rule's formula,
+    not a calibrated classification confidence; calibration needs validated classification_example records
+    with reviewer outcomes, which do not exist yet.
+
+questions:
+  CT-1:
+    question: Is the event related to boundary crossing, authorization or access restrictions?
+    fields: [observable_id, observable_type, session_id, agent_id, operator_id, org_id, team_id,
+             permission_mode, permission_decision, permission_source, permission_scope, permission_options,
+             denial_reason, sandboxed, outside_workspace, policy_rule_matched, violation_count, tool_name,
+             tool_arguments, file_path, command, mcp_server, raw_ref]
+    requires:
+      - {metric: insights.outside, kind: REQUIRED}
+      - {metric: insights.sensitive_unasked, kind: REQUIRED}
+      - {metric: access.first_seen_mcp, kind: OPTIONAL}
+    verified: []
+    blocking: []
+    outcomes: [FAMILY_INDICATED, NOT_INDICATED]
+
+  CT-2:
+    question: Does the event involve inadequate oversight, missing approval or inappropriate human intervention?
+    fields: [observable_id, observable_type, session_id, turn_id, agent_id, operator_id, operator_username,
+             operator_email, permission_mode, permission_decision, permission_source, permission_scope,
+             permission_options, denial_reason, escalation_flag, policy_rule_matched, tool_name, tool_arguments,
+             tool_result, success, status, raw_ref]
+    requires:
+      - {metric: insights.blocked, kind: REQUIRED}
+      - {metric: insights.no_oversight, kind: OPTIONAL}
+      - {metric: oversight.fast_approvals, kind: OPTIONAL}
+      - {metric: oversight.declined_inferred, kind: OPTIONAL}
+    verified: []
+    blocking: []
+    outcomes: [FAMILY_INDICATED, NOT_INDICATED]
+
+  CT-3:
+    question: Does the event involve sensitive information, credentials or security-related exposure?
+    fields: [observable_id, observable_type, session_id, agent_id, tool_name, tool_arguments, tool_result,
+             command, file_path, file_extension, file_change_kind, file_size, old_content, new_content,
+             content_hash, outside_workspace, sensitivity_tier, secret_detected, injection_markers, risk_markers,
+             mcp_server, mcp_tool, raw_ref]
+    requires:
+      - {metric: insights.secrets, kind: REQUIRED}
+    verified: []
+    blocking: []
+    outcomes: [FAMILY_INDICATED, NOT_INDICATED]
+
+  CT-4:
+    question: Does the event involve behavioural, execution, integrity or resource-related concerns?
+    fields: [observable_id, observable_type, session_id, turn_id, agent_id, agent_type, parent_agent_id,
+             delegation_depth, tool_use_id, tool_name, tool_arguments, tool_result, tool_duration_ms,
+             tool_interrupted, tool_timeout_ms, success, status, error_type, error_message, exit_code, loop_count,
+             turn_count, hung_seconds, latency_ms, input_tokens, output_tokens, total_tokens, cost_usd, file_path,
+             file_change_kind, content_hash, reverted_to_earlier, is_config_file, is_dependency_manifest,
+             is_lockfile, risk_markers, raw_ref]
+    requires:
+      - {metric: insights.failed, kind: OPTIONAL}
+      - {metric: insights.repetition, kind: OPTIONAL}
+      - {metric: insights.retry, kind: OPTIONAL}
+      - {metric: insights.stalled, kind: OPTIONAL}
+      - {metric: insights.reverted, kind: OPTIONAL}
+      - {metric: insights.lockfile, kind: OPTIONAL}
+      - {metric: insights.token_outlier, kind: OPTIONAL}
+      - {metric: insights.duration_outlier, kind: OPTIONAL}
+      - {metric: path.transition_novelty, kind: OPTIONAL}
+      - {metric: activity.action_rate_ratio, kind: OPTIONAL}
+      - {metric: interaction.subagent_lanes, kind: OPTIONAL}
+      - {metric: interaction.mcp_servers, kind: OPTIONAL}
+    verified: []
+    blocking: []
+    outcomes: [CONCERNS_OBSERVED, NONE_OBSERVED]
+
+  CT-5:
+    question: >-
+      Can the event be classified with sufficient confidence and linked to the correct actors, resources and
+      evidence?
+    fields: [observable_id, observable_type, collector, raw_ref, session_id, turn_id, agent_id, agent_type,
+             parent_agent_id, operator_id, operator_username, org_id, team_id, tool_use_id, tool_name,
+             tool_arguments, tool_result, file_path, command, mcp_server, mcp_tool, permission_decision,
+             policy_rule_matched, sensitivity_tier, secret_detected, injection_markers, risk_markers,
+             violation_count, escalation_flag, success, status, error_type]
+    requires:
+      - {metric: insights.unattributed, kind: OPTIONAL}
+      - {metric: telemetry.collector_coverage, kind: OPTIONAL}
+      - {metric: telemetry.source_agreement, kind: OPTIONAL}
+      - {metric: telemetry.turn_linkage, kind: OPTIONAL}
+      - {metric: telemetry.lane_linkage, kind: OPTIONAL}
+      - {metric: telemetry.unknown_share, kind: OPTIONAL}
+    verified: []
+    blocking: []
+    depends_on: [CT-1, CT-2, CT-3, CT-4]
+    outcomes: [CLASSIFIED, AMBIGUOUS, UNCLASSIFIED, UNDETERMINED]
+
+# The families the legacy rule assigns, with the question that observes each and the metrics that count.
+# Only these four metrics (cops/specs.py metric_keys) count toward a family; every other assigned metric
+# is observed and reported.
+families:
+  BOUNDARY: {question: CT-1, metrics: [insights.outside, insights.sensitive_unasked]}
+  INTEGRITY: {question: CT-3, metrics: [insights.secrets]}
+  OVERSIGHT: {question: CT-2, metrics: [insights.blocked]}
+
+# The legacy rule's order (outside, sensitive_unasked, secrets, blocked). It names the computational baseline
+# for an ambiguous event; it does not decide one (INTERPRETATION.md).
+precedence: [BOUNDARY, INTEGRITY, OVERSIGHT]
+
+# CT-5's answer gives the label. CLASSIFIED is the one candidate family; AMBIGUOUS (two or more candidate
+# families) is interpreted by the model against the approved taxonomy, and its verified label is read back
+# as CT-5's answer only when it is one of the candidates.
+labels:
+  CLASSIFIED: [BOUNDARY, INTEGRITY, OVERSIGHT]
+  UNCLASSIFIED: UNCLASSIFIED
+  UNDETERMINED: INCONCLUSIVE
+  INCONCLUSIVE: INCONCLUSIVE
+
+interpretations:
+  BOUNDARY: CLASSIFIED
+  INTEGRITY: CLASSIFIED
+  OVERSIGHT: CLASSIFIED
+
+# Metric states that indicate a family: the states cops/interpret.py's classification_tagging rule treated
+# as hot. The thresholds are metrics_config.json's; WARNING does not indicate a family.
+deviation_states: [EXCEPTION, CRITICAL]
+
+operations:
+  compute_metrics: {by: deterministic, code: collector/signal_metrics.py:compute}
+  read_taxonomy: {by: deterministic, code: collector/cops/runtime/tools.py:t_query_taxonomy}
+  inspect_event_metadata: {by: deterministic, code: collector/cops/runtime/tools.py:t_inspect_event_metadata}
+  assess_evidence: {by: deterministic, code: collector/cops/runtime/evidence_assessment.py:assess}
+  observe_questions: {by: deterministic, code: collector/cops/runtime/cop_package.py:observe_classification_tagging}
+  associate_entities: {by: deterministic, code: collector/cops/runtime/cop_package.py:_ct_entities}
+  decide_label: {by: deterministic, code: collector/cops/runtime/cop_package.py:decide_classification_tagging}
+  interpret_ambiguous_event: {by: llm, code: collector/cops/runtime/graph.py:llm_assess_evidence}
+  read_back_interpretation: {by: deterministic, code: collector/cops/runtime/cop_package.py:interpreted_classification_tagging}
+  gate_every_label: {by: deterministic, code: collector/cops/runtime/requirements.py}
+  verify_finding: {by: deterministic, code: collector/cops/runtime/verifiers.py}
+  select_action: {by: deterministic, code: collector/cops/runtime/triage.py}
+  memory_write: {by: deterministic, code: collector/cops/runtime/graph.py:validate_memory_update}
+  decision_record: {by: deterministic, code: collector/cops/runtime/decision.py:build}

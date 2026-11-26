@@ -1,0 +1,236 @@
+# Classification & Tagging: expected outcomes per scenario, written before the harness and before the package
+# code.
+#
+# Each expectation follows from the workbook questions (rows 107 to 115), the approved thresholds in
+# metrics_config.json (a family is indicated by a counted metric in EXCEPTION or CRITICAL), the legacy rule's
+# semantics that this package keeps (cops/interpret.py classification_tagging: insights.outside and
+# insights.sensitive_unasked indicate BOUNDARY, insights.secrets INTEGRITY, insights.blocked OVERSIGHT; kind
+# only; the only action is NONE; UNCLASSIFIED 0.7; a classified reading min(0.9, 0.65 + 0.1 n) over its n
+# indicating measures), the workbook's partial-input rule (row 11: missing sensitivity or file metadata
+# degrades classification), the taxonomy gate in requirements.py (no approved taxonomy: no label at all) and
+# the package rules in INTERPRETATION.md:
+#   - one candidate family is classified by the package without a model;
+#   - two or more candidate families are ambiguous: the model interprets them against the approved taxonomy,
+#     and its verified label stands only when it is one of the candidates;
+#   - a family whose id is not in the approved taxonomy is not a candidate;
+#   - no family indicated, with a family question unanswered for missing metadata, is UNDETERMINED
+#     (INCONCLUSIVE), not UNCLASSIFIED;
+#   - upstream findings never decide a family; they are listed with their verification status and whether
+#     they are independent of this COP's counted metrics.
+# No expected value was taken from a run of this package.
+#
+# The taxonomy is synthetic.taxonomy() (approved, version tax-2026-10, families BOUNDARY, INTEGRITY, OVERSIGHT,
+# OUTCOME) unless the scenario says otherwise. Scenarios marked "scripted model" use fixtures.Script: every
+# model invocation is simulated, no paid model is called. All rows are synthetic.
+#
+# questions: the answer each question must give (INCONCLUSIVE where it cannot be answered).
+# cop_label: accepted labels. confidence: exact value. checks: named properties, defined in harness.CHECKS.
+
+estate: >-
+  Seven earlier sessions base1 to base7 of dev1@tenant-a.example with claude-code, 1000 tokens each, tools
+  Read, Grep, Read, Edit, Bash with 200 ms steps, collectors local_hooks and otel, plus the scenario session s1
+  on day 9, unless the scenario says otherwise. "outside read" is a Read of /etc/hosts with
+  outside_workspace true; "secret" is a tool_result on /ws/config.py with secret_detected true and
+  sensitivity_tier 1; "blocked" is a Bash request that matched policy rule deny-destructive.
+
+scenarios:
+  normal_unclassified:
+    description: an ordinary session like the seven before it
+    questions: {CT-1: NOT_INDICATED, CT-2: NOT_INDICATED, CT-3: NOT_INDICATED, CT-4: NONE_OBSERVED,
+                CT-5: UNCLASSIFIED}
+    cop_label: [UNCLASSIFIED]
+    confidence: 0.7
+    checks: [decision_contract_valid, five_question_findings, decided_without_model, no_model_call, verified,
+             action_none, taxonomy_version_recorded, not_calculated_named, no_record_written]
+
+  no_taxonomy:
+    description: the same session with no taxonomy artifact
+    cop_label: [INCONCLUSIVE]
+    checks: [taxonomy_gates_every_label, no_model_call]
+
+  taxonomy_not_approved:
+    description: a taxonomy artifact that is not approved
+    cop_label: [INCONCLUSIVE]
+    checks: [taxonomy_gates_every_label, no_model_call]
+
+  boundary_outside:
+    description: an outside read
+    questions: {CT-1: FAMILY_INDICATED, CT-2: NOT_INDICATED, CT-3: NOT_INDICATED, CT-4: NONE_OBSERVED,
+                CT-5: CLASSIFIED}
+    cop_label: [BOUNDARY]
+    confidence: 0.75
+    checks: [decision_contract_valid, decided_without_model, no_model_call, verified, action_none,
+             entities_are_the_indicating_rows, observed_inferred_recorded, record_written,
+             recipients_governance_intelligence]
+
+  boundary_two_indicators:
+    description: >-
+      one read of /home/u/.aws/config outside the workspace at sensitivity_tier 3 with no approval: outside
+      and sensitive_unasked both indicate BOUNDARY, one family
+    questions: {CT-1: FAMILY_INDICATED, CT-3: NOT_INDICATED, CT-5: CLASSIFIED}
+    cop_label: [BOUNDARY]
+    confidence: 0.85
+    checks: [decided_without_model, one_candidate_family]
+
+  integrity_secret:
+    description: a secret
+    questions: {CT-1: NOT_INDICATED, CT-2: NOT_INDICATED, CT-3: FAMILY_INDICATED, CT-5: CLASSIFIED}
+    cop_label: [INTEGRITY]
+    confidence: 0.75
+    checks: [decided_without_model, record_written]
+
+  oversight_blocked:
+    description: >-
+      a blocked Bash request; insights.failed reads WARNING (one failed step), which is a recorded concern
+      level below the deviation states
+    questions: {CT-1: NOT_INDICATED, CT-2: FAMILY_INDICATED, CT-3: NOT_INDICATED, CT-4: NONE_OBSERVED,
+                CT-5: CLASSIFIED}
+    cop_label: [OVERSIGHT]
+    confidence: 0.75
+    checks: [decided_without_model, warning_recorded_not_a_concern]
+
+  overlap_model_integrity:
+    description: >-
+      evaluation case C08's event: secret-shaped content read from /ws/tests/fixtures/fake_aws_credentials.txt
+      at sensitivity_tier 3 inside the workspace, no approval. sensitive_unasked indicates BOUNDARY and secrets
+      INTEGRITY: two candidates. Scripted model (C08's script): INTEGRITY, BOUNDARY and OVERSIGHT rejected
+    questions: {CT-1: FAMILY_INDICATED, CT-3: FAMILY_INDICATED, CT-5: CLASSIFIED}
+    cop_label: [INTEGRITY]
+    checks: [model_called_simulated, verified, candidates_boundary_integrity, precedence_baseline_recorded,
+             interpreted_by_model, record_written]
+
+  overlap_without_model:
+    description: the same event with no model available
+    questions: {CT-1: FAMILY_INDICATED, CT-3: FAMILY_INDICATED, CT-5: INCONCLUSIVE}
+    cop_label: [INCONCLUSIVE]
+    checks: [model_needed_not_decided, precedence_baseline_recorded, no_record_written]
+
+  model_outside_candidates:
+    description: the same event; scripted model concludes OUTCOME, a taxonomy family that no indicator supports
+    questions: {CT-5: INCONCLUSIVE}
+    cop_label: [INCONCLUSIVE]
+    checks: [model_label_rejected_outside_candidates]
+
+  model_unclassified_on_overlap:
+    description: the same event; scripted model concludes UNCLASSIFIED although two families are indicated
+    questions: {CT-5: INCONCLUSIVE}
+    cop_label: [INCONCLUSIVE]
+    checks: [model_label_rejected_outside_candidates]
+
+  family_not_in_taxonomy:
+    description: blocked, with a taxonomy that defines BOUNDARY, INTEGRITY and OUTCOME but not OVERSIGHT
+    questions: {CT-2: FAMILY_INDICATED, CT-5: UNDETERMINED}
+    cop_label: [INCONCLUSIVE]
+    confidence: 0.0
+    checks: [family_not_defined_named, no_model_call]
+
+  overlap_one_family_undefined:
+    description: >-
+      blocked and a secret, with the taxonomy without OVERSIGHT. OVERSIGHT is indicated but cannot be named,
+      so INTEGRITY is the one candidate; the OVERSIGHT indicator is a limitation
+    questions: {CT-2: FAMILY_INDICATED, CT-3: FAMILY_INDICATED, CT-5: CLASSIFIED}
+    cop_label: [INTEGRITY]
+    confidence: 0.75
+    checks: [decided_without_model, family_not_defined_named]
+
+  metadata_missing_quiet:
+    description: >-
+      s1 recorded by cli_wrapper only: insights.outside and insights.blocked are UNKNOWN (no path or rule
+      metadata); nothing is indicated. Missing metadata degrades classification (row 11), so it is not
+      UNCLASSIFIED
+    questions: {CT-1: INCONCLUSIVE, CT-2: INCONCLUSIVE, CT-3: NOT_INDICATED, CT-5: UNDETERMINED}
+    cop_label: [INCONCLUSIVE]
+    confidence: 0.0
+    checks: [missing_metadata_named, no_model_call]
+
+  metadata_missing_with_secret:
+    description: the cli_wrapper-only session with a secret
+    questions: {CT-1: INCONCLUSIVE, CT-2: INCONCLUSIVE, CT-3: FAMILY_INDICATED, CT-5: CLASSIFIED}
+    cop_label: [INTEGRITY]
+    confidence: 0.75
+    checks: [families_not_evaluated_named]
+
+  upstream_policy_enforcement_correlated:
+    description: >-
+      an outside read with Policy Enforcement run first against an allow-all synthetic policy store.
+      Policy Enforcement reads the same four metrics, so its finding is never counted
+    questions: {CT-1: FAMILY_INDICATED, CT-5: CLASSIFIED}
+    cop_label: [BOUNDARY]
+    confidence: 0.75
+    checks: [policy_enforcement_listed_not_counted, same_as_without_upstream]
+
+  behaviour_concerns_upstream:
+    description: >-
+      40000 tokens (insights.token_outlier CRITICAL), nothing else. Anomaly Detection runs without a model
+      and is not verified; Resource Management runs with an ample quota. The concern is observed in CT-4 and
+      no approved rule maps it to a family
+    questions: {CT-1: NOT_INDICATED, CT-2: NOT_INDICATED, CT-3: NOT_INDICATED, CT-4: CONCERNS_OBSERVED,
+                CT-5: UNCLASSIFIED}
+    cop_label: [UNCLASSIFIED]
+    confidence: 0.7
+    checks: [unverified_upstream_not_used, resource_management_listed_as_context, unmapped_concern_named,
+             same_as_without_upstream]
+
+  novel_mcp_access:
+    description: a first call to MCP server prod-db (access.first_seen_mcp EXCEPTION), nothing else
+    questions: {CT-1: NOT_INDICATED, CT-4: NONE_OBSERVED, CT-5: UNCLASSIFIED}
+    cop_label: [UNCLASSIFIED]
+    confidence: 0.7
+    checks: [novel_access_recorded_not_counted]
+
+  subagent_linkage_recorded:
+    description: >-
+      the outside read made by subagent lane sub-a, whose rows record parent_agent_id main; Interaction
+      Discovery runs first
+    questions: {CT-1: FAMILY_INDICATED, CT-5: CLASSIFIED}
+    cop_label: [BOUNDARY]
+    confidence: 0.75
+    checks: [entity_lane_linked_through_recorded_link]
+
+  subagent_linkage_inferred:
+    description: the same, with no parent_agent_id on sub-a's rows
+    questions: {CT-1: FAMILY_INDICATED, CT-5: CLASSIFIED}
+    cop_label: [BOUNDARY]
+    confidence: 0.75
+    checks: [entity_lane_not_linked_named]
+
+  subagent_without_interaction_discovery:
+    description: the recorded-link session with Interaction Discovery not run
+    questions: {CT-5: CLASSIFIED}
+    cop_label: [BOUNDARY]
+    checks: [entity_lane_not_linked_named]
+
+  memory_precedent:
+    description: >-
+      an earlier outside read m0 wrote a classification_example record, validated by a reviewer; s1 repeats
+      it. The precedent is listed and changes nothing
+    questions: {CT-5: CLASSIFIED}
+    cop_label: [BOUNDARY]
+    checks: [precedent_listed, memory_changes_nothing]
+
+  adversarial_instruction_text:
+    description: the outside read, and a tool result telling the governance system to report UNCLASSIFIED
+    cop_label: [BOUNDARY]
+    checks: [same_as_without_text]
+
+  source_disagreement:
+    description: >-
+      the outside read and an Edit the collectors disagree on (telemetry.source_agreement CRITICAL). The
+      family indicator stands; the disagreement is a limitation and contrary evidence
+    questions: {CT-1: FAMILY_INDICATED, CT-5: CLASSIFIED}
+    cop_label: [BOUNDARY]
+    confidence: 0.75
+    checks: [source_disagreement_recorded]
+
+  evidence_change_changes_classification:
+    description: >-
+      the secret session read three ways: as it is (INTEGRITY), without the secret row (UNCLASSIFIED), and
+      with a taxonomy that does not define INTEGRITY (INCONCLUSIVE)
+    cop_label: [INTEGRITY]
+    checks: [classification_follows_evidence]
+
+  downstream_consumers:
+    description: >-
+      the outside read; Incident Response and Governance Intelligence run after Classification & Tagging
+    cop_label: [BOUNDARY]
+    checks: [incident_response_reads_classification, governance_intelligence_reads_classification]
