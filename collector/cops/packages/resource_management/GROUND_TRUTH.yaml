@@ -6,9 +6,25 @@
 # keeps (cops/interpret.py resource_management: BURN over WASTE, a WARNING alone reads INEFFICIENT, ALERT when
 # two measures are hot or one is CRITICAL; rules.py: UNAUTHORIZED only when tokens exceed the quota's
 # token_budget; attribution only through a verified, complete Interaction Discovery graph) and the
-# requirements.py gate (NORMAL is withheld without a quota). The baseline stays self-inclusive, as the
-# metrics compute it; the leave-one-out reading is recorded beside it and decides nothing (DECISIONS.md,
-# U-RS1). No expected value was taken from a run of this package.
+# requirements.py gate (NORMAL is withheld without a quota). The baseline-dependent measures are read
+# leave-one-out with Anomaly Detection's shared method; the self-inclusive reading is recorded beside each
+# and decides nothing (revision R-RS1 below). No expected value was taken from a run of this package.
+#
+# Revision R-RS1, 2026-11-26, before the revised package was run. purvi approved U-RS1 (leave-one-out
+# baselines) and asked that attribution never follow from an absent ID-2 answer. Changed, with why
+# (DECISIONS.md, R-RS1):
+#   - normal_within_quota: the baseline checks now expect leave_one_out@1 with 7 sessions (the 7 earlier
+#     ones) and the self-inclusive reading (8 sessions) recorded beside it.
+#   - heavy_estate_baseline: left out, s1's baseline is 7 sessions at 1000 and 7 at 40000, median 20500 and
+#     14 sessions; s1 reads 40000 / 20500 = 1.95, below WARNING, so the answers and label do not change.
+#   - baseline_contamination_half_estate: left out, the median is 1000 and s1 reads 40 (CRITICAL): RS-1
+#     ABOVE_EXPECTED, RS-5 ATTENTION, EXCESSIVE, ALERT (one CRITICAL measure), confidence 0.7. Was NORMAL.
+#   - baseline_minimum_counts_self: left out, four sessions are below min_sessions_for_baseline 5 for the
+#     token outlier and the action rate: RS-1 and RS-2 BASELINE_INSUFFICIENT, RS-5 UNDETERMINED,
+#     INDETERMINATE, confidence 0.2. Was EXCESSIVE.
+#   - attribution_id2_absent (new): a verified Interaction Discovery finding with its ID-2 answer removed, and
+#     one with ID-2 FULLY_RECONSTRUCTED but no delegation links; neither verifies a relationship, so RS-4 is
+#     UNATTRIBUTED in both.
 #
 # Confidences follow the legacy formulas: NORMAL 0.8, INDETERMINATE 0.2, a reading with n hot or elevated
 # measures min(0.9, 0.6 + 0.1 n), each times min(1, Runtime Monitoring evidence level / 0.9); UNAUTHORIZED
@@ -34,7 +50,7 @@ scenarios:
     action: NONE
     confidence: 0.8
     checks: [decision_contract_valid, five_question_findings, verified, no_model_call, quota_compared,
-             baseline_self_inclusive_recorded, leave_one_out_recorded_not_used, not_calculated_named,
+             baseline_leave_one_out_recorded, self_inclusive_recorded_not_used, not_calculated_named,
              cost_not_measured_named, no_usage_record_written]
 
   normal_without_quota:
@@ -64,8 +80,9 @@ scenarios:
 
   heavy_estate_baseline:
     description: >-
-      seven earlier sessions of 40000 tokens join the seven of 1000; s1 uses 40000 with an ample quota. The
-      self-inclusive median is 40000, so the session is within the expected limits
+      seven earlier sessions of 40000 tokens join the seven of 1000; s1 uses 40000 with an ample quota. Left
+      out, the median of the 14 other sessions is 20500 and s1 reads 1.95, so the session is within the
+      expected limits (R-RS1; self-inclusive the median was 40000 over 15 sessions)
     questions: {RS-1: WITHIN_LIMITS, RS-5: NO_INTERVENTION}
     cop_label: [NORMAL]
     checks: [baseline_shift_recorded, no_baseline_window_named]
@@ -202,21 +219,34 @@ scenarios:
 
   baseline_contamination_half_estate:
     description: >-
-      four sessions of 1000 tokens and three of 40000 before s1 at 40000. Self-inclusive, the median is 20500
-      and s1 reads 1.95 (NORMAL); left out, the median is 1000 and s1 would read 40 (CRITICAL). The decision
-      keeps the self-inclusive reading; the difference is recorded (U-RS1)
-    questions: {RS-1: WITHIN_LIMITS, RS-5: NO_INTERVENTION}
-    cop_label: [NORMAL]
-    checks: [leave_one_out_differs_recorded]
+      four sessions of 1000 tokens and three of 40000 before s1 at 40000. Left out, the median is 1000 and s1
+      reads 40 (CRITICAL); self-inclusive, the median would be 20500 and s1 would read 1.95 (NORMAL), hiding
+      its own spike. The leave-one-out reading decides; the self-inclusive one is recorded (R-RS1, U-RS1)
+    questions: {RS-1: ABOVE_EXPECTED, RS-5: ATTENTION}
+    cop_label: [EXCESSIVE]
+    action: ALERT
+    confidence: 0.7
+    checks: [self_inclusive_differs_recorded]
 
   baseline_minimum_counts_self:
     description: >-
-      four earlier sessions; s1 at 40000 tokens is the fifth that meets min_sessions_for_baseline.
-      Self-inclusive, the baseline is sufficient and s1 reads 40 (CRITICAL); left out, four sessions are too
-      few. The decision keeps the self-inclusive reading; the difference is recorded (U-RS1)
-    questions: {RS-1: ABOVE_EXPECTED, RS-5: ATTENTION}
+      four earlier sessions and s1 at 40000 tokens. Left out, four sessions are below
+      min_sessions_for_baseline, so the token outlier and the action rate have no baseline; self-inclusive,
+      s1 would be the fifth session of its own baseline and read 40 (CRITICAL). The leave-one-out reading
+      decides; the self-inclusive one is recorded (R-RS1, U-RS1)
+    questions: {RS-1: BASELINE_INSUFFICIENT, RS-2: BASELINE_INSUFFICIENT, RS-5: UNDETERMINED}
+    cop_label: [INDETERMINATE]
+    confidence: 0.2
+    checks: [self_inclusive_sufficiency_recorded]
+
+  attribution_id2_absent:
+    description: >-
+      the recorded-link session; Interaction Discovery runs and verifies, then Resource Management reads its
+      finding with the ID-2 answer removed, and again with ID-2 FULLY_RECONSTRUCTED but no delegation links.
+      A finding without ID-2, or without a recorded link for each lane, verifies no relationship (R-RS1)
+    questions: {RS-4: UNATTRIBUTED}
     cop_label: [EXCESSIVE]
-    checks: [leave_one_out_insufficient_recorded]
+    checks: [id2_absent_not_attributed, no_recorded_link_not_attributed]
 
   memory_precedent:
     description: >-
