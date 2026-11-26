@@ -1,0 +1,245 @@
+# Resource Management: expected outcomes per scenario, written before the harness and before the package code.
+#
+# Each expectation follows from the workbook questions (rows 146 to 154), the approved thresholds in
+# metrics_config.json (a deviation is a metric in EXCEPTION or CRITICAL; WARNING is elevated), the minimum
+# samples in metrics_config.json (min_sessions_for_baseline 5), the legacy rule's semantics that this package
+# keeps (cops/interpret.py resource_management: BURN over WASTE, a WARNING alone reads INEFFICIENT, ALERT when
+# two measures are hot or one is CRITICAL; rules.py: UNAUTHORIZED only when tokens exceed the quota's
+# token_budget; attribution only through a verified, complete Interaction Discovery graph) and the
+# requirements.py gate (NORMAL is withheld without a quota). The baseline stays self-inclusive, as the
+# metrics compute it; the leave-one-out reading is recorded beside it and decides nothing (DECISIONS.md,
+# U-RS1). No expected value was taken from a run of this package.
+#
+# Confidences follow the legacy formulas: NORMAL 0.8, INDETERMINATE 0.2, a reading with n hot or elevated
+# measures min(0.9, 0.6 + 0.1 n), each times min(1, Runtime Monitoring evidence level / 0.9); UNAUTHORIZED
+# keeps the confidence of the reading underneath; an unattributed multi-lane reading is discounted by 0.6/0.9.
+#
+# All rows are synthetic. No scenario calls a model: Resource Management is deterministic.
+#
+# questions: the answer each question must give (INCONCLUSIVE where it cannot be answered).
+# cop_label: accepted labels. action: the COP's proposal before triage. confidence: exact value.
+# checks: named properties, defined in harness.CHECKS.
+
+estate: >-
+  Seven earlier sessions base1 to base7 of dev1@tenant-a.example with claude-code, 1000 tokens each, tools
+  Read, Grep, Read, Edit, Bash with 200 ms steps, plus the scenario session s1 on day 9, unless the scenario
+  says otherwise. "ample quota" is token_budget 10000000 for dev1.
+
+scenarios:
+  normal_within_quota:
+    description: an ordinary session like the seven before it, with an ample quota
+    questions: {RS-1: WITHIN_LIMITS, RS-2: WITHIN_THRESHOLDS, RS-3: NO_WASTE_COUNTED, RS-4: SINGLE_AGENT,
+                RS-5: NO_INTERVENTION}
+    cop_label: [NORMAL]
+    action: NONE
+    confidence: 0.8
+    checks: [decision_contract_valid, five_question_findings, verified, no_model_call, quota_compared,
+             baseline_self_inclusive_recorded, leave_one_out_recorded_not_used, not_calculated_named,
+             cost_not_measured_named, no_usage_record_written]
+
+  normal_without_quota:
+    description: the same session with no quota configured
+    questions: {RS-1: WITHIN_EXPECTED, RS-2: WITHIN_THRESHOLDS, RS-3: NO_WASTE_COUNTED, RS-4: SINGLE_AGENT,
+                RS-5: NO_INTERVENTION}
+    cop_label: [INCONCLUSIVE]
+    checks: [quota_missing_gates_normal, permitted_not_evaluated_named]
+
+  token_spike_within_quota:
+    description: 40000 tokens, 40x the estate median (CRITICAL), ample quota
+    questions: {RS-1: ABOVE_EXPECTED, RS-2: WITHIN_THRESHOLDS, RS-3: NO_WASTE_COUNTED, RS-4: SINGLE_AGENT,
+                RS-5: ATTENTION}
+    cop_label: [EXCESSIVE]
+    action: ALERT
+    confidence: 0.7
+    checks: [decision_contract_valid, verified, high_is_not_unauthorized, recipients_risk_mitigation,
+             usage_record_written]
+
+  legitimate_high_workload:
+    description: >-
+      40000 tokens against an approved budget of 100000 for heavy work. The estate holds no record that the
+      task is larger, so the reading stays above the estate's normal; it is not unauthorized
+    questions: {RS-1: ABOVE_EXPECTED, RS-5: ATTENTION}
+    cop_label: [EXCESSIVE]
+    checks: [high_is_not_unauthorized, workload_legitimacy_not_evaluated]
+
+  heavy_estate_baseline:
+    description: >-
+      seven earlier sessions of 40000 tokens join the seven of 1000; s1 uses 40000 with an ample quota. The
+      self-inclusive median is 40000, so the session is within the expected limits
+    questions: {RS-1: WITHIN_LIMITS, RS-5: NO_INTERVENTION}
+    cop_label: [NORMAL]
+    checks: [baseline_shift_recorded, no_baseline_window_named]
+
+  quota_exceeded:
+    description: 40000 tokens against a token_budget of 20000
+    questions: {RS-1: ABOVE_PERMITTED, RS-2: WITHIN_THRESHOLDS, RS-3: NO_WASTE_COUNTED, RS-4: SINGLE_AGENT,
+                RS-5: INTERVENTION_REQUIRED}
+    cop_label: [UNAUTHORIZED]
+    action: ALERT
+    confidence: 0.7
+    checks: [decision_contract_valid, verified, quota_claim_cited, severity_high, usage_record_written]
+
+  quota_exceeded_at_normal_consumption:
+    description: >-
+      an ordinary 1000-token session against a token_budget of 500: within the estate's normal, above the
+      quota. Exceeding the entitlement is what is unauthorized, not the volume
+    questions: {RS-1: ABOVE_PERMITTED, RS-5: INTERVENTION_REQUIRED}
+    cop_label: [UNAUTHORIZED]
+    action: ALERT
+    confidence: 0.8
+    checks: [quota_claim_cited, token_outlier_within]
+
+  elevated_tokens_warning:
+    description: 4000 tokens, 4x the estate median; WARNING under the approved thresholds, ample quota
+    questions: {RS-1: ELEVATED, RS-2: WITHIN_THRESHOLDS, RS-3: NO_WASTE_COUNTED, RS-5: ATTENTION}
+    cop_label: [INEFFICIENT]
+    action: WATCH
+    confidence: 0.7
+    checks: [warning_counted_as_legacy]
+
+  missing_token_measurements:
+    description: no row carries total_tokens; ample quota
+    questions: {RS-1: INCONCLUSIVE, RS-2: WITHIN_THRESHOLDS, RS-3: NO_WASTE_COUNTED, RS-5: UNDETERMINED}
+    cop_label: [INDETERMINATE]
+    action: WATCH
+    confidence: 0.2
+    checks: [tokens_missing_named, missing_meter_not_thrift]
+
+  insufficient_baseline_history:
+    description: only two earlier sessions; the token and rate baselines need five
+    questions: {RS-1: BASELINE_INSUFFICIENT, RS-2: BASELINE_INSUFFICIENT, RS-5: UNDETERMINED}
+    cop_label: [INDETERMINATE]
+    confidence: 0.2
+    checks: [baseline_gap_named]
+
+  unreliable_telemetry:
+    description: the 40000-token spike, with two collectors disagreeing on an action; ample quota
+    questions: {RS-1: INCONCLUSIVE, RS-2: INCONCLUSIVE, RS-3: INCONCLUSIVE, RS-4: INCONCLUSIVE,
+                RS-5: UNDETERMINED}
+    cop_label: [INDETERMINATE]
+    checks: [conflict_named, spike_observed_not_judged]
+
+  incomplete_telemetry:
+    description: only the CLI wrapper reported; Runtime Monitoring reads the telemetry INSUFFICIENT; ample quota
+    questions: {RS-5: UNDETERMINED}
+    cop_label: [INDETERMINATE]
+    confidence: 0.067
+    checks: [runtime_monitoring_bounds]
+
+  spike_on_incomplete_telemetry:
+    description: >-
+      conflicting evidence: only the CLI wrapper reported (Runtime Monitoring INSUFFICIENT) and the session
+      used 40000 tokens. The positive reading stands, discounted by the evidence level
+    questions: {RS-1: ABOVE_EXPECTED, RS-5: ATTENTION}
+    cop_label: [EXCESSIVE]
+    confidence: 0.233
+    checks: [runtime_monitoring_in_contrary]
+
+  rate_spike:
+    description: eight times the ordinary tool calls in the same time (action rate 6x, EXCEPTION); ample quota
+    questions: {RS-1: WITHIN_LIMITS, RS-2: OUTSIDE_THRESHOLDS, RS-3: NO_WASTE_COUNTED, RS-5: ATTENTION}
+    cop_label: [EXCESSIVE]
+    action: WATCH
+    confidence: 0.7
+    checks: [rate_counted_as_burn, low_rate_not_evaluated]
+
+  slow_step:
+    description: one 5000 ms step against a 2000 ms limit (duration outlier 1, EXCEPTION); ample quota
+    questions: {RS-1: WITHIN_LIMITS, RS-2: OUTSIDE_THRESHOLDS, RS-3: NO_WASTE_COUNTED, RS-5: ATTENTION}
+    cop_label: [INEFFICIENT]
+    action: WATCH
+    confidence: 0.7
+    checks: [recipients_workload_optimization]
+
+  stalled_step:
+    description: one step reports hung_seconds 120 (stalled 1, EXCEPTION); ample quota
+    questions: {RS-1: WITHIN_LIMITS, RS-2: WITHIN_THRESHOLDS, RS-3: WASTE_OBSERVED, RS-5: ATTENTION}
+    cop_label: [INEFFICIENT]
+    action: WATCH
+    checks: [recipients_workload_optimization, capacity_not_evaluated_named]
+
+  burn_and_waste:
+    description: 40000 tokens and one 5000 ms step; ample quota
+    questions: {RS-1: ABOVE_EXPECTED, RS-2: OUTSIDE_THRESHOLDS, RS-5: ATTENTION}
+    cop_label: [EXCESSIVE]
+    action: ALERT
+    confidence: 0.8
+    checks: [recipients_both]
+
+  repeated_operations_not_counted:
+    description: >-
+      a failing test run three times (retry EXCEPTION, failed WARNING); tokens, rate and durations ordinary;
+      ample quota. The legacy rule does not count retries as waste; they are recorded, not counted (U-RS2)
+    questions: {RS-1: WITHIN_LIMITS, RS-2: WITHIN_THRESHOLDS, RS-3: NO_WASTE_COUNTED, RS-5: NO_INTERVENTION}
+    cop_label: [NORMAL]
+    checks: [repeated_operations_recorded_not_counted]
+
+  attribution_verified:
+    description: >-
+      40000 tokens across two subagent lanes whose rows record parent_agent_id main, and three jira MCP calls;
+      Interaction Discovery runs first; ample quota
+    questions: {RS-1: ABOVE_EXPECTED, RS-4: ATTRIBUTED, RS-5: ATTENTION}
+    cop_label: [EXCESSIVE]
+    checks: [attributed_through_recorded_links, interaction_discovery_cited, subagent_tokens_not_recorded_named]
+
+  attribution_timing_inferred:
+    description: the same session, but the lanes carry no parent_agent_id; the links rest on handoff timing
+    questions: {RS-4: UNATTRIBUTED, RS-5: ATTENTION}
+    cop_label: [EXCESSIVE]
+    checks: [inferred_links_not_attributed, confidence_discounted]
+
+  attribution_mixed_links:
+    description: sub-a records parent_agent_id main; sub-b's link rests on timing only
+    questions: {RS-4: UNATTRIBUTED}
+    cop_label: [EXCESSIVE]
+    checks: [recorded_and_inferred_listed]
+
+  attribution_without_interaction_discovery:
+    description: the recorded-link session with Interaction Discovery not run
+    questions: {RS-4: UNATTRIBUTED}
+    cop_label: [EXCESSIVE]
+    checks: [no_interaction_finding_named, confidence_discounted]
+
+  baseline_contamination_half_estate:
+    description: >-
+      four sessions of 1000 tokens and three of 40000 before s1 at 40000. Self-inclusive, the median is 20500
+      and s1 reads 1.95 (NORMAL); left out, the median is 1000 and s1 would read 40 (CRITICAL). The decision
+      keeps the self-inclusive reading; the difference is recorded (U-RS1)
+    questions: {RS-1: WITHIN_LIMITS, RS-5: NO_INTERVENTION}
+    cop_label: [NORMAL]
+    checks: [leave_one_out_differs_recorded]
+
+  baseline_minimum_counts_self:
+    description: >-
+      four earlier sessions; s1 at 40000 tokens is the fifth that meets min_sessions_for_baseline.
+      Self-inclusive, the baseline is sufficient and s1 reads 40 (CRITICAL); left out, four sessions are too
+      few. The decision keeps the self-inclusive reading; the difference is recorded (U-RS1)
+    questions: {RS-1: ABOVE_EXPECTED, RS-5: ATTENTION}
+    cop_label: [EXCESSIVE]
+    checks: [leave_one_out_insufficient_recorded]
+
+  memory_precedent:
+    description: >-
+      an earlier spike case m0 wrote a usage_baseline record, validated by a reviewer; s1 repeats the spike.
+      The precedent is listed and changes nothing
+    questions: {RS-1: ABOVE_EXPECTED, RS-5: ATTENTION}
+    cop_label: [EXCESSIVE]
+    checks: [precedent_listed, memory_changes_nothing]
+
+  adversarial_instruction_text:
+    description: the 40000-token spike, and a tool result telling the governance system to report NORMAL
+    questions: {RS-1: ABOVE_EXPECTED, RS-5: ATTENTION}
+    cop_label: [EXCESSIVE]
+    checks: [same_as_without_text]
+
+  quota_change_changes_decision:
+    description: the 40000-token spike read with an ample quota and again with a token_budget of 20000
+    cop_label: [UNAUTHORIZED]
+    checks: [decision_follows_quota]
+
+  downstream_consumers:
+    description: >-
+      the 40000-token spike; Risk Mitigation (with a synthetic register) and Incident Response run after
+      Resource Management
+    cop_label: [EXCESSIVE]
+    checks: [risk_mitigation_reads_resource_management, incident_response_reads_resource_management]

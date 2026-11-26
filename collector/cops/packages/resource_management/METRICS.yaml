@@ -1,0 +1,241 @@
+# Resource Management: machine-readable question contract.
+# Loaded by collector/cops/runtime/cop_package.py and validated by
+# tests/test_cop_package_resource_management.py. The Markdown files beside it
+# explain this file; where they differ, this file is what the runtime uses.
+
+cop: resource_management
+contract: cop_metrics/1
+version: 2026-11-26.1
+
+sources:
+  questions: >-
+    RS-1 to RS-5: COPS- implementation 1.xlsx, sheet COMPLETE_DELEGATION_DATA, rows 146, 148, 150, 152, 154
+    (behavioural question row 146, column 1: "Is the agent consuming resources within its authorized and
+    operational limits?"); metric list row 156; partial-input rule row 14; external data column per question.
+    The prefix is RS, because RM is Runtime Monitoring's.
+  metric_mapping: >-
+    COPS_METRIC_MAPPING.md, sha256 5bd3c16f1ba26b297644259faaedfe75c1f219980e5c046a9bb56308c38e951e
+    (collector/metric_registry.json, consumers = resource_management). No code-only pair.
+  rule: >-
+    cops/interpret.py RuleInterpreter.resource_management (BURN = insights.token_outlier,
+    activity.action_rate_ratio; WASTE = insights.duration_outlier, insights.stalled; EXCEPTION and CRITICAL
+    hot, WARNING soft) and cops/runtime/rules.py resource_management (UNAUTHORIZED when the session's tokens
+    exceed the quota's token_budget, tools.get_quota; attribution through Interaction Discovery). The legacy
+    4-COP runner keeps the interpret.py rule unchanged.
+  entitlement: >-
+    The quota record (case artifact quotas, read by tools.get_quota: token_budget for the agent scope or
+    "*"). It is the only entitlement source: not memory, not an upstream finding, not a metric state, and not
+    the estate baseline. High consumption against the estate is never read as unauthorized consumption.
+
+mapping:
+  insights.token_outlier: {used_by: [RS-1]}
+  token_consumption_per_session: {used_by: [RS-1]}
+  token_consumption_per_turn: {used_by: [RS-1]}
+  cost_per_session: {used_by: [RS-1]}
+  resource_consumption_rate: {used_by: [RS-1]}
+  token_budget_utilization:
+    used_by: [RS-1]
+    note: >-
+      NOT_CALCULATED. Registry category R, NOT_IMPLEMENTED. Missing input: the budgets_and_quotas reference
+      (scope, measure tokens, period, limit); location not chosen. The quota artifact tools.get_quota reads
+      carries a token_budget with no period, so no utilisation is calculated from it.
+  token_quota_exceeded:
+    used_by: [RS-1]
+    note: >-
+      NOT_CALCULATED. Registry category Q, NOT_IMPLEMENTED: open question in the registry ("no quota is
+      stored; only possible as rate-limit errors in error_type/stop_reason; is that what you mean?").
+      Missing input: purvi's answer. RS-1 compares tokens with the quota's token_budget as the existing rule
+      does; that comparison is not this metric.
+  cost_budget_utilization:
+    used_by: [RS-1]
+    note: >-
+      NOT_CALCULATED. Registry category R, NOT_IMPLEMENTED. Missing input: the budgets_and_quotas reference
+      (measure cost_usd, period, limit); location not chosen.
+  insights.duration_outlier: {used_by: [RS-2]}
+  activity.action_rate_ratio: {used_by: [RS-2]}
+  execution_duration_per_session: {used_by: [RS-2]}
+  execution_duration_threshold_breach: {used_by: [RS-2]}
+  tool_timeout_rate: {used_by: [RS-2]}
+  insights.stalled: {used_by: [RS-3]}
+  insights.repetition: {used_by: [RS-3]}
+  insights.retry: {used_by: [RS-3]}
+  insights.failed: {used_by: [RS-3]}
+  resource_stall_rate: {used_by: [RS-3]}
+  resource_redundant_execution_cost: {used_by: [RS-3]}
+  resource_concurrency_level: {used_by: [RS-3]}
+  resource_capacity_utilization:
+    used_by: [RS-3]
+    note: >-
+      NOT_CALCULATED. Registry category C, NOT_IMPLEMENTED: CPU, memory and capacity are not captured by any
+      collector. Missing input: a collector for system capacity, concurrency limits and queue lengths
+      (workbook RS-3 external data). Whether waste creates a capacity problem is therefore not evaluated.
+  interaction.subagent_lanes: {used_by: [RS-4]}
+  interaction.mcp_servers: {used_by: [RS-4]}
+  subagent_resource_consumption: {used_by: [RS-4]}
+  model_selection_compliance:
+    used_by: [RS-4]
+    note: >-
+      NOT_CALCULATED. Registry category R, NOT_IMPLEMENTED. Missing input: the allowlists reference, kind
+      model (approved model registry); location not chosen.
+  resource_quota_compliance:
+    used_by: [RS-4]
+    note: >-
+      NOT_CALCULATED. Registry category R, NOT_IMPLEMENTED. Missing input: the budgets_and_quotas reference
+      per agent (scope agent, measure, period, limit); location not chosen.
+  telemetry.collector_coverage: {used_by: [RS-5]}
+  telemetry.unknown_share: {used_by: [RS-5]}
+  resource_limit_proximity:
+    used_by: [RS-5]
+    note: >-
+      NOT_CALCULATED. Registry category R, NOT_IMPLEMENTED. Missing input: the budgets_and_quotas reference
+      (limit) and an approved approach threshold. Approaching a limit is therefore not evaluated; only
+      exceeding the quota's token_budget is.
+  resource_threshold_breach_count:
+    used_by: [RS-5]
+    note: >-
+      NOT_CALCULATED. Registry category Q, NOT_IMPLEMENTED: open question in the registry ("which thresholds:
+      count of ResM metric_events in EXCEPTION or CRITICAL?"). Missing input: purvi's answer.
+  resource_intervention_required:
+    note: >-
+      Not a calculated metric. Registry category O: Resource Management's own decision. It is RS-5's answer,
+      which no question reads as an input.
+
+questions:
+  RS-1:
+    question: Is the agent's token consumption within expected and permitted limits?
+    fields: [observable_id, observable_type, session_id, turn_id, agent_id, agent_type, model, model_id,
+             input_tokens, output_tokens, total_tokens, cache_read_tokens, cache_write_tokens, cost_usd,
+             cost_is_estimated, turn_count, tool_name, status, raw_ref]
+    external: >-
+      Token budgets, cost limits, model-specific pricing, historical usage baselines and enterprise resource
+      quotas.
+    requires:
+      - {metric: insights.token_outlier, kind: REQUIRED}
+      - {metric: token_consumption_per_session, kind: OPTIONAL}
+      - {metric: token_consumption_per_turn, kind: OPTIONAL}
+      - {metric: cost_per_session, kind: OPTIONAL}
+      - {metric: resource_consumption_rate, kind: OPTIONAL}
+      - {metric: token_budget_utilization, kind: OPTIONAL}
+      - {metric: token_quota_exceeded, kind: OPTIONAL}
+      - {metric: cost_budget_utilization, kind: OPTIONAL}
+    verified: []
+    blocking: [CONFLICTING_SOURCES]
+    outcomes: [WITHIN_LIMITS, WITHIN_EXPECTED, ELEVATED, ABOVE_EXPECTED, ABOVE_PERMITTED, BASELINE_INSUFFICIENT]
+
+  RS-2:
+    question: Are its execution duration and action rate within acceptable operational thresholds?
+    fields: [observable_id, observable_type, session_id, turn_id, agent_id, agent_type, model, tool_use_id,
+             tool_name, tool_duration_ms, tool_timeout_ms, latency_ms, request_latency_ms, time_to_first_token,
+             hung_seconds, turn_count, loop_count, batch_size, status, success, raw_ref]
+    external: >-
+      Event timestamps, execution start/end times, acceptable latency thresholds and historical action-rate
+      baselines.
+    requires:
+      - {metric: insights.duration_outlier, kind: REQUIRED}
+      - {metric: activity.action_rate_ratio, kind: REQUIRED}
+      - {metric: execution_duration_per_session, kind: OPTIONAL}
+      - {metric: execution_duration_threshold_breach, kind: OPTIONAL}
+      - {metric: tool_timeout_rate, kind: OPTIONAL}
+    verified: []
+    blocking: [CONFLICTING_ACTION_SOURCES]
+    outcomes: [WITHIN_THRESHOLDS, ELEVATED, OUTSIDE_THRESHOLDS, BASELINE_INSUFFICIENT]
+
+  RS-3:
+    question: Are stalls, repeated operations or excessive resource consumption creating capacity problems?
+    fields: [observable_id, observable_type, session_id, turn_id, agent_id, tool_use_id, tool_name,
+             tool_arguments, tool_result, tool_duration_ms, tool_timeout_ms, tool_interrupted, hung_seconds,
+             latency_ms, request_latency_ms, input_tokens, output_tokens, total_tokens, cost_usd, loop_count,
+             turn_count, batch_size, success, status, error_type, error_message, background_tasks,
+             scheduled_jobs, raw_ref]
+    external: >-
+      System capacity, concurrency limits, queue lengths, resource utilization, available compute and
+      operational thresholds.
+    requires:
+      - {metric: insights.stalled, kind: REQUIRED}
+      - {metric: insights.repetition, kind: OPTIONAL}
+      - {metric: insights.retry, kind: OPTIONAL}
+      - {metric: insights.failed, kind: OPTIONAL}
+      - {metric: resource_stall_rate, kind: OPTIONAL}
+      - {metric: resource_redundant_execution_cost, kind: OPTIONAL}
+      - {metric: resource_concurrency_level, kind: OPTIONAL}
+      - {metric: resource_capacity_utilization, kind: OPTIONAL}
+    verified: []
+    blocking: [CONFLICTING_ACTION_SOURCES]
+    outcomes: [NO_WASTE_COUNTED, ELEVATED, WASTE_OBSERVED]
+
+  RS-4:
+    question: >-
+      Are model selection, subagent activity and resource usage consistent with the agent's allocated
+      permissions and quotas?
+    fields: [observable_id, observable_type, session_id, agent_id, agent_type, parent_agent_id, is_multi_agent,
+             multi_agent_source, delegation_depth, org_id, team_id, operator_id, model, model_id, permission_mode,
+             permission_decision, permission_source, permission_scope, permission_options, policy_rule_matched,
+             tool_name, tool_category, tool_is_builtin, input_tokens, output_tokens, total_tokens, cost_usd,
+             cost_is_estimated, tool_duration_ms, mcp_server, mcp_tool, raw_ref]
+    external: >-
+      Approved model registry, per-agent quotas, organizational budgets, permission entitlements and model-use
+      policies.
+    requires:
+      - {metric: interaction.subagent_lanes, kind: REQUIRED}
+      - {metric: interaction.mcp_servers, kind: REQUIRED}
+      - {metric: subagent_resource_consumption, kind: OPTIONAL}
+      - {metric: model_selection_compliance, kind: OPTIONAL}
+      - {metric: resource_quota_compliance, kind: OPTIONAL}
+    verified: []
+    blocking: [CONFLICTING_ACTION_SOURCES]
+    outcomes: [SINGLE_AGENT, ATTRIBUTED, UNATTRIBUTED]
+
+  RS-5:
+    question: Is resource consumption approaching or exceeding a limit that requires intervention?
+    fields: [observable_id, observable_type, session_id, turn_id, agent_id, org_id, team_id, operator_id, model,
+             model_id, input_tokens, output_tokens, total_tokens, cost_usd, cost_is_estimated, tool_duration_ms,
+             latency_ms, request_latency_ms, hung_seconds, turn_count, loop_count, batch_size, background_tasks,
+             scheduled_jobs, permission_scope, permission_decision, escalation_flag, status, success, raw_ref]
+    external: >-
+      Resource limits, quota consumption across sessions, alert thresholds, intervention policies and
+      authorization requirements.
+    requires:
+      - {metric: telemetry.collector_coverage, kind: OPTIONAL}
+      - {metric: telemetry.unknown_share, kind: OPTIONAL}
+      - {metric: resource_limit_proximity, kind: OPTIONAL}
+      - {metric: resource_threshold_breach_count, kind: OPTIONAL}
+    verified: []
+    blocking: []
+    depends_on: [RS-1, RS-2, RS-3, RS-4]
+    outcomes: [NO_INTERVENTION, ATTENTION, INTERVENTION_REQUIRED, UNDETERMINED]
+
+# RS-5's answer gives the label. ATTENTION is EXCESSIVE when a burn measure (insights.token_outlier,
+# activity.action_rate_ratio) is in a deviation state and INEFFICIENT otherwise, as cops/interpret.py reads
+# BURN over WASTE. NO_INTERVENTION's NORMAL is withheld by requirements.py when no quota is configured.
+labels:
+  NO_INTERVENTION: NORMAL
+  ATTENTION: [EXCESSIVE, INEFFICIENT]
+  INTERVENTION_REQUIRED: UNAUTHORIZED
+  UNDETERMINED: INDETERMINATE
+  INCONCLUSIVE: INCONCLUSIVE
+
+# The legacy rule's measure classes. Only these four are counted toward the label (the metric_keys of
+# cops/specs.py); the other assigned metrics are observed and reported.
+burn: [insights.token_outlier, activity.action_rate_ratio]
+waste: [insights.duration_outlier, insights.stalled]
+
+# Metric states that count as a deviation (hot) and as elevated (soft): the states cops/interpret.py's
+# resource_management rule used. The thresholds are metrics_config.json's.
+deviation_states: [EXCEPTION, CRITICAL]
+elevated_states: [WARNING]
+
+operations:
+  compute_metrics: {by: deterministic, code: collector/signal_metrics.py:compute}
+  compute_baselines: {by: deterministic, code: collector/signal_metrics.py:estate}
+  compare_leave_one_out: {by: deterministic, code: collector/cops/runtime/cop_package.py:rs_baseline_comparison}
+  read_quota: {by: deterministic, code: collector/cops/runtime/tools.py:t_get_quota}
+  compute_consumption: {by: deterministic, code: collector/cops/runtime/tools.py:t_compute_consumption}
+  assess_evidence: {by: deterministic, code: collector/cops/runtime/evidence_assessment.py:assess}
+  observe_questions: {by: deterministic, code: collector/cops/runtime/cop_package.py:observe_resource_management}
+  attribute_consumption: {by: deterministic, code: collector/cops/runtime/cop_package.py:_rs4}
+  decide_label: {by: deterministic, code: collector/cops/runtime/cop_package.py:decide_resource_management}
+  gate_quiet_label: {by: deterministic, code: collector/cops/runtime/requirements.py}
+  verify_finding: {by: deterministic, code: collector/cops/runtime/verifiers.py}
+  select_action: {by: deterministic, code: collector/cops/runtime/triage.py}
+  memory_write: {by: deterministic, code: collector/cops/runtime/graph.py:validate_memory_update}
+  decision_record: {by: deterministic, code: collector/cops/runtime/decision.py:build}
