@@ -26,6 +26,18 @@ SPIKE = E._estate(E.spike_session("eps", 9))     # Anomaly Detection consults th
 QUIET = {k: s.interpretations[0] for k, s in BY_KEY.items()}
 
 
+
+@pytest.fixture
+def ir_model_path(monkeypatch):
+    """COP 9 (2026-11-27): Incident Response's package decides most readings without a model and never lets a model
+    propose PAUSE, BLOCK or INSTRUCT (packages/incident_response/DECISIONS.md D-IR11, D-IR12). The tests using this
+    fixture exercise the shared authority, provider and recovery machinery through Incident Response's model path,
+    so the package's decision and read-back are switched off for them: the runtime path they were written for.
+    The package's own behaviour is tested in test_cop_package_incident_response.py."""
+    from cops.runtime import graph as _G, rules as _R
+    monkeypatch.setattr(_R, "_ir_questions", lambda ctx, f: None)
+    monkeypatch.delitem(_G.INTERPRETED, "incident_response")
+
 def rt(rows, sid, art=None, script=None, provider=None, **kw):
     return E.make_runtime(f"ep-{sid}-{abs(hash(str(art)))}", sid, rows, art or {}, script,
                           provider=provider, **kw)
@@ -410,7 +422,7 @@ def test_ds01_refuses_an_attention_label_from_not_applicable_rows_only():
     assert r["result"] == "FAIL" and "NOT_APPLICABLE rows only" in r["detail"]
 
 
-def test_an_intervention_with_no_policy_basis_is_blocked_before_approval():
+def test_an_intervention_with_no_policy_basis_is_blocked_before_approval(ir_model_path):
     """Supervised and live, Incident Response proposes BLOCK with no policy store:
     PE-01 fails and the action is NOT_EXECUTED_BLOCKED without asking anyone."""
     rows = E._estate(E.sensitive_session("pb", 9))
@@ -435,7 +447,7 @@ def test_an_intervention_with_no_policy_basis_is_blocked_before_approval():
     assert not out.get("interrupted") and r.enforcement.applied == []
 
 
-def test_pe01_still_blocks_a_supported_intervention_with_no_policy_basis(monkeypatch):
+def test_pe01_still_blocks_a_supported_intervention_with_no_policy_basis(monkeypatch, ir_model_path):
     """Isolates PE-01 from the graded layer: the support decision is forced to
     SUPPORTED, so BLOCK reaches authority_check, where PE-01 must still stop it."""
     from cops.runtime import graph as G

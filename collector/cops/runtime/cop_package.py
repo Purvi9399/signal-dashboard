@@ -3886,3 +3886,644 @@ def decide_risk_mitigation(questions, evidence_scale=1.0):
                                       if str(x.get("requirement", "")).startswith("risk_register")), None)
             if two == INCONCLUSIVE else None,
             "previous_reading": b2.get("previous_reading"), "decision": label}
+
+
+# ---------------------------------------------------------------- Incident Response
+
+IR = "incident_response"
+IR_QUESTIONS = ("IR-1", "IR-2", "IR-3", "IR-4", "IR-5")
+IR_REASON = {INCONCLUSIVE: "whether an incident exists could not be established: see the question answers"}
+IR_AUTHORITY = ("Incident Response watches, alerts, requests approval and escalates; it never pauses, blocks or "
+                "instructs an agent itself: a block is requested from a person and executes only after approval "
+                "(agents-harness row 10: direct intervention only with authority)")
+IR_NO_INVENTORY = ("no enterprise asset inventory: the potential impact is not scored (incident_impact_score "
+                   "NOT_CALCULATED); the recorded sensitivity tiers of the rows involved are listed instead")
+IR_NO_RESOLUTION = ("no resolution or containment records exist (incident_resolution_status, "
+                    "incident_containment_status NOT_CALCULATED): RESOLVED is never answered")
+# ground kinds -> what they are (DECISIONS.md D-IR2, D-IR3)
+IR_INCIDENT_KINDS = ("exposure", "violation", "failed_recovery")
+IR_FINDING_KINDS = ("anomaly", "deny_rule_fired", "pending_authorization", "partial_recovery")
+IR_EXPOSURE_METRICS = ("insights.secrets", "insights.sensitive_unasked")
+IR_QUIET_CLASSES = ("QUIET", "EVIDENCE_QUALITY")
+IR_CATEGORY = {"OBSERVED_ABNORMAL": "observed abnormal behaviour: unusual is not wrong",
+               "VERIFIED_FINDING": "a verified governance finding that is not an incident",
+               "INCIDENT_ATTENTION": "an incident requiring attention",
+               "INCIDENT_INTERVENTION": "an incident requiring intervention, which a person authorises",
+               "INCIDENT_UNCONFIRMED": "an intervention incident the model did not confirm: a person decides",
+               "INSUFFICIENT_EVIDENCE": "insufficient evidence to establish or rule out an incident",
+               "NONE": "no incident and no finding"}
+
+
+def _ir_pkg():
+    return EA.load_package(IR)
+
+
+def _ir_kind(cop, label, pkg):
+    """(class, ground kind or None) of a consumed COP's label (METRICS.yaml upstream)."""
+    spec = pkg["upstream"][cop]
+    if spec.get("evidence_quality"):
+        return "EVIDENCE_QUALITY", None
+    if spec.get("context_only"):
+        return "CONTEXT", None
+    if label in spec.get("incident", []):
+        return "INCIDENT", "violation" if cop == "policy_enforcement" else "failed_recovery"
+    if label in spec.get("finding", []):
+        return "FINDING", "pending_authorization" if cop == "policy_enforcement" else "partial_recovery"
+    if label in spec.get("abnormal", []):
+        return "ABNORMAL", "anomaly"
+    if label in spec.get("context", []):
+        return "CONTEXT", None
+    if label in spec.get("quiet", []):
+        return "QUIET", None
+    return "UNDETERMINED", None
+
+
+def _ir_upstream(upstream, pkg):
+    """Each consumed COP's finding (specs.CONSUMES): present, verified, class (EVIDENCE_QUALITY, INCIDENT, FINDING,
+    ABNORMAL, CONTEXT, QUIET, UNDETERMINED, NOT_VERIFIED, ABSENT), its proposed action and its source items. Only a
+    verified substantive INCIDENT, FINDING or ABNORMAL reading can be a ground."""
+    from ..specs import CONSUMES
+    out = {}
+    for k in CONSUMES[IR]:
+        f = (upstream or {}).get(k)
+        if f is None:
+            out[k] = {"present": False, "class": "ABSENT", "why": "no finding in this case"}
+            continue
+        ok = bool(f.get("verified")) and f.get("status") == "SUBSTANTIVE"
+        cls, kind = _ir_kind(k, f.get("label"), pkg)
+        row = {"present": True, "label": f.get("label"), "finding_id": f.get("finding_id"),
+               "verified": bool(f.get("verified")), "status": f.get("status"),
+               "confidence": f.get("confidence"),
+               # the producer's own proposal (published proposed_action.requested_action) and the action its
+               # authority check let through (proposed_action.action: in dry-run a BLOCK is recorded as ALERT)
+               "action": (f.get("proposed_action") or {}).get("requested_action")
+               or (f.get("proposed_action") or {}).get("action"),
+               "final_action": (f.get("proposed_action") or {}).get("action"),
+               "lineage": sorted(f.get("lineage") or []),
+               "sources": sorted(rk_source_items(f, upstream)) if ok and kind else []}
+        if not ok:
+            row.update({"class": "NOT_VERIFIED", "grade": cls if kind else None,
+                        "why": "not a verified substantive finding; it grounds nothing"})
+        else:
+            row.update({"class": cls, "kind": kind, "why": {
+                "EVIDENCE_QUALITY": "evidence quality, never a ground",
+                "CONTEXT": "context: listed with its entities, never a ground (D-IR2, D-IR16)",
+                "QUIET": f"{f.get('label')} is a quiet reading",
+                "UNDETERMINED": f"{f.get('label')}: the producer could not decide; a limitation"}.get(cls, "")})
+        out[k] = row
+    return out
+
+
+def _ir_grounds(view, exposure, blocked, disputed):
+    """The grounds, in order: this COP's exposure, the deny rule, then producers in topological order. Each carries
+    its source items; a ground whose items are all carried by grounds taken earlier is correlated (D-IR6)."""
+    from ..specs import BY_KEY as _BY, topological_order
+    seen = {f"metric:{m}" for m in _BY[IR].metric_keys}
+    grounds = []
+    exp_refs = sorted({r for m in exposure if m["verdict"] == DEVIATES for r in m.get("evidence_refs") or []})
+    undisputed = [r for r in exp_refs if r not in disputed]
+    if undisputed:
+        grounds.append({"kind": "exposure", "source": "own", "metrics": [f"{m['metric']}@{m['state']}" for m in exposure
+                                                                        if m["verdict"] == DEVIATES],
+                        "sources": undisputed, "independent": True, "verified": True,
+                        "why": "secret-shaped content or a sensitive path without approval was handled"})
+        seen |= set(undisputed)
+    if blocked and blocked["verdict"] == DEVIATES:
+        refs = sorted(blocked.get("evidence_refs") or [])
+        grounds.append({"kind": "deny_rule_fired", "source": "own", "metrics": [f"insights.blocked@{blocked['state']}"],
+                        "sources": refs, "independent": bool(set(refs) - seen), "verified": True,
+                        "why": "a deny rule stopped an operation: the control worked"})
+        seen |= set(refs)
+    for k in [x for x in topological_order() if x in view and view[x].get("kind")]:
+        v = view[k]
+        src = set(v["sources"])
+        ind = bool(src - seen)
+        grounds.append({"kind": v["kind"], "source": k, "label": v["label"], "finding_id": v["finding_id"],
+                        "action": v["action"], "sources": sorted(src), "independent": ind, "verified": True,
+                        "why": v["why"] or f"verified {k} {v['label']}",
+                        **({} if ind else {"correlated": "rests only on source evidence already carried by an "
+                                                         "earlier ground: the same evidence, one ground"})})
+        seen |= src
+    return grounds, exp_refs, undisputed
+
+
+def _ir_confidence(upstream):
+    """The legacy rule's confidence: the lowest confidence of the verified Runtime Monitoring, Anomaly Detection,
+    Policy Enforcement and Interaction Discovery findings used, else 0.8 x the evidence level."""
+    from ..interpret import EVIDENCE_LEVEL
+    up = {k: f for k, f in (upstream or {}).items() if f and f.get("verified") and f.get("status") == "SUBSTANTIVE"}
+    rm = up.get("runtime_monitoring")
+    evid = EVIDENCE_LEVEL.get(rm["label"], 0.9) if rm else 0.9
+    used = [up[k]["confidence"] for k in ("runtime_monitoring", "anomaly_detection", "policy_enforcement",
+                                          "interaction_discovery") if k in up and up[k].get("confidence")]
+    return round(min(used or [0.8 * min(1.0, evid / 0.9)]), 3)
+
+
+def _ir1(a, s, states, pkg, view, exposure):
+    from ..specs import BY_KEY as _BY
+    req = _ct_measures(a, _BY[IR].metric_keys, states)
+    by = {m["metric"]: m for m in req}
+    exp = [by[m] for m in IR_EXPOSURE_METRICS]
+    other = _ct_measures(a, [m for m in _rk_built(pkg, "IR-1") if m not in _BY[IR].metric_keys], states)
+    disputed = _ct_disputed(s)
+    grounds, exp_refs, undisputed = _ir_grounds(view, exp, by["insights.blocked"], disputed)
+    cls = lambda c: [{"cop": k, "label": v["label"], "finding_id": v.get("finding_id"), "why": v["why"]}
+                     for k, v in view.items() if v["class"] == c]
+    basis = {"measures": req + other, "observed": [f"{m['metric']}@{m['state']}" for m in req if m["verdict"] == DEVIATES],
+             "exposure_refs": exp_refs, "exposure_disputed": sorted(set(exp_refs) - set(undisputed)),
+             "grounds": grounds, "incident_grounds": [g["kind"] for g in grounds if g["kind"] in IR_INCIDENT_KINDS],
+             "finding_grounds": [g["kind"] for g in grounds if g["kind"] in IR_FINDING_KINDS],
+             "correlated": [g for g in grounds if not g["independent"]],
+             "context": cls("CONTEXT"), "quiet": cls("QUIET") + cls("EVIDENCE_QUALITY"),
+             "undetermined": cls("UNDETERMINED"),
+             "not_verified": [{"cop": k, "label": v["label"], "grade": v.get("grade")} for k, v in view.items()
+                              if v["class"] == "NOT_VERIFIED"],
+             "absent": [k for k, v in view.items() if v["class"] == "ABSENT"],
+             "evidence_quality": (view.get("runtime_monitoring") or {}).get("label")
+             if (view.get("runtime_monitoring") or {}).get("class") == "EVIDENCE_QUALITY" else None,
+             "outbound_after_secret": list((exposure or {}).get("outbound_after_secret") or []),
+             "not_calculated": _rk_not_built(pkg, "IR-1"), "upstream": view, "incidents": 1 if grounds else 0}
+    if basis["incident_grounds"]:
+        return "INCIDENT_INDICATED", basis
+    if basis["finding_grounds"]:
+        return "FINDING_WITHOUT_INCIDENT", basis
+    why = [{"code": EA.MISSING_DATA, "requirement": m["metric"], "check": None,
+            "detail": f"{m['metric']} {m.get('reason') or m['verdict']}: whether it grounds an incident is not "
+                      f"evaluated"} for m in req if m["verdict"] not in (WITHIN, DOES_NOT_APPLY)
+           and not (m["verdict"] == DEVIATES)]
+    if basis["exposure_disputed"]:
+        why.append({"code": EA.CONFLICTING_SOURCES, "requirement": "exposure", "check": None,
+                    "detail": "the exposure rests only on rows the collectors disagree on ("
+                              + ", ".join(basis["exposure_disputed"]) + "): directly disputed evidence does not "
+                              "establish an incident on its own"})
+    if not [k for k, v in view.items() if v["class"] not in ("ABSENT", "NOT_VERIFIED")]:
+        why.append({"code": EA.MISSING_DATA, "requirement": "upstream_findings", "check": None,
+                    "detail": "no consumed COP (" + ", ".join(view) + ") has a verified finding: the absence of an "
+                              "incident is not shown"})
+    if basis["evidence_quality"] == "INSUFFICIENT":
+        why.append({"code": EA.MISSING_DATA, "requirement": "runtime_monitoring", "check": None,
+                    "detail": "Runtime Monitoring verified the telemetry INSUFFICIENT: the absence of findings is not "
+                              "the absence of an incident"})
+    for x in basis["not_verified"]:
+        if x["grade"]:
+            why.append({"code": EA.MISSING_DATA, "requirement": x["cop"], "check": None,
+                        "detail": f"{x['cop']} reads {x['label']}, not verified: an incident-relevant reading that "
+                                  f"can neither ground nor be ruled out"})
+    if why:
+        basis["interpretation_reasons"] = why
+        return INCONCLUSIVE, basis
+    return "NO_INCIDENT_INDICATED", basis
+
+
+def _ir_lane(r):
+    return r.get("agent_id") or "main"
+
+
+def _ir_ground(one, kind):
+    return [g for g in one["basis"]["grounds"] if g["kind"] == kind]
+
+
+def _ir_anomaly_independent(one):
+    """A verified anomaly independent of the exposure: some of its source items are not the exposure's (D-IR6)."""
+    exp = set(one["basis"]["exposure_refs"]) | {f"metric:{m}" for m in IR_EXPOSURE_METRICS}
+    return [g for g in _ir_ground(one, "anomaly") if set(g["sources"]) - exp]
+
+
+def _ir2(a, s, states, pkg, deps):
+    one = deps["IR-1"]
+    b1 = one["basis"]
+    ms = _ct_measures(a, _rk_built(pkg, "IR-2"), states)
+    refs = {r for g in b1["grounds"] for r in g["sources"] if str(r).startswith("observable:")}
+    rows = [r for r in (s.rows if s else []) if f"observable:{r.get('observable_id')}" in refs]
+    ents = [{"ref": f"observable:{r['observable_id']}", "kind": "event", "lane": _ir_lane(r),
+             **{k: r.get(k) for k in CT_ENTITY_FIELDS if EA.signal_metrics.has(r.get(k))}} for r in rows]
+    ents += [{"ref": g["finding_id"], "kind": "finding", "cop": g["source"], "label": g["label"],
+              "independent": g["independent"]} for g in b1["grounds"] if g["source"] != "own"]
+    proposed = sorted({x for g in b1["grounds"] for x in g["sources"] if str(x).startswith("proposed:")})
+    tiers = sorted({r.get("sensitivity_tier") for r in rows if r.get("sensitivity_tier") is not None})
+    basis = {"measures": ms, "deviating": [m["metric"] for m in ms if m["verdict"] == DEVIATES], "entities": ents,
+             "agents": sorted({e["lane"] for e in ents if e["kind"] == "event"}),
+             "resources": sorted({e.get("file_path") or e.get("mcp_server") or e.get("command")
+                                  for e in ents if e["kind"] == "event"} - {None}) + proposed,
+             "context_findings": b1["context"], "sensitivity_tiers": tiers, "impact": "NOT_CALCULATED",
+             "impact_note": IR_NO_INVENTORY, "incidents": b1["incidents"],
+             "not_calculated": _rk_not_built(pkg, "IR-2")}
+    if one["outcome"] == INCONCLUSIVE:
+        basis["interpretation_reasons"] = [{"code": EA.MISSING_DATA, "requirement": "IR-1", "check": None,
+                                            "detail": "IR-1 is not answered, so there is nothing established to "
+                                                      "rate"}]
+        return INCONCLUSIVE, basis
+    if one["outcome"] == "NO_INCIDENT_INDICATED":
+        return "NOTHING_TO_RATE", basis
+    inc, why = b1["incident_grounds"], []
+    if "violation" in inc:
+        why.append("a verified policy violation")
+    if "failed_recovery" in inc:
+        why.append("a failed or irreversible recovery")
+    ind = _ir_anomaly_independent(one)
+    if "exposure" in inc and ind:
+        why.append("an exposure with an independent verified anomaly")
+    if why:
+        basis["severity_basis"] = why
+        return "SEVERITY_HIGH", basis
+    alerting = [g for g in _ir_ground(one, "anomaly") if g.get("action") == "ALERT"]
+    if "exposure" in inc:
+        basis["severity_basis"] = ["an exposure" + (" (the anomaly rests on the exposure's evidence: not "
+                                                    "independent)" if _ir_ground(one, "anomaly") else "")]
+        return "SEVERITY_MEDIUM", basis
+    if alerting:
+        basis["severity_basis"] = ["an anomaly Anomaly Detection alerts on"]
+        return "SEVERITY_MEDIUM", basis
+    basis["severity_basis"] = [f"a finding without incident ({', '.join(b1['finding_grounds'])})"]
+    return "SEVERITY_LOW", basis
+
+
+def _ir_pending_block(one):
+    return [g for g in _ir_ground(one, "violation") if g.get("action") == "BLOCK"]
+
+
+def _ir3(a, s, states, pkg, deps):
+    one = deps["IR-1"]
+    b1 = one["basis"]
+    ms = _ct_measures(a, _rk_built(pkg, "IR-3"), states)
+    basis = {"measures": ms, "deviating": [m["metric"] for m in ms if m["verdict"] == DEVIATES],
+             "resolution": IR_NO_RESOLUTION, "not_calculated": _rk_not_built(pkg, "IR-3")}
+    if one["outcome"] == INCONCLUSIVE:
+        basis["interpretation_reasons"] = [{"code": EA.MISSING_DATA, "requirement": "IR-1", "check": None,
+                                            "detail": "IR-1 is not answered: no incident state can be given"}]
+        return INCONCLUSIVE, basis
+    stopped = bool(_ir_ground(one, "deny_rule_fired"))
+    if one["outcome"] != "INCIDENT_INDICATED":
+        if stopped:
+            basis["contained_by"] = [g["sources"] for g in _ir_ground(one, "deny_rule_fired")]
+            return "CONTAINED", basis
+        return "NO_INCIDENT_STATE", basis
+    ongoing = []
+    for g in _ir_pending_block(one):
+        ongoing.append(f"a denied operation is still pending: {g['source']} {g['label']} proposes BLOCK")
+    for g in _ir_ground(one, "failed_recovery"):
+        ongoing.append(f"{g['source']} {g['label']}: restoration did not return a viable state")
+    if b1["outbound_after_secret"] and "exposure" in b1["incident_grounds"]:
+        ongoing.append("outbound calls after a secret was read: " + ", ".join(b1["outbound_after_secret"]))
+    basis["ongoing_because"] = ongoing
+    if ongoing:
+        return "ONGOING", basis
+    if stopped and "exposure" not in b1["incident_grounds"]:
+        basis["contained_by"] = [g["sources"] for g in _ir_ground(one, "deny_rule_fired")]
+        return "CONTAINED", basis
+    why = []
+    if "exposure" in b1["incident_grounds"]:
+        why.append("a secret or sensitive path was handled; whether it left the session is not shown (no outbound "
+                   "call after it was observed, and no containment record exists)")
+    if _ir_ground(one, "violation"):
+        why.append("the violating operation is not shown stopped and no block is pending")
+    basis["interpretation_reasons"] = [{"code": EA.MISSING_DATA, "requirement": "incident_containment_status",
+                                        "check": None, "detail": "still uncertain: " + "; ".join(why)}]
+    return INCONCLUSIVE, basis
+
+
+def _ir_intervention_grounds(one):
+    out = [f"pending block: {g['source']} {g['label']}" for g in _ir_pending_block(one)]
+    out += [f"failed recovery: {g['source']} {g['label']}" for g in _ir_ground(one, "failed_recovery")]
+    if "exposure" in one["basis"]["incident_grounds"]:
+        out += [f"exposure with an independent anomaly: {g['source']} {g['label']}"
+                for g in _ir_anomaly_independent(one)]
+    return out
+
+
+def _ir4(a, s, states, pkg, deps, upstream):
+    one, three = deps["IR-1"], deps["IR-3"]
+    b1 = one["basis"]
+    ms = _ct_measures(a, _rk_built(pkg, "IR-4"), states)
+    basis = {"telemetry": ms, "telemetry_deviating": [m["metric"] for m in ms if m["verdict"] == DEVIATES],
+             "evidence_quality": b1["evidence_quality"],
+             "verified_upstream": [k for k, v in b1["upstream"].items() if v["class"] not in ("ABSENT", "NOT_VERIFIED")],
+             "not_verified": b1["not_verified"], "independent_grounds": [g["kind"] for g in b1["grounds"]
+                                                                         if g["independent"]],
+             "correlated_grounds": [g["kind"] for g in b1["grounds"] if not g["independent"]],
+             "confidence": _ir_confidence(upstream),
+             "confidence_rule": "the lowest confidence of the verified Runtime Monitoring, Anomaly Detection, Policy "
+                                "Enforcement and Interaction Discovery findings, else 0.8 x the evidence level",
+             "not_calculated": _rk_not_built(pkg, "IR-4")}
+    if basis["evidence_quality"] == "DEGRADED" or basis["telemetry_deviating"]:
+        basis["certainty"] = "reduced: partial evidence lowers confidence and does not erase a ground"
+    if one["outcome"] == INCONCLUSIVE:
+        basis["interpretation_reasons"] = [{"code": EA.MISSING_DATA, "requirement": "IR-1", "check": None,
+                                            "detail": "IR-1 is not answered: no intervention can be justified"}]
+        return INCONCLUSIVE, basis
+    if one["outcome"] != "INCIDENT_INDICATED":
+        return "NOT_JUSTIFIED", basis
+    grounds = _ir_intervention_grounds(one)
+    basis["intervention_grounds"] = grounds
+    if grounds and three["outcome"] != "CONTAINED":
+        return "INTERVENTION_JUSTIFIED", basis
+    return "ATTENTION_JUSTIFIED", basis
+
+
+def _ir_precedents(memory):
+    out = []
+    for x in (memory or {}).get("established", [])[:10]:
+        p = x.get("payload") or {}
+        out.append({"record_id": x["record_id"], "label": p.get("label"), "category": p.get("category"),
+                    "session_id": p.get("session_id"), "status": x.get("status"),
+                    "use": "comparison only, never proof"})
+    return out
+
+
+def _ir5(a, s, states, pkg, deps, memory):
+    one, two, four = deps["IR-1"], deps["IR-2"], deps["IR-4"]
+    ms = _ct_measures(a, _rk_built(pkg, "IR-5"), states)
+    prec = _ir_precedents(memory)
+    basis = {"oversight": ms, "oversight_deviating": [m["metric"] for m in ms if m["verdict"] == DEVIATES],
+             "precedents": prec, "recurrence": [p["record_id"] for p in prec if p["label"] in ("INCIDENT", "WATCH")],
+             "recurrence_note": "validated earlier incidents on this tenant: comparison only, no effect on the answer",
+             "authority": IR_AUTHORITY, "executed": [], "not_calculated": _rk_not_built(pkg, "IR-5")}
+    if four["outcome"] == INCONCLUSIVE:
+        basis["interpretation_reasons"] = [{"code": EA.MISSING_DATA, "requirement": "IR-4", "check": None,
+                                            "detail": "IR-4 is not answered: no response beyond the fallback"}]
+        return INCONCLUSIVE, basis
+    if four["outcome"] == "INTERVENTION_JUSTIFIED":
+        blocks = _ir_pending_block(one)
+        if blocks:
+            ops = sorted({x for g in blocks for x in g["sources"] if str(x).startswith("proposed:")})
+            basis.update(requires_approval=True, escalated_to_person=False,
+                         containment=f"block the denied operation{'s' if len(ops) != 1 else ''} "
+                                     f"{', '.join(ops) or ''} after a person approves; nothing is blocked before",
+                         approval_basis="a verified violation whose operation Policy Enforcement proposes to block")
+            return "REQUEST_APPROVAL", basis
+        basis.update(requires_approval=False, escalated_to_person=True,
+                     containment="a person decides containment: " + "; ".join(four["basis"]["intervention_grounds"]))
+        return "ESCALATE_TO_PERSON", basis
+    basis.update(requires_approval=False, escalated_to_person=False)
+    if four["outcome"] == "ATTENTION_JUSTIFIED":
+        return "ALERT", basis
+    if one["outcome"] == "FINDING_WITHOUT_INCIDENT":
+        return ("ALERT" if two["outcome"] == "SEVERITY_MEDIUM" else "WATCH"), basis
+    return "NO_RESPONSE", basis
+
+
+def observe_incident_response(assessments, session, exposure=None, upstream=None, memory=None):
+    """{question_id: assessment} -> {question_id: answer}. exposure: tools.check_exposure's result; memory:
+    {established, verified_pending} incident_outcome records."""
+    pkg = _ir_pkg()
+    states = tuple(pkg["deviation_states"])
+    view = _ir_upstream(upstream, pkg)
+    out = {}
+    for qid, q in pkg["questions"].items():
+        a = assessments[qid]
+        if qid == "IR-1":
+            outcome, basis = _ir1(a, session, states, pkg, view, exposure)
+        elif qid == "IR-2":
+            outcome, basis = _ir2(a, session, states, pkg, out)
+        elif qid == "IR-3":
+            outcome, basis = _ir3(a, session, states, pkg, out)
+        elif qid == "IR-4":
+            outcome, basis = _ir4(a, session, states, pkg, out, upstream)
+        else:
+            outcome, basis = _ir5(a, session, states, pkg, out, memory)
+        if outcome not in q["outcomes"] and outcome != INCONCLUSIVE:
+            raise ValueError(f"{qid}: outcome {outcome} is not in METRICS.yaml")
+        out[qid] = {"outcome": outcome, "sufficiency": a["sufficiency"]["status"], "basis": basis,
+                    "findings": a["findings"], "not_assessed": a["sufficiency"]["not_assessed"]}
+        if outcome == INCONCLUSIVE or basis.get("interpretation_reasons"):
+            out[qid]["because"] = basis.get("interpretation_reasons", [])
+    return out
+
+
+def assess_incident_response(rows, session_id, cfg=None, computed_at=None, exposure=None, upstream=None, memory=None,
+                             raw_events=None, native=None):
+    """The five questions for one session: each assessment with its answer."""
+    cfg = cfg or EA.signal_metrics.load_config()
+    events, srows = EA.session_inputs(rows, session_id, cfg, computed_at)
+    sessions = EA._computed(rows, cfg, computed_at)[1]
+    s = next(x for x in sessions if x.id == session_id)
+    assessments = {qid: EA.assess(IR, qid, events, srows, cfg, computed_at, raw_events, native)
+                   for qid in EA.QUESTIONS[IR]}
+    answers = observe_incident_response(assessments, s, exposure, upstream, memory)
+    return {qid: {"assessment": assessments[qid], "answer": answers[qid]} for qid in assessments}
+
+
+def _explain_ir(qid, ans):
+    b = ans["basis"] or {}
+    o = ans["outcome"]
+    if o == INCONCLUSIVE:
+        return _explain(qid, ans)
+    if qid == "IR-1":
+        if o == "NO_INCIDENT_INDICATED":
+            return ("no ground: no exposure, no deny rule fired, no verified violation, anomaly, pending authorization "
+                    "or recovery finding; quiet: " + (", ".join(f"{x['cop']} {x['label']}" for x in b["quiet"]) or
+                                                      "none")
+                    + ("; context: " + ", ".join(f"{x['cop']} {x['label']}" for x in b["context"]) if b["context"]
+                       else ""))
+        s = "; ".join(f"{g['kind']} ({g['source'] if g['source'] != 'own' else ', '.join(g['metrics'])}"
+                      f"{'' if g['independent'] else ', correlated'})" for g in b["grounds"])
+        return ("one incident: " if o == "INCIDENT_INDICATED" else "finding without incident: ") + s
+    if qid == "IR-2":
+        if o == "NOTHING_TO_RATE":
+            return "no incident and no finding to rate"
+        return (f"{o.split('_')[1]}: {'; '.join(b.get('severity_basis') or [])}; scope agents "
+                f"{', '.join(b['agents']) or 'none'}, resources {', '.join(b['resources']) or 'none'}; impact not scored "
+                f"(no asset inventory)")
+    if qid == "IR-3":
+        if o == "ONGOING":
+            return "ongoing: " + "; ".join(b["ongoing_because"])
+        if o == "CONTAINED":
+            return "contained: a deny rule stopped the operation, and nothing was exposed"
+        return "no incident, so no incident state"
+    if qid == "IR-4":
+        if o == "INTERVENTION_JUSTIFIED":
+            return "intervention justified by verified upstream findings: " + "; ".join(b["intervention_grounds"])
+        if o == "ATTENTION_JUSTIFIED":
+            return "attention, not intervention: no verified ground needs a person to act"
+        return "no incident: no intervention"
+    if o == "REQUEST_APPROVAL":
+        return "request a person's approval: " + b["containment"]
+    if o == "ESCALATE_TO_PERSON":
+        return "escalate to a person: " + b["containment"]
+    return {"ALERT": "alert; nothing to authorise", "WATCH": "watch", "NO_RESPONSE": "no response"}[o]
+
+
+def _ir_limitations(ans):
+    from . import decision as D
+    out = []
+    b1 = ans["IR-1"].get("basis") or {}
+    b4 = ans["IR-4"].get("basis") or {}
+    pkg = _ir_pkg()
+    for k in b1.get("absent", []):
+        out.append(D.limitation(D.MISSING_EVIDENCE, "IR-1", k, "UPSTREAM_ABSENT",
+                                f"no {k} finding in this case: it neither grounds nor rules out an incident"))
+    for x in b1.get("not_verified", []):
+        out.append(D.limitation(D.MISSING_EVIDENCE, "IR-1", x["cop"], "UPSTREAM_NOT_VERIFIED",
+                                f"{x['cop']} reads {x['label']}, not verified: it grounds nothing"))
+    for x in b1.get("undetermined", []):
+        out.append(D.limitation(D.MISSING_EVIDENCE, "IR-1", x["cop"], "UPSTREAM_UNDETERMINED",
+                                f"{x['cop']} reads {x['label']}: it could not decide"))
+    if b1.get("exposure_disputed"):
+        out.append(D.limitation(D.MISSING_EVIDENCE, "IR-1", "exposure", EA.CONFLICTING_SOURCES,
+                                "the collectors disagree on row(s) carrying the exposure: directly disputed evidence "
+                                "does not establish an incident alone", b1["exposure_disputed"]))
+    for g in b1.get("correlated", []):
+        out.append(D.limitation(D.INFERRED_RELATIONSHIP, "IR-1", g["source"], "CORRELATED_GROUND",
+                                f"{g['source']} {g.get('label') or g['kind']} rests only on evidence an earlier ground "
+                                f"carries: one ground, not two", g["sources"]))
+    if b4.get("evidence_quality") == "DEGRADED":
+        out.append(D.limitation(D.MISSING_EVIDENCE, "IR-4", "runtime_monitoring", "TELEMETRY_QUALITY",
+                                "Runtime Monitoring reads DEGRADED: certainty is reduced, grounds stand"))
+    for m in b4.get("telemetry_deviating", []):
+        out.append(D.limitation(D.MISSING_EVIDENCE, "IR-4", m, "TELEMETRY_QUALITY",
+                                f"{m} is in a deviation state: certainty is reduced, grounds stand"))
+    if ans["IR-2"]["outcome"] not in (INCONCLUSIVE, "NOTHING_TO_RATE"):
+        out.append(D.limitation(D.MISSING_EVIDENCE, "IR-2", "asset_inventory", EA.MISSING_REFERENCE, IR_NO_INVENTORY))
+    if ans["IR-1"]["outcome"] in ("INCIDENT_INDICATED", "FINDING_WITHOUT_INCIDENT"):
+        out.append(D.limitation(D.NOT_CALCULATED, "IR-3", "incident_resolution_status", D.NOT_CALCULATED,
+                                IR_NO_RESOLUTION))
+    if ans["IR-1"]["outcome"] != INCONCLUSIVE:
+        for qid in IR_QUESTIONS:
+            for x in (ans[qid].get("basis") or {}).get("not_calculated", []):
+                out.append(D.limitation(D.NOT_CALCULATED, qid, x["metric"], D.NOT_CALCULATED, x["missing_inputs"]))
+        for k, v in pkg["not_calculated"].items():
+            out.append(D.limitation(D.NOT_CALCULATED, "IR-2", k, D.NOT_CALCULATED, " ".join(v.split())))
+        out.append(D.limitation(D.LIMIT_NOT_APPROVED, "IR-4", "confidence", "UNCALIBRATED_CONFIDENCE",
+                                "the confidence is the legacy rule's formula, not calibrated against outcomes (U-IR6)"))
+    if (ans["IR-5"].get("basis") or {}).get("recurrence"):
+        out.append(D.limitation(D.LIMIT_NOT_APPROVED, "IR-5", "recurrence", "RECURRENCE_NOT_WEIGHED",
+                                "validated earlier incidents are listed; no approved rule weighs recurrence (U-IR4)"))
+    return out
+
+
+def _ir_category(ans, label):
+    if label == INCONCLUSIVE:
+        return "INSUFFICIENT_EVIDENCE"
+    if label == "NO_INCIDENT":
+        return "NONE"
+    if label == "WATCH":
+        return "OBSERVED_ABNORMAL" if set(ans["IR-1"]["basis"]["finding_grounds"]) == {"anomaly"} else \
+            "VERIFIED_FINDING"
+    return "INCIDENT_INTERVENTION" if ans["IR-4"]["outcome"] == "INTERVENTION_JUSTIFIED" else "INCIDENT_ATTENTION"
+
+
+def _ir_status(ans, label, category, action):
+    """Observed behaviour, verified findings, the incident and the intervention it justifies, kept apart."""
+    b1 = ans["IR-1"].get("basis") or {}
+    b5 = ans["IR-5"].get("basis") or {}
+    return {"category": category, "meaning": IR_CATEGORY[category],
+            "observed": {"metrics": b1.get("observed", []), "exposure_refs": b1.get("exposure_refs", []),
+                         "disputed": b1.get("exposure_disputed", [])},
+            "verified_findings": [{k: g.get(k) for k in ("source", "kind", "label", "finding_id", "independent")}
+                                  for g in b1.get("grounds", []) if g["source"] != "own"],
+            "context": [{k: x[k] for k in ("cop", "label", "finding_id")} for x in b1.get("context", [])],
+            "incident": {"indicated": ans["IR-1"]["outcome"] == "INCIDENT_INDICATED", "count": b1.get("incidents", 0),
+                         "grounds": [g["kind"] for g in b1.get("grounds", []) if g["independent"]],
+                         "correlated": [g["kind"] for g in b1.get("correlated", [])],
+                         "state": ans["IR-3"]["outcome"]},
+            "intervention": {"justified": ans["IR-4"]["outcome"] == "INTERVENTION_JUSTIFIED",
+                             "response": ans["IR-5"]["outcome"], "action": action,
+                             "requires_approval": bool(b5.get("requires_approval")),
+                             "escalated_to_person": bool(b5.get("escalated_to_person")),
+                             "containment": b5.get("containment"), "executed": [], "authority": IR_AUTHORITY}}
+
+
+def decide_incident_response(questions):
+    """The COP decision from the five answers (INTERPRETATION.md). IR-1 gives the label, IR-2 the severity, IR-5 the
+    action and IR-4 the confidence (the legacy rule's formula). Decided by the package unless IR-4 justifies an
+    intervention: then the model scopes the incident and drafts the containment plan, and `decided` is False."""
+    pkg = _ir_pkg()
+    ans = {q: v["answer"] for q, v in questions.items()}
+    one, two, four, five = (ans[q]["outcome"] for q in ("IR-1", "IR-2", "IR-4", "IR-5"))
+    label = pkg["labels"][one]
+    action = pkg["responses"].get(five, "WATCH") if label != INCONCLUSIVE else "WATCH"
+    sev = pkg["severity"].get(two, "NONE") if label != INCONCLUSIVE else "NONE"
+    conf = (ans["IR-4"].get("basis") or {}).get("confidence", 0.0) if label != INCONCLUSIVE else 0.0
+    category = _ir_category(ans, label)
+    b1 = ans["IR-1"].get("basis") or {}
+    reason = IR_REASON.get(label, "")
+    if label != INCONCLUSIVE:
+        reason = _explain_ir("IR-5", ans["IR-5"]) + f" ({IR_CATEGORY[category]})"
+    drivers = ["IR-1"] if label == INCONCLUSIVE else ["IR-1", "IR-2", "IR-4", "IR-5"]
+    trace = _question_trace(questions, _explain_ir, drivers)
+    contrary = [f"{q}: {x['check']} {x['detail']}" for q, v in questions.items() for x in v["answer"].get("findings", [])]
+    contrary += [f"IR-1: {g['source']} {g.get('label') or g['kind']}: {g['correlated']}" for g in b1.get("correlated", [])]
+    contrary += [f"IR-1: {x['cop']} reads {x['label']}: context, not a ground" for x in b1.get("context", [])]
+    contrary += [f"IR-1: exposure on disputed row {r}: not a ground alone" for r in b1.get("exposure_disputed", [])]
+    if label == "WATCH" and category == "OBSERVED_ABNORMAL":
+        contrary.append("IR-1: an anomaly is unusual behaviour, not a violation or an exposure: not an incident")
+    status = _ir_status(ans, label, category, action)
+    decided = four != "INTERVENTION_JUSTIFIED"
+    from ..specs import consumers
+    pay = {"answers": {q: x["outcome"] for q, x in ans.items()}, "category": category,
+           "grounds": [{k: g.get(k) for k in ("kind", "source", "label", "independent", "sources")}
+                       for g in b1.get("grounds", [])],
+           "response": five, "decided_by": "package" if decided else "package and model",
+           "precedents_read": [p["record_id"] for p in (ans["IR-5"].get("basis") or {}).get("precedents", [])]}
+    return {"label": label, "confidence": conf, "severity": sev, "action": action, "action_reason": reason,
+            "recipients": list(consumers(IR)) if label in ("INCIDENT", "WATCH") else [],
+            "drivers": drivers, "contrary": contrary, "questions": trace, "limitations": _ir_limitations(ans),
+            "decided": decided, "memory_payload": pay, "incident_status": status, "decision": label,
+            "category": category}
+
+
+def interpreted_incident_response(f, baseline):
+    """After verification, for a finding the model concluded on an intervention incident: the model scopes the
+    incident and drafts the containment plan; the package checks its conclusion against its own answers (D-IR11).
+    The label must be INCIDENT and the action the package's IR-5 action: a different action is replaced and
+    recorded; a different label, or no verified conclusion, leaves the finding INCONCLUSIVE with the package's
+    answers and the rejected candidate kept. A finding the package decided is returned as it is."""
+    import copy
+    from .contracts import ORIGIN_LLM
+    cs = (baseline or {}).get("cop_specific") or {}
+    if f.get("origin") != ORIGIN_LLM or not cs.get("questions"):
+        return f
+    q = copy.deepcopy(cs["questions"])
+    want_label, want_action = cs.get("decision"), (cs.get("incident_status") or {}).get("intervention", {}).get("action")
+    detail = (f.get("cop_specific") or {}).get("detail") or {}
+    got_action = (f.get("proposed_action") or {}).get("action")
+    out = dict(f)
+    # the model's own conclusion: its label, or the candidate a verifier rejected
+    concluded = f["label"] if f["status"] == "SUBSTANTIVE" else (f.get("rejected_candidate") or {}).get("label")
+    check = {"by": "package", "model_label": concluded, "model_status": f["status"],
+             "model_verified": bool(f.get("verified")), "model_action": got_action, "package_label": want_label,
+             "package_action": want_action, "scope_entities": detail.get("scope_entities", []),
+             "containment_plan": detail.get("response_proposal"), "upstream_basis": detail.get("upstream_basis", [])}
+    status = copy.deepcopy(cs.get("incident_status") or {})
+    lims = list(cs.get("limitations", []))
+    from . import decision as D
+    check["model_confidence"] = f.get("confidence")
+    if f["status"] == "SUBSTANTIVE" and f["label"] == want_label:
+        check["accepted"] = True
+        # IR-2 gives the severity and IR-4 the confidence; the model scopes and plans, it does not rate
+        out.update(severity=(baseline or {}).get("severity") or f.get("severity"),
+                   confidence=min(f.get("confidence") or 0.0, (baseline or {}).get("confidence") or 0.0))
+        if got_action != want_action:
+            check["action_replaced"] = True
+            out["proposed_action"] = {"action": want_action,
+                                      "reason": f"the package's IR-5 response ({want_action}); the model proposed "
+                                                f"{got_action}, which the answers do not support"}
+            lims.append(D.limitation(D.LIMIT_NOT_APPROVED, "IR-5", "model_action", "MODEL_ACTION_REPLACED",
+                                     f"the model proposed {got_action}; the package's response {want_action} stands"))
+        q["IR-5"]["basis"] = {**(q["IR-5"]["basis"] or {}), "containment_plan_by_model": check["containment_plan"],
+                              "scope_by_model": check["scope_entities"]}
+    else:
+        check["accepted"] = False
+        cand = f["label"] if f["status"] == "SUBSTANTIVE" else (f.get("rejected_candidate") or {}).get("label")
+        why = (f"the model concluded {cand}; the package's answers establish {want_label}" if cand else
+               "no verified model conclusion: " + str((f.get("cop_specific") or {}).get("stop_reason")
+                                                       or f.get("rationale", ""))[:200])
+        check["reason"] = why
+        out.update(label=INCONCLUSIVE, status="INCONCLUSIVE", confidence=0.0, verified=False,
+                   rejected_candidate={"label": cand, "confidence": f.get("confidence"), "reason": why}
+                   if cand else f.get("rejected_candidate"),
+                   rationale=f"INCONCLUSIVE: {why}; the incident and its response stay in the answers for a person"[:600])
+        out["proposed_action"] = {"action": "WATCH", "reason": "the containment plan was not confirmed; a person "
+                                                               "reviews the recorded answers"}
+        status["category"] = "INCIDENT_UNCONFIRMED"
+        status["meaning"] = IR_CATEGORY["INCIDENT_UNCONFIRMED"]
+        lims.append(D.limitation(D.MISSING_EVIDENCE, "IR-5", "containment_plan", "CONTAINMENT_PLAN_NOT_CONFIRMED",
+                                 why + "; the package's answers are kept (U-IR1)"))
+    out["cop_specific"] = {**(f.get("cop_specific") or {}), "questions": q, "drivers": cs.get("drivers", []),
+                           "limitations": lims, "contrary": cs.get("contrary", []),
+                           "recipients": cs.get("recipients", []) if check["accepted"] else [],
+                           "memory_payload": {**(cs.get("memory_payload") or {}), "model_check": check},
+                           "incident_status": status, "model_check": check,
+                           "decision": out["label"], "legacy_reading": cs.get("legacy_reading"),
+                           "previous_cycle": cs.get("previous_cycle")}
+    return out

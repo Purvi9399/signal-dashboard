@@ -55,7 +55,7 @@ from .requirements import assess_requirements, required_unavailable, precheck as
 from .memory import MemoryAccessDenied, POLICIES, VERIFIED
 from .rules import RULES, DETERMINISTIC_TOOLS, evidence_conf
 from .cop_package import DECIDED_WITHOUT_MODEL, interpreted_anomaly_detection, ad_case_events, LEAVE_ONE_OUT_COPS, \
-    interpreted_classification_tagging
+    interpreted_classification_tagging, interpreted_incident_response
 from . import decision
 from .tools import TOOLS, scan
 from .verifiers import (R, au01, verify_finding, verify_action, verify_memory_update, blocking,
@@ -71,7 +71,8 @@ from . import support as SUP
 NO_MODEL_NEEDED = ("precheck_required_evidence_unavailable", DECIDED_WITHOUT_MODEL)
 # LLM COPs whose package reads the verified interpretation back into its question answers.
 INTERPRETED = {"anomaly_detection": interpreted_anomaly_detection,
-               "classification_tagging": interpreted_classification_tagging}
+               "classification_tagging": interpreted_classification_tagging,
+               "incident_response": interpreted_incident_response}
 
 MODES = ("dry_run", "supervised")
 SECURITY_CODES = ("unknown_tool", "not_in_allowlist", "out_of_scope")

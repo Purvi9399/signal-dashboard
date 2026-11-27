@@ -360,7 +360,12 @@ def _ir_reads_ad5(res):
         five = d["ad"]["cop_specific"]["questions"]["AD-5"]["answer"]
         cons = d["consumption"][0] if d["consumption"] else {}
         got[k] = {"ad5": five, "ad_label": d["ad"]["label"], "consumed_label": cons.get("label"),
-                  "ir_rule_reading": (d["ir"].get("baseline") or {}).get("label")}
+                  # C-AD (COP 9, 2026-11-27): Incident Response's package now decides these worlds without a
+                  # model, so its rule reading is recorded as cop_specific.legacy_reading instead of the model
+                  # finding's baseline. The same rule reading is read; ground truth unchanged.
+                  "ir_rule_reading": (d["ir"].get("baseline") or d["ir"]["cop_specific"].get("legacy_reading")
+                                      or {}).get("label"),
+                  "ir_package_reading": d["ir"]["label"]}
     ok = all(g["ad_label"] == labels[g["ad5"]] == g["consumed_label"]
              and g["ir_rule_reading"] == IR_READING[g["ad_label"]] for g in got.values()) and \
         [g["ad5"] for g in got.values()] == ["NO_DEVIATION", "MEANINGFUL_ANOMALY", "UNDETERMINED"]

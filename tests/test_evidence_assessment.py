@@ -377,6 +377,8 @@ def test_only_the_packaged_cops_and_shared_runtime_use_the_assessment():
                      os.path.join("cops", "packages", "audit_traceability", "harness.py"),
                      # COP 7 (2026-11-26): the Classification & Tagging harness reads the package's answers
                      os.path.join("cops", "packages", "classification_tagging", "harness.py"),
+                     # COP 9 (2026-11-27): the Incident Response harness reads the package's answers
+                     os.path.join("cops", "packages", "incident_response", "harness.py"),
                      os.path.join("cops", "packages", "interaction_discovery", "harness.py"),
                      # COP 8 (2026-11-27): the Risk Mitigation harness reads the package's answers
                      os.path.join("cops", "packages", "risk_mitigation", "harness.py"),

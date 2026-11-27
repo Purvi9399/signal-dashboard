@@ -551,7 +551,11 @@ def test_replayed_results_are_never_labelled_as_new_live_calls(bench):
 def test_root_causes_can_co_occur_and_use_the_defined_codes(bench):
     cases, _ = bench
     ir = next(c for c in cases if c["id"] == "incident_response:missing")["diagnosis"]
-    assert {"EXPECTED_INCONCLUSIVE", "VERIFIER_REJECTED"} <= set(ir["root_causes"])
+    # COP 9 (2026-11-27): Incident Response's package now decides this case without the model (no ground and no
+    # verified upstream: INCONCLUSIVE, D-IR7), so no model candidate exists for a verifier to reject; the causes that
+    # co-occur are the expected inconclusive and the missing evidence behind it
+    assert {"EXPECTED_INCONCLUSIVE", "MISSING_EVIDENCE"} <= set(ir["root_causes"])
+    assert "VERIFIER_REJECTED" not in ir["root_causes"]
     for c in cases:
         assert set(c["diagnosis"]["root_causes"]) <= set(CODES)
         if c["verdict"] != "PASS":

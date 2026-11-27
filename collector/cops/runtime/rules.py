@@ -36,7 +36,7 @@ from .contracts import (Claim, CLAIM_METRIC_STATE, CLAIM_METRIC_VALUE, CLAIM_TOO
 from ..interpret import EVIDENCE_LEVEL
 from ..specs import BY_KEY, SPEC_CONSUMES
 from .cop_package import aggregate_runtime_monitoring, decide_audit_traceability, decide_interaction_discovery, \
-    decide_policy_enforcement, decide_anomaly_detection, decide_resource_management, decide_classification_tagging, decide_risk_mitigation, AT_CLEAN, CEILING, DECIDED_WITHOUT_MODEL
+    decide_policy_enforcement, decide_anomaly_detection, decide_resource_management, decide_classification_tagging, decide_risk_mitigation, decide_incident_response, AT_CLEAN, CEILING, DECIDED_WITHOUT_MODEL
 
 _RI = RuleInterpreter()
 HOT = ("EXCEPTION", "CRITICAL")
@@ -57,7 +57,7 @@ DETERMINISTIC_TOOLS = {
     "anomaly_detection": ("assess_anomaly_questions",),
     "context_memory": ("get_context_snapshots", "compare_instruction_versions",
                        "inspect_context_references", "verify_context_provenance"),
-    "incident_response": ("check_exposure",),
+    "incident_response": ("check_exposure", "assess_incident_questions"),
     "classification_tagging": ("query_taxonomy", "inspect_event_metadata", "assess_classification_questions"),
     "risk_mitigation": ("read_risk_register", "calculate_risk_components", "assess_risk_questions"),
     "governance_intelligence": ("query_aggregate_report",),
@@ -795,7 +795,55 @@ def incident_response(ctx):
     f["cop_specific"]["earlier_risk_assessment"] = {
         "finding_id": risk.get("finding_id"), "run_id": risk.get("run_id"),
         "decided_at": risk.get("decided_at"), "label": risk["label"]} if risk else None
+    _ir_questions(ctx, f)
     return f
+
+
+def _ir_questions(ctx, f):
+    """Incident Response's five answers (cop_package.decide_incident_response). IR-1 decides the label from incident
+    grounds counted once; IR-5 the response. The legacy reading above stays the computational baseline. Decided
+    without a model unless IR-4 justifies an intervention: then the model scopes the incident and drafts the
+    containment plan, and interpreted_incident_response reads its conclusion back (INTERPRETATION.md)."""
+    t = ctx["tools"]
+    res = result(t, "assess_incident_questions")
+    if not res.get("questions"):
+        why = res.get("missing_dependency") or (t.get("assess_incident_questions") or {}).get("status")
+        f["cop_specific"]["question_assessment"] = f"unavailable: {why}"
+        return
+    d = decide_incident_response(res["questions"])
+    q = d["questions"]
+    legacy = {"label": f["label"], "confidence": f["confidence"], "action": f.get("action"),
+              "severity": f.get("severity")}
+    earlier = f["cop_specific"].get("earlier_risk_assessment")
+    previous = {"risk_mitigation": earlier, "use": "context only, never counted as a current-cycle ground"} \
+        if earlier else None
+    lims = list(d["limitations"])
+    if (legacy["label"], legacy["action"]) != (d["label"], d["action"]):
+        from .decision import limitation, LIMIT_NOT_APPROVED
+        lims.append(limitation(LIMIT_NOT_APPROVED, "IR-1", "legacy_reading", "PREVIOUS_READING_DIFFERS",
+                               f"the legacy rule read {legacy['label']} {legacy['severity']} {legacy['action']}; the "
+                               f"package's answers read {d['label']} {d['severity']} {d['action']} (DECISIONS.md)"))
+    f["cop_specific"].update(questions=q, drivers=d["drivers"], contrary=d["contrary"], limitations=lims,
+                             recipients=d["recipients"], memory_payload=d["memory_payload"],
+                             decided_without_model=d["decided"], decision=d["decision"],
+                             incident_status=d["incident_status"], category=d["category"], legacy_reading=legacy,
+                             previous_cycle=previous)
+    claims = [tclaim(t, "assess_incident_questions", f"questions.{qid}.answer.outcome", x["answer"],
+                     f"{qid} answered {x['answer']}: {x['explanation']}"[:240]).to_dict() for qid, x in q.items()]
+    status = SUBSTANTIVE if d["label"] != INCONCLUSIVE else "INCONCLUSIVE"
+    why = "; ".join(f"{x} {q[x]['answer']}" for x in d["drivers"])
+    upd = dict(label=d["label"], confidence=d["confidence"], action=d["action"], severity=d["severity"],
+               action_reason=d["action_reason"])
+    if not d["decided"]:
+        # the model scopes the intervention; the package's label, severity and response are the baseline it is held to
+        f.update(**upd, claims=claims + f["claims"])
+        return
+    # the legacy claims (metrics, consumed findings, outbound calls) stay: they are checkable statements; IR-1's
+    # basis says which consumed findings are grounds and which are context
+    f.update(**upd, status=status, claims=claims + f["claims"],
+             rationale=(f"{d['label']} from {why}; correlated findings counted once; nothing paused, blocked or "
+                        f"contained; legacy reading: {legacy['label']} ({f['rationale']})")[:600])
+    f["cop_specific"]["stop_reason"] = DECIDED_WITHOUT_MODEL
 
 
 def classification_tagging(ctx):

@@ -433,9 +433,15 @@ CHECKS = {
     "severity_high": lambda r: (_f(r)["severity"] == "HIGH", _f(r)["severity"]),
     "register_version_recorded": lambda r: (_b(r, "RK-2")["register_version"] == REGISTER,
                                             _b(r, "RK-2").get("register_version")),
+    # C-RK5 (COP 9, 2026-11-27): Incident Response's package now decides this world without a model and publishes a
+    # verified NO_INCIDENT, a quiet reading; before COP 9 it was INCONCLUSIVE (no model) and not listed. The four
+    # producers named here stay required; incident_response is accepted in the list only when its finding is a
+    # verified NO_INCIDENT. Nothing is counted either way. Ground truth unchanged; for purvi's review.
     "quiet_findings_not_counted": lambda r: (
-        sorted(_b(r, "RK-2")["quiet_not_counted"]) == ["anomaly_detection", "interaction_discovery",
-                                                       "policy_enforcement", "resource_management"]
+        sorted(set(_b(r, "RK-2")["quiet_not_counted"]) - ({"incident_response"} if (
+            r["upstream"].get("incident_response") or {}).get("label") == "NO_INCIDENT"
+            and r["upstream"]["incident_response"].get("verified") else set()))
+        == ["anomaly_detection", "interaction_discovery", "policy_enforcement", "resource_management"]
         and _b(r, "RK-2")["signals_counted"] == [], (_b(r, "RK-2")["quiet_not_counted"],
                                                      _b(r, "RK-2")["signals_counted"])),
     "legacy_baseline_recorded": lambda r: (

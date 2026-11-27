@@ -222,6 +222,18 @@ def test_malformed_live_reply_is_rejected_by_the_schema(live_env):
 
 # ---------------------------------------------------------------- the model cannot authorise itself
 
+
+@pytest.fixture
+def ir_model_path(monkeypatch):
+    """COP 9 (2026-11-27): Incident Response's package decides most readings without a model and never lets a model
+    propose PAUSE, BLOCK or INSTRUCT (packages/incident_response/DECISIONS.md D-IR11, D-IR12). The tests using this
+    fixture exercise the shared authority, provider and recovery machinery through Incident Response's model path,
+    so the package's decision and read-back are switched off for them: the runtime path they were written for.
+    The package's own behaviour is tested in test_cop_package_incident_response.py."""
+    from cops.runtime import graph as _G, rules as _R
+    monkeypatch.setattr(_R, "_ir_questions", lambda ctx, f: None)
+    monkeypatch.delitem(_G.INTERPRETED, "incident_response")
+
 def _self_authorising(action, extra_detail=None):
     def script(c, purpose, p, n):
         if purpose == "plan":
@@ -237,7 +249,7 @@ def _self_authorising(action, extra_detail=None):
 IR_CASE = ["runtime_monitoring", "interaction_discovery", "incident_response"]
 
 
-def test_model_text_claiming_approval_does_not_execute_anything():
+def test_model_text_claiming_approval_does_not_execute_anything(ir_model_path):
     for mode, live in (("dry_run", False), ("supervised", True)):
         rt = E.make_runtime(f"self-auth-{mode}", "lp1", ROWS, E.c05_art(),
                             provider=FixtureProvider(_self_authorising("BLOCK")), mode=mode, live=live)
@@ -259,7 +271,7 @@ def test_model_text_claiming_approval_does_not_execute_anything():
             assert tri["routing"]["tier"] == "human" and tri["routing"]["human_needed"]
 
 
-def test_model_cannot_choose_an_action_outside_its_vocabulary():
+def test_model_cannot_choose_an_action_outside_its_vocabulary(ir_model_path):
     rt = E.make_runtime("self-grant", "lp1", ROWS, E.c05_art(),
                         provider=FixtureProvider(_self_authorising("GRANT_ADMIN")), mode="supervised", live=True)
     out = run_case(rt, cops=IR_CASE)
@@ -281,7 +293,7 @@ class ProcessKilled(BaseException):
     """Stands in for the process dying: not an Exception, so nothing catches it."""
 
 
-def test_case_recovers_from_its_checkpoint_after_a_crash(tmp_path):
+def test_case_recovers_from_its_checkpoint_after_a_crash(tmp_path, ir_model_path):
     from langgraph.checkpoint.sqlite import SqliteSaver
     from cops.runtime.persistence import SQLiteStore
     ck, st = str(tmp_path / "ck.sqlite"), str(tmp_path / "st.sqlite")

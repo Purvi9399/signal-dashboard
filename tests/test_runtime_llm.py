@@ -31,8 +31,19 @@ def rt_with(provider, budget=None, case="llm-case"):
                           provider=provider, budget=budget)
 
 
+# COP 9 (2026-11-27): Incident Response's package consults the model only for an incident whose intervention the
+# verified upstream findings justify (packages/incident_response/DECISIONS.md D-IR11). Run alone it has no upstream
+# and decides without the model, so it is run after Runtime Monitoring and Policy Enforcement (both deterministic):
+# Policy Enforcement's verified VIOLATION of the proposed prod write (c05_art) is that justification.
+IR_UPSTREAM = ["runtime_monitoring", "policy_enforcement"]
+
+
 def one(cop, provider, budget=None):
     rt = rt_with(provider, budget)
+    if cop == "incident_response":
+        from cops.runtime.graph import run_case
+        out = run_case(rt, cops=IR_UPSTREAM + [cop])["results"][cop]
+        return rt, out, out["finding"]
     out = run_cop(rt, cop)
     return rt, out["result"], out["finding"]
 

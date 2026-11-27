@@ -1291,6 +1291,23 @@ def t_assess_risk_questions(case, a, ctx):
             "evaluated_at": case.computed_at}
 
 
+
+def t_assess_incident_questions(case, a, ctx):
+    """The five Incident Response questions for the case session (cop_package), read against the exposure check
+    (t_check_exposure), validated incident_outcome memory and the verified upstream findings. Earlier-cycle Risk
+    Mitigation feedback is not an input (packages/incident_response/DECISIONS.md D-IR15)."""
+    if not case.session:
+        return missing("session", "incident question assessment", "the case session")
+    mem = _memory_lookup(ctx, "incident_outcome") if ctx.get("memory") else None
+    memory = {k: mem[k] for k in ("established", "verified_pending")} if mem and "missing_dependency" not in mem \
+        else None
+    exp = t_check_exposure(case, a, ctx)
+    q = cop_package.assess_incident_response(case.rows, case.session_id, case.cfg, case.computed_at, exp,
+                                             ctx.get("upstream"), memory, case.artifact("source_events"),
+                                             case.artifact("native_transcripts"))
+    return {"questions": q, "memory_supplied": memory is not None,
+            "upstream_supplied": sorted((ctx.get("upstream") or {})), "evaluated_at": case.computed_at}
+
 TOOLS = {
     # name: (fn, schema {arg: spec})
     "get_metric_rows": (t_get_metric_rows, {"metric_ids": _arr("metric_ids", 25)}),
@@ -1363,6 +1380,7 @@ TOOLS = {
     "assess_resource_questions": (t_assess_resource_questions, {}),
     "assess_classification_questions": (t_assess_classification_questions, {}),
     "assess_risk_questions": (t_assess_risk_questions, {}),
+    "assess_incident_questions": (t_assess_incident_questions, {}),
     "compute_sequence_statistics": (t_compute_sequence_statistics, {}),
     "compare_behaviour_history": (t_compare_behaviour_history, {}),
     "get_recovery_records": (t_get_recovery_records, {}),
@@ -1377,7 +1395,8 @@ TOOLS = {
 # so the model's tool-call ids, and the recorded replies that cite them, stay as they were
 # (packages/anomaly_detection/DECISIONS.md, D-AD9; packages/classification_tagging/DECISIONS.md, D-CT16;
 # packages/risk_mitigation/DECISIONS.md, D-RK12).
-UNSEQUENCED = frozenset({"assess_anomaly_questions", "assess_classification_questions", "assess_risk_questions"})
+UNSEQUENCED = frozenset({"assess_anomaly_questions", "assess_classification_questions", "assess_risk_questions",
+                         "assess_incident_questions"})
 
 class ToolGateway:
     def __init__(self, case, allowlists, memory=None):
