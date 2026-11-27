@@ -102,6 +102,13 @@ def test_llm_quiet_label_without_required_artifact_is_rejected_by_ds01(cop):
         assert f["status"] == "MISSING_DEPENDENCY" and f["label"] == "INCONCLUSIVE"
         assert "MISSING_EVIDENCE" in f["reason_codes"] and "artifact:taxonomy" in str(f["missing_evidence"])
         return
+    if cop == "risk_mitigation":
+        # The package decides without the model (COP 8, D-RK8): no register leaves RK-2 unanswered and the legacy
+        # MISSING_DEPENDENCY reading stands, so no candidate exists for a verifier to reject.
+        assert out["llm_invocations"] == []
+        assert f["status"] == "MISSING_DEPENDENCY" and f["label"] == "INCONCLUSIVE"
+        assert f["cop_specific"]["questions"]["RK-2"]["answer"] == "INCONCLUSIVE"
+        return
     ds = [v for v in out["verifier_results"] if v["check_id"] == "DS-01"][0]
     assert ds["result"] == "FAIL" and "required evidence unavailable" in ds["detail"]
     assert f["status"] == "REJECTED_BY_VERIFIER" and f["label"] == "INCONCLUSIVE"

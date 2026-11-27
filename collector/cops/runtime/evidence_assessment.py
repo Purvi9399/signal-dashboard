@@ -63,7 +63,7 @@ ACTION_TYPES = signal_metrics.CALL_TYPES | signal_metrics.CALL_REQUESTS | signal
 
 PACKAGES = os.path.join(HERE, "cops", "packages")
 PACKAGED = ("runtime_monitoring", "interaction_discovery", "audit_traceability", "policy_enforcement",
-            "anomaly_detection", "resource_management", "classification_tagging")
+            "anomaly_detection", "resource_management", "classification_tagging", "risk_mitigation")
 
 
 def load_package(cop):

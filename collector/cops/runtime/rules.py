@@ -36,7 +36,7 @@ from .contracts import (Claim, CLAIM_METRIC_STATE, CLAIM_METRIC_VALUE, CLAIM_TOO
 from ..interpret import EVIDENCE_LEVEL
 from ..specs import BY_KEY, SPEC_CONSUMES
 from .cop_package import aggregate_runtime_monitoring, decide_audit_traceability, decide_interaction_discovery, \
-    decide_policy_enforcement, decide_anomaly_detection, decide_resource_management, decide_classification_tagging, AT_CLEAN, CEILING, DECIDED_WITHOUT_MODEL
+    decide_policy_enforcement, decide_anomaly_detection, decide_resource_management, decide_classification_tagging, decide_risk_mitigation, AT_CLEAN, CEILING, DECIDED_WITHOUT_MODEL
 
 _RI = RuleInterpreter()
 HOT = ("EXCEPTION", "CRITICAL")
@@ -59,7 +59,7 @@ DETERMINISTIC_TOOLS = {
                        "inspect_context_references", "verify_context_provenance"),
     "incident_response": ("check_exposure",),
     "classification_tagging": ("query_taxonomy", "inspect_event_metadata", "assess_classification_questions"),
-    "risk_mitigation": ("read_risk_register", "calculate_risk_components"),
+    "risk_mitigation": ("read_risk_register", "calculate_risk_components", "assess_risk_questions"),
     "governance_intelligence": ("query_aggregate_report",),
     "workload_optimization": ("calculate_usage_rates", "inspect_repeated_operations"),
     "knowledge_policy_management": ("get_policy_versions", "compare_policy_documents",
@@ -894,6 +894,13 @@ def workflow_orchestration(ctx):
 
 
 def risk_mitigation(ctx):
+    f = _risk_mitigation_legacy(ctx)
+    _rk_questions(ctx, f)
+    return f
+
+
+def _risk_mitigation_legacy(ctx):
+    """The legacy register reading. It stays the computational baseline (packages/risk_mitigation/DECISIONS.md)."""
     t = ctx["tools"]
     reg = result(t, "read_risk_register")
     comp = result(t, "calculate_risk_components")
@@ -917,11 +924,46 @@ def risk_mitigation(ctx):
     claims = [tclaim(t, "calculate_risk_components", "independent_verified_signals",
                      comp.get("independent_verified_signals"),
                      f"independent verified signals: {comp.get('independent_verified_signals')}")]
-    return F(label, 0.75, action, f"risk score {score} against register thresholds {th}",
-             f"impact {impact} x (independent signals {signals} + irreversible {irrev}); "
-             f"correlated not counted: {comp.get('correlated_not_counted')}",
-             claims, {"MATERIAL": "HIGH", "EMERGING": "MEDIUM", "LOW": "NONE"}[label],
-             cop_specific={"score": score, "components": comp, "register_version": reg.get("version")})
+    f = F(label, 0.75, action, f"risk score {score} against register thresholds {th}",
+          f"impact {impact} x (independent signals {signals} + irreversible {irrev}); "
+          f"correlated not counted: {comp.get('correlated_not_counted')}",
+          claims, {"MATERIAL": "HIGH", "EMERGING": "MEDIUM", "LOW": "NONE"}[label],
+          cop_specific={"score": score, "components": comp, "register_version": reg.get("version")})
+    return f
+
+
+def _rk_questions(ctx, f):
+    """Risk Mitigation's four answers (cop_package.decide_risk_mitigation). RK-2's register band decides the label
+    from risk-bearing, independent, undisputed signals; the legacy reading above stays the computational baseline.
+    Every reading is decided without a model (packages/risk_mitigation/INTERPRETATION.md)."""
+    t = ctx["tools"]
+    res = result(t, "assess_risk_questions")
+    if not res.get("questions"):
+        why = res.get("missing_dependency") or (t.get("assess_risk_questions") or {}).get("status")
+        f["cop_specific"]["question_assessment"] = f"unavailable: {why}"
+        return
+    d = decide_risk_mitigation(res["questions"])
+    q = d["questions"]
+    legacy = {"label": f["label"], "confidence": f["confidence"], "action": f.get("action"),
+              "score": f["cop_specific"].get("score")}
+    f["cop_specific"].update(questions=q, drivers=d["drivers"], contrary=d["contrary"], limitations=d["limitations"],
+                             recipients=d["recipients"], memory_payload=d["memory_payload"],
+                             decided_without_model=d["decided"], decision=d["decision"], risk_status=d["risk_status"],
+                             legacy_reading=legacy, previous_reading=d["previous_reading"])
+    claims = [tclaim(t, "assess_risk_questions", f"questions.{qid}.answer.outcome", x["answer"],
+                     f"{qid} answered {x['answer']}: {x['explanation']}"[:240]).to_dict() for qid, x in q.items()]
+    why = "; ".join(f"{x} {q[x]['answer']}" for x in d["drivers"])
+    if d["label"] == INCONCLUSIVE and d["register_problem"]:
+        # the register or its thresholds are missing: the legacy MISSING_DEPENDENCY reading stands, with the answers
+        f["claims"] = claims + f["claims"]
+        f["cop_specific"]["stop_reason"] = DECIDED_WITHOUT_MODEL
+        return
+    status = SUBSTANTIVE if d["label"] != INCONCLUSIVE else "INCONCLUSIVE"
+    f.update(label=d["label"], confidence=d["confidence"] if d["label"] != INCONCLUSIVE else 0.0, action=d["action"],
+             severity=d["severity"], action_reason=d["action_reason"], status=status, claims=claims + f["claims"],
+             rationale=(f"{d['label']} from {why}; observed, inferred and verified risk kept apart; controls "
+                        f"recommended, never applied; legacy reading: {f['label']} ({f['rationale']})")[:600])
+    f["cop_specific"]["stop_reason"] = DECIDED_WITHOUT_MODEL
 
 
 def governance_intelligence(ctx):

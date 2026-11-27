@@ -528,18 +528,24 @@ IRREVERSIBLE = re.compile(r"(\brm\s+-rf\b|git push (-f|--force)|\bdrop\s+table\b
 
 
 def t_calculate_risk_components(case, a, ctx):
-    from .rules import independent_upstream
+    """The register formula's inputs. A signal is a verified substantive upstream finding with a risk-bearing label
+    (packages/risk_mitigation/METRICS.yaml upstream) whose lineage is independent (rules.independent_upstream); a
+    quiet or undetermined reading is listed, not counted. An irreversible operation on a row the collectors
+    disagree on is listed as disputed, not counted (packages/risk_mitigation/DECISIONS.md, D-RK3, D-RK6)."""
     up = ctx.get("upstream") or {}
-    own = set(BY_KEY[ctx["cop"]].metric_keys)
-    indep = independent_upstream(own, up)
+    split = cop_package.rk_signal_split(up)
     rows = case.session.rows if case.session else []
     irrev = [r for r in rows if IRREVERSIBLE.search(str(r.get("command") or ""))]
     reverted = [r for r in rows if r.get("reverted_to_earlier")]
     sens = max([r.get("sensitivity_tier") or 0 for r in rows] or [0])
-    return {"independent_verified_signals": [u["cop"] for u in indep["independent"]],
-            "correlated_not_counted": [u["cop"] for u in indep["correlated"]],
+    return {"independent_verified_signals": [u["cop"] for u in split["independent"]],
+            "correlated_not_counted": [u["cop"] for u in split["correlated"]],
+            "quiet_not_counted": split["quiet"], "undetermined_not_counted": split["undetermined"],
             "max_sensitivity_tier": sens,
-            "irreversible_operations": [f"observable:{r['observable_id']}" for r in irrev],
+            "irreversible_operations": [f"observable:{r['observable_id']}" for r in irrev
+                                        if r.get("collectors_agree") is not False],
+            "irreversible_disputed": [f"observable:{r['observable_id']}" for r in irrev
+                                      if r.get("collectors_agree") is False],
             "reverted_changes": len(reverted)}
 
 
@@ -1234,6 +1240,27 @@ def t_assess_classification_questions(case, a, ctx):
             "evaluated_at": case.computed_at}
 
 
+def t_assess_risk_questions(case, a, ctx):
+    """The four Risk Mitigation questions for the case session (cop_package), read against the risk register
+    (t_read_risk_register), the legacy risk components (t_calculate_risk_components), the controls'
+    prerequisites (t_evaluate_control_prerequisites), validated mitigation_outcome memory and the upstream
+    findings."""
+    if not case.session:
+        return missing("session", "risk question assessment", "the case session")
+    mem = _memory_lookup(ctx, "mitigation_outcome") if ctx.get("memory") else None
+    memory = {k: mem[k] for k in ("established", "verified_pending")} if mem and "missing_dependency" not in mem \
+        else None
+    reg = t_read_risk_register(case, a, ctx)
+    comp = t_calculate_risk_components(case, a, ctx)
+    ctl = t_evaluate_control_prerequisites(case, a, ctx)
+    q = cop_package.assess_risk_mitigation(case.rows, case.session_id, case.cfg, case.computed_at, reg, comp,
+                                           None if "missing_dependency" in ctl else ctl, ctx.get("upstream"), memory,
+                                           case.artifact("source_events"), case.artifact("native_transcripts"))
+    return {"questions": q, "register_supplied": "missing_dependency" not in reg,
+            "memory_supplied": memory is not None, "upstream_supplied": sorted((ctx.get("upstream") or {})),
+            "evaluated_at": case.computed_at}
+
+
 TOOLS = {
     # name: (fn, schema {arg: spec})
     "get_metric_rows": (t_get_metric_rows, {"metric_ids": _arr("metric_ids", 25)}),
@@ -1305,6 +1332,7 @@ TOOLS = {
     "get_quota": (t_get_quota, {}),
     "assess_resource_questions": (t_assess_resource_questions, {}),
     "assess_classification_questions": (t_assess_classification_questions, {}),
+    "assess_risk_questions": (t_assess_risk_questions, {}),
     "compute_sequence_statistics": (t_compute_sequence_statistics, {}),
     "compare_behaviour_history": (t_compare_behaviour_history, {}),
     "get_recovery_records": (t_get_recovery_records, {}),
@@ -1317,8 +1345,9 @@ TOOLS = {
 
 # Baseline tools added after the recorded live run (2026-11-02). They take no place in the call sequence,
 # so the model's tool-call ids, and the recorded replies that cite them, stay as they were
-# (packages/anomaly_detection/DECISIONS.md, D-AD9; packages/classification_tagging/DECISIONS.md, D-CT16).
-UNSEQUENCED = frozenset({"assess_anomaly_questions", "assess_classification_questions"})
+# (packages/anomaly_detection/DECISIONS.md, D-AD9; packages/classification_tagging/DECISIONS.md, D-CT16;
+# packages/risk_mitigation/DECISIONS.md, D-RK12).
+UNSEQUENCED = frozenset({"assess_anomaly_questions", "assess_classification_questions", "assess_risk_questions"})
 
 class ToolGateway:
     def __init__(self, case, allowlists, memory=None):

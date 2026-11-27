@@ -3160,3 +3160,447 @@ def interpreted_classification_tagging(f, baseline):
                            "recipients": ["governance_intelligence"] if answer == "CLASSIFIED" else [],
                            "memory_payload": pay, "decision": answer}
     return out
+
+
+# ---------------------------------------------------------------- Risk Mitigation
+
+RK = "risk_mitigation"
+RK_QUESTIONS = ("RK-1", "RK-2", "RK-3", "RK-4")
+RK_REASON = {INCONCLUSIVE: "the risk could not be assessed: see the question answers"}
+RK_AUTHORITY = ("Risk Mitigation recommends controls and escalates; it never applies a control, never blocks or "
+                "pauses an agent, and never accepts residual risk on the owner's behalf (triage handoff)")
+RK_NO_INVENTORY = ("no enterprise asset inventory (asset, owner, criticality, workflow dependencies): exposure is "
+                   "named by the events and findings involved, not by asset criticality or ownership")
+RK_NO_RESIDUAL = ("residual risk after controls is not established: no approved mitigation effectiveness and no "
+                  "record of an applied mitigation (risk_residual_score, risk_mitigation_effectiveness "
+                  "NOT_CALCULATED)")
+
+
+def _rk_pkg():
+    return EA.load_package(RK)
+
+
+def _rk_built(pkg, qid):
+    """The built metrics a question requires (the unbuilt ones carry a NOT_CALCULATED note in the mapping)."""
+    return [r["metric"] for r in pkg["questions"][qid]["requires"] if not (pkg["mapping"][r["metric"]] or {}).get("note")]
+
+
+def _rk_not_built(pkg, qid):
+    return [{"metric": r["metric"], "state": EA.NOT_CALCULATED,
+             "missing_inputs": " ".join(pkg["mapping"][r["metric"]]["note"].split())}
+            for r in pkg["questions"][qid]["requires"] if (pkg["mapping"][r["metric"]] or {}).get("note")]
+
+
+def _rk_irreversible(session):
+    """Irreversible operations (tools.IRREVERSIBLE on the command field), split by whether the collectors dispute
+    the row (collectors_agree false)."""
+    from .tools import IRREVERSIBLE
+    rows = [r for r in (session.rows if session else []) if IRREVERSIBLE.search(str(r.get("command") or ""))]
+    ref = lambda r: f"observable:{r.get('observable_id')}"
+    return ([ref(r) for r in rows if r.get("collectors_agree") is not False],
+            [ref(r) for r in rows if r.get("collectors_agree") is False])
+
+
+def rk_signal_split(upstream):
+    """The consumed findings that can be risk signals: verified substantive with a risk-bearing label, split into
+    independent and correlated (rules.independent_upstream over this COP's counted metrics). Quiet and
+    undetermined verified readings are named and never counted. Used by tools.calculate_risk_components, so the
+    legacy rule, VS-01's recomputation and this package read the same signals."""
+    from .rules import independent_upstream
+    from ..specs import BY_KEY as _BY, CONSUMES
+    pkg = _rk_pkg()
+    risky, quiet, und = {}, [], []
+    for k in CONSUMES[RK]:
+        f = (upstream or {}).get(k)
+        if not (f and f.get("verified") and f.get("status") == "SUBSTANTIVE"):
+            continue
+        if f["label"] in pkg["upstream"][k]["risk"]:
+            risky[k] = f
+        elif f["label"] in pkg["upstream"][k]["quiet"]:
+            quiet.append(k)
+        else:
+            und.append(k)
+    split = independent_upstream(set(_BY[RK].metric_keys), risky)
+    return {**split, "quiet": quiet, "undetermined": und}
+
+
+def _rk_previous_reading(upstream, session, register, tier):
+    """The reading before D-RK3/D-RK6: every verified substantive consumed finding counted when independent, quiet
+    readings included, and every irreversible operation, disputed ones included."""
+    from .rules import independent_upstream
+    from ..specs import BY_KEY as _BY, CONSUMES
+    if _rk_register_problem(register):
+        return None
+    up = {k: v for k, v in (upstream or {}).items() if k in CONSUMES[RK]}
+    sig = [x["cop"] for x in independent_upstream(set(_BY[RK].metric_keys), up)["independent"]]
+    a, b = _rk_irreversible(session)
+    impact, _ = _rk_impact(register, tier)
+    score = impact * (len(sig) + (1 if a or b else 0))
+    return {"signals": sig, "irreversible": a + b, "score": score, "band": _rk_band(score, register["thresholds"]),
+            "note": "the rule before D-RK3 and D-RK6 counted every verified substantive upstream finding, quiet "
+                    "readings included, and every irreversible operation, disputed ones included"}
+
+
+def _rk_upstream(upstream, pkg):
+    """Each consumed COP's finding (specs.CONSUMES): present, verified, its label's class (RISK, QUIET or
+    UNDETERMINED, METRICS.yaml upstream), and, for risk-bearing findings, whether its lineage is independent of
+    this COP's counted metrics and of signals already counted (rules.independent_upstream). Only an independent
+    risk-bearing finding is counted; quiet and undetermined readings never are."""
+    from ..specs import CONSUMES
+    up = upstream or {}
+    out = {}
+    for k in CONSUMES[RK]:
+        f = up.get(k)
+        if f is None:
+            out[k] = {"present": False, "class": "ABSENT", "counted": False, "why": "no finding in this case"}
+            continue
+        ok = bool(f.get("verified")) and f.get("status") == "SUBSTANTIVE"
+        cls = ("RISK" if f["label"] in pkg["upstream"][k]["risk"] else
+               "QUIET" if f["label"] in pkg["upstream"][k]["quiet"] else "UNDETERMINED") if ok else "NOT_VERIFIED"
+        out[k] = {"present": True, "label": f.get("label"), "finding_id": f.get("finding_id"),
+                  "verified": bool(f.get("verified")), "status": f.get("status"), "class": cls,
+                  "lineage": sorted(f.get("lineage") or []), "counted": False}
+    split = rk_signal_split(up)
+    for x in split["independent"]:
+        out[x["cop"]].update(counted=True, why="independent verified risk signal")
+    for x in split["correlated"]:
+        out[x["cop"]]["why"] = f"correlated, not counted: {x['why']}"
+    for k, v in out.items():
+        v.setdefault("why", {"QUIET": f"{v.get('label')} is a quiet reading, not a risk signal",
+                             "UNDETERMINED": f"{v.get('label')}: the producer could not decide; not a signal",
+                             "NOT_VERIFIED": "not a verified substantive finding; supports nothing"}.get(v["class"], ""))
+    return out
+
+
+def _rk1(a, s, states, pkg, view):
+    from ..specs import BY_KEY as _BY
+    counted = _ct_measures(a, _BY[RK].metric_keys, states)
+    tel = _ct_measures(a, [m for m in _rk_built(pkg, "RK-1") if m not in _BY[RK].metric_keys], states)
+    irrev, disputed = _rk_irreversible(s)
+    observed = [m for m in counted if m["verdict"] == DEVIATES]
+    inferred = [{"cop": k, "label": v["label"], "finding_id": v["finding_id"], "counted": v["counted"], "why": v["why"]}
+                for k, v in view.items() if v["class"] == "RISK"]
+    verified_up = [k for k, v in view.items() if v["class"] in ("RISK", "QUIET", "UNDETERMINED")]
+    basis = {"measures": counted, "observed": [f"{m['metric']}@{m['state']}" for m in observed],
+             "observed_refs": sorted({r for m in observed for r in m.get("evidence_refs") or []}),
+             "irreversible": irrev, "irreversible_disputed": disputed, "inferred": inferred,
+             "quiet_not_counted": [{"cop": k, "label": v["label"]} for k, v in view.items() if v["class"] == "QUIET"],
+             "undetermined": [{"cop": k, "label": v["label"]} for k, v in view.items() if v["class"] == "UNDETERMINED"],
+             "not_verified": [{"cop": k, "label": v["label"]} for k, v in view.items() if v["class"] == "NOT_VERIFIED"],
+             "absent": [k for k, v in view.items() if v["class"] == "ABSENT"],
+             "verified_upstream": verified_up, "telemetry": tel,
+             "telemetry_deviating": [m["metric"] for m in tel if m["verdict"] == DEVIATES],
+             "warnings": [m["metric"] for m in counted if m.get("warning")],
+             "not_calculated": _rk_not_built(pkg, "RK-1"), "upstream": view}
+    if observed or irrev or inferred:
+        return "RISK_INDICATED", basis
+    open_ = [m for m in counted if m["verdict"] not in (WITHIN, DOES_NOT_APPLY)]
+    why = [{"code": EA.MISSING_DATA, "requirement": m["metric"], "check": None,
+            "detail": f"{m['metric']} {m['reason']}: whether it indicates a risk is not evaluated"} for m in open_]
+    if not verified_up:
+        why.append({"code": EA.MISSING_DATA, "requirement": "upstream_findings", "check": None,
+                    "detail": "no consumed COP (" + ", ".join(view) + ") has a verified finding: the combined "
+                              "findings are not available, so the absence of risk is not shown"})
+    if why:
+        basis["interpretation_reasons"] = why
+        return INCONCLUSIVE, basis
+    return "NO_RISK_INDICATED", basis
+
+
+def _rk_register_problem(register):
+    if not register or "missing_dependency" in register:
+        return {"code": EA.MISSING_REFERENCE, "requirement": "risk_register", "check": None,
+                "detail": "no risk register: impact, thresholds and controls are undefined"}
+    th = register.get("thresholds") or {}
+    if "EMERGING" not in th or "MATERIAL" not in th:
+        return {"code": EA.MISSING_REFERENCE, "requirement": "risk_register.thresholds", "check": None,
+                "detail": f"risk register {register.get('version')} defines no EMERGING/MATERIAL thresholds"}
+    return None
+
+
+def _rk_impact(register, tier):
+    applies = [r for r in register.get("risks", []) if r.get("min_sensitivity_tier", 0) <= tier]
+    return max([r.get("impact", 0) for r in applies] or [0]), [r["id"] for r in applies]
+
+
+def _rk_band(score, th):
+    return "MATERIAL" if score >= th["MATERIAL"] else "EMERGING" if score >= th["EMERGING"] else "LOW"
+
+
+def _rk2(a, s, states, pkg, deps, register, components, upstream):
+    one = deps["RK-1"]["basis"]
+    ctx = _ct_measures(a, _rk_built(pkg, "RK-2"), states)
+    comp = components or {}
+    basis = {"likelihood_context": ctx, "likelihood_context_deviating": [m["metric"] for m in ctx
+                                                                         if m["verdict"] == DEVIATES],
+             "counted": False if not ctx else "observed, never counted: the register formula counts independent "
+                                              "verified signals and irreversible operations only",
+             "not_calculated": _rk_not_built(pkg, "RK-2"),
+             "max_sensitivity_tier": comp.get("max_sensitivity_tier", 0)}
+    prob = _rk_register_problem(register)
+    if prob:
+        basis["interpretation_reasons"] = [prob]
+        basis["previous_reading"] = None
+        return INCONCLUSIVE, basis
+    th = register["thresholds"]
+    impact, applies = _rk_impact(register, basis["max_sensitivity_tier"])
+    signals = [x["cop"] for x in one["inferred"] if x["counted"]]
+    irrev = 1 if one["irreversible"] else 0
+    score = impact * (len(signals) + irrev)
+    band = _rk_band(score, th)
+    basis.update(register_version=register.get("version"), thresholds=th, impact=impact, applicable_risks=applies,
+                 signals_counted=signals + (["irreversible_operation"] if irrev else []),
+                 correlated_not_counted=[x["cop"] for x in one["inferred"] if not x["counted"]],
+                 quiet_not_counted=[x["cop"] for x in one["quiet_not_counted"]],
+                 irreversible_disputed_not_counted=one["irreversible_disputed"],
+                 score=score, formula=f"impact {impact} x (independent signals {len(signals)} + irreversible {irrev})",
+                 band=band, components={k: comp.get(k) for k in ("independent_verified_signals",
+                                                                "irreversible_operations", "max_sensitivity_tier")},
+                 previous_reading=_rk_previous_reading(upstream, s, register, basis["max_sensitivity_tier"]))
+    return {"MATERIAL": "MATERIAL_LEVEL", "EMERGING": "EMERGING_LEVEL", "LOW": "BELOW_THRESHOLDS"}[band], basis
+
+
+def _rk3(a, s, states, pkg, deps):
+    sm = EA.signal_metrics
+    one = deps["RK-1"]
+    b1 = one["basis"]
+    ms = _ct_measures(a, _rk_built(pkg, "RK-3"), states)
+    refs = set(b1["observed_refs"]) | set(b1["irreversible"]) | set(b1["irreversible_disputed"])
+    rows = [r for r in (s.rows if s else []) if f"observable:{r.get('observable_id')}" in refs]
+    ents = [{"ref": f"observable:{r['observable_id']}", "kind": "event",
+             **{k: r.get(k) for k in CT_ENTITY_FIELDS if sm.has(r.get(k))},
+             "lane": r.get("agent_id") or "main",
+             "disputed": f"observable:{r['observable_id']}" in b1["irreversible_disputed"]} for r in rows]
+    ents += [{"ref": x["finding_id"], "kind": "finding", "cop": x["cop"], "label": x["label"], "counted": x["counted"]}
+             for x in b1["inferred"]]
+    basis = {"entities": ents, "measures": ms, "deviating": [m["metric"] for m in ms if m["verdict"] == DEVIATES],
+             "agents": sorted({e["lane"] for e in ents if e["kind"] == "event"}),
+             "resources": sorted({e.get("file_path") or e.get("mcp_server") or e.get("command")
+                                  for e in ents if e["kind"] == "event"} - {None}),
+             "asset_inventory": "NOT_SUPPLIED", "asset_note": RK_NO_INVENTORY,
+             "not_calculated": _rk_not_built(pkg, "RK-3")}
+    if ents:
+        return "EXPOSURE_IDENTIFIED", basis
+    if one["outcome"] == INCONCLUSIVE:
+        basis["interpretation_reasons"] = [{"code": EA.MISSING_DATA, "requirement": "RK-1", "check": None,
+                                            "detail": "RK-1 is not answered, so no exposure can be ruled out"}]
+        return INCONCLUSIVE, basis
+    return "NO_EXPOSURE_IDENTIFIED", basis
+
+
+def _rk4(a, states, pkg, deps, register, controls, memory):
+    two = deps["RK-2"]
+    ms = _ct_measures(a, _rk_built(pkg, "RK-4"), states)
+    basis = {"oversight": ms, "oversight_deviating": [m["metric"] for m in ms if m["verdict"] == DEVIATES],
+             "precedents": _rs_precedents(memory), "not_calculated": _rk_not_built(pkg, "RK-4"),
+             "authority": RK_AUTHORITY, "executed": [], "residual_risk": "NOT_ESTABLISHED"}
+    if two["outcome"] == INCONCLUSIVE:
+        basis["interpretation_reasons"] = [{"code": EA.MISSING_DATA, "requirement": "RK-2", "check": None,
+                                            "detail": "RK-2 is not answered, so whether mitigation is needed is not "
+                                                      "known"}]
+        return INCONCLUSIVE, basis
+    if two["outcome"] == "BELOW_THRESHOLDS":
+        basis["recommended"] = []
+        return "NOT_REQUIRED", basis
+    applies = set(two["basis"]["applicable_risks"])
+    cs = [c for c in ((controls or {}).get("controls") or []) if c["risk"] in applies]
+    basis["controls"] = cs
+    basis["recommended"] = [dict(c, use="recommended to the risk owner; not applied by this COP") for c in cs
+                            if c["prerequisites_met"]]
+    basis["unavailable"] = [dict(c, why="its prerequisites are not met in this environment") for c in cs
+                            if not c["prerequisites_met"]]
+    basis["no_control"] = sorted(r for r in applies if not any(c["risk"] == r for c in cs))
+    return ("CONTROL_AVAILABLE" if basis["recommended"] else "NO_CONTROL_AVAILABLE"), basis
+
+
+def observe_risk_mitigation(assessments, session, register=None, components=None, controls=None, upstream=None,
+                            memory=None):
+    """{question_id: assessment} -> {question_id: answer}. register: tools.read_risk_register's result;
+    components: tools.calculate_risk_components's (the legacy inputs); controls: tools.evaluate_control_prerequisites';
+    memory: {established, verified_pending} mitigation_outcome records."""
+    pkg = _rk_pkg()
+    states = tuple(pkg["deviation_states"])
+    view = _rk_upstream(upstream, pkg)
+    out = {}
+    for qid, q in pkg["questions"].items():
+        a = assessments[qid]
+        if qid == "RK-1":
+            outcome, basis = _rk1(a, session, states, pkg, view)
+        elif qid == "RK-2":
+            outcome, basis = _rk2(a, session, states, pkg, out, register, components, upstream)
+        elif qid == "RK-3":
+            outcome, basis = _rk3(a, session, states, pkg, out)
+        else:
+            outcome, basis = _rk4(a, states, pkg, out, register, controls, memory)
+        if outcome not in q["outcomes"] and outcome != INCONCLUSIVE:
+            raise ValueError(f"{qid}: outcome {outcome} is not in METRICS.yaml")
+        out[qid] = {"outcome": outcome, "sufficiency": a["sufficiency"]["status"], "basis": basis,
+                    "findings": a["findings"], "not_assessed": a["sufficiency"]["not_assessed"]}
+        if outcome == INCONCLUSIVE or basis.get("interpretation_reasons"):
+            out[qid]["because"] = basis.get("interpretation_reasons", [])
+    return out
+
+
+def assess_risk_mitigation(rows, session_id, cfg=None, computed_at=None, register=None, components=None,
+                           controls=None, upstream=None, memory=None, raw_events=None, native=None):
+    """The four questions for one session: each assessment with its answer."""
+    cfg = cfg or EA.signal_metrics.load_config()
+    events, srows = EA.session_inputs(rows, session_id, cfg, computed_at)
+    sessions = EA._computed(rows, cfg, computed_at)[1]
+    s = next(x for x in sessions if x.id == session_id)
+    assessments = {qid: EA.assess(RK, qid, events, srows, cfg, computed_at, raw_events, native)
+                   for qid in EA.QUESTIONS[RK]}
+    answers = observe_risk_mitigation(assessments, s, register, components, controls, upstream, memory)
+    return {qid: {"assessment": assessments[qid], "answer": answers[qid]} for qid in assessments}
+
+
+def _explain_rk(qid, ans):
+    b = ans["basis"] or {}
+    o = ans["outcome"]
+    if o == INCONCLUSIVE:
+        return _explain(qid, ans)
+    if qid == "RK-1":
+        if o == "NO_RISK_INDICATED":
+            s = ("no counted metric in a deviation state, no irreversible operation, no verified risk-bearing "
+                 "finding; quiet readings: " + (", ".join(f"{x['cop']} {x['label']}" for x in b["quiet_not_counted"])
+                                                or "none"))
+        else:
+            parts = ([f"observed {', '.join(b['observed'])}"] if b["observed"] else []) + \
+                    ([f"irreversible {', '.join(b['irreversible'])}"] if b["irreversible"] else []) + \
+                    ([f"inferred {', '.join(x['cop'] + ' ' + x['label'] + (' (counted)' if x['counted'] else ' (correlated)') for x in b['inferred'])}"]
+                     if b["inferred"] else [])
+            s = "; ".join(parts)
+        if b["irreversible_disputed"]:
+            s += f"; disputed irreversible, not counted: {', '.join(b['irreversible_disputed'])}"
+        return s
+    if qid == "RK-2":
+        return (f"{b['formula']} = {b['score']} against register {b['register_version']} thresholds "
+                f"{b['thresholds']}: {b['band']}" + (f"; counted {', '.join(b['signals_counted'])}" if
+                                                       b["signals_counted"] else "")
+                + (f"; correlated, not counted: {', '.join(b['correlated_not_counted'])}" if
+                   b["correlated_not_counted"] else ""))
+    if qid == "RK-3":
+        if o == "NO_EXPOSURE_IDENTIFIED":
+            return "no event or finding carries a risk; " + RK_NO_INVENTORY
+        return (f"{len(b['entities'])} exposed event(s) or finding(s); agents {', '.join(b['agents']) or 'none'}; "
+                f"resources {', '.join(b['resources']) or 'none'}; asset inventory not supplied")
+    if o == "NOT_REQUIRED":
+        return "below the register's thresholds: no mitigation is required"
+    if o == "CONTROL_AVAILABLE":
+        return ("recommended, not applied: " + ", ".join(f"{c['control']} for {c['risk']} (reversible {c['reversible']})"
+                                                         for c in b["recommended"]) + "; residual risk not established")
+    return ("no control available: " + "; ".join([f"{c['control']} for {c['risk']}: {c['why']}" for c in b["unavailable"]]
+                                                  + [f"{r} lists no control" for r in b["no_control"]])
+            + "; the decision is left to a person")
+
+
+def _rk_limitations(ans):
+    from . import decision as D
+    out = []
+    b1 = ans["RK-1"].get("basis") or {}
+    b2 = ans["RK-2"].get("basis") or {}
+    b4 = ans["RK-4"].get("basis") or {}
+    for k in b1.get("absent", []):
+        out.append(D.limitation(D.MISSING_EVIDENCE, "RK-1", k, "UPSTREAM_ABSENT",
+                                f"no {k} finding in this case: its risk is not combined"))
+    for x in b1.get("not_verified", []):
+        out.append(D.limitation(D.MISSING_EVIDENCE, "RK-1", x["cop"], "UPSTREAM_NOT_VERIFIED",
+                                f"{x['cop']} reads {x['label']}, not verified: it supports nothing"))
+    for x in b1.get("undetermined", []):
+        out.append(D.limitation(D.MISSING_EVIDENCE, "RK-1", x["cop"], "UPSTREAM_UNDETERMINED",
+                                f"{x['cop']} reads {x['label']}: it could not decide, so its risk is unknown"))
+    if b1.get("irreversible_disputed"):
+        out.append(D.limitation(D.MISSING_EVIDENCE, "RK-1", "irreversible_operation", EA.CONFLICTING_SOURCES,
+                                "the collectors disagree on the row(s) carrying the irreversible operation: directly "
+                                "disputed evidence is not counted", b1["irreversible_disputed"]))
+    for m in b1.get("telemetry_deviating", []):
+        out.append(D.limitation(D.MISSING_EVIDENCE, "RK-1", m, "TELEMETRY_QUALITY",
+                                f"{m} is in a deviation state: the combined findings rest on degraded telemetry"))
+    if ans["RK-3"]["outcome"] != INCONCLUSIVE:
+        out.append(D.limitation(D.MISSING_EVIDENCE, "RK-3", "asset_inventory", EA.MISSING_REFERENCE, RK_NO_INVENTORY))
+    for c in b4.get("unavailable", []) or []:
+        out.append(D.limitation(D.MISSING_EVIDENCE, "RK-4", c["control"], "CONTROL_PREREQUISITE_UNMET",
+                                f"{c['control']} for {c['risk']}: {c['why']}"))
+    if ans["RK-4"]["outcome"] in ("CONTROL_AVAILABLE", "NO_CONTROL_AVAILABLE"):
+        out.append(D.limitation(D.NOT_CALCULATED, "RK-4", "residual_risk", D.NOT_CALCULATED, RK_NO_RESIDUAL))
+    if ans["RK-2"]["outcome"] != INCONCLUSIVE:
+        pkg = _rk_pkg()
+        for qid in RK_QUESTIONS:
+            for x in (ans[qid].get("basis") or {}).get("not_calculated", []):
+                out.append(D.limitation(D.NOT_CALCULATED, qid, x["metric"], D.NOT_CALCULATED, x["missing_inputs"]))
+        for k, v in pkg["not_calculated"].items():
+            out.append(D.limitation(D.NOT_CALCULATED, "RK-2", k, D.NOT_CALCULATED, " ".join(v.split())))
+    prev = b2.get("previous_reading")
+    if prev and prev["band"] != b2.get("band"):
+        out.append(D.limitation(D.LIMIT_NOT_APPROVED, "RK-2", "previous_reading", "PREVIOUS_READING_DIFFERS",
+                                f"before D-RK3/D-RK6 the rule read {prev['band']} (score {prev['score']}, signals "
+                                f"{prev['signals']}, irreversible {prev['irreversible']}); risk-bearing, undisputed "
+                                f"signals only read {b2['band']}"))
+    return out
+
+
+def _rk_status(ans, label):
+    """Observed, inferred and verified risk, and the intervention it justifies, kept apart."""
+    b1 = ans["RK-1"].get("basis") or {}
+    b2 = ans["RK-2"].get("basis") or {}
+    b4 = ans["RK-4"].get("basis") or {}
+    return {"observed": {"metrics": b1.get("observed", []), "irreversible": b1.get("irreversible", []),
+                         "disputed": b1.get("irreversible_disputed", [])},
+            "inferred": [{k: x[k] for k in ("cop", "label", "finding_id", "counted")} for x in b1.get("inferred", [])],
+            "verified": {"band": label if label in ("EMERGING", "MATERIAL") else None,
+                         "score": b2.get("score"), "signals_counted": b2.get("signals_counted", []),
+                         "register_version": b2.get("register_version")},
+            "intervention": {"answer": ans["RK-4"]["outcome"],
+                             "recommended": [c["control"] for c in b4.get("recommended", []) or []],
+                             "executed": [], "escalated_to_person": label == "MATERIAL",
+                             "justified": ("escalation to a person" if label == "MATERIAL" else
+                                           "watch; controls recommended for the owner's review" if label == "EMERGING"
+                                           else "none"),
+                             "authority": RK_AUTHORITY}}
+
+
+def decide_risk_mitigation(questions, evidence_scale=1.0):
+    """The COP decision from the four answers (INTERPRETATION.md). RK-2's register band gives the label; a LOW band
+    with RK-1 unanswered is INCONCLUSIVE; RK-2 unanswered is INCONCLUSIVE. Action, severity and confidence are the
+    legacy rule's (METRICS.yaml decision). Every reading is decided by the package; no model is needed."""
+    pkg = _rk_pkg()
+    ans = {q: v["answer"] for q, v in questions.items()}
+    one, two = ans["RK-1"]["outcome"], ans["RK-2"]["outcome"]
+    b1, b2 = ans["RK-1"].get("basis") or {}, ans["RK-2"].get("basis") or {}
+    label = pkg["labels"][two] if two != INCONCLUSIVE else INCONCLUSIVE
+    if label == "LOW" and one == INCONCLUSIVE:
+        label = INCONCLUSIVE
+    d = pkg["decision"].get(label, {"action": "NONE", "severity": "NONE", "confidence": 0.0})
+    reason = "" if label != INCONCLUSIVE else RK_REASON[INCONCLUSIVE]
+    if label == "MATERIAL":
+        reason = (f"risk score {b2['score']} reaches the register's MATERIAL threshold {b2['thresholds']['MATERIAL']}: "
+                  f"a person decides on mitigation; {RK_AUTHORITY}")
+    elif label == "EMERGING":
+        reason = (f"risk score {b2['score']} reaches the register's EMERGING threshold {b2['thresholds']['EMERGING']}: "
+                  f"watched; controls recommended, not applied")
+    drivers = ["RK-1", "RK-2"] if label != INCONCLUSIVE or two != INCONCLUSIVE else ["RK-2"]
+    trace = _question_trace(questions, _explain_rk, drivers)
+    contrary = [f"{q}: {x['check']} {x['detail']}" for q, v in questions.items()
+                for x in v["answer"].get("findings", [])]
+    contrary += [f"RK-1: {x['cop']} reads {x['label']}, {x['why']}" for x in b1.get("inferred", []) if not x["counted"]]
+    contrary += [f"RK-1: {x['cop']} reads {x['label']}: a quiet reading, not counted (the legacy rule counted it)"
+                 for x in b1.get("quiet_not_counted", [])]
+    contrary += [f"RK-1: {r} carries an irreversible operation the collectors disagree on: disputed, not counted"
+                 for r in b1.get("irreversible_disputed", [])]
+    contrary += [f"RK-2: {m} in a deviation state, observed as likelihood context and not counted"
+                 for m in b2.get("likelihood_context_deviating", [])]
+    if label in ("LOW",) and b1.get("observed"):
+        contrary.append(f"RK-1: observed {', '.join(b1['observed'])} without an independent verified signal: observed "
+                        f"risk, not verified risk")
+    status = _rk_status(ans, label)
+    pay = {"answers": {q: x["outcome"] for q, x in ans.items()}, "band": b2.get("band"), "score": b2.get("score"),
+           "signals_counted": b2.get("signals_counted", []), "register_version": b2.get("register_version"),
+           "recommended_controls": status["intervention"]["recommended"], "decided_by": "package",
+           "precedents_read": [p["record_id"] for p in (ans["RK-4"].get("basis") or {}).get("precedents", [])]}
+    return {"label": label, "confidence": round(d["confidence"], 3), "severity": d["severity"], "action": d["action"],
+            "action_reason": reason, "recipients": ["incident_response"] if label in ("EMERGING", "MATERIAL") else [],
+            "drivers": drivers, "also_held": [], "contrary": contrary, "questions": trace,
+            "limitations": _rk_limitations(ans), "decided": True, "memory_payload": pay, "risk_status": status,
+            "register_problem": (b2.get("interpretation_reasons") or [{}])[0].get("requirement")
+            if two == INCONCLUSIVE else None,
+            "previous_reading": b2.get("previous_reading"), "decision": label}

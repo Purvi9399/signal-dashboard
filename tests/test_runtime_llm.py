@@ -19,6 +19,11 @@ RECORD_FIELDS = ("invocation_id", "cop", "case_id", "purpose", "provider", "mode
                  "validation", "retry_count", "error", "timed_out")
 
 
+# Risk Mitigation's package decides every reading without the model (COP 8, packages/risk_mitigation/DECISIONS.md,
+# D-RK9), so its provider wiring cannot be exercised here; test_risk_mitigation_does_not_reach_the_provider checks it.
+MODEL_PATH_COPS = [c for c in LLM_COPS if c != "risk_mitigation"]
+
+
 def rt_with(provider, budget=None, case="llm-case"):
     # The taxonomy is supplied so Classification reaches its model call: without it the
     # evidence precheck stops that COP before any call (tested in test_runtime_error_paths).
@@ -48,7 +53,7 @@ def test_prompts_tools_and_schemas_differ_per_cop():
     assert len({p[k].detail_schema for k in LLM_COPS}) == 10
 
 
-@pytest.mark.parametrize("cop", LLM_COPS)
+@pytest.mark.parametrize("cop", MODEL_PATH_COPS)
 def test_wiring_through_the_provider_interface(cop):
     seen = []
 
@@ -68,7 +73,7 @@ def test_wiring_through_the_provider_interface(cop):
     assert f["status"] == "INCONCLUSIVE" and f["cop_specific"]["stop_reason"] == "model_inconclusive"
 
 
-@pytest.mark.parametrize("cop", LLM_COPS)
+@pytest.mark.parametrize("cop", MODEL_PATH_COPS)
 def test_unavailable_provider_is_recorded_not_fabricated(cop):
     rt, r, f = one(cop, UnavailableProvider())
     assert f["label"] == "INCONCLUSIVE" and f["status"] == "INCONCLUSIVE" and not f["verified"]
@@ -79,7 +84,7 @@ def test_unavailable_provider_is_recorded_not_fabricated(cop):
     assert r["proposed_action"]["execution_status"] in ("NOT_EXECUTED_NO_ACTION",)
 
 
-@pytest.mark.parametrize("cop", LLM_COPS)
+@pytest.mark.parametrize("cop", MODEL_PATH_COPS)
 def test_timeout_retries_then_stops(cop):
     rt, r, f = one(cop, FixtureProvider(lambda *a: ProviderTimeout("slow")))
     inv = r["llm_invocations"]
@@ -87,7 +92,7 @@ def test_timeout_retries_then_stops(cop):
     assert f["cop_specific"]["stop_reason"] == "llm_timeout" and f["label"] == "INCONCLUSIVE"
 
 
-@pytest.mark.parametrize("cop", LLM_COPS)
+@pytest.mark.parametrize("cop", MODEL_PATH_COPS)
 def test_malformed_output_retries_then_stops(cop):
     replies = iter(["not json at all", {"known": [], "unknown": [], "uncertain": [], "hypothesis": "h",
                                         "tool_requests": [], "grant_me": "admin"}])
@@ -97,7 +102,7 @@ def test_malformed_output_retries_then_stops(cop):
     assert f["cop_specific"]["stop_reason"] == "llm_output_invalid"
 
 
-@pytest.mark.parametrize("cop", LLM_COPS)
+@pytest.mark.parametrize("cop", MODEL_PATH_COPS)
 def test_prohibited_tool_request_is_refused_and_logged(cop):
     other = next(t for k in LLM_COPS if k != cop for t in build_profiles()[k].tools
                  if t not in build_profiles()[cop].tools)
@@ -180,3 +185,14 @@ def test_live_provider_smoke():                                         # pragma
     rt, r, f = one("anomaly_detection", AnthropicProvider())
     assert r["llm_invocations"] and not r["llm_invocations"][0]["simulated"]
     assert f["status"] in ("SUBSTANTIVE", "INCONCLUSIVE", "REJECTED_BY_VERIFIER")
+
+
+def test_risk_mitigation_does_not_reach_the_provider():
+    seen = []
+
+    def script(c, purpose, payload, n):
+        seen.append((c, purpose))
+        return FX.plan("look", [], [], []) if purpose == "plan" else FX.inconclusive("stop", ["x"])
+    rt, r, f = one("risk_mitigation", FixtureProvider(script))
+    assert seen == [] and r["llm_invocations"] == []
+    assert f["cop_specific"]["stop_reason"] == "decided_by_package_without_model"
