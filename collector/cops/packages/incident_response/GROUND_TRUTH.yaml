@@ -303,3 +303,120 @@ scenarios:
     questions: {IR-1: INCIDENT_INDICATED}
     cop_label: [INCIDENT]
     checks: [topology_doc_matches_runtime_edges, topological_order_acyclic, ir_before_its_consumers]
+
+  # ---------------------------------------------------------------- revision R-IR1 (2026-11-27)
+  # Written before the correction code, from purvi's conditional acceptance (A-IR1, U-IR1): an incident that the
+  # package's deterministic evidence establishes, and that passes the existing verification independently, keeps
+  # its label, severity, evidence and deterministic response whatever the model does. The containment plan is
+  # recorded apart (cop_specific.containment_plan.status: VERIFIED, UNVERIFIED, REJECTED or UNAVAILABLE). Only a
+  # failure of the deterministic incident evidence itself makes the finding INCONCLUSIVE. Confidence is IR-4's
+  # rule value: the lowest of the verified RM (0.9), ID (0.8), AD (0.8) and PE (0.85) confidences = 0.8.
+
+  r1_verified_incident_model_unavailable:
+    description: the verified-violation world (secret, prod write denied, BLOCK proposed); no model available
+    questions: {IR-1: INCIDENT_INDICATED, IR-2: SEVERITY_HIGH, IR-3: ONGOING, IR-4: INTERVENTION_JUSTIFIED,
+                IR-5: REQUEST_APPROVAL}
+    cop_label: [INCIDENT]
+    confidence: 0.8
+    checks: [verified, severity_high, action_request_approval, category_incident_intervention, plan_unavailable,
+             deterministic_finding_published, containment_plan_limitation, approval_requested_not_granted,
+             block_never_proposed, nothing_executed, action_within_authority, decision_contract_valid,
+             record_written, recipients_downstream]
+
+  r1_verified_incident_plan_rejected:
+    description: >-
+      the verified-violation world; Incident Response's model (scripted, simulated) concludes INCIDENT with
+      REQUEST_APPROVAL, but its plan cites an exposure row the session does not contain, which a verifier rejects
+    questions: {IR-1: INCIDENT_INDICATED, IR-2: SEVERITY_HIGH, IR-3: ONGOING, IR-4: INTERVENTION_JUSTIFIED,
+                IR-5: REQUEST_APPROVAL}
+    cop_label: [INCIDENT]
+    confidence: 0.8
+    checks: [verified, severity_high, action_request_approval, plan_rejected, model_output_preserved,
+             deterministic_finding_published, model_called_simulated, nothing_executed, decision_contract_valid]
+
+  r1_model_claims_no_incident:
+    description: the verified-violation world; the model (scripted, simulated) concludes NO_INCIDENT
+    questions: {IR-1: INCIDENT_INDICATED, IR-2: SEVERITY_HIGH, IR-3: ONGOING, IR-4: INTERVENTION_JUSTIFIED,
+                IR-5: REQUEST_APPROVAL}
+    cop_label: [INCIDENT]
+    confidence: 0.8
+    checks: [verified, severity_high, action_request_approval, plan_rejected, model_output_preserved,
+             model_label_no_incident_recorded, never_no_incident, deterministic_finding_published, nothing_executed]
+
+  r1_model_requests_block:
+    description: the verified-violation world; the model (scripted, simulated) concludes INCIDENT and proposes BLOCK
+    questions: {IR-1: INCIDENT_INDICATED, IR-2: SEVERITY_HIGH, IR-3: ONGOING, IR-4: INTERVENTION_JUSTIFIED,
+                IR-5: REQUEST_APPROVAL}
+    cop_label: [INCIDENT]
+    checks: [action_request_approval, plan_rejected, model_action_block_recorded, block_never_proposed,
+             approval_requested_not_granted, nothing_executed, action_within_authority]
+
+  r1_incident_evidence_fails_verification:
+    description: >-
+      the verified-violation world with no model; one claim of the package's own incident finding is tampered (the
+      harness asserts insights.secrets CRITICAL where the session reads EXCEPTION) so the existing verifiers reject
+      the deterministic incident evidence itself
+    questions: {IR-1: INCIDENT_INDICATED, IR-2: SEVERITY_HIGH, IR-3: ONGOING, IR-4: INTERVENTION_JUSTIFIED,
+                IR-5: REQUEST_APPROVAL}
+    cop_label: [INCONCLUSIVE]
+    checks: [category_incident_unconfirmed, answers_kept_when_unconfirmed, incident_evidence_rejection_named,
+             plan_unavailable, never_no_incident, nothing_executed, block_never_proposed]
+
+  r1_approval_required_without_violation:
+    description: an ordinary session and a proposed write to /staging/app.cfg that needs approval (U-IR2 kept)
+    questions: {IR-1: FINDING_WITHOUT_INCIDENT, IR-2: SEVERITY_LOW, IR-3: NO_INCIDENT_STATE, IR-4: NOT_JUSTIFIED,
+                IR-5: WATCH}
+    cop_label: [WATCH]
+    confidence: 0.8
+    checks: [verified, decided_without_model, action_watch, category_verified_finding, no_containment_plan,
+             approval_is_finding_not_incident, approval_workflow_not_suppressed]
+
+  r1_partial_recovery_without_incident:
+    description: a failed deploy and a restore that passed 1 of 3 checks; no incident ground (U-IR2 kept)
+    questions: {IR-1: FINDING_WITHOUT_INCIDENT, IR-2: SEVERITY_LOW, IR-3: NO_INCIDENT_STATE, IR-4: NOT_JUSTIFIED,
+                IR-5: WATCH}
+    cop_label: [WATCH]
+    confidence: 0.8
+    checks: [verified, decided_without_model, action_watch, category_verified_finding, no_containment_plan,
+             partial_recovery_is_finding_not_incident, never_resolved_or_contained]
+
+  r1_context_producers_neutral_in_vs01:
+    description: >-
+      an MCP call to prod-db, first seen and entitled (Interaction Discovery NEW_ROUTE, context); U-IR3: context
+      producers are not applicable evidence in Incident Response's VS-01, and only there
+    questions: {IR-1: NO_INCIDENT_INDICATED}
+    cop_label: [NO_INCIDENT]
+    checks: [verified, vs01_context_producers_neutral, vs01_grounding_producers_unchanged, other_cops_vs01_unchanged]
+
+  r1_recovery_downstream_deferred:
+    description: >-
+      U-IR5: the intended Incident Response to Recovery & Resilience relationship is recorded, not wired; as a
+      current-cycle edge it would close a cycle (Recovery & Resilience is consumed by Incident Response), so it is
+      deferred until Recovery & Resilience is packaged, when it can only be a previous-cycle edge
+    questions: {IR-1: INCIDENT_INDICATED}
+    cop_label: [INCIDENT]
+    checks: [rr_downstream_recorded_not_wired, rr_current_edge_would_cycle, topology_doc_matches_runtime_edges,
+             topological_order_acyclic]
+
+superseded:
+  violation_without_model:
+    reason: >-
+      A-IR1 (U-IR1, purvi 2026-11-27): a deterministic incident that passes verification is kept when the model is
+      unavailable; the plan is recorded UNAVAILABLE. The first build made the finding INCONCLUSIVE
+    replaces: [cop_label, category_incident_unconfirmed, answers_kept_when_unconfirmed]
+    cop_label: [INCIDENT]
+    checks: [category_incident_intervention, plan_unavailable, deterministic_finding_published]
+  adversarial_model_contradicts:
+    reason: >-
+      A-IR1 (U-IR1): a model that claims NO_INCIDENT never overrides a verified deterministic incident; the plan is
+      REJECTED and the model output kept. The first build made the finding INCONCLUSIVE
+    replaces: [cop_label, category_incident_unconfirmed]
+    cop_label: [INCIDENT]
+    checks: [category_incident_intervention, plan_rejected, deterministic_finding_published]
+  adversarial_model_overreaches:
+    reason: >-
+      A-IR1 (U-IR1): a model asking for BLOCK has its plan REJECTED (an unsupported, stronger intervention); the
+      published finding is the package's verified incident with its REQUEST_APPROVAL. The first build kept the model's
+      finding with the action replaced
+    replaces: [model_action_replaced]
+    checks: [plan_rejected, model_action_block_recorded, deterministic_finding_published]
