@@ -4605,3 +4605,487 @@ def interpreted_incident_response(f, baseline, plan=None, model_results=None):
     out = dict(f)
     out["cop_specific"] = {**(f.get("cop_specific") or {}), "verify_package_finding": pkg}
     return out
+
+
+# ---------------------------------------------------------------- Recovery & Resilience
+
+RR = "recovery_resilience"
+RR_QUESTIONS = ("RR-1", "RR-2", "RR-3", "RR-4")
+RR_AUTHORITY = ("Recovery & Resilience observes, verifies recovery, watches and alerts; it never executes, requests "
+                "or initiates a rollback, restart, block, pause or restoration (specs.permitted_actions NONE, WATCH, "
+                "ALERT; agents-harness row 17 'initiate approved recovery' is not granted: U-RR5)")
+RR_CATEGORY = {"RECOVERED_VERIFIED": "restoration verified by independent post-restore checks",
+               "RECOVERY_INCOMPLETE": "recovery incomplete: some restoration not shown, or failures recurred",
+               "RECOVERY_FAILED": "restoration did not return a viable state",
+               "IRREVERSIBLE_CHANGE": "an irreversible operation ran; restoration cannot undo it",
+               "NO_DISRUPTION": "nothing disrupted the workflow: there is no recovery to judge",
+               "NO_RECOVERY_RECORD": "a disruption with no recovery record: whether the system recovered is unknown",
+               "APPROVAL_PENDING": "a recovery action awaits a person's approval: nothing has been attempted",
+               "NOT_ATTEMPTED": "no recovery action was attempted",
+               "RECOVERY_UNCONFIRMED": "a recovery action was attempted but nothing independently confirms the "
+                                       "restored state",
+               "CONFLICTING_RECORDS": "recovery records disagree about the same restoration",
+               "INSUFFICIENT_EVIDENCE": "whether a disruption happened cannot be established"}
+RR_CHECKED = ("VERIFIED", "FAILED_CHECKS", "PARTIAL_CHECKS", "INTEGRITY_FAILED")
+RR_NO_IR = ("Incident Response is downstream of this COP in the current cycle and is not read; a previous-cycle "
+            "edge is proposed for approval (P-RR1)")
+
+
+def _rr_pkg():
+    return EA.load_package(RR)
+
+
+def _rr_ref(r):
+    return f"observable:{r.get('observable_id')}"
+
+
+def _rr_failed(r):
+    """requirements._had_failure's failure: success false or a non-zero exit code."""
+    return r.get("success") is False or str(r.get("exit_code") if r.get("exit_code") is not None else "0") \
+        not in ("0", "0.0")
+
+
+def _rr_disruptions(session):
+    """Rows that disrupted the workflow (D-RR3), each with its kind, split by whether the collectors dispute it."""
+    from .tools import IRREVERSIBLE
+    out = []
+    for r in (session.rows if session else []):
+        kinds = [k for k, hit in (("failure", _rr_failed(r) and r.get("observable_type") != "session_end"),
+                                  ("stall", bool(r.get("hung_seconds"))),
+                                  ("deny_rule", bool(r.get("policy_rule_matched"))
+                                   and str(r.get("permission_decision") or "").lower() == "deny"),
+                                  ("reverted", bool(r.get("reverted_to_earlier"))),
+                                  ("irreversible", bool(IRREVERSIBLE.search(str(r.get("command") or "")))))
+                 if hit]
+        if kinds:
+            out.append({"ref": _rr_ref(r), "kinds": kinds, "at": r.get("occurred_at"), "command": r.get("command"),
+                        "disputed": r.get("collectors_agree") is False})
+    return out
+
+
+def _rr_time(rec):
+    ex = rec.get("execution") or {}
+    return ex.get("at") or rec.get("restored_at")
+
+
+def _rr_record_state(rec, chk, disputed_refs):
+    """One record's state (D-RR5, D-RR6)."""
+    ap = str((rec.get("approval") or {}).get("status") or "").upper() or None
+    ex = rec.get("execution")
+    st = str((ex or {}).get("status") or "").upper() or None
+    attempted = st in ("ATTEMPTED", "EXECUTED", "FAILED") or (ex is None and bool(rec.get("restored_at")))
+    executed = st == "EXECUTED" or (ex is None and bool(rec.get("restored_at")))
+    if not attempted:
+        state = {"PENDING": "APPROVAL_PENDING", "REJECTED": "APPROVAL_REJECTED"}.get(ap, "NOT_STARTED")
+    elif (ex or {}).get("ref") and ("observable:" + str(ex["ref"]).removeprefix("observable:")) in disputed_refs:
+        state = "DISPUTED_EXECUTION"
+    elif not chk or not chk.get("checks_total"):
+        state = "ATTEMPTED_UNVERIFIED"
+    elif chk.get("hash_matches") is False:
+        state = "INTEGRITY_FAILED"
+    elif chk["checks_passed"] == chk["checks_total"]:
+        state = "VERIFIED"
+    elif chk["checks_passed"] == 0:
+        state = "FAILED_CHECKS"
+    else:
+        state = "PARTIAL_CHECKS"
+    return {"checkpoint_id": rec.get("checkpoint_id"), "action": rec.get("action") or (
+                "restore" if rec.get("restored_at") or rec.get("checkpoint_id") else None),
+            "recommended_by": rec.get("recommended_by"), "approval": ap, "execution": st or (
+                "EXECUTED (legacy record)" if executed else None),
+            "attempted": attempted, "executed": executed, "at": _rr_time(rec),
+            "expected_outcome": rec.get("expected_outcome"), "disruption_refs": list(rec.get("disruption_refs") or []),
+            "checks_passed": (chk or {}).get("checks_passed"), "checks_total": (chk or {}).get("checks_total"),
+            "hash_matches": (chk or {}).get("hash_matches"), "state": state}
+
+
+def _rr_conflicts(states):
+    """Checked records on the same checkpoint and time that disagree are conflicting (D-RR6)."""
+    groups = {}
+    for i, s in enumerate(states):
+        if s["state"] in RR_CHECKED:
+            groups.setdefault((s["checkpoint_id"], s["at"]), []).append(i)
+    bad = []
+    for idx in groups.values():
+        outcomes = {states[i]["state"] for i in idx}
+        if len(outcomes) > 1:
+            for i in idx:
+                states[i] = dict(states[i], state="CONFLICTING", checked_as=states[i]["state"])
+            bad.append([states[i]["checkpoint_id"] for i in idx][0])
+    return bad
+
+
+def _rr1(a, s, states, pkg, records):
+    ms = _ct_measures(a, _rk_built(pkg, "RR-1"), states)
+    by = {m["metric"]: m for m in ms}
+    rows = _rr_disruptions(s)
+    undisputed = [d for d in rows if not d["disputed"]]
+    disputed = [d for d in rows if d["disputed"]]
+    basis = {"measures": ms, "disruptions": undisputed, "disputed": disputed,
+             "recorded_restorations": [r.get("checkpoint_id") or r.get("action") for r in (records or [])],
+             "kinds": sorted({k for d in undisputed for k in d["kinds"]}),
+             "incident_response": RR_NO_IR, "not_calculated": _rk_not_built(pkg, "RR-1")}
+    if undisputed or records:
+        return "DISRUPTED", basis
+    if disputed:
+        basis["interpretation_reasons"] = [{
+            "code": EA.CONFLICTING_SOURCES, "requirement": "disruption", "check": "collectors_agree",
+            "detail": "the only failures are on rows the collectors disagree on (" + ", ".join(d["ref"] for d in disputed)
+                      + "): directly disputed evidence does not establish a disruption on its own"}]
+        return INCONCLUSIVE, basis
+    if by["insights.failed"]["verdict"] in (WITHIN, DOES_NOT_APPLY):
+        return "NOT_DISRUPTED", basis
+    basis["interpretation_reasons"] = [{"code": EA.MISSING_DATA, "requirement": "insights.failed", "check": None,
+                                        "detail": f"insights.failed {by['insights.failed'].get('reason') or 'unobserved'}"
+                                                  ": whether anything failed is not shown"}]
+    return INCONCLUSIVE, basis
+
+
+def _rr2(a, s, states, pkg, deps, records, checkpoints):
+    one = deps["RR-1"]
+    ms = _ct_measures(a, _rk_built(pkg, "RR-2"), states)
+    rows = one["basis"]["disruptions"] + one["basis"]["disputed"]
+    irrev = [d["ref"] for d in rows if "irreversible" in d["kinds"] and not d["disputed"]]
+    irrev_disputed = [d["ref"] for d in rows if "irreversible" in d["kinds"] and d["disputed"]]
+    disputed_refs = {d["ref"] for d in one["basis"]["disputed"]} | {
+        _rr_ref(r) for r in (s.rows if s else []) if r.get("collectors_agree") is False}
+    chks = (checkpoints or {}).get("checkpoints") or []
+    rec_states = [_rr_record_state(r, chks[i] if i < len(chks) else None, disputed_refs)
+                  for i, r in enumerate(records or [])]
+    conflicting = _rr_conflicts(rec_states)
+    observed = []
+    for r in (s.rows if s else []):
+        if r.get("reverted_to_earlier") and r.get("collectors_agree") is not False:
+            observed.append({"ref": _rr_ref(r), "kind": "work_reverted"})
+    srows = [r for r in (s.rows if s else []) if r.get("command") and r.get("collectors_agree") is not False]
+    for i, r in enumerate(srows):
+        if _rr_failed(r) and any(x["command"] == r["command"] and not _rr_failed(x) for x in srows[i + 1:]):
+            observed.append({"ref": _rr_ref(r), "kind": "failed_command_later_succeeded", "command": r["command"]})
+    basis = {"measures": ms, "irreversible": irrev, "irreversible_disputed": irrev_disputed,
+             "records_supplied": records is not None, "records": rec_states, "conflicting": conflicting,
+             "recovery_observed": observed,
+             "recovery_verified": [x["checkpoint_id"] for x in rec_states if x["state"] == "VERIFIED"],
+             "not_calculated": _rk_not_built(pkg, "RR-2")}
+    if irrev:
+        basis["category"] = "IRREVERSIBLE_CHANGE"
+        return "IRREVERSIBLE_CHANGE", basis
+    if one["outcome"] == "NOT_DISRUPTED":
+        basis["category"] = "NO_DISRUPTION"
+        return "NOTHING_TO_RESTORE", basis
+    why = lambda code, req, detail: [{"code": code, "requirement": req, "check": None, "detail": detail}]
+    if one["outcome"] == INCONCLUSIVE and not records:
+        basis["category"] = "INSUFFICIENT_EVIDENCE"
+        basis["interpretation_reasons"] = why(EA.MISSING_DATA, "RR-1", "no disruption is established, and no "
+                                              "recovery record shows one")
+        return INCONCLUSIVE, basis
+    if records is None:
+        basis["category"] = "NO_RECOVERY_RECORD"
+        basis["interpretation_reasons"] = why(EA.MISSING_REFERENCE, "recovery_records", "no recovery record store: "
+                                              "whether the system returned to a viable state cannot be told")
+        return INCONCLUSIVE, basis
+    if not records:
+        basis["category"] = "NO_RECOVERY_RECORD"
+        basis["interpretation_reasons"] = why(EA.MISSING_DATA, "recovery_records", "no recovery was recorded; "
+                                              "resumed work or the absence of new errors is not a verified recovery")
+        return INCONCLUSIVE, basis
+    st = [x["state"] for x in rec_states]
+    checked = [x for x in st if x in RR_CHECKED]
+    if "INTEGRITY_FAILED" in st or (checked and all(x == "FAILED_CHECKS" for x in checked)):
+        basis["category"] = "RECOVERY_FAILED"
+        return "NOT_RESTORED", basis
+    if checked and len(checked) == len(st) and all(x == "VERIFIED" for x in checked):
+        basis["category"] = "RECOVERED_VERIFIED"
+        return "RESTORED_VERIFIED", basis
+    if "VERIFIED" in checked or "PARTIAL_CHECKS" in checked:
+        basis["category"] = "RECOVERY_INCOMPLETE"
+        return "PARTIALLY_RESTORED", basis
+    cat = ("CONFLICTING_RECORDS" if "CONFLICTING" in st else "APPROVAL_PENDING" if "APPROVAL_PENDING" in st
+           else "RECOVERY_UNCONFIRMED" if set(st) & {"ATTEMPTED_UNVERIFIED", "DISPUTED_EXECUTION"}
+           else "NOT_ATTEMPTED")
+    basis["category"] = cat
+    basis["interpretation_reasons"] = why(EA.CONFLICTING_SOURCES if cat == "CONFLICTING_RECORDS" else EA.MISSING_DATA,
+                                          "recovery_records", RR_CATEGORY[cat] + " (" + ", ".join(
+                                              f"{x['checkpoint_id'] or x['action']}: {x['state']}"
+                                              for x in rec_states) + ")")
+    return INCONCLUSIVE, basis
+
+
+def _rr_precedents(memory):
+    out = []
+    for x in (memory or {}).get("established", [])[:10]:
+        p = x.get("payload") or {}
+        out.append({"record_id": x["record_id"], "label": p.get("label"), "category": p.get("category"),
+                    "session_id": p.get("session_id"), "status": x.get("status"),
+                    "use": "comparison only, never proof"})
+    return out
+
+
+def _rr_restored_at(two):
+    ts = EA.signal_traces.ts
+    t = [ts(x["at"]) for x in two["basis"].get("records", []) if x["state"] in ("VERIFIED", "PARTIAL_CHECKS")
+         and x.get("at") and ts(x["at"])]
+    return max(t) if t else None
+
+
+def _rr3(a, s, states, pkg, deps, memory):
+    two = deps["RR-2"]
+    ms = _ct_measures(a, _rk_built(pkg, "RR-3"), states)
+    prec = _rr_precedents(memory)
+    basis = {"measures": ms, "precedents": prec,
+             "recurrence_across_sessions": [p["record_id"] for p in prec
+                                            if p["label"] in ("FAILED_RECOVERY", "PARTIAL_RECOVERY", "IRREVERSIBLE")],
+             "recurrence_note": "validated earlier recovery outcomes on this tenant: comparison only, no effect",
+             "not_calculated": _rk_not_built(pkg, "RR-3")}
+    if two["outcome"] not in ("RESTORED_VERIFIED", "PARTIALLY_RESTORED"):
+        return "NO_RECOVERY_TO_FOLLOW", basis
+    ts = EA.signal_traces.ts
+    t0 = _rr_restored_at(two)
+    basis["restored_at"] = t0.isoformat() if t0 else None
+    after = [d for d in _rr_disruptions(s) if not d["disputed"] and t0 and d["at"] and ts(d["at"]) and ts(d["at"]) > t0
+             and set(d["kinds"]) & {"failure", "stall"}]
+    basis["recurring"] = after
+    return ("RECURRING" if after else "NOT_RECURRING"), basis
+
+
+def _rr4(a, s, states, pkg, deps):
+    one, two, three = deps["RR-1"], deps["RR-2"], deps["RR-3"]
+    ms = _ct_measures(a, _rk_built(pkg, "RR-4"), states)
+    tele = [m["metric"] for m in ms if m["metric"].startswith("telemetry.") and m["verdict"] == DEVIATES]
+    ts = EA.signal_traces.ts
+    t0 = _rr_restored_at(two)
+    window = [_rr_ref(r) for r in (s.rows if s else []) if t0 and r.get("observable_type") == "tool_request"
+              and r.get("success") is True and r.get("collectors_agree") is not False and ts(r.get("occurred_at"))
+              and ts(r["occurred_at"]) > t0 and not _rr_failed(r)]
+    basis = {"measures": ms, "telemetry_deviating": tele, "post_recovery_window": window,
+             "authority": RR_AUTHORITY, "executed_by_this_cop": [], "not_calculated": _rk_not_built(pkg, "RR-4")}
+    o2 = two["outcome"]
+    if o2 in ("IRREVERSIBLE_CHANGE", "NOT_RESTORED"):
+        basis["recommendation"] = "further restoration is recommended; a person decides and acts"
+        return "INTERVENTION_REQUIRED", basis
+    if o2 == "NOTHING_TO_RESTORE":
+        return "NOTHING_TO_CONFIRM", basis
+    if o2 == "RESTORED_VERIFIED" and three["outcome"] == "NOT_RECURRING" and window and not tele:
+        return "STABILITY_CONFIRMED", basis
+    basis["stability_not_confirmed"] = (
+        "failures recurred after the restoration" if three["outcome"] == "RECURRING" else
+        "no undisputed successful work after the restoration time" if o2 == "RESTORED_VERIFIED" and not window else
+        "telemetry in a deviation state: " + ", ".join(tele) if o2 == "RESTORED_VERIFIED" and tele else
+        "restoration incomplete" if o2 == "PARTIALLY_RESTORED" else "recovery not established")
+    return "MONITORING_REQUIRED", basis
+
+
+def observe_recovery_resilience(assessments, session, records=None, checkpoints=None, upstream=None, memory=None):
+    """{question_id: assessment} -> {question_id: answer}. records: the case's recovery_records (None when there is
+    no store); checkpoints: tools.validate_checkpoints's result; upstream: the consumed findings (Behavior
+    Analytics); memory: {established, verified_pending} recovery_outcome records."""
+    pkg = _rr_pkg()
+    states = tuple(pkg["deviation_states"])
+    out = {}
+    for qid, q in pkg["questions"].items():
+        a = assessments[qid]
+        if qid == "RR-1":
+            outcome, basis = _rr1(a, session, states, pkg, records)
+            basis["upstream"] = _rr_upstream(upstream, pkg)
+        elif qid == "RR-2":
+            outcome, basis = _rr2(a, session, states, pkg, out, records, checkpoints)
+        elif qid == "RR-3":
+            outcome, basis = _rr3(a, session, states, pkg, out, memory)
+        else:
+            outcome, basis = _rr4(a, session, states, pkg, out)
+        if outcome not in q["outcomes"] and outcome != INCONCLUSIVE:
+            raise ValueError(f"{qid}: outcome {outcome} is not in METRICS.yaml")
+        out[qid] = {"outcome": outcome, "sufficiency": a["sufficiency"]["status"], "basis": basis,
+                    "findings": a["findings"], "not_assessed": a["sufficiency"]["not_assessed"]}
+        if outcome == INCONCLUSIVE or basis.get("interpretation_reasons"):
+            out[qid]["because"] = basis.get("interpretation_reasons", [])
+    return out
+
+
+def _rr_upstream(upstream, pkg):
+    """Behavior Analytics, the only consumed COP, as context (D-RR8): listed with its source items, never a ground."""
+    from ..specs import CONSUMES
+    out = {}
+    for k in CONSUMES[RR]:
+        f = (upstream or {}).get(k)
+        if f is None:
+            out[k] = {"present": False, "class": "ABSENT"}
+            continue
+        ok = bool(f.get("verified")) and f.get("status") == "SUBSTANTIVE"
+        spec = pkg["upstream"].get(k, {})
+        cls = ("QUIET" if f.get("label") in spec.get("quiet", []) else "CONTEXT") if ok else "NOT_VERIFIED"
+        out[k] = {"present": True, "label": f.get("label"), "finding_id": f.get("finding_id"), "verified": ok,
+                  "class": cls, "ground": False, "sources": sorted(rk_source_items(f, upstream)) if ok else [],
+                  "why": "context: a behaviour pattern on the same failure evidence, never a recovery ground (D-RR8)"}
+    return out
+
+
+def assess_recovery_resilience(rows, session_id, cfg=None, computed_at=None, records=None, checkpoints=None,
+                               upstream=None, memory=None, raw_events=None, native=None):
+    """The four questions for one session: each assessment with its answer."""
+    cfg = cfg or EA.signal_metrics.load_config()
+    events, srows = EA.session_inputs(rows, session_id, cfg, computed_at)
+    sessions = EA._computed(rows, cfg, computed_at)[1]
+    s = next(x for x in sessions if x.id == session_id)
+    assessments = {qid: EA.assess(RR, qid, events, srows, cfg, computed_at, raw_events, native)
+                   for qid in EA.QUESTIONS[RR]}
+    answers = observe_recovery_resilience(assessments, s, records, checkpoints, upstream, memory)
+    return {qid: {"assessment": assessments[qid], "answer": answers[qid]} for qid in assessments}
+
+
+def _explain_rr(qid, ans):
+    b = ans["basis"] or {}
+    o = ans["outcome"]
+    if o == INCONCLUSIVE:
+        return _explain(qid, ans)
+    if qid == "RR-1":
+        if o == "NOT_DISRUPTED":
+            return "no failure, stall, deny-rule stop, reverted work or recorded restoration"
+        return ("disrupted: " + (", ".join(f"{d['ref']} ({'/'.join(d['kinds'])})" for d in b["disruptions"])
+                                 or "a recovery record shows a restoration was needed"))
+    if qid == "RR-2":
+        if o == "IRREVERSIBLE_CHANGE":
+            return "irreversible operation on undisputed row(s): " + ", ".join(b["irreversible"])
+        if o == "NOTHING_TO_RESTORE":
+            return "nothing to restore"
+        return (RR_CATEGORY[b["category"]] + ": " + ", ".join(
+            f"{x['checkpoint_id'] or x['action']} {x['state']} ({x['checks_passed']}/{x['checks_total']} checks)"
+            for x in b["records"]))
+    if qid == "RR-3":
+        if o == "RECURRING":
+            return "failures recurred after the restoration: " + ", ".join(d["ref"] for d in b["recurring"])
+        if o == "NOT_RECURRING":
+            return "no failure or stall after the restoration time"
+        return "no verified restoration to follow"
+    if o == "STABILITY_CONFIRMED":
+        return f"stable: {len(b['post_recovery_window'])} successful step(s) after the restoration, telemetry not deviating"
+    if o == "INTERVENTION_REQUIRED":
+        return b["recommendation"]
+    if o == "MONITORING_REQUIRED":
+        return "keep watching: " + b["stability_not_confirmed"]
+    return "nothing to confirm"
+
+
+def _rr_limitations(ans):
+    from . import decision as D
+    out = []
+    pkg = _rr_pkg()
+    b1, b2, b3, b4 = ((ans[q].get("basis") or {}) for q in RR_QUESTIONS)
+    for d in b1.get("disputed", []):
+        out.append(D.limitation(D.MISSING_EVIDENCE, "RR-1", d["ref"], EA.CONFLICTING_SOURCES,
+                                f"the collectors disagree on {d['ref']} ({'/'.join(d['kinds'])}): not a ground alone",
+                                [d["ref"]]))
+    if b2.get("irreversible_disputed"):
+        out.append(D.limitation(D.MISSING_EVIDENCE, "RR-2", "irreversible", EA.CONFLICTING_SOURCES,
+                                "an irreversible command on a row the collectors disagree on is listed and grounds "
+                                "nothing", b2["irreversible_disputed"]))
+    for x in b2.get("records", []):
+        if x["state"] in ("ATTEMPTED_UNVERIFIED", "DISPUTED_EXECUTION"):
+            out.append(D.limitation(D.MISSING_EVIDENCE, "RR-2", x["checkpoint_id"] or x["action"] or "record",
+                                    "RECOVERY_NOT_VERIFIED", f"{x['action'] or 'the action'} was attempted "
+                                    f"({x['execution']}); no independent post-restore check confirms the state"))
+        if x["state"] in RR_CHECKED and x.get("hash_matches") is None:
+            out.append(D.limitation(D.MISSING_EVIDENCE, "RR-2", x["checkpoint_id"] or "record",
+                                    "CHECKPOINT_INTEGRITY_NOT_CHECKED", "no checkpoint content was recorded, so its "
+                                    "hash cannot be recomputed; the post-restore checks stand"))
+    if b2.get("category") == "NO_RECOVERY_RECORD":
+        out.append(D.limitation(D.MISSING_EVIDENCE, "RR-2", "recovery_records", EA.MISSING_REFERENCE,
+                                "no recovery record: restoration is not shown"))
+    if ans["RR-4"]["outcome"] == "MONITORING_REQUIRED" and ans["RR-2"]["outcome"] == "RESTORED_VERIFIED":
+        out.append(D.limitation(D.MISSING_EVIDENCE, "RR-4", "post_recovery_window", "STABILITY_NOT_CONFIRMED",
+                                b4.get("stability_not_confirmed", "")))
+    for m in b4.get("telemetry_deviating", []):
+        out.append(D.limitation(D.MISSING_EVIDENCE, "RR-4", m, "TELEMETRY_QUALITY",
+                                f"{m} is in a deviation state: stability is not confirmed, grounds stand"))
+    if b3.get("recurrence_across_sessions"):
+        out.append(D.limitation(D.LIMIT_NOT_APPROVED, "RR-3", "recurrence", "RECURRENCE_NOT_WEIGHED",
+                                "validated earlier recovery outcomes are listed; no approved rule weighs them (U-RR4)"))
+    for k, v in (b1.get("upstream") or {}).items():
+        if v["class"] == "ABSENT":
+            out.append(D.limitation(D.MISSING_EVIDENCE, "RR-1", k, "UPSTREAM_ABSENT",
+                                    f"no {k} finding in this case: context only, nothing is grounded on it"))
+    out.append(D.limitation(D.MISSING_EVIDENCE, "RR-1", "incident_response", "INCIDENT_CONTEXT_NOT_READ", RR_NO_IR))
+    for qid in RR_QUESTIONS:
+        for x in (ans[qid].get("basis") or {}).get("not_calculated", []):
+            out.append(D.limitation(D.NOT_CALCULATED, qid, x["metric"], D.NOT_CALCULATED, x["missing_inputs"]))
+    for k, v in pkg["not_calculated"].items():
+        out.append(D.limitation(D.NOT_CALCULATED, "RR-2", k, D.NOT_CALCULATED, " ".join(v.split())))
+    out.append(D.limitation(D.LIMIT_NOT_APPROVED, "RR-2", "confidence", "UNCALIBRATED_CONFIDENCE",
+                            "the confidence is the legacy rule's constant, not calibrated against outcomes (U-RR7)"))
+    return out
+
+
+def _rr_category(ans, label):
+    if label == "RECOVERED":
+        return "RECOVERED_VERIFIED"
+    if label == "PARTIAL_RECOVERY":
+        return "RECOVERY_INCOMPLETE"
+    if label == "FAILED_RECOVERY":
+        return "RECOVERY_FAILED"
+    if label == "IRREVERSIBLE":
+        return "IRREVERSIBLE_CHANGE"
+    if ans["RR-1"]["outcome"] == INCONCLUSIVE:
+        return "INSUFFICIENT_EVIDENCE"
+    return (ans["RR-2"].get("basis") or {}).get("category") or "INSUFFICIENT_EVIDENCE"
+
+
+def _rr_status(ans, label, category, action):
+    """Intervention recommended, approved, attempted and executed; recovery observed and verified; the outcome, kept
+    apart (D-RR5)."""
+    b2 = ans["RR-2"].get("basis") or {}
+    recs = b2.get("records", [])
+    name = lambda x: f"{x['action'] or 'restore'}:{x['checkpoint_id']}" if x["checkpoint_id"] else (x["action"] or "?")
+    return {"category": category, "meaning": RR_CATEGORY[category],
+            "disruption": {"answer": ans["RR-1"]["outcome"],
+                           "refs": [d["ref"] for d in (ans["RR-1"].get("basis") or {}).get("disruptions", [])]},
+            "intervention": {"recommended": [name(x) for x in recs if x["action"]],
+                             "approved": [name(x) for x in recs if x["approval"] in ("APPROVED", "NOT_REQUIRED")],
+                             "approval_pending": [name(x) for x in recs if x["approval"] == "PENDING"],
+                             "attempted": [name(x) for x in recs if x["attempted"]],
+                             "executed_successfully": [name(x) for x in recs if x["executed"]],
+                             "executed_by_this_cop": [], "authority": RR_AUTHORITY,
+                             "note": "an executed action says the action ran, not that the system recovered"},
+            "recovery": {"observed": b2.get("recovery_observed", []), "verified": b2.get("recovery_verified", []),
+                         "outcome": label, "recurring": [d["ref"] for d in (ans["RR-3"].get("basis") or {}).get(
+                             "recurring", [])],
+                         "stability": ans["RR-4"]["outcome"]},
+            "action": action}
+
+
+def decide_recovery_resilience(questions):
+    """The COP decision from the four answers (INTERPRETATION.md). RR-2 gives the label (RR-3 RECURRING turns a
+    verified restoration into PARTIAL_RECOVERY), the label the severity and confidence, RR-4 the action. Decided by
+    the package; no model."""
+    pkg = _rr_pkg()
+    ans = {q: v["answer"] for q, v in questions.items()}
+    two, three, four = (ans[q]["outcome"] for q in ("RR-2", "RR-3", "RR-4"))
+    label = pkg["labels"][two]
+    if label == "RECOVERED" and three == "RECURRING":
+        label = pkg["recurring_label"]
+    sev, conf = pkg["severity"][label], pkg["confidence"][label]
+    action = pkg["responses"].get(four, "WATCH")
+    category = _rr_category(ans, label)
+    reason = _explain_rr("RR-4", ans["RR-4"]) + f" ({RR_CATEGORY[category]})"
+    drivers = ["RR-1", "RR-2", "RR-3", "RR-4"]
+    trace = _question_trace(questions, _explain_rr, drivers)
+    b2 = ans["RR-2"].get("basis") or {}
+    contrary = [f"{q}: {x['check']} {x['detail']}" for q, v in questions.items() for x in v["answer"].get("findings", [])]
+    contrary += [f"RR-1: {d['ref']} is disputed: not a ground alone" for d in (ans["RR-1"].get("basis") or {}).get(
+        "disputed", [])]
+    contrary += [f"RR-2: irreversible command on disputed row {r}: not a ground alone"
+                 for r in b2.get("irreversible_disputed", [])]
+    contrary += [f"RR-2: {x['kind']} at {x['ref']}: recovery observed, not verified" for x in b2.get("recovery_observed",
+                                                                                                    [])]
+    contrary += [f"RR-1: {k} reads {v['label']}: context, not a ground" for k, v in
+                 ((ans["RR-1"].get("basis") or {}).get("upstream") or {}).items() if v.get("present")]
+    status = _rr_status(ans, label, category, action)
+    from ..specs import consumers
+    pay = {"answers": {q: x["outcome"] for q, x in ans.items()}, "category": category,
+           "records": [{k: x[k] for k in ("checkpoint_id", "action", "state")} for x in b2.get("records", [])],
+           "intervention": status["intervention"] | {"authority": None},
+           "recovery": status["recovery"], "decided_by": "package",
+           "precedents_read": [p["record_id"] for p in (ans["RR-3"].get("basis") or {}).get("precedents", [])]}
+    return {"label": label, "confidence": conf, "severity": sev, "action": action, "action_reason": reason,
+            "recipients": list(consumers(RR)) if label != INCONCLUSIVE else [],
+            "drivers": drivers, "contrary": contrary, "questions": trace, "limitations": _rr_limitations(ans),
+            "decided": True, "memory_payload": pay, "recovery_status": status, "decision": label,
+            "category": category}

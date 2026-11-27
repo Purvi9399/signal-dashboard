@@ -1308,6 +1308,24 @@ def t_assess_incident_questions(case, a, ctx):
     return {"questions": q, "memory_supplied": memory is not None,
             "upstream_supplied": sorted((ctx.get("upstream") or {})), "evaluated_at": case.computed_at}
 
+def t_assess_recovery_questions(case, a, ctx):
+    """The four Recovery & Resilience questions for the case session (cop_package), read against the recovery
+    records (t_get_recovery_records), their checkpoints (t_validate_checkpoints), validated recovery_outcome memory
+    and the consumed findings. Incident Response is not an input (packages/recovery_resilience/DECISIONS.md D-RR13)."""
+    if not case.session:
+        return missing("session", "recovery question assessment", "the case session")
+    mem = _memory_lookup(ctx, "recovery_outcome") if ctx.get("memory") else None
+    memory = {k: mem[k] for k in ("established", "verified_pending")} if mem and "missing_dependency" not in mem \
+        else None
+    records = case.artifact("recovery_records")
+    chk = t_validate_checkpoints(case, a, ctx) if records is not None else None
+    q = cop_package.assess_recovery_resilience(case.rows, case.session_id, case.cfg, case.computed_at, records, chk,
+                                               ctx.get("upstream"), memory, case.artifact("source_events"),
+                                               case.artifact("native_transcripts"))
+    return {"questions": q, "records_supplied": records is not None, "memory_supplied": memory is not None,
+            "upstream_supplied": sorted((ctx.get("upstream") or {})), "evaluated_at": case.computed_at}
+
+
 TOOLS = {
     # name: (fn, schema {arg: spec})
     "get_metric_rows": (t_get_metric_rows, {"metric_ids": _arr("metric_ids", 25)}),
@@ -1381,6 +1399,7 @@ TOOLS = {
     "assess_classification_questions": (t_assess_classification_questions, {}),
     "assess_risk_questions": (t_assess_risk_questions, {}),
     "assess_incident_questions": (t_assess_incident_questions, {}),
+    "assess_recovery_questions": (t_assess_recovery_questions, {}),
     "compute_sequence_statistics": (t_compute_sequence_statistics, {}),
     "compare_behaviour_history": (t_compare_behaviour_history, {}),
     "get_recovery_records": (t_get_recovery_records, {}),

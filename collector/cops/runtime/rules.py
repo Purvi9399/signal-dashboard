@@ -36,7 +36,7 @@ from .contracts import (Claim, CLAIM_METRIC_STATE, CLAIM_METRIC_VALUE, CLAIM_TOO
 from ..interpret import EVIDENCE_LEVEL
 from ..specs import BY_KEY, SPEC_CONSUMES
 from .cop_package import aggregate_runtime_monitoring, decide_audit_traceability, decide_interaction_discovery, \
-    decide_policy_enforcement, decide_anomaly_detection, decide_resource_management, decide_classification_tagging, decide_risk_mitigation, decide_incident_response, AT_CLEAN, CEILING, DECIDED_WITHOUT_MODEL
+    decide_policy_enforcement, decide_anomaly_detection, decide_resource_management, decide_classification_tagging, decide_risk_mitigation, decide_incident_response, decide_recovery_resilience, AT_CLEAN, CEILING, DECIDED_WITHOUT_MODEL
 
 _RI = RuleInterpreter()
 HOT = ("EXCEPTION", "CRITICAL")
@@ -48,7 +48,7 @@ DETERMINISTIC_TOOLS = {
     "policy_enforcement": ("evaluate_session_operations", "check_entitlements", "assess_policy_questions"),
     "resource_management": ("compute_consumption", "get_quota", "assess_resource_questions"),
     "behavior_analytics": ("compute_sequence_statistics", "compare_behaviour_history"),
-    "recovery_resilience": ("get_recovery_records", "validate_checkpoints"),
+    "recovery_resilience": ("get_recovery_records", "validate_checkpoints", "assess_recovery_questions"),
     "audit_traceability": ("reconstruct_trace", "check_decision_linkage", "assess_audit_questions"),
     "agent_lifecycle_management": ("get_agent_registry", "detect_configuration_changes"),
     # LLM COPs: the tools their computational baseline reads, so it is
@@ -542,6 +542,56 @@ def behavior_analytics(ctx):
 
 
 def recovery_resilience(ctx):
+    # the legacy rule's metric inputs (specs.metric_keys); named here so activation._rule_reads still finds them
+    f = _recovery_resilience_legacy(ctx, ("insights.reverted", "insights.retry", "insights.failed"))
+    _rr_questions(ctx, f)
+    return f
+
+
+def _rr_questions(ctx, f):
+    """Recovery & Resilience's four answers (cop_package.decide_recovery_resilience). RR-2 decides the label from
+    restoration verified by independent post-restore checks, RR-3 from recurrence after it, RR-4 the action. The
+    legacy reading stays the computational baseline. Every reading is decided without a model
+    (packages/recovery_resilience/INTERPRETATION.md)."""
+    t = ctx["tools"]
+    res = result(t, "assess_recovery_questions")
+    if not res.get("questions"):
+        why = res.get("missing_dependency") or (t.get("assess_recovery_questions") or {}).get("status")
+        f["cop_specific"]["question_assessment"] = f"unavailable: {why}"
+        return
+    d = decide_recovery_resilience(res["questions"])
+    q = d["questions"]
+    legacy = {"label": f["label"], "confidence": f["confidence"], "action": f.get("action"),
+              "severity": f.get("severity"), "status": f.get("status")}
+    lims = list(d["limitations"])
+    if (legacy["label"], legacy["action"]) != (d["label"], d["action"]):
+        from .decision import limitation, LIMIT_NOT_APPROVED
+        lims.append(limitation(LIMIT_NOT_APPROVED, "RR-2", "legacy_reading", "PREVIOUS_READING_DIFFERS",
+                               f"the legacy rule read {legacy['label']} {legacy['severity']} {legacy['action']}; the "
+                               f"package's answers read {d['label']} {d['severity']} {d['action']} (DECISIONS.md)"))
+    f["cop_specific"].update(questions=q, drivers=d["drivers"], contrary=d["contrary"], limitations=lims,
+                             recipients=d["recipients"], memory_payload=d["memory_payload"],
+                             decided_without_model=d["decided"], decision=d["decision"],
+                             recovery_status=d["recovery_status"], category=d["category"], legacy_reading=legacy,
+                             # D-RR12: RECOVERED is the quiet label, but after a disruption it is a recovery outcome
+                             # worth remembering (graph.validate_memory_update's remember_quiet)
+                             remember_quiet=d["label"] == "RECOVERED")
+    claims = [tclaim(t, "assess_recovery_questions", f"questions.{qid}.answer.outcome", x["answer"],
+                     f"{qid} answered {x['answer']}: {x['explanation']}"[:240]).to_dict() for qid, x in q.items()]
+    why = "; ".join(f"{x} {q[x]['answer']}" for x in d["drivers"])
+    upd = dict(label=d["label"], confidence=d["confidence"], action=d["action"], severity=d["severity"],
+               action_reason=d["action_reason"], claims=claims + f["claims"],
+               rationale=(f"{d['label']} from {why}; nothing rolled back, restarted, blocked or restored by this COP; "
+                          f"legacy reading: {legacy['label']} ({f['rationale']})")[:600])
+    if legacy["status"] != MISSING_DEPENDENCY or d["label"] != INCONCLUSIVE:
+        # no record store: the legacy MISSING_DEPENDENCY reading and its missing dependency stand, with the answers
+        upd["status"] = SUBSTANTIVE if d["label"] != INCONCLUSIVE else "INCONCLUSIVE"
+    f.update(**upd)
+    f["cop_specific"]["stop_reason"] = DECIDED_WITHOUT_MODEL
+
+
+def _recovery_resilience_legacy(ctx, keys):
+    """The legacy recovery reading. It stays the computational baseline (packages/recovery_resilience/DECISIONS.md)."""
     m = {e.metric_id: e for e in ctx["events"]}
     recs = result(ctx["tools"], "get_recovery_records")
     cps = result(ctx["tools"], "validate_checkpoints")
@@ -549,8 +599,7 @@ def recovery_resilience(ctx):
     rows = ctx["case"].session.rows if ctx["case"].session else []
     from .tools import IRREVERSIBLE
     irrev = [r for r in rows if IRREVERSIBLE.search(str(r.get("command") or ""))]
-    hot = [e for e in (m.get("insights.reverted"), m.get("insights.retry"), m.get("insights.failed"))
-           if e is not None and e.state in HOT]
+    hot = [e for e in (m.get(k) for k in keys) if e is not None and e.state in HOT]
     if irrev:
         return F("IRREVERSIBLE", 0.85, "ALERT", "an irreversible operation ran; restoration cannot undo it",
                  f"{len(irrev)} irreversible commands",
