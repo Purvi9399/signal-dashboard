@@ -86,7 +86,9 @@ def test_labels_actions_and_edges_are_the_existing_ones():
     pkg = EA.load_package(COP)
     assert set(pkg["labels"].values()) - {"INCONCLUSIVE"} == set(BY_KEY[COP].interpretations)
     assert {d["action"] for d in pkg["decision"].values()} <= set(BY_KEY[COP].permitted_actions)
-    assert set(pkg["upstream"]) == set(CONSUMES[COP]) == set(SPEC_CONSUMES[COP])
+    # U-RK1: Classification & Tagging is a runtime (topology) input, context only
+    assert set(pkg["upstream"]) == set(CONSUMES[COP]) == set(SPEC_CONSUMES[COP]) | {"classification_tagging"}
+    assert pkg["upstream"]["classification_tagging"]["context_only"] is True
     assert COP in FEEDBACK["incident_response"]
 
 
@@ -94,7 +96,7 @@ def test_labels_actions_and_edges_are_the_existing_ones():
 
 def test_harness_meets_every_ground_truth_expectation(bench):
     assert bench["failed"] == [], bench["failed"][:3]
-    assert bench["passed"] == len(bench["expectations"]) == 158
+    assert bench["passed"] == len(bench["expectations"]) == 237
 
 
 def test_every_decided_scenario_publishes_a_valid_decision_with_four_findings(bench):
@@ -129,10 +131,16 @@ def test_actions_never_exceed_authority_and_nothing_is_executed(bench):
 
 # ---------------------------------------------------------------- the formula and its inputs
 
+DENIED_WRITE = {"drivers": ["PE-2"], "questions": {"PE-2": {"basis": {"violations": [
+    {"ref": None, "action": "write", "resource": "/prod/x", "decision": "DENY", "stage": "proposed"}]}}}}
+APPROVAL_ON_ROW = {"drivers": ["PE-3"], "questions": {"PE-3": {"basis": {"required": [
+    {"ref": "observable:s1-8", "action": "read", "resource": "/ws/.env", "decision": "REQUIRE_APPROVAL"}]}}}}
+
+
 def test_quiet_and_correlated_findings_are_not_signals():
     up = {"anomaly_detection": {"verified": True, "status": "SUBSTANTIVE", "label": "NORMAL", "lineage": ["tool_call:a"]},
           "policy_enforcement": {"verified": True, "status": "SUBSTANTIVE", "label": "VIOLATION",
-                                 "lineage": ["tool_call:b"]},
+                                 "lineage": ["tool_call:b"], "cop_specific": DENIED_WRITE},
           "incident_response": {"verified": True, "status": "SUBSTANTIVE", "label": "INCIDENT",
                                 "lineage": ["insights.secrets"]},
           "resource_management": {"verified": False, "status": "SUBSTANTIVE", "label": "EXCESSIVE",
@@ -193,3 +201,60 @@ def test_topology_doc_carries_the_runtime_edges_of_risk_mitigation():
     assert ok, diff
     order, after = H._order()
     assert after and len(order) == 18
+
+
+# ---------------------------------------------------------------- revision 1 (A-RK1)
+
+def test_findings_on_the_same_row_are_one_signal_whatever_their_tool_call_ids():
+    pe = {"verified": True, "status": "SUBSTANTIVE", "label": "APPROVAL_REQUIRED", "lineage": ["tool_call:x"],
+          "cop_specific": APPROVAL_ON_ROW}
+    split = P.rk_signal_split({"policy_enforcement": pe}, {"observable:s1-8"})
+    assert split["independent"] == [] and split["lineage_only_independent"] == ["policy_enforcement"]
+    assert "already carried" in split["correlated"][0]["why"]
+    # the same finding on a row this COP does not observe is distinct evidence
+    assert [x["cop"] for x in P.rk_signal_split({"policy_enforcement": pe})["independent"]] == ["policy_enforcement"]
+
+
+def test_a_finding_with_only_tool_call_ids_does_not_show_independence():
+    pe = {"verified": True, "status": "SUBSTANTIVE", "label": "VIOLATION", "lineage": ["tool_call:x"]}
+    split = P.rk_signal_split({"policy_enforcement": pe})
+    assert split["independent"] == [] and "no source evidence" in split["correlated"][0]["why"]
+
+
+def test_genuinely_distinct_findings_both_count():
+    pe = {"verified": True, "status": "SUBSTANTIVE", "label": "VIOLATION", "lineage": ["tool_call:a"],
+          "cop_specific": DENIED_WRITE}
+    rs = {"verified": True, "status": "SUBSTANTIVE", "label": "UNAUTHORIZED", "lineage": ["tool_call:b"],
+          "cop_specific": {"drivers": ["RS-5"], "questions": {"RS-5": {"basis": {"permitted": {
+              "source": "quotas", "status": "ABOVE_QUOTA"}}}}}}
+    split = P.rk_signal_split({"policy_enforcement": pe, "resource_management": rs}, {"observable:s1-8"})
+    assert [x["cop"] for x in split["independent"]] == ["policy_enforcement", "resource_management"]
+
+
+def test_classification_tagging_is_context_and_never_a_signal():
+    ct = {"verified": True, "status": "SUBSTANTIVE", "label": "INTEGRITY", "lineage": ["insights.blocked"]}
+    split = P.rk_signal_split({"classification_tagging": ct})
+    assert split["context"] == ["classification_tagging"] and split["independent"] == split["correlated"] == []
+
+
+def test_pending_approval_and_watch_are_flagged_not_reweighted(bench):
+    b = bench["results"]["approval_required_without_violation"]["cop"]["finding"]["cop_specific"]["questions"]["RK-2"]
+    assert b["basis"]["score"] == 3 and "not a verified violation" in b["basis"]["signal_kinds"]["policy_enforcement"]
+    assert P.RK_SIGNAL_KIND[("incident_response", "WATCH")] == "watch: not a verified incident"
+
+
+def test_unapproved_or_unversioned_register_is_unavailable():
+    from cops.runtime.tools import risk_register_problem
+    case = lambda reg: type("C", (), {"artifact": lambda self, k: reg})()
+    assert risk_register_problem(case(S.risk_register())) is None
+    assert "not approved" in risk_register_problem(case(dict(S.risk_register(), approved=False)))
+    assert "not approved" in risk_register_problem(case({k: v for k, v in S.risk_register().items() if k != "approved"}))
+    assert "version" in risk_register_problem(case(dict(S.risk_register(), version=" ")))
+
+
+def test_impact_binding_is_recorded_and_never_applied(bench):
+    for name, res in bench["results"].items():
+        ib = (res["cop"]["finding"]["cop_specific"]["questions"]["RK-2"]["basis"] or {}).get("impact_binding")
+        assert ib is None or ib["applied"] is False, name
+    b = bench["results"]["unrelated_high_sensitivity_low_impact"]["cop"]["finding"]
+    assert b["label"] == "EMERGING" and b["cop_specific"]["questions"]["RK-2"]["basis"]["impact_binding"]["band"] == "LOW"

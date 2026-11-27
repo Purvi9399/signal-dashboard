@@ -39,6 +39,28 @@ The likelihood-context metrics are reported and never counted.
 The same signals are what `tools.calculate_risk_components` returns (`cop_package.rk_signal_split`), so the
 legacy rule, VS-01's recomputation (`support._risk_recomputation`) and the package agree (D-RK3).
 
+Since revision 1 (A-RK1, U-RK3, D-RK16) independence also needs distinct source evidence. Each risk-bearing finding's
+source items are read from its lineage metrics, its claims and its driver questions (`cop_package.rk_source_items`):
+observable rows, metrics, a decision item (DENY or REQUIRE_APPROVAL) by its row or, without one, by its proposed
+operation, and a quota exceeded. Tool-call ids and telemetry measures are not source items. A finding is counted
+only if at least one of its items is not already carried by this COP's own observed evidence (the rows behind its
+counted metrics in a deviation state and its undisputed irreversible operations) or by a signal already counted.
+Producers are taken first (`specs.topological_order`). The lineage-only reading is recorded
+(`basis.lineage_only_reading`, limitation LINEAGE_ONLY_READING_DIFFERS).
+
+APPROVAL_REQUIRED and Incident Response WATCH keep their weight of one signal (U-RK2) and are flagged
+(`basis.signal_kinds`, limitation SIGNAL_WEIGHT_PROVISIONAL). Classification & Tagging is context only (U-RK1):
+listed in RK-1 `basis.context`, never counted, correlated or scored.
+
+The register must be approved and versioned (U-RK8, `tools.risk_register_problem`). An unapproved or unversioned
+register is treated as unavailable: INCONCLUSIVE, status MISSING_DEPENDENCY, the reason named
+(`risk_register.approval` or `risk_register.version`).
+
+Impact still comes from the session's highest sensitivity tier. The bound-impact reading (U-RK7: the highest tier
+among the rows that support the counted risk; a proposed operation carries no tier) is recorded in
+`basis.impact_binding` with `applied: false`, and named as IMPACT_NOT_BOUND when it differs. It is a proposal and
+changes no label.
+
 ## RK-3
 
 The exposed events (rows behind the observed metrics and the irreversible operations, disputed ones marked) and

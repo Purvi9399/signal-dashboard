@@ -97,7 +97,8 @@ def policy_store(rules, version="pol-2026-10-01", approved=True, extra_versions=
 
 
 def risk_register():
-    return {"synthetic": True, "version": "risk-2026-09",
+    # approved: purvi, 2026-11-27 (U-RK8): a register must be approved and versioned to establish a band
+    return {"synthetic": True, "approved": True, "version": "risk-2026-09",
             "risks": [{"id": "R-secret-exfil", "impact": 3, "min_sensitivity_tier": 3,
                        "controls": [{"id": "C-block-write", "reversible": True,
                                      "prerequisite": {"collector": "local_hooks"}}]},

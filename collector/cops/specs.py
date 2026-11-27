@@ -262,6 +262,9 @@ TOPOLOGY_CONSUMES = {
     # purvi, 2026-11-26 (COP 7): Classification & Tagging consumes these three as well. Context only: no
     # upstream finding indicates a family (cops/packages/classification_tagging/CONNECTIONS.md).
     "classification_tagging": ("policy_enforcement", "interaction_discovery", "resource_management"),
+    # purvi, 2026-11-27 (U-RK1, COP 8): Risk Mitigation reads Classification & Tagging as context only; a family
+    # is never a risk signal (cops/packages/risk_mitigation/DECISIONS.md, A-RK1)
+    "risk_mitigation": ("classification_tagging",),
 }
 
 # The runtime's current-cycle graph: a COP runs after these and reads their

@@ -43,7 +43,8 @@ approximated.
 
 | Reference | Source | Use |
 |---|---|---|
-| Risk register | case artifact `risk_register`, `tools.read_risk_register` (REQUIRED) | impact per risk and sensitivity tier, EMERGING and MATERIAL thresholds, controls |
+| Risk register | case artifact `risk_register`, `tools.read_risk_register` (REQUIRED; approved and versioned, U-RK8) | impact per risk and sensitivity tier, EMERGING and MATERIAL thresholds, controls |
+| Taxonomy family | Classification & Tagging's finding (context only, U-RK1) | listed in RK-1, never counted |
 | Control prerequisites | `tools.evaluate_control_prerequisites` | which controls can run in this environment |
 | Asset inventory | not supplied anywhere (registry `asset_inventory`, location not chosen) | RK-3 names exposure by event and finding only |
 | Memory | `mitigation_outcome` (writes, reads), `incident_outcome` (reads, policy) | precedents for comparison only |

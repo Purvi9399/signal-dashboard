@@ -3,20 +3,28 @@
 ## Upstream (current cycle)
 
 `specs.SPEC_CONSUMES["risk_mitigation"]`, unchanged: Anomaly Detection, Interaction Discovery, Policy
-Enforcement, Resource Management, Incident Response. `docs/cops/cops_topology.json` now carries the same five
-inputs (D-RK11). Each finding is listed in RK-1 `basis.upstream` with present, label, finding id, verified,
-status, class (RISK, QUIET, UNDETERMINED, NOT_VERIFIED, ABSENT), lineage, counted and why.
+Enforcement, Resource Management, Incident Response. Since revision 1 (purvi, U-RK1)
+`specs.TOPOLOGY_CONSUMES["risk_mitigation"]` adds Classification & Tagging, context only. The graph stays acyclic:
+Classification & Tagging runs before Incident Response, which runs before Risk Mitigation
+(`specs.topological_order`). `docs/cops/cops_topology.json` carries the six inputs (D-RK11, D-RK18). Each finding
+is listed in RK-1 `basis.upstream` with present, label, finding id, verified, status, class (RISK, QUIET,
+UNDETERMINED, CONTEXT, NOT_VERIFIED, ABSENT), lineage, source items, counted and why.
 
 | Producer | Risk-bearing labels | Usually |
 |---|---|---|
-| Policy Enforcement | VIOLATION, APPROVAL_REQUIRED | independent (lineage: tool calls); correlated in MCP sessions, where its lineage is Interaction Discovery's |
+| Policy Enforcement | VIOLATION, APPROVAL_REQUIRED | independent when it rests on a decision this COP does not observe (a denied or approval-pending proposed operation); correlated when its decision is about a row this COP already observes (an approval missing on the secret read), or in MCP sessions, where its lineage is Interaction Discovery's |
 | Interaction Discovery | NEW_ROUTE, PROPAGATING | always correlated: its lineage holds insights.outside, one of this COP's counted metrics |
 | Anomaly Detection | ANOMALOUS | unverified without a model when a deviation is seen; NORMAL is quiet |
-| Resource Management | EXCESSIVE, UNAUTHORIZED | correlated on a token spike (insights.token_outlier); INEFFICIENT is quiet here (waste, not risk) |
-| Incident Response | INCIDENT, WATCH | correlated when its lineage holds insights.secrets |
+| Resource Management | EXCESSIVE, UNAUTHORIZED | correlated on a token spike (insights.token_outlier); independent on a quota exceeded (the quota record is distinct evidence); INEFFICIENT is quiet here (waste, not risk) |
+| Incident Response | INCIDENT, WATCH | correlated when its lineage holds insights.secrets, or when it rests on the same row or on an upstream finding already counted |
+| Classification & Tagging | none: context only (U-RK1) | listed in RK-1 `basis.context`; a family is a kind, not a risk |
 
-The workbook's RK-1 external data also names Classification & Tagging. It is not a consumed COP in
-`specs.py` and was not added: U-RK1.
+Downstream effect of the new edge: VS-01 (`support._risk`) builds one supporting component per consumed COP, so it
+now has an `upstream:classification_tagging` component. VS-01 is unchanged. When the family's lineage does not share
+this COP's metrics, the component opposes a LOW reading. Probe: a session with one blocked call and the
+synthetic taxonomy reads Classification & Tagging OVERSIGHT (lineage insights.blocked), and Risk Mitigation stays
+LOW and verified, but VS-01 moves from SUPPORTED to PROVISIONALLY_SUPPORTED. No harness, evaluation or bench case
+moved. P-RK3 in DECISIONS.md proposes making this component neutral for a context-only input.
 
 ## Downstream
 

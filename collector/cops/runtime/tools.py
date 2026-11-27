@@ -492,18 +492,34 @@ def t_inspect_event_metadata(case, a, ctx):
 
 
 # ---- Risk Mitigation
-def t_read_risk_register(case, a, ctx):
+def risk_register_problem(case):
+    """Why the case's risk register cannot establish a band or a control, or None when it is approved and
+    versioned (purvi, 2026-11-27, U-RK8). A valid version is a non-empty string; the register carries no effective
+    date or expiry, so none is checked (packages/risk_mitigation/DECISIONS.md, D-RK17; as D-CT17 for the taxonomy)."""
     reg = case.artifact("risk_register")
     if not reg:
-        return missing("risk_register", "risk_mitigation: impact and thresholds",
-                       "an approved risk register with impact scores and EMERGING/MATERIAL thresholds")
-    return reg
+        return "no risk register"
+    if reg.get("approved") is not True:
+        return "the risk register is present but not approved"
+    v = reg.get("version")
+    if not isinstance(v, str) or not v.strip():
+        return "the risk register carries no valid version"
+    return None
+
+
+def t_read_risk_register(case, a, ctx):
+    why = risk_register_problem(case)
+    if why:
+        return dict(missing("risk_register", "risk_mitigation: impact and thresholds",
+                            "an approved risk register with impact scores and EMERGING/MATERIAL thresholds"), why=why)
+    return case.artifact("risk_register")
 
 
 def t_evaluate_control_prerequisites(case, a, ctx):
+    why = risk_register_problem(case)
+    if why:
+        return dict(missing("risk_register", "controls", "an approved risk register listing controls"), why=why)
     reg = case.artifact("risk_register")
-    if not reg:
-        return missing("risk_register", "controls", "a risk register listing controls")
     rows = case.session.rows if case.session else []
     collectors = case.session.collectors if case.session else set()
     out = []
@@ -533,14 +549,20 @@ def t_calculate_risk_components(case, a, ctx):
     quiet or undetermined reading is listed, not counted. An irreversible operation on a row the collectors
     disagree on is listed as disputed, not counted (packages/risk_mitigation/DECISIONS.md, D-RK3, D-RK6)."""
     up = ctx.get("upstream") or {}
-    split = cop_package.rk_signal_split(up)
     rows = case.session.rows if case.session else []
     irrev = [r for r in rows if IRREVERSIBLE.search(str(r.get("command") or ""))]
+    # this COP's own observed evidence (D-RK16, U-RK3): the rows behind its counted metrics in a deviation state,
+    # and the undisputed irreversible operations; a finding resting only on these is the same signal seen again
+    own = {r for e in case.case_events(set(cop_package.rk_counted_metrics()))
+           if e.state in ("EXCEPTION", "CRITICAL") for r in (e.evidence_refs or [])}
+    own |= {f"observable:{r['observable_id']}" for r in irrev if r.get("collectors_agree") is not False}
+    split = cop_package.rk_signal_split(up, own)
     reverted = [r for r in rows if r.get("reverted_to_earlier")]
     sens = max([r.get("sensitivity_tier") or 0 for r in rows] or [0])
     return {"independent_verified_signals": [u["cop"] for u in split["independent"]],
             "correlated_not_counted": [u["cop"] for u in split["correlated"]],
             "quiet_not_counted": split["quiet"], "undetermined_not_counted": split["undetermined"],
+            "context_not_counted": split["context"],
             "max_sensitivity_tier": sens,
             "irreversible_operations": [f"observable:{r['observable_id']}" for r in irrev
                                         if r.get("collectors_agree") is not False],

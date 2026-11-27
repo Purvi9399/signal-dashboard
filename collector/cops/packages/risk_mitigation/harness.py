@@ -94,8 +94,37 @@ def session(*extra, sid="s1", day=9, tokens=1000, text=None, tier=None):
 
 UP = ["runtime_monitoring", "interaction_discovery", "anomaly_detection", "policy_enforcement", "resource_management",
       "incident_response", COP]
+# R-RK1: with Classification & Tagging (context only, U-RK1) before Incident Response and Risk Mitigation
+UP_CT = UP[:5] + ["classification_tagging"] + UP[5:]
 CYCLE2 = UP[:-1]
 IR_MODEL = {"incident_response": E.ir_steps}
+# C-RK4: with the secret at tier 3, Classification & Tagging has two candidate families (INTEGRITY from
+# insights.secrets, BOUNDARY from insights.sensitive_unasked) and needs its model to choose; without one its finding is
+# INCONCLUSIVE and there is no verified context to list. Its scripted reply is evaluation C08's (evaluation.ct_steps,
+# simulated), as the C&T harness uses. Ground truth unchanged.
+CT_MODEL = {"classification_tagging": lambda: E.ct_steps(None)}
+
+# R-RK1 rows and artifacts (GROUND_TRUTH.yaml, revision R-RK1)
+PERM_CSV = dict(observable_type="permission_request", tool_name="Read", tool_use_id="s1-csv", permission_decision="allow")
+CUSTOMER_READ = dict(observable_type="tool_request", tool_name="Read", file_path="/ws/data/customers.csv",
+                     sensitivity_tier=3, tool_arguments={"p": "customers.csv"}, tool_use_id="s1-csv", success=True)
+OVER_QUOTA = {"quotas": {S.OPS: {"token_budget": 1200, "synthetic": True}}}
+STAGING = S.policy_store([
+    {"id": "P-read", "action": "read", "resource_pattern": "*", "effect": "allow"},
+    {"id": "P-write-staging", "action": "write", "resource_pattern": "/staging/*", "effect": "require_approval"},
+    {"id": "P-exec", "action": "exec", "resource_pattern": "*", "effect": "allow"},
+    {"id": "P-tool", "action": "tool", "resource_pattern": "*", "effect": "allow"}])
+
+
+def same_metric_art():
+    return dict({"policy_store": E.sensitive_policy(), "risk_register": S.risk_register(), "taxonomy": S.taxonomy()},
+                **QUOTA)
+
+
+def staging_art():
+    return dict({"policy_store": STAGING, "risk_register": S.risk_register(),
+                 "proposed_operations": [{"action": "write", "resource": "/staging/app.cfg", "requested_by": "agent",
+                                          "synthetic": True}]}, **QUOTA)
 
 # name: (rows, artifacts, scripted models {cop: steps()} or None, COPs run)
 WORLDS = {
@@ -121,6 +150,20 @@ WORLDS = {
     "downstream_incident_response_feedback": (lambda: history() + session(SECRET), genuine, None, UP),
     "evidence_change_changes_decision": (lambda: history() + session(SECRET), genuine, None, UP),
     "topology_consistent": (lambda: history() + session(SECRET), genuine, None, UP),
+    # R-RK1
+    "multiple_findings_same_metric": (lambda: history() + session(SECRET), same_metric_art, dict(IR_MODEL, **CT_MODEL),
+                                      UP_CT),
+    "independent_distinct_evidence": (lambda: history() + session(SECRET, tokens=1500),
+                                      lambda: dict(genuine(), **OVER_QUOTA), None, UP),
+    "unrelated_high_sensitivity_low_impact": (lambda: history() + session(PERM_CSV, CUSTOMER_READ), genuine, None, UP),
+    "approval_required_without_violation": (lambda: history() + session(SECRET), staging_art, None, UP),
+    "unapproved_register": (lambda: history() + session(SECRET), lambda: genuine(register(approved=False)), None, UP),
+    "register_version_missing": (lambda: history() + session(SECRET),
+                                 lambda: genuine({k: v for k, v in S.risk_register().items() if k != "version"}),
+                                 None, UP),
+    "ct_context_no_inflation": (lambda: history() + session(SECRET), lambda: dict(genuine(), taxonomy=S.taxonomy()),
+                                CT_MODEL, UP_CT),
+    "material_escalates_never_applies": (lambda: history() + session(SECRET, RMRF), genuine, IR_MODEL, UP),
 }
 
 
@@ -179,6 +222,8 @@ def run_scenario(name, t):
         res["permissive"] = _finding(_case("perm", rows, permissive(), cops=cops)[0])
         res["with_rmrf"] = _finding(_case("rmrf", history() + session(SECRET, RMRF), art, cops=cops)[0])
         res["tier0"] = _finding(_case("tier0", history() + session(SECRET, tier=0), art, cops=cops)[0])
+    if name == "ct_context_no_inflation":
+        res["without_ct"] = _finding(_case("no-ct", rows, art, models, cops=UP)[0])
     if name == "downstream_incident_response_feedback":
         # the published finding names the cycle it came from (graph.prior_feedback)
         pub = dict(r["finding"], run_id=r["run_id"], decided_at=r["decided_at"])
@@ -265,8 +310,9 @@ def _topology_doc():
 
 
 def _topology_matches():
-    """The topology document carries Risk Mitigation's current-cycle inputs (specs.CONSUMES) exactly, and its one
-    outgoing link is the previous-cycle feedback edge to Incident Response (specs.FEEDBACK)."""
+    """The topology document carries Risk Mitigation's current-cycle inputs (specs.CONSUMES, Classification &
+    Tagging included since U-RK1) exactly, and its one outgoing link is the previous-cycle feedback edge to Incident
+    Response (specs.FEEDBACK)."""
     from ...specs import CONSUMES, FEEDBACK
     d = _topology_doc()
     links = {(x["from"], x["to"]): x.get("kind") for x in d["cop_links"]}
@@ -429,6 +475,78 @@ CHECKS = {
         and _answers(r["permissive"])["RK-2"] == "BELOW_THRESHOLDS" and _answers(r["with_rmrf"])["RK-2"] == "MATERIAL_LEVEL"
         and _answers(r["tier0"])["RK-4"] == "NOT_REQUIRED",
         (_f(r)["label"], r["permissive"]["label"], r["with_rmrf"]["label"], r["tier0"]["label"])),
+    # R-RK1 checks (GROUND_TRUTH.yaml, revision R-RK1)
+    "no_signal_counted": lambda r: (_b(r, "RK-2").get("signals_counted") == [] and _b(r, "RK-2").get("score") == 0,
+                                    _b(r, "RK-2").get("formula")),
+    "policy_enforcement_correlated_by_source": lambda r: (
+        _up(r, "policy_enforcement")["class"] == "RISK" and _up(r, "policy_enforcement")["counted"] is False
+        and "already carried" in _up(r, "policy_enforcement")["why"]
+        and _up(r, "policy_enforcement")["lineage_only_counted"] is True
+        and not any(str(x).startswith("tool_call:") for x in _up(r, "policy_enforcement")["sources"]),
+        _up(r, "policy_enforcement")),
+    "classification_tagging_context_only": lambda r: (
+        _up(r, "classification_tagging")["class"] == "CONTEXT" and _up(r, "classification_tagging")["counted"] is False
+        and [x["cop"] for x in _b(r, "RK-1")["context"]] == ["classification_tagging"]
+        and "classification_tagging" not in _b(r, "RK-2")["signals_counted"]
+        and "classification_tagging" not in _b(r, "RK-2")["correlated_not_counted"]
+        and "classification_tagging" not in _b(r, "RK-2")["quiet_not_counted"]
+        and "classification_tagging" not in [x["cop"] for x in _b(r, "RK-1")["inferred"]],
+        (_up(r, "classification_tagging"), _b(r, "RK-1").get("context"))),
+    "lineage_only_reading_recorded": lambda r: (
+        _b(r, "RK-2")["lineage_only_reading"]["signals"] == ["policy_enforcement"]
+        and _b(r, "RK-2")["lineage_only_reading"]["band"] == "EMERGING"
+        and _limitation_present(r, "RK-2", "LINEAGE_ONLY_READING_DIFFERS"), _b(r, "RK-2").get("lineage_only_reading")),
+    "observed_secret_named": lambda r: ("insights.secrets@EXCEPTION" in _b(r, "RK-1")["observed"],
+                                        _b(r, "RK-1")["observed"]),
+    "no_escalation": lambda r: (
+        _r(r)["proposed_action"]["action"] not in ("ESCALATE", "BLOCK", "PAUSE")
+        and _r(r)["triage"]["action_selection"]["original_proposal"] != "ESCALATE", _r(r)["proposed_action"]["action"]),
+    "two_independent_by_source": lambda r: (
+        _b(r, "RK-2")["signals_counted"] == ["policy_enforcement", "resource_management"]
+        and "proposed:write:/prod/secrets/db.env" in _up(r, "policy_enforcement")["distinct_sources"]
+        and any(x.startswith("quota:") for x in _up(r, "resource_management")["distinct_sources"]),
+        (_up(r, "policy_enforcement").get("distinct_sources"), _up(r, "resource_management").get("distinct_sources"))),
+    "impact_from_session_tier_kept": lambda r: (
+        _b(r, "RK-2")["impact"] == 3 and _b(r, "RK-2")["max_sensitivity_tier"] == 3
+        and _b(r, "RK-1")["observed"] == [] and _b(r, "RK-2")["signals_counted"] == ["policy_enforcement"],
+        _b(r, "RK-2").get("formula")),
+    "bound_impact_proposal_low": lambda r: (
+        _b(r, "RK-2")["impact_binding"]["applied"] is False and _b(r, "RK-2")["impact_binding"]["supporting_tier"] == 0
+        and _b(r, "RK-2")["impact_binding"]["impact"] == 1 and _b(r, "RK-2")["impact_binding"]["band"] == "LOW",
+        _b(r, "RK-2").get("impact_binding")),
+    "impact_binding_limitation_named": lambda r: (_limitation_present(r, "RK-2", "IMPACT_NOT_BOUND"),
+                                                  sorted(_limits(r))),
+    "approval_required_counted_provisionally": lambda r: (
+        _up(r, "policy_enforcement")["label"] == "APPROVAL_REQUIRED" and _up(r, "policy_enforcement")["counted"] is True
+        and "proposed:write:/staging/app.cfg" in _up(r, "policy_enforcement")["distinct_sources"]
+        and _b(r, "RK-2")["signals_counted"] == ["policy_enforcement"] and _b(r, "RK-2")["score"] == 3,
+        (_up(r, "policy_enforcement"), _b(r, "RK-2").get("formula"))),
+    "pending_approval_flagged": lambda r: (
+        "not a verified violation" in (_b(r, "RK-2").get("signal_kinds") or {}).get("policy_enforcement", "")
+        and _limitation_present(r, "RK-2", "SIGNAL_WEIGHT_PROVISIONAL", "policy_enforcement")
+        and any("not a verified violation" in c for c in _f(r)["cop_specific"]["contrary"]),
+        _b(r, "RK-2").get("signal_kinds")),
+    "register_named_unapproved": lambda r: (
+        any(x.get("requirement") == "risk_register.approval" and "not approved" in x.get("detail", "")
+            for x in _q(r, "RK-2")["sufficiency_reasons"]), _q(r, "RK-2")["sufficiency_reasons"]),
+    "register_named_unversioned": lambda r: (
+        any(x.get("requirement") == "risk_register.version" and "version" in x.get("detail", "")
+            for x in _q(r, "RK-2")["sufficiency_reasons"]), _q(r, "RK-2")["sufficiency_reasons"]),
+    "no_band_established": lambda r: (
+        _f(r)["label"] not in ("EMERGING", "MATERIAL") and _status(r)["verified"]["band"] is None
+        and not _b(r, "RK-4").get("recommended") and _r(r)["proposed_action"]["action"] not in ("WATCH", "ESCALATE"),
+        (_f(r)["label"], _status(r)["verified"], _r(r)["proposed_action"]["action"])),
+    "same_as_without_ct": lambda r: (
+        _same(_f(r), r["without_ct"])
+        and _b(r, "RK-2")["score"] == r["without_ct"]["cop_specific"]["questions"]["RK-2"]["basis"]["score"]
+        and _f(r)["verified"] == r["without_ct"]["verified"],
+        (_f(r)["label"], r["without_ct"]["label"], _f(r)["verified"], r["without_ct"]["verified"])),
+    "escalated_to_person": lambda r: (_status(r)["intervention"]["escalated_to_person"] is True, _status(r)["intervention"]),
+    "no_control_in_any_executed_list": lambda r: (
+        "C-block-write" not in json.dumps(_r(r).get("executed") or [], default=str)
+        and "C-block-write" not in json.dumps(_r(r)["proposed_action"].get("executed") or [], default=str)
+        and _status(r)["intervention"]["executed"] == [] and _b(r, "RK-4")["executed"] == [],
+        (_r(r).get("executed"), _r(r)["proposed_action"].get("execution_status"))),
     "topological_order_acyclic": lambda r: (len(_order()[0]) == 18, _order()[0]),
     "rk_after_every_producer": lambda r: (_order()[1], _order()[0]),
     "topology_doc_matches_runtime_edges": lambda r: _topology_matches(),

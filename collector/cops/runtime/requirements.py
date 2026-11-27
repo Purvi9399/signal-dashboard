@@ -23,7 +23,7 @@ classifications are a semantic choice, listed for agreement in
 docs/cops/PR4_ACCEPTANCE_REPORT.md.
 """
 
-from .tools import latest_policy, _snapshots, taxonomy_problem
+from .tools import latest_policy, _snapshots, taxonomy_problem, risk_register_problem
 
 REQUIRED, OPTIONAL, NOT_APPLICABLE = "REQUIRED", "OPTIONAL", "NOT_APPLICABLE"
 AVAILABLE, UNAVAILABLE = "AVAILABLE", "UNAVAILABLE"
@@ -57,14 +57,16 @@ AVAILABLE_IF = {
     # purvi, 2026-11-27 (U-CT4): approval and version validity, not only presence (tools.taxonomy_problem)
     "taxonomy": lambda c: taxonomy_problem(c) is None,
     "budget_or_quota": _quota,
-    "risk_register": lambda c: bool(c.artifact("risk_register")),
+    # purvi, 2026-11-27 (U-RK8): approval and version validity, not only presence (tools.risk_register_problem)
+    "risk_register": lambda c: risk_register_problem(c) is None,
     "decision_store": lambda c: c.decision_store is not None,
     "task_classes": lambda c: bool(c.artifact("task_classes")),
 }
 
-# Why an artifact that is present still does not count, where that is checked. Only the taxonomy has one;
+# Why an artifact that is present still does not count, where that is checked: the taxonomy and the risk register;
 # an absent artifact's detail, and every other artifact's, is unchanged.
-UNAVAILABLE_WHY = {"taxonomy": lambda c: taxonomy_problem(c) if c.artifact("taxonomy") else None}
+UNAVAILABLE_WHY = {"taxonomy": lambda c: taxonomy_problem(c) if c.artifact("taxonomy") else None,
+                   "risk_register": lambda c: risk_register_problem(c) if c.artifact("risk_register") else None}
 
 # cop -> [(artifact, kind, what it backs, applies or None)]
 REQUIREMENTS = {
