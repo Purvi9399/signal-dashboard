@@ -1326,6 +1326,26 @@ def t_assess_recovery_questions(case, a, ctx):
             "upstream_supplied": sorted((ctx.get("upstream") or {})), "evaluated_at": case.computed_at}
 
 
+def t_assess_behaviour_questions(case, a, ctx):
+    """The four Behavior Analytics questions for the case session (cop_package), read against the estate's metric
+    history, validated behaviour_baseline, context_integrity_finding and workflow_failure memory (context only) and
+    the consumed findings (packages/behavior_analytics/DECISIONS.md)."""
+    if not case.session:
+        return missing("session", "behaviour question assessment", "the case session")
+    memory = None
+    if ctx.get("memory"):
+        memory = {}
+        for rtype in ("behaviour_baseline", "context_integrity_finding", "workflow_failure"):
+            mem = _memory_lookup(ctx, rtype)
+            if mem and "missing_dependency" not in mem:
+                memory[rtype] = mem["established"]
+    q = cop_package.assess_behavior_analytics(case.rows, case.session_id, case.cfg, case.computed_at,
+                                              ctx.get("upstream"), memory, case.artifact("source_events"),
+                                              case.artifact("native_transcripts"))
+    return {"questions": q, "memory_supplied": memory is not None,
+            "upstream_supplied": sorted((ctx.get("upstream") or {})), "evaluated_at": case.computed_at}
+
+
 TOOLS = {
     # name: (fn, schema {arg: spec})
     "get_metric_rows": (t_get_metric_rows, {"metric_ids": _arr("metric_ids", 25)}),
@@ -1400,6 +1420,7 @@ TOOLS = {
     "assess_risk_questions": (t_assess_risk_questions, {}),
     "assess_incident_questions": (t_assess_incident_questions, {}),
     "assess_recovery_questions": (t_assess_recovery_questions, {}),
+    "assess_behaviour_questions": (t_assess_behaviour_questions, {}),
     "compute_sequence_statistics": (t_compute_sequence_statistics, {}),
     "compare_behaviour_history": (t_compare_behaviour_history, {}),
     "get_recovery_records": (t_get_recovery_records, {}),

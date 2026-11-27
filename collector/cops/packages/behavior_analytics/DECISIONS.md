@@ -74,3 +74,19 @@ Behavior Analytics 12. The build order is recorded apart from that numbering (pr
 | U-BA7 | OVER_EXPLORING stays unreachable (no exploration rate) | unreachable | define exploration_rate |
 | U-BA8 | P-BA1 | not wired | approve one or more edges |
 | U-BA9 | behavior_investigation_prioritya looks like a typo of behavior_investigation_priority | kept as written | correct the registry |
+
+## Corrections after the first run (350 of 358)
+
+Ground truth was not edited. Each correction is marked in the harness.
+
+| # | What | Why |
+|---|---|---|
+| C-BA1 | `trend_metrics_reported_not_judged` required all three trend metrics to read NOT_JUDGED | behavior_retry_trend is UNOBSERVED in that estate (the catalogue needs a value in more earlier sessions; insights.retry is NOT_APPLICABLE where nothing failed). The ground truth asks that the trends are reported and never judged: each is listed with its verdict and none is WITHIN or DEVIATES |
+| C-BA2 | `ad_marks_correlated` read Anomaly Detection's `upstream_used` | AD carries `upstream_used` only when its model interprets; with no model AD is INCONCLUSIVE (llm_unavailable). AD-1's basis records how AD counted this COP's finding ("correlated, not counted: shares ['insights.retry']"); the check reads that |
+| — | harness slips: the registry entries are keyed `id`; `graph.run_cop` returns the COP result under `result` | not corrections of meaning |
+
+## Documentation corrected (no runtime change)
+
+`docs/cops/cops_topology.json`: `reads_decisions_from` for this COP corrected from [] to runtime_monitoring,
+context_memory, workflow_orchestration (specs.CONSUMES); a runtime_monitoring → behavior_analytics link and an
+anomaly_detection → behavior_analytics `feedback` link added (specs.CONSUMES and specs.FEEDBACK).

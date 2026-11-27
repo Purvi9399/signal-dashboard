@@ -5203,3 +5203,481 @@ def decide_recovery_resilience(questions, earlier=None):
             "drivers": drivers, "contrary": contrary, "questions": trace, "limitations": lims,
             "decided": True, "memory_payload": pay, "recovery_status": status, "decision": label,
             "category": category}
+
+
+# ---------------------------------------------------------------- Behavior Analytics
+
+BA = "behavior_analytics"
+BA_QUESTIONS = ("BA-1", "BA-2", "BA-3", "BA-4")
+BA_AUTHORITY = ("Behavior Analytics observes, classifies, records and passes; it enforces nothing from a behavioural "
+                "characterization (agents-harness row 16; specs.permitted_actions NONE, WATCH)")
+BA_RECOUNTED = ("insights.retry", "insights.failed")
+BA_SCOPE = {"ISOLATED": "this execution only: no earlier ordered session of this agent deviated on the same metric",
+            "RECURRING": "recurring across distinct sessions of this agent",
+            "WORSENING": "worsening across consecutive sessions of this agent",
+            INCONCLUSIVE: "undetermined: the history cannot place this reading in time",
+            "NO_CURRENT_PATTERN": "none: no behavioural pattern in this execution"}
+BA_PERSISTENCE = ("persistence is not assessed: no time window or persistence threshold is approved (workbook row 185 "
+                  "column 5); recurrence and worsening use the approved metric states over all ordered history (U-BA3)")
+BA_AD = ("Anomaly Detection reads the same metrics: its earlier finding is context for persistence and never a "
+         "separate occurrence (D-BA9)")
+
+
+def _ba_pkg():
+    return EA.load_package(BA)
+
+
+def _ba_ref(r):
+    return f"observable:{r.get('observable_id')}"
+
+
+def _ba_events(rows, keep_disputed=False):
+    """One row per event (tool_use_id, else the row itself), in time order (D-BA3). Rows the collectors dispute are
+    left out unless keep_disputed."""
+    seen, out = set(), []
+    for r in sorted(rows, key=lambda r: (r.get("occurred_at") or "", r.get("sequence_num") or 0)):
+        if not keep_disputed and r.get("collectors_agree") is False:
+            continue
+        k = r.get("tool_use_id") or r.get("observable_id")
+        if k in seen:
+            continue
+        seen.add(k)
+        out.append(r)
+    return out
+
+
+def ba_recount(rows, cfg, keep_disputed=False):
+    """insights.retry and insights.failed over distinct events (signal_metrics.m_retry and m_failed's definitions,
+    applied to one row per tool_use_id), judged with the approved thresholds (signal_metrics.judge)."""
+    sm = EA.signal_metrics
+    ev = _ba_events(rows, keep_disputed)
+    failed_cmd, retries = set(), []
+    for r in ev:
+        if not sm.has(r.get("command")):
+            continue
+        k = str(r["command"]).strip()
+        if k in failed_cmd:
+            retries.append(_ba_ref(r))
+        if sm.nonzero_exit(r):
+            failed_cmd.add(k)
+    fails = [_ba_ref(r) for r in ev if r.get("success") is False]
+    had_failure = any(r.get("success") is False or sm.nonzero_exit(r) for r in ev)
+    th = cfg["thresholds"]
+    retry = ({"value": len(retries), "state": sm.judge(len(retries), th["insights.retry"]), "refs": retries}
+             if had_failure else {"value": None, "state": "NOT_APPLICABLE", "refs": []})
+    return {"insights.retry": retry,
+            "insights.failed": {"value": len(fails), "state": sm.judge(len(fails), th["insights.failed"]),
+                                "refs": fails},
+            "events": len(ev)}
+
+
+def _ba_disputed(session):
+    return {_ba_ref(r) for r in (session.rows if session else []) if r.get("collectors_agree") is False}
+
+
+def _ba1(a, a2, s, states, pkg, cfg):
+    ms = _ct_measures(a, _rk_built(pkg, "BA-1"), states)
+    by = {m["metric"]: m for m in ms}
+    rows = s.rows if s else []
+    rc = ba_recount(rows, cfg)
+    with_disputed = ba_recount(rows, cfg, keep_disputed=True)
+    recount = []
+    for mid in BA_RECOUNTED:
+        raw = by[mid]
+        x = rc[mid]
+        dup = (raw["state"] in states and with_disputed[mid]["state"] not in states)
+        disp = (with_disputed[mid]["state"] in states and x["state"] not in states)
+        recount.append({"metric": mid, "raw_value": raw["value"], "raw_state": raw["state"], "value": x["value"],
+                        "state": x["state"], "events": x["refs"],
+                        "deviates": x["state"] in states,
+                        "only_duplicates": dup, "only_disputed": disp})
+    rec = {x["metric"]: x for x in recount}
+    rep = by["insights.repetition"]
+    bad = _ba_disputed(s)
+    rep_refs = list(rep.get("evidence_refs") or [])
+    rep_disputed = rep["verdict"] == DEVIATES and rep_refs and all(r in bad for r in rep_refs)
+    rep_dev = rep["verdict"] == DEVIATES and not rep_disputed
+    workload = [m for m in _ct_measures(a2, pkg["workload_metrics"], states)]
+    stall = by["insights.stalled"]
+    basis = {"measures": ms, "recount": recount, "events_counted": rc["events"],
+             "repetition_disputed": bool(rep_disputed),
+             "workload": workload, "workload_deviating": [m["metric"] for m in workload if m["verdict"] == DEVIATES],
+             "stalls": stall["evidence_refs"] if stall["verdict"] == DEVIATES else [],
+             "reported_not_judged": [m for m in ms if m["verdict"] == NOT_JUDGED],
+             "not_calculated": _rk_not_built(pkg, "BA-1"),
+             "event_identity": "one event per tool_use_id; rows the collectors dispute are not counted (D-BA3)"}
+    retry_dev, failed_dev = rec["insights.retry"]["deviates"], rec["insights.failed"]["deviates"]
+    behind = []
+    if retry_dev and failed_dev:
+        outcome, behind = "RETRY_AFTER_FAILURE", ["insights.retry", "insights.failed"]
+    elif retry_dev or rep_dev:
+        outcome = "REPEATED_ACTIONS"
+        behind = (["insights.retry"] if retry_dev else []) + (["insights.repetition"] if rep_dev else [])
+    elif basis["workload_deviating"]:
+        outcome, behind = "WORKLOAD_ONLY", list(basis["workload_deviating"])
+    else:
+        outcome = None
+    basis["behind"] = behind
+    basis["behind_states"] = {m: (rec[m]["state"] if m in rec else by.get(m, {}).get("state") or next(
+        (w["state"] for w in workload if w["metric"] == m), None)) for m in behind}
+    if outcome:
+        return outcome, basis
+    disputed = [x["metric"] for x in recount if x["only_disputed"]] + (["insights.repetition"] if rep_disputed else [])
+    if disputed:
+        basis["interpretation_reasons"] = [{
+            "code": EA.CONFLICTING_SOURCES, "requirement": m, "check": "collectors_agree",
+            "detail": f"{m} deviates only on rows the collectors disagree on: directly disputed evidence does not "
+                      f"establish a behavioural pattern"} for m in disputed]
+        return INCONCLUSIVE, basis
+    judged = [m for m in (by[k] for k in ("insights.repetition", "insights.retry", "insights.failed",
+                                          "insights.stalled")) if m["verdict"] in (WITHIN, DEVIATES)]
+    judged += [m for m in (by.get("oversight.fast_approvals"),) if m and m["verdict"] in (WITHIN, DEVIATES)]
+    if judged:
+        return "NO_PATTERN", basis
+    basis["interpretation_reasons"] = [{"code": EA.MISSING_DATA, "requirement": m["metric"], "check": None,
+                                        "detail": f"{m['metric']} {m.get('reason') or m['verdict']}"}
+                                       for m in ms if m["metric"] in pkg["pattern_metrics"]]
+    return INCONCLUSIVE, basis
+
+
+def _ba_history_states(sessions, events, cur, metric, cfg):
+    """This operator's other sessions of the same tool (D-BA6), each with its state of metric (insights.retry and
+    insights.failed recounted by event as in D-BA3), split by whether they can be ordered against cur."""
+    by_sid = {}
+    for e in events:
+        if e["metric_id"] == metric:
+            by_sid[e["session_id"]] = e
+    ordered, unordered = [], []
+    for x in sessions:
+        if x.id == cur.id or x.tool != cur.tool or x.operator != cur.operator:
+            continue
+        if not x.start:
+            unordered.append(x.id)
+            continue
+        if cur.start and x.start >= cur.start:
+            continue
+        if metric in BA_RECOUNTED:
+            r = ba_recount(x.rows, cfg)[metric]
+            st, v = r["state"], r["value"]
+        else:
+            e = by_sid.get(x.id) or {}
+            st, v = e.get("state") or "UNKNOWN", e.get("value")
+        ordered.append({"session_id": x.id, "start": x.start, "value": v, "state": st})
+    ordered.sort(key=lambda h: h["start"])
+    return ordered, sorted(unordered)
+
+
+def _ba3(a, s, states, pkg, deps, sessions, events, cfg, memory):
+    one = deps["BA-1"]
+    ms = _ct_measures(a, _rk_built(pkg, "BA-3"), states)
+    rank = pkg["state_rank"]
+    minimum = cfg["min_sessions_for_baseline"]
+    b1 = one["basis"] or {}
+    behind = list(b1.get("behind") or [])
+    fa = next((m for m in ms if m["metric"] == "oversight.fast_approvals"), None)
+    if fa and fa["verdict"] == DEVIATES:
+        behind.append("oversight.fast_approvals")
+    basis = {"measures": ms, "metrics_followed": behind, "min_sessions_for_baseline": minimum,
+             "precedents": _ba_precedents(memory), "persistence": "NOT_ASSESSED", "persistence_why": BA_PERSISTENCE,
+             "anomaly_detection": BA_AD,
+             "reported_not_judged": [m for m in ms if m["verdict"] == NOT_JUDGED],
+             "not_calculated": _rk_not_built(pkg, "BA-3"),
+             "definitions": {"same_session": "the same session_id", "distinct_sessions": "different session_ids",
+                             "history": "this operator's other sessions of the same tool that started earlier",
+                             "consecutive": "those sessions in start order", "window": "none approved: all ordered "
+                                                                                       "history is read"}}
+    if one["outcome"] == INCONCLUSIVE:
+        basis["interpretation_reasons"] = [{"code": EA.MISSING_DATA, "requirement": "BA-1", "check": None,
+                                            "detail": "BA-1 is unanswered: there is no current pattern to follow"}]
+        return INCONCLUSIVE, basis
+    if not behind:
+        return "NO_CURRENT_PATTERN", basis
+    if s is None or not s.start:
+        basis["interpretation_reasons"] = [{"code": EA.INCOMPARABLE_TIMESTAMPS, "requirement": "session start",
+                                            "check": "MISSING_TIMESTAMPS",
+                                            "detail": "this session's rows carry no timestamp: it cannot be ordered "
+                                                      "against the agent's earlier sessions"}]
+        basis["missing_timestamps"] = True
+        return INCONCLUSIVE, basis
+    per = {}
+    unordered = set()
+    for mid in behind:
+        hist, un = _ba_history_states(sessions, events, s, mid, cfg)
+        unordered |= set(un)
+        cur_state = (b1.get("behind_states") or {}).get(mid) or (fa or {}).get("state")
+        observed = [h for h in hist if h["state"] != "UNKNOWN"]
+        dev = [h for h in observed if h["state"] in states]
+        judged = [rank[h["state"]] for h in observed if h["state"] in rank]
+        seq = judged + ([rank[cur_state]] if cur_state in rank else [])
+        if dev:
+            worse = all(x <= y for x, y in zip(seq, seq[1:])) and len(seq) > 1 and seq[-1] > seq[0]
+            res = "WORSENING" if worse else "RECURRING"
+        elif len(observed) >= minimum:
+            res = "ISOLATED"
+        else:
+            res = INCONCLUSIVE
+        per[mid] = {"current_state": cur_state, "history": hist, "observed": len(observed),
+                    "earlier_deviations": [h["session_id"] for h in dev], "ranks_in_order": seq, "reading": res}
+    basis["per_metric"] = per
+    basis["unordered_history"] = sorted(unordered)
+    reads = [p["reading"] for p in per.values()]
+    if "WORSENING" in reads:
+        return "WORSENING", basis
+    if "RECURRING" in reads:
+        return "RECURRING", basis
+    if all(r == "ISOLATED" for r in reads):
+        return "ISOLATED", basis
+    basis["interpretation_reasons"] = [{
+        "code": EA.INSUFFICIENT_HISTORY, "requirement": m, "check": "min_sessions_for_baseline",
+        "detail": f"{m}: {p['observed']} earlier observed session(s), fewer than {minimum}: one reading is not "
+                  f"generalized to a tendency"} for m, p in per.items() if p["reading"] == INCONCLUSIVE]
+    return INCONCLUSIVE, basis
+
+
+def _ba2(a, s, states, pkg, sessions, events, cfg):
+    ms = _ct_measures(a, _rk_built(pkg, "BA-2"), states)
+    judged = [m for m in ms if m["verdict"] in (WITHIN, DEVIATES)]
+    dev = [m["metric"] for m in ms if m["verdict"] == DEVIATES]
+    own = {}
+    if s is not None:
+        for mid in ("insights.repetition", "insights.retry", "insights.failed"):
+            hist, _ = _ba_history_states(sessions, events, s, mid, cfg)
+            vals = [h["value"] for h in hist if h["value"] is not None and h["state"] not in ("UNKNOWN",
+                                                                                            "NOT_APPLICABLE")]
+            own[mid] = {"n": len(vals), "median": sorted(vals)[len(vals) // 2] if vals else None,
+                        "max": max(vals) if vals else None}
+    earlier = [x for x in sessions if s is not None and x.id != s.id and x.tool == s.tool
+               and x.operator == s.operator and x.start and s.start and x.start < s.start]
+    basis = {"measures": ms, "deviating": dev, "own_history": own, "earlier_sessions": len(earlier),
+             "min_sessions_for_baseline": cfg["min_sessions_for_baseline"],
+             "peer_comparison": "not made: no cohorts or comparable task categories (U-BA4)",
+             "reported_not_judged": [m for m in ms if m["verdict"] == NOT_JUDGED],
+             "not_calculated": _rk_not_built(pkg, "BA-2")}
+    if dev:
+        return "OUTSIDE_USUAL_RANGE", basis
+    if judged:
+        return "WITHIN_USUAL_RANGE", basis
+    basis["interpretation_reasons"] = [{"code": EA.MISSING_DATA, "requirement": m["metric"], "check": None,
+                                        "detail": f"{m['metric']} {m.get('reason') or m['verdict']}"} for m in ms]
+    return INCONCLUSIVE, basis
+
+
+def _ba_upstream(upstream, pkg):
+    """Context & Memory and Workflow Orchestration, the authorised integrity reads (D-BA8), and Runtime Monitoring's
+    evidence quality."""
+    from ..specs import CONSUMES
+    out = {}
+    for k in CONSUMES[BA]:
+        f = (upstream or {}).get(k)
+        if f is None:
+            out[k] = {"present": False, "class": "ABSENT"}
+            continue
+        ok = bool(f.get("verified")) and f.get("status") == "SUBSTANTIVE"
+        spec = pkg["upstream"].get(k, {})
+        lab = f.get("label")
+        cls = ("ALTERED" if lab in spec.get("altered", []) else "QUALITY" if lab in spec.get("quality", [])
+               else "QUIET" if lab in spec.get("quiet", []) else "CONTEXT") if ok else "NOT_VERIFIED"
+        out[k] = {"present": True, "label": lab, "finding_id": f.get("finding_id"), "verified": ok, "class": cls}
+    return out
+
+
+def _ba4(a, s, states, pkg, upstream):
+    ms = _ct_measures(a, _rk_built(pkg, "BA-4"), states)
+    view = _ba_upstream(upstream, pkg)
+    altered = [dict(v, cop=k) for k, v in view.items() if v["class"] == "ALTERED"]
+    basis = {"measures": ms, "upstream": view, "altered_by": altered,
+             "unverified": [k for k, v in view.items() if v["class"] == "NOT_VERIFIED"],
+             "reported_not_judged": [m for m in ms if m["verdict"] == NOT_JUDGED],
+             "not_calculated": _rk_not_built(pkg, "BA-4")}
+    return ("CONTEXT_ALTERED" if altered else "NO_ALTERATION_SHOWN"), basis
+
+
+def _ba_precedents(memory):
+    out = []
+    for rtype, recs in (memory or {}).items():
+        for x in (recs or [])[:10]:
+            p = x.get("payload") or {}
+            out.append({"record_type": rtype, "record_id": x["record_id"], "label": p.get("label"),
+                        "session_id": p.get("session_id"), "status": x.get("status"), "counted": False,
+                        "use": "context only: an earlier classification never validates itself or counts as an "
+                               "occurrence (D-BA10)"})
+    return out
+
+
+def observe_behavior_analytics(assessments, session, sessions, events, cfg, upstream=None, memory=None):
+    """{question_id: assessment} -> {question_id: answer}. sessions and events: the estate's signal_metrics sessions
+    and metric events (the agent's own history); upstream: the consumed findings; memory: {record_type: established
+    records} for behaviour_baseline, context_integrity_finding and workflow_failure."""
+    pkg = _ba_pkg()
+    states = tuple(pkg["deviation_states"])
+    out = {}
+    for qid in BA_QUESTIONS:
+        q, a = pkg["questions"][qid], assessments[qid]
+        if qid == "BA-1":
+            outcome, basis = _ba1(a, assessments["BA-2"], session, states, pkg, cfg)
+        elif qid == "BA-2":
+            outcome, basis = _ba2(a, session, states, pkg, sessions, events, cfg)
+        elif qid == "BA-3":
+            outcome, basis = _ba3(a, session, states, pkg, out, sessions, events, cfg, memory)
+        else:
+            outcome, basis = _ba4(a, session, states, pkg, upstream)
+        if outcome not in q["outcomes"] and outcome != INCONCLUSIVE:
+            raise ValueError(f"{qid}: outcome {outcome} is not in METRICS.yaml")
+        out[qid] = {"outcome": outcome, "sufficiency": a["sufficiency"]["status"], "basis": basis,
+                    "findings": a["findings"], "not_assessed": a["sufficiency"]["not_assessed"]}
+        if outcome == INCONCLUSIVE or basis.get("interpretation_reasons"):
+            out[qid]["because"] = basis.get("interpretation_reasons", [])
+    return out
+
+
+def assess_behavior_analytics(rows, session_id, cfg=None, computed_at=None, upstream=None, memory=None,
+                              raw_events=None, native=None):
+    """The four questions for one session: each assessment with its answer."""
+    cfg = cfg or EA.signal_metrics.load_config()
+    events, srows = EA.session_inputs(rows, session_id, cfg, computed_at)
+    all_events, sessions = EA._computed(rows, cfg, computed_at)
+    s = next(x for x in sessions if x.id == session_id)
+    assessments = {qid: EA.assess(BA, qid, events, srows, cfg, computed_at, raw_events, native)
+                   for qid in EA.QUESTIONS[BA]}
+    answers = observe_behavior_analytics(assessments, s, sessions, all_events, cfg, upstream, memory)
+    return {qid: {"assessment": assessments[qid], "answer": answers[qid]} for qid in assessments}
+
+
+def _explain_ba(qid, ans):
+    b = ans["basis"] or {}
+    o = ans["outcome"]
+    if o == INCONCLUSIVE:
+        return _explain(qid, ans)
+    if qid == "BA-1":
+        rc = "; ".join(f"{x['metric']} {x['value']} {x['state']} over distinct events (raw {x['raw_value']} "
+                       f"{x['raw_state']})" for x in b["recount"])
+        if o == "RETRY_AFTER_FAILURE":
+            return "failed commands reissued and failing again: " + rc
+        if o == "REPEATED_ACTIONS":
+            return "repeated actions: " + ", ".join(f"{m} {b['behind_states'][m]}" for m in b["behind"]) + "; " + rc
+        if o == "WORKLOAD_ONLY":
+            return ("workload outside its usual size (" + ", ".join(b["workload_deviating"]) + ") with no repeated "
+                    "or failing action pattern: not a behavioural pattern")
+        return "no behavioural pattern measure deviates (" + rc + ")"
+    if qid == "BA-2":
+        if o == "OUTSIDE_USUAL_RANGE":
+            return "outside the estate's usual range: " + ", ".join(b["deviating"])
+        return (f"within the estate's usual range; {b['earlier_sessions']} earlier session(s) of this agent; no peer "
+                "comparison")
+    if qid == "BA-3":
+        if o == "NO_CURRENT_PATTERN":
+            return "no current pattern to follow over time"
+        per = b["per_metric"]
+        s = "; ".join(f"{m}: {p['reading']} ({p['observed']} earlier observed, deviations in "
+                      f"{', '.join(p['earlier_deviations']) or 'none'})" for m, p in per.items())
+        return BA_SCOPE[o] + ": " + s + "; persistence not assessed (no approved window)"
+    if o == "CONTEXT_ALTERED":
+        return "working from altered context: " + ", ".join(f"{x['cop']} {x['label']}" for x in b["altered_by"])
+    return "no verified upstream finding shows altered context"
+
+
+def _ba_limitations(ans):
+    from . import decision as D
+    out = []
+    pkg = _ba_pkg()
+    b1, b2, b3, b4 = ((ans[q].get("basis") or {}) for q in BA_QUESTIONS)
+    for x in b1.get("recount", []):
+        if x["only_duplicates"]:
+            out.append(D.limitation(D.MISSING_EVIDENCE, "BA-1", x["metric"], "DUPLICATE_TELEMETRY",
+                                    f"{x['metric']} reads {x['raw_value']} ({x['raw_state']}) over rows, "
+                                    f"{x['value']} ({x['state']}) over distinct events: the same event seen by "
+                                    "several collectors is one event, not repeated behaviour (D-BA3, U-BA1)",
+                                    x["events"]))
+        if x["only_disputed"]:
+            out.append(D.limitation(D.MISSING_EVIDENCE, "BA-1", x["metric"], EA.CONFLICTING_SOURCES,
+                                    f"{x['metric']} deviates only on rows the collectors disagree on"))
+    if b1.get("stalls"):
+        out.append(D.limitation(D.LIMIT_NOT_APPROVED, "BA-1", "insights.stalled", "STALL_NOT_LABELLED",
+                                "a stall is reported; Behavior Analytics has no stall label (U-BA2)", b1["stalls"]))
+    if ans["BA-1"]["outcome"] == "WORKLOAD_ONLY":
+        out.append(D.limitation(D.MISSING_EVIDENCE, "BA-1", "workload", "WORKLOAD_NOT_A_PATTERN",
+                                "a workload outlier alone is not a behavioural pattern: reported, label STABLE"))
+    if b3.get("missing_timestamps"):
+        out.append(D.limitation(D.MISSING_EVIDENCE, "BA-3", "session_start", "MISSING_TIMESTAMPS",
+                                "this session cannot be ordered against the agent's history"))
+    if b3.get("unordered_history"):
+        out.append(D.limitation(D.MISSING_EVIDENCE, "BA-3", "history", "UNORDERED_HISTORY",
+                                "earlier sessions without a start timestamp are listed and not used: "
+                                + ", ".join(b3["unordered_history"])))
+    if ans["BA-3"]["outcome"] == INCONCLUSIVE and not b3.get("missing_timestamps") and b3.get("per_metric"):
+        out.append(D.limitation(D.MISSING_EVIDENCE, "BA-3", "history", EA.INSUFFICIENT_HISTORY,
+                                "fewer earlier observed sessions than min_sessions_for_baseline: the reading is not "
+                                "generalized"))
+    if ans["BA-3"]["outcome"] in ("ISOLATED", "RECURRING", "WORSENING"):
+        out.append(D.limitation(D.LIMIT_NOT_APPROVED, "BA-3", "persistence", "PERSISTENCE_NOT_ASSESSED",
+                                BA_PERSISTENCE))
+    out.append(D.limitation(D.MISSING_EVIDENCE, "BA-2", "peer_comparison", "PEER_COMPARISON_NOT_MADE",
+                            "no cohorts or comparable task categories (workbook row 183 column 5, U-BA4)"))
+    for k in b4.get("unverified", []):
+        out.append(D.limitation(D.MISSING_EVIDENCE, "BA-4", k, "UPSTREAM_NOT_VERIFIED",
+                                f"the {k} finding is not verified: listed, alters nothing"))
+    for k, v in (b4.get("upstream") or {}).items():
+        if v["class"] == "ABSENT":
+            out.append(D.limitation(D.MISSING_EVIDENCE, "BA-4", k, "UPSTREAM_ABSENT",
+                                    f"no {k} finding in this case: no altered context is shown"))
+    for qid in BA_QUESTIONS:
+        for x in (ans[qid].get("basis") or {}).get("not_calculated", []):
+            out.append(D.limitation(D.NOT_CALCULATED, qid, x["metric"], D.NOT_CALCULATED, x["missing_inputs"]))
+    for k, v in pkg["not_calculated"].items():
+        out.append(D.limitation(D.NOT_CALCULATED, "BA-1", k, D.NOT_CALCULATED, " ".join(v.split())))
+    out.append(D.limitation(D.LIMIT_NOT_APPROVED, "BA-1", "confidence", "UNCALIBRATED_CONFIDENCE",
+                            "the confidence is the legacy rule's constant, not calibrated against outcomes (U-BA6)"))
+    return out
+
+
+def decide_behavior_analytics(questions, evidence_scale=1.0):
+    """The COP decision from the four answers (INTERPRETATION.md). BA-1 gives the pattern label, BA-4 DRIFTING when
+    BA-1 shows none, BA-2 and BA-3 the scope it is published with. Decided by the package; no model."""
+    from ..interpret import SEV, RANK
+    pkg = _ba_pkg()
+    ans = {q: v["answer"] for q, v in questions.items()}
+    one, two, three, four = (ans[q]["outcome"] for q in BA_QUESTIONS)
+    b1 = ans["BA-1"].get("basis") or {}
+    if one == INCONCLUSIVE:
+        label = INCONCLUSIVE
+    elif pkg["labels"][one] in ("POOR_RECOVERY", "LOOPING"):
+        label = pkg["labels"][one]
+    elif four == "CONTEXT_ALTERED":
+        label = pkg["labels"]["CONTEXT_ALTERED"]
+    else:
+        label = "STABLE"
+    sev = pkg["severity"][label]
+    if sev == "from_state":
+        sev = max((SEV[st] for st in (b1.get("behind_states") or {}).values() if st in SEV), key=RANK.get,
+                  default="NONE")
+    conf = round(pkg["confidence"][label] * evidence_scale, 3)
+    action = pkg["responses"][label]
+    drivers = {"POOR_RECOVERY": ["BA-1"], "LOOPING": ["BA-1"], "DRIFTING": ["BA-4"], "STABLE": ["BA-1", "BA-4"],
+               INCONCLUSIVE: ["BA-1"]}[label]
+    scope_key = three if label in ("POOR_RECOVERY", "LOOPING") or one == "WORKLOAD_ONLY" else "NO_CURRENT_PATTERN"
+    if (label in ("POOR_RECOVERY", "LOOPING") and three == "NO_CURRENT_PATTERN") or label == INCONCLUSIVE:
+        scope_key = INCONCLUSIVE
+    status = {"pattern": label, "answers": {q: x["outcome"] for q, x in ans.items()},
+              "scope": BA_SCOPE.get(scope_key, BA_SCOPE[INCONCLUSIVE]), "time_scope": scope_key,
+              "persistent": False, "persistence": "NOT_ASSESSED",
+              "events": {x["metric"]: {"raw": x["raw_value"], "distinct_events": x["value"], "state": x["state"]}
+                         for x in b1.get("recount", [])},
+              "authority": BA_AUTHORITY, "enforced_by_this_cop": []}
+    trace = _question_trace(questions, _explain_ba, drivers)
+    reason = (f"{label}: " + _explain_ba("BA-1", ans["BA-1"]) + f"; scope {status['scope']}")[:400]
+    contrary = [f"{q}: {x['check']} {x['detail']}" for q, v in questions.items() for x in v["answer"].get("findings", [])]
+    contrary += [f"BA-1: {x['metric']} raw {x['raw_value']} counts duplicate rows of one event"
+                 for x in b1.get("recount", []) if x["only_duplicates"]]
+    contrary += [f"BA-3: precedent {p['record_id']} ({p['label']}): context, never counted"
+                 for p in (ans["BA-3"].get("basis") or {}).get("precedents", [])]
+    from ..specs import consumers
+    pay = {"answers": status["answers"], "time_scope": scope_key, "events": status["events"],
+           "metric_states": {m["metric"]: m["state"] for m in b1.get("measures", [])
+                             if m["metric"] in pkg["pattern_metrics"]},
+           "decided_by": "package",
+           "precedents_read": [p["record_id"] for p in (ans["BA-3"].get("basis") or {}).get("precedents", [])]}
+    return {"label": label, "confidence": conf, "severity": sev, "action": action,
+            "action_reason": reason if label != "STABLE" else "", "rationale_head": reason,
+            "recipients": list(consumers(BA)) if label != INCONCLUSIVE else [], "drivers": drivers,
+            "contrary": contrary, "questions": trace, "limitations": _ba_limitations(ans), "decided": True,
+            "memory_payload": pay, "behaviour_status": status, "decision": label}

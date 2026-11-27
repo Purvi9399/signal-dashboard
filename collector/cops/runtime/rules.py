@@ -36,7 +36,7 @@ from .contracts import (Claim, CLAIM_METRIC_STATE, CLAIM_METRIC_VALUE, CLAIM_TOO
 from ..interpret import EVIDENCE_LEVEL
 from ..specs import BY_KEY, SPEC_CONSUMES
 from .cop_package import aggregate_runtime_monitoring, decide_audit_traceability, decide_interaction_discovery, \
-    decide_policy_enforcement, decide_anomaly_detection, decide_resource_management, decide_classification_tagging, decide_risk_mitigation, decide_incident_response, decide_recovery_resilience, AT_CLEAN, CEILING, DECIDED_WITHOUT_MODEL
+    decide_policy_enforcement, decide_anomaly_detection, decide_resource_management, decide_classification_tagging, decide_risk_mitigation, decide_incident_response, decide_recovery_resilience, decide_behavior_analytics, AT_CLEAN, CEILING, DECIDED_WITHOUT_MODEL
 
 _RI = RuleInterpreter()
 HOT = ("EXCEPTION", "CRITICAL")
@@ -47,7 +47,7 @@ DETERMINISTIC_TOOLS = {
     "interaction_discovery": ("build_interaction_graph", "compare_known_routes", "assess_interaction_questions"),
     "policy_enforcement": ("evaluate_session_operations", "check_entitlements", "assess_policy_questions"),
     "resource_management": ("compute_consumption", "get_quota", "assess_resource_questions"),
-    "behavior_analytics": ("compute_sequence_statistics", "compare_behaviour_history"),
+    "behavior_analytics": ("compute_sequence_statistics", "compare_behaviour_history", "assess_behaviour_questions"),
     "recovery_resilience": ("get_recovery_records", "validate_checkpoints", "assess_recovery_questions"),
     "audit_traceability": ("reconstruct_trace", "check_decision_linkage", "assess_audit_questions"),
     "agent_lifecycle_management": ("get_agent_registry", "detect_configuration_changes"),
@@ -477,8 +477,12 @@ def _pattern_persistence(ctx, f):
         return f
     ref = {"finding_id": prior.get("finding_id"), "run_id": prior.get("run_id"),
            "decided_at": prior.get("decided_at"), "label": prior["label"]}
+    same = bool(prior.get("session_id")) and prior.get("session_id") == ctx["case"].session_id
     if prior["label"] != "ANOMALOUS":
         st = "NO_EARLIER_DEVIATION"
+    elif same:
+        # D-BA9: Anomaly Detection read this same session's metrics; reading them again is not a recurrence
+        st = "SAME_EVENTS"
     elif f["label"] in ("LOOPING", "POOR_RECOVERY", "DRIFTING", "OVER_EXPLORING"):
         st = "RECURRING"
         f["rationale"] += (f"; Anomaly Detection verified a deviation in an earlier cycle "
@@ -488,13 +492,64 @@ def _pattern_persistence(ctx, f):
         f["rationale"] += f"; the deviation verified in an earlier cycle ({prior.get('run_id')}) is not present now"
     else:
         st = "UNDETERMINED"
+    ref["session_id"] = prior.get("session_id")
     cs["pattern_persistence"] = {"status": st, "earlier_finding": ref,
-                                 "baseline_updated": False}
+                                 "baseline_updated": False,
+                                 # D-BA9: context for persistence only, never a separate occurrence
+                                 "counted_as_occurrence": False}
+    if isinstance(cs.get("behaviour_status"), dict):
+        cs["behaviour_status"]["anomaly_detection_feedback"] = cs["pattern_persistence"]
     return f
 
 
 @_with_pattern_persistence
 def behavior_analytics(ctx):
+    # the legacy rule's metric inputs (specs.metric_keys); named here so activation._rule_reads still finds them
+    f = _behavior_analytics_legacy(ctx, ("insights.repetition", "insights.retry", "insights.failed",
+                                         "insights.stalled", "oversight.fast_approvals"))
+    _ba_questions(ctx, f)
+    return f
+
+
+def _ba_questions(ctx, f):
+    """Behavior Analytics' four answers (cop_package.decide_behavior_analytics). BA-1 decides the pattern label over
+    distinct, undisputed events, BA-4 DRIFTING when there is none, BA-2 and BA-3 the scope it is published with. The
+    legacy reading stays the computational baseline. Decided without a model
+    (packages/behavior_analytics/INTERPRETATION.md)."""
+    t = ctx["tools"]
+    res = result(t, "assess_behaviour_questions")
+    if not res.get("questions"):
+        why = res.get("missing_dependency") or (t.get("assess_behaviour_questions") or {}).get("status")
+        f["cop_specific"]["question_assessment"] = f"unavailable: {why}"
+        return
+    scale = min(1.0, evidence_conf(ctx["upstream"]) / 0.9)
+    d = decide_behavior_analytics(res["questions"], scale)
+    q = d["questions"]
+    legacy = {"label": f["label"], "confidence": f["confidence"], "action": f.get("action"),
+              "severity": f.get("severity"), "status": f.get("status")}
+    lims = list(d["limitations"])
+    if (legacy["label"], legacy["action"]) != (d["label"], d["action"]):
+        from .decision import limitation, LIMIT_NOT_APPROVED
+        lims.append(limitation(LIMIT_NOT_APPROVED, "BA-1", "legacy_reading", "PREVIOUS_READING_DIFFERS",
+                               f"the legacy rule read {legacy['label']} {legacy['severity']} {legacy['action']}; the "
+                               f"package's answers read {d['label']} {d['severity']} {d['action']} (DECISIONS.md)"))
+    f["cop_specific"].update(questions=q, drivers=d["drivers"], contrary=d["contrary"], limitations=lims,
+                             recipients=d["recipients"], memory_payload=d["memory_payload"],
+                             decided_without_model=d["decided"], decision=d["decision"],
+                             behaviour_status=d["behaviour_status"], legacy_reading=legacy)
+    claims = [tclaim(t, "assess_behaviour_questions", f"questions.{qid}.answer.outcome", x["answer"],
+                     f"{qid} answered {x['answer']}: {x['explanation']}"[:240]).to_dict() for qid, x in q.items()]
+    why = "; ".join(f"{x} {q[x]['answer']}" for x in q)
+    f.update(label=d["label"], confidence=d["confidence"], action=d["action"], severity=d["severity"],
+             action_reason=d["action_reason"], claims=claims + f["claims"],
+             status=SUBSTANTIVE if d["label"] != INCONCLUSIVE else "INCONCLUSIVE",
+             rationale=(f"{d['label']} from {why}; scope: {d['behaviour_status']['scope']}; nothing enforced by this "
+                        f"COP; legacy reading: {legacy['label']} ({f['rationale']})")[:600])
+    f["cop_specific"]["stop_reason"] = DECIDED_WITHOUT_MODEL
+
+
+def _behavior_analytics_legacy(ctx, keys):
+    """The legacy behaviour reading. It stays the computational baseline (packages/behavior_analytics/DECISIONS.md)."""
     m = {e.metric_id: e for e in ctx["events"]}
     up = ctx["upstream"]
     seq = result(ctx["tools"], "compute_sequence_statistics")
