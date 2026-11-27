@@ -271,3 +271,101 @@ scenarios:
     confidence: 0.75
     checks: [proposes_escalate, escalated_to_person, control_recommended_not_executed, nothing_executed,
              no_control_in_any_executed_list, action_within_authority]
+
+  # ------------------------------------------------------------------------------------------------------------
+  # Revision R-RK2 (2026-11-27), written before the code, from purvi's approval of P-RK1, P-RK2 (with her rule)
+  # and P-RK3 (DECISIONS.md, A-RK2). The rules these follow:
+  #   - P-RK1: impact is taken from the sensitivity of the evidence that supports the counted risk: the rows behind
+  #     this COP's counted metrics in a deviation state, its undisputed irreversible rows, and the rows the counted
+  #     signals cite. Each counted signal and the irreversible operation is "established" when at least one of its
+  #     rows carries a recorded sensitivity_tier. When every counted item is established, or the recorded tiers
+  #     already reach the register's highest min_sensitivity_tier, impact is decided. Otherwise impact lies between
+  #     the impact at the highest recorded tier (tier 0 risks when none) and the register's highest impact: if both
+  #     ends give the same band, that band; if the lower end is LOW and the upper is not, RK-2 is INCONCLUSIVE (no safe
+  #     value is assumed); if the lower end is EMERGING or MATERIAL, that band stands on its positive evidence and the
+  #     higher band is named as not excluded. Thresholds and the formula are unchanged; VS-01 recomputes the same
+  #     inputs from tools.calculate_risk_components.
+  #   - P-RK2: Policy Enforcement APPROVAL_REQUIRED is a pending authorization condition and Incident Response WATCH
+  #     an advisory condition. Neither is counted as a signal or as correlated; both are kept in the decision record
+  #     with their reasons. Other independently supported evidence counts on its own. Policy Enforcement's and
+  #     Incident Response's own proposed actions are not changed.
+  #   - P-RK3: in VS-01's Risk Mitigation assessment a context-only input (Classification & Tagging) is not
+  #     applicable evidence (neutral); every other component and every other COP's VS-01 is unchanged.
+  # "blocked call": a Bash call that a deny hook stops (policy_rule_matched deny-network, permission_decision deny);
+  # Incident Response runs with a scripted reply (simulated) reading WATCH on insights.blocked.
+
+  approval_required_with_independent_risk:
+    description: the approval-required staging write, the secret, and over quota
+    questions: {RK-1: RISK_INDICATED, RK-2: EMERGING_LEVEL}
+    cop_label: [EMERGING]
+    confidence: 0.75
+    checks: [decided_without_model, verified, score_three, approval_condition_recorded_not_counted,
+             resource_management_counted_alone]
+
+  preventive_control_succeeded:
+    description: >-
+      the blocked call under a permissive policy, with Classification & Tagging (synthetic taxonomy) and Incident
+      Response (scripted WATCH) run before Risk Mitigation
+    questions: {RK-1: NO_RISK_INDICATED, RK-2: BELOW_THRESHOLDS, RK-4: NOT_REQUIRED}
+    cop_label: [LOW]
+    confidence: 0.75
+    checks: [decided_without_model, verified, no_signal_counted, watch_condition_recorded_not_counted,
+             classification_tagging_context_only, vs01_context_not_applicable, action_none]
+
+  supporting_sensitivity_unknown_two_signals:
+    description: >-
+      no secret and no recorded sensitivity tier; the prod write that Policy Enforcement denies and over quota.
+      Impact lies between 1 and 3: score 2 (EMERGING) to 6 (MATERIAL)
+    questions: {RK-1: RISK_INDICATED, RK-2: EMERGING_LEVEL}
+    cop_label: [EMERGING]
+    confidence: 0.75
+    checks: [decided_without_model, sensitivity_range_two_to_six, material_not_excluded_named]
+
+  context_only_neutral_in_vs01:
+    description: the genuine-risk session with Classification & Tagging run before Risk Mitigation
+    questions: {RK-2: EMERGING_LEVEL}
+    cop_label: [EMERGING]
+    confidence: 0.75
+    checks: [vs01_context_not_applicable, other_cops_vs01_unchanged]
+
+  downstream_contracts:
+    description: the genuine-risk session; Incident Response's and Governance Intelligence's contracts with this COP
+    cop_label: [EMERGING]
+    checks: [incident_response_feedback_contract, governance_intelligence_contract]
+
+# Expectations above that R-RK2 replaces. The original text is kept; the harness reports each replaced expectation
+# as SUPERSEDED with the reason and evaluates the replacement instead.
+superseded:
+  false_positive_policy_concern:
+    reason: >-
+      P-RK1: the denied write has no recorded sensitivity tier and the session records none. The first build assumed
+      tier 0 (impact 1, score 1, LOW); impact is now 1 to 3, score 1 (LOW) to 3 (EMERGING), so RK-2 is INCONCLUSIVE
+    replaces: [RK-2, RK-4, cop_label, confidence, policy_concern_counted_impact_one, action_none]
+    questions: {RK-1: RISK_INDICATED, RK-2: INCONCLUSIVE, RK-4: INCONCLUSIVE}
+    cop_label: [INCONCLUSIVE]
+    checks: [sensitivity_unestablished_named, policy_enforcement_counted, no_escalation]
+  unrelated_high_sensitivity_low_impact:
+    reason: >-
+      P-RK1 approved: the tier-3 customer read supports no counted risk, and the denied write has no recorded tier.
+      Impact is 1 to 3 (score 1 LOW to 3 EMERGING), so RK-2 is INCONCLUSIVE. Revision 1 recorded LOW as the proposal,
+      which assumed tier 0 for the write; purvi's rule keeps the uncertainty instead
+    replaces: [RK-2, cop_label, confidence, verified, score_three, impact_from_session_tier_kept,
+               bound_impact_proposal_low, impact_binding_limitation_named]
+    questions: {RK-1: RISK_INDICATED, RK-2: INCONCLUSIVE}
+    cop_label: [INCONCLUSIVE]
+    checks: [sensitivity_unestablished_named, unrelated_row_not_supporting, no_escalation]
+  approval_required_without_violation:
+    reason: >-
+      P-RK2: APPROVAL_REQUIRED is a pending authorization condition and does not increase the score on its own.
+      Revision 1 counted it (3 x 1, EMERGING); with no other counted signal the score is 0, LOW
+    replaces: [RK-2, RK-4, cop_label, approval_required_counted_provisionally, pending_approval_flagged, action_watch]
+    questions: {RK-1: RISK_INDICATED, RK-2: BELOW_THRESHOLDS, RK-4: NOT_REQUIRED}
+    cop_label: [LOW]
+    checks: [no_signal_counted, approval_condition_recorded_not_counted, approval_workflow_not_suppressed]
+  multiple_findings_same_metric:
+    reason: >-
+      P-RK2: Policy Enforcement's APPROVAL_REQUIRED is now a pending authorization condition, not a risk-bearing
+      finding, so the check that read it as a correlated risk finding is replaced. It still rests on the same secret
+      row as this COP's own evidence, and the label is unchanged
+    replaces: [policy_enforcement_correlated_by_source]
+    checks: [approval_condition_recorded_not_counted, approval_condition_same_source]
