@@ -4,7 +4,8 @@
 
 `specs.SPEC_CONSUMES`: Anomaly Detection and Agent Lifecycle Management (canonical, unchanged). On purvi's
 instruction (2026-11-26) `specs.TOPOLOGY_CONSUMES` adds Policy Enforcement, Interaction Discovery and Resource
-Management, so the case graph delivers their findings (D-CT9). No upstream finding indicates a family or changes
+Management, so the case graph delivers their findings (D-CT9). `docs/cops/cops_topology.json` carries the same
+edges (D-CT19). No upstream finding indicates a family or changes
 a confidence. Each is listed in CT-5 `basis.upstream` with present, label, finding id, verified, status,
 lineage, used and counted_as.
 

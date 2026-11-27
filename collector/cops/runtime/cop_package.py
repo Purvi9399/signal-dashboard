@@ -2718,10 +2718,19 @@ def _ct_measures(a, metrics, states):
     return [_ad_measure(a, m, {}, states) for m in metrics]
 
 
-def _ct_family(qid, a, pkg, states):
+def _ct_disputed(session):
+    """The rows the collectors disagree on (collectors_agree false), by evidence ref."""
+    return {f"observable:{r.get('observable_id')}" for r in (session.rows if session else [])
+            if r.get("collectors_agree") is False}
+
+
+def _ct_family(qid, a, pkg, states, session=None):
     """CT-1 to CT-3: whether the question's family is indicated by its counted metrics (pkg families). A counted
     metric in a deviation state indicates the family even when another is unobserved (positive evidence stands);
-    nothing indicated with a counted metric unobserved leaves the question unanswered (workbook row 11)."""
+    nothing indicated with a counted metric unobserved leaves the question unanswered (workbook row 11).
+    purvi, 2026-11-27 (U-CT3, D-CT18): when the collectors disagree on every row behind the indicating metrics,
+    the family is directly disputed and has no independent support: the question is INCONCLUSIVE. One
+    undisputed indicating row supports it; the disputed rows are contrary evidence."""
     fam = next(f for f, d in pkg["families"].items() if d["question"] == qid)
     counted = _ct_measures(a, pkg["families"][fam]["metrics"], states)
     observed = _ct_measures(a, CT_OBSERVED.get(qid, ()), states)
@@ -2731,6 +2740,18 @@ def _ct_family(qid, a, pkg, states):
                                       for m in observed],
              "warnings": [m["metric"] for m in counted if m.get("warning")]}
     if basis["indicating"]:
+        refs = sorted({r for m in counted if m["verdict"] == DEVIATES for r in m.get("evidence_refs") or []})
+        bad = _ct_disputed(session)
+        basis["indicating_refs"] = refs
+        basis["disputed_refs"] = [r for r in refs if r in bad]
+        if refs and len(basis["disputed_refs"]) == len(refs):
+            basis["disputed"] = True
+            basis["interpretation_reasons"] = [
+                {"code": EA.CONFLICTING_SOURCES, "requirement": m, "check": "collectors_agree",
+                 "detail": f"{m} indicates {fam} only on rows the collectors disagree on "
+                           f"({', '.join(basis['disputed_refs'])}): directly disputed evidence cannot establish "
+                           f"{fam} without independent support"} for m in basis["indicating"]]
+            return INCONCLUSIVE, basis
         return "FAMILY_INDICATED", basis
     open_ = [m for m in counted if m["verdict"] not in (WITHIN, DOES_NOT_APPLY)]
     if not open_:
@@ -2841,6 +2862,7 @@ def _ct5(a, s, states, deps, pkg, taxonomy, upstream_view, upstream, memory):
     undefined = [f for f in indicated if f not in defined]
     cands = [f for f in indicated if f in defined]
     unanswered = [q for q in CT_FAMILY_QUESTIONS if deps[q]["outcome"] == INCONCLUSIVE]
+    disputed_q = [q for q in unanswered if (deps[q]["basis"] or {}).get("disputed")]
     judged = [m for q in CT_FAMILY_QUESTIONS for m in (deps[q]["basis"] or {}).get("measures", [])
               if m["verdict"] in (WITHIN, DEVIATES)]
     refs = sorted({r for f in cands for m in deps[fam_q[f]]["basis"]["measures"] if m["verdict"] == DEVIATES
@@ -2849,16 +2871,24 @@ def _ct5(a, s, states, deps, pkg, taxonomy, upstream_view, upstream, memory):
     basis = {"taxonomy": {"version": (taxonomy or {}).get("version") if tax_ok else None,
                           "status": "APPROVED" if tax_ok else "NOT_SUPPLIED", "families": sorted(defined)},
              "indicated": indicated, "candidates": cands, "undefined": undefined,
-             "families_not_evaluated": [next(f for f, q in fam_q.items() if q == x) for x in unanswered],
+             "families_not_evaluated": [next(f for f, q in fam_q.items() if q == x) for x in unanswered
+                                        if x not in disputed_q],
+             "disputed": [next(f for f, q in fam_q.items() if q == x) for x in disputed_q],
              "precedence_reading": cands[0] if cands else None,
              "entities": ents, "linkage": link, "telemetry": tel,
              "telemetry_deviating": [m["metric"] for m in tel if m["verdict"] == DEVIATES],
              "upstream": upstream_view, "precedents": _rs_precedents(memory),
              "not_calculated": [{"metric": k, "state": EA.NOT_CALCULATED, "missing_inputs": " ".join(v.split())}
                                 for k, v in pkg["not_calculated"].items()]}
+    # collector disagreement, split by whether it touches a row behind an indicating metric (U-CT3)
+    bad = _ct_disputed(s)
+    ind_refs = {r for q in CT_FAMILY_QUESTIONS for r in (deps[q]["basis"] or {}).get("indicating_refs", [])}
+    basis["disagreement"] = {"rows": sorted(bad), "on_indicating_rows": sorted(bad & ind_refs),
+                             "unrelated": sorted(bad - ind_refs)}
     basis["evidence_status"] = {
         "observed": [f"{m['metric']}@{m['state']}" for q in CT_FAMILY_QUESTIONS
                      for m in (deps[q]["basis"] or {}).get("measures", []) if m["verdict"] == DEVIATES],
+        "disputed": sorted(bad & ind_refs),
         "inferred": None, "insufficient": []}
     if not tax_ok:
         basis["evidence_status"]["insufficient"].append("no approved taxonomy")
@@ -2878,7 +2908,7 @@ def _ct5(a, s, states, deps, pkg, taxonomy, upstream_view, upstream, memory):
         return "AMBIGUOUS", basis
     why = ([("FAMILY_NOT_IN_TAXONOMY", f, f"{f} is indicated but not defined in taxonomy "
                                          f"{basis['taxonomy']['version']}") for f in undefined]
-           + [(EA.MISSING_DATA, r["requirement"], f"{q} not answered: {r['detail']}")
+           + [(r.get("code") or EA.MISSING_DATA, r["requirement"], f"{q} not answered: {r['detail']}")
               for q in unanswered for r in deps[q].get("because") or []]
            + ([] if judged else [(EA.MISSING_DATA, "classification", "no counted metric could be judged")]))
     if why:
@@ -2900,7 +2930,7 @@ def observe_classification_tagging(assessments, session, taxonomy=None, upstream
         a = assessments[qid]
         suf = a["sufficiency"]["status"]
         if qid in CT_FAMILY_QUESTIONS:
-            outcome, basis = _ct_family(qid, a, pkg, states)
+            outcome, basis = _ct_family(qid, a, pkg, states, session)
         elif qid == "CT-4":
             outcome, basis = _ct4(a, states, view)
         else:
@@ -2936,6 +2966,9 @@ def _explain_ct(qid, ans):
             return _explain(qid, ans)
         if o == "FAMILY_INDICATED":
             s = f"{b['family']} indicated by " + _measures_text([m for m in b["measures"] if m["verdict"] == DEVIATES])
+            if b.get("disputed_refs"):
+                s += (f"; collectors disagree on {', '.join(b['disputed_refs'])}, supported by "
+                      f"{', '.join(r for r in b['indicating_refs'] if r not in b['disputed_refs'])}")
         else:
             s = f"{b['family']} not indicated: " + _measures_text(b["measures"])
         seen = [m for m in b["observed_not_counted"] if m["verdict"] == DEVIATES]
@@ -2970,6 +3003,12 @@ def _ct_limitations(ans):
     for f in five.get("families_not_evaluated", []):
         out.append(D.limitation(D.MISSING_EVIDENCE, _ct_family_q(f), f, EA.MISSING_DATA,
                                 f"whether the event is also {f} is not evaluated: its metadata is missing"))
+    for f in five.get("disputed", []):
+        q = _ct_family_q(f)
+        refs = (ans[q].get("basis") or {}).get("disputed_refs", [])
+        out.append(D.limitation(D.MISSING_EVIDENCE, q, f, EA.CONFLICTING_SOURCES,
+                                f"{f} is indicated only on rows the collectors disagree on: directly disputed "
+                                f"evidence does not establish it without independent support", refs))
     four = ans["CT-4"].get("basis") or {}
     if four.get("unmapped"):
         out.append(D.limitation(D.LIMIT_NOT_APPROVED, "CT-4", "LOOPS/OUTCOME/COST", D.LIMIT_NOT_APPROVED,
@@ -2979,10 +3018,19 @@ def _ct_limitations(ans):
             out.append(D.limitation(D.INFERRED_RELATIONSHIP, "CT-5", f"lane {e['lane']}", "LANE_NOT_LINKED",
                                     f"{e['ref']} was made in lane {e['lane']}; its parent is not associated: "
                                     f"{e['linkage']['reason']}", [e["ref"]]))
+    dis = five.get("disagreement") or {}
     for m in five.get("telemetry_deviating", []):
-        out.append(D.limitation(D.MISSING_EVIDENCE, "CT-5", m, "TELEMETRY_QUALITY",
-                                f"{m} reads {next(x['state'] for x in five['telemetry'] if x['metric'] == m)}: the "
-                                f"classification stands on the indicators observed"))
+        st = next(x['state'] for x in five['telemetry'] if x['metric'] == m)
+        if m == "telemetry.source_agreement" and dis.get("rows"):
+            touch = dis["on_indicating_rows"]
+            text = (f"{m} reads {st}: the collectors disagree on " + ", ".join(dis["rows"]) + "; "
+                    + (f"{', '.join(touch)} indicate(s) a family and is treated as disputed" if touch else
+                       "none of these rows indicates a family, so the disagreement is unrelated and the "
+                       "classification stands on the indicators observed"))
+            out.append(D.limitation(D.MISSING_EVIDENCE, "CT-5", m, "TELEMETRY_QUALITY", text, dis["rows"]))
+        else:
+            out.append(D.limitation(D.MISSING_EVIDENCE, "CT-5", m, "TELEMETRY_QUALITY",
+                                    f"{m} reads {st}: the classification stands on the indicators observed"))
     if ans["CT-5"]["outcome"] not in (INCONCLUSIVE,):
         for x in five.get("not_calculated", []):
             out.append(D.limitation(D.NOT_CALCULATED, "CT-5", x["metric"], D.NOT_CALCULATED, x["missing_inputs"]))
@@ -3038,6 +3086,12 @@ def decide_classification_tagging(questions, evidence_scale=1.0):
                 contrary.append(f"{q}: {m['metric']} {m['value']} ({m['state']}), observed and not counted")
     contrary += [f"CT-5: {m} in a deviation state; the classification stands on the indicators observed"
                  for m in b5.get("telemetry_deviating", [])]
+    for q in CT_FAMILY_QUESTIONS:
+        bq = ans[q].get("basis") or {}
+        if bq.get("disputed_refs"):
+            contrary.append(f"{q}: the collectors disagree on {', '.join(bq['disputed_refs'])}, which indicate(s) "
+                            f"{bq['family']}" + (": the family is disputed and not established" if bq.get("disputed")
+                                                 else "; other indicating rows are undisputed"))
     for k, v in (b5.get("upstream") or {}).items():
         if v["used"] and k == "policy_enforcement" and label in pkg["families"]:
             contrary.append(f"CT-5: Policy Enforcement reads {v['label']}: whether the event is permitted is its "

@@ -26,7 +26,7 @@ recorded as `warning`), UNOBSERVED (the basis is absent), DOES_NOT_APPLY.
 
 | Q | Answers |
 |---|---|
-| CT-1 to CT-3 | FAMILY_INDICATED: a counted metric DEVIATES. NOT_INDICATED: every counted metric WITHIN or DOES_NOT_APPLY. INCONCLUSIVE: none indicates and one is unobserved |
+| CT-1 to CT-3 | FAMILY_INDICATED: a counted metric DEVIATES on at least one row the collectors do not disagree on. NOT_INDICATED: every counted metric WITHIN or DOES_NOT_APPLY. INCONCLUSIVE: none indicates and one is unobserved, or every indicating row is disputed (`collectors_agree` false; D-CT18) |
 | CT-4 | CONCERNS_OBSERVED: an assigned measure DEVIATES, or a verified Anomaly Detection or Resource Management finding reads above its quiet label. NONE_OBSERVED otherwise. Never counted |
 | CT-5 | CLASSIFIED: exactly one candidate family (indicated and defined in the approved taxonomy). AMBIGUOUS: two or more candidates. UNCLASSIFIED: no family indicated and every family question answered with a judged measure. UNDETERMINED: no approved taxonomy; or no candidate while a family is indicated but undefined, a family question is unanswered, or nothing could be judged |
 
@@ -75,6 +75,6 @@ by the read-back (INTERPRETATION_OUTSIDE_CANDIDATES).
 ## Unchanged
 
 - `cops/interpret.py` and `specs.metric_keys`.
-- The taxonomy gate in `requirements.py`.
+- The taxonomy gate in `requirements.py`, except that it now checks approval and version (D-CT17).
 - VS-01, triage, verifiers.
 - The model prompt and tools.

@@ -24,7 +24,9 @@ These are maintenance instructions for Claude Code. They are not the runtime's s
 1. Change METRICS.yaml first, then the code. `cop_package.validate("classification_tagging")` must return `[]`.
 2. Only the four `specs.metric_keys` indicate a family, at EXCEPTION or CRITICAL (D-CT2). Do not change `specs.metric_keys` or `cops/interpret.py`.
 3. A candidate is a family that is indicated and defined in the approved taxonomy. One candidate is decided by the package without a model. Two or more are AMBIGUOUS and go to the model; its verified label stands only if it is a candidate (D-CT5). Never let the precedence order decide an ambiguous event.
-4. No family indicated with a family question unanswered is UNDETERMINED (INCONCLUSIVE), not UNCLASSIFIED (D-CT7).
+4. No family indicated with a family question unanswered is UNDETERMINED (INCONCLUSIVE), not UNCLASSIFIED (D-CT7, approved).
+4a. A family whose every indicating row is disputed (`collectors_agree` false) is not established: its question is INCONCLUSIVE. Disagreement on other rows is unrelated and leaves the family standing (D-CT18).
+4b. The taxonomy gate (`tools.taxonomy_problem`) needs approval and a version (D-CT17). Keep `docs/cops/cops_topology.json` in step with this COP's edges in `specs.CONSUMES` (D-CT19).
 5. Upstream findings are context. They never indicate a family or change a confidence; list each with verification status and whether it is correlated (D-CT10).
 6. Link a subagent lane only through a verified Interaction Discovery finding with ID-2 FULLY_RECONSTRUCTED and a RECORDED link for the lane (D-CT11).
 7. The action is always NONE. Kind only, not severity or response.

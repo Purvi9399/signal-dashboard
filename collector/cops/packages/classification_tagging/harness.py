@@ -64,6 +64,12 @@ DISAGREE = dict(observable_type="tool_request", tool_name="Edit", file_path="/ws
                 collectors_agree=False, tool_use_id="s1-d", success=True)
 
 
+# R-CT1 (2026-11-27): the outside read the collectors disagree on, and a second, undisputed outside read
+DISPUTED_OUTSIDE = dict(OUTSIDE, collectors_agree=False)
+OUTSIDE2 = dict(observable_type="tool_request", tool_name="Read", file_path="/etc/passwd", outside_workspace=True,
+                tool_arguments={"p": "outside2"}, success=True, raw_ref="hooks:s1:outside2")
+
+
 def session(*extra, sid="s1", day=9, tokens=1000, collectors=("local_hooks", "otel"), text=None, thin=False):
     s = S.Session(sid, day, collectors=("cli_wrapper",) if thin else collectors).start(tokens).tools(S.NORMAL_TOOLS)
     for e in extra:
@@ -118,6 +124,12 @@ UP_PE = ["runtime_monitoring", "interaction_discovery", "agent_lifecycle_managem
 UP_BEHAVIOUR = ["runtime_monitoring", "interaction_discovery", "anomaly_detection", "resource_management", COP]
 WITH_ID = ["runtime_monitoring", "interaction_discovery", COP]
 DOWNSTREAM = [COP, "incident_response", "governance_intelligence"]
+# R-CT1: every upstream COP of Classification & Tagging (specs.CONSUMES) and what they consume, then its consumers
+TOPOLOGY = ["runtime_monitoring", "interaction_discovery", "agent_lifecycle_management", "context_memory",
+            "workflow_orchestration", "behavior_analytics", "anomaly_detection", "resource_management",
+            "policy_enforcement", COP, "incident_response", "governance_intelligence"]
+CANONICAL = ["runtime_monitoring", "interaction_discovery", "agent_lifecycle_management", "context_memory",
+             "workflow_orchestration", "behavior_analytics", "anomaly_detection", COP]
 
 # name: (rows, artifacts, scripted model reply or None, COPs run)
 WORLDS = {
@@ -158,6 +170,20 @@ WORLDS = {
     "source_disagreement": (lambda: history() + session(OUTSIDE, DISAGREE), lambda: TAX, None, None),
     "evidence_change_changes_classification": (lambda: history() + session(SECRET), lambda: TAX, None, None),
     "downstream_consumers": (lambda: history() + session(OUTSIDE), lambda: TAX, None, DOWNSTREAM),
+    # ---- revision R-CT1
+    "taxonomy_unapproved_with_indicator": (lambda: history() + session(OUTSIDE),
+                                           lambda: {"taxonomy": dict(S.taxonomy(), approved=False)}, None, None),
+    "taxonomy_version_missing": (lambda: history() + session(OUTSIDE),
+                                 lambda: {"taxonomy": {k: v for k, v in S.taxonomy().items() if k != "version"}},
+                                 None, None),
+    "taxonomy_valid_gate_passes": (lambda: history() + session(OUTSIDE), lambda: TAX, None, None),
+    "unrelated_disagreement_verified": (lambda: history() + session(OUTSIDE, DISAGREE), lambda: TAX, None, None),
+    "indicator_disputed": (lambda: history() + session(DISPUTED_OUTSIDE), lambda: TAX, None, None),
+    "indicator_disputed_with_support": (lambda: history() + session(DISPUTED_OUTSIDE, OUTSIDE2), lambda: TAX,
+                                        None, None),
+    "disputed_family_beside_another": (lambda: history() + session(DISPUTED_OUTSIDE, SECRET), lambda: TAX,
+                                       None, None),
+    "topology_consistent": (lambda: history() + session(OUTSIDE), lambda: TAX, None, TOPOLOGY),
 }
 
 
@@ -208,6 +234,9 @@ def run_scenario(name, t):
     if name == "evidence_change_changes_classification":
         res["without_secret"] = _finding(_case("nosecret", history() + session(), art)[0])
         res["without_family"] = _finding(_case("nofamily", rows, taxonomy(("INTEGRITY",)))[0])
+    if name == "topology_consistent":
+        res["canonical"] = _finding(_case("canonical", rows, art, cops=CANONICAL)[0])
+        res["alone"] = _finding(_case("alone", rows, art)[0])
     if name == "downstream_consumers":
         res["consumption"] = [c for c in out.get("consumption", []) if c.get("producer") == COP]
         res["rule_baselines"] = {k: (out["results"][k]["finding"].get("baseline") or {}).get("label")
@@ -264,6 +293,42 @@ def _limitation_present(res, question, code):
     return any(q == question and c == code for q, _, c in _limits(res))
 
 
+def _gate(res, why):
+    f = _f(res)
+    reasons = [x.get("reason") or "" for x in f.get("missing_evidence") or []]
+    return (f["status"] == "MISSING_DEPENDENCY"
+            and f["cop_specific"].get("stop_reason") == "precheck_required_evidence_unavailable"
+            and any(why in x for x in reasons), (f["status"], reasons))
+
+
+def _topology_doc():
+    with open(os.path.join(HERE, "..", "..", "..", "..", "docs", "cops", "cops_topology.json")) as fh:
+        return json.load(fh)
+
+
+def _topology_matches():
+    from ...specs import CONSUMES
+    d = _topology_doc()
+    links = {(x["from"], x["to"]) for x in d["cop_links"]}
+    want_in = {(u, COP) for u in CONSUMES[COP]}
+    want_out = {(COP, k) for k, ups in CONSUMES.items() if COP in ups}
+    got_in = {x for x in links if x[1] == COP}
+    got_out = {x for x in links if x[0] == COP}
+    cop = next(c for c in d["cops"] if c["id"] == COP)
+    ok = (got_in == want_in and got_out == want_out and cop["reads_decisions_from"] == list(CONSUMES[COP])
+          and all(COP in next(c for c in d["cops"] if c["id"] == u)["downstream"] for u in CONSUMES[COP])
+          and sorted(cop["downstream"]) == sorted(k for _, k in want_out))
+    return ok, {"in": sorted(got_in ^ want_in), "out": sorted(got_out ^ want_out),
+                "reads": cop["reads_decisions_from"], "downstream": cop["downstream"]}
+
+
+def _order():
+    from ...specs import CONSUMES, topological_order
+    o = topological_order()
+    return o, all(o.index(u) < o.index(COP) for u in CONSUMES[COP]) and all(
+        o.index(COP) < o.index(k) for k, ups in CONSUMES.items() if COP in ups)
+
+
 CHECKS = {
     "decision_contract_valid": lambda r: (_r(r)["decision_problems"] == [], _r(r)["decision_problems"]),
     "five_question_findings": lambda r: (
@@ -293,7 +358,7 @@ CHECKS = {
         (_r(r)["memory_write"] or {}).get("written") is True
         and _r(r)["memory_write"]["record_type"] == "classification_example"
         and _f(r)["cop_specific"]["memory_payload"]["answers"]["CT-5"] == "CLASSIFIED", _r(r)["memory_write"]),
-    # C-CT2: requirements.py counts any taxonomy artifact as present, so an unapproved one passes the shared
+    # C-CT2 (moot since D-CT17: the gate itself now stops an unapproved taxonomy): requirements.py counted any taxonomy artifact as present, so an unapproved one passes the shared
     # precheck and the package's CT-5 stops it (no approved taxonomy: UNDETERMINED). Either stop satisfies the
     # property: no label and no model call without an approved taxonomy.
     "taxonomy_gates_every_label": lambda r: (
@@ -420,6 +485,39 @@ CHECKS = {
         and r["rule_baselines"]["incident_response"] == r["rule_baselines_without"]["incident_response"],
         {"consumption": r["consumption"], "rule_baselines": r["rule_baselines"],
          "without": r["rule_baselines_without"]}),
+    # ---- revision R-CT1
+    "gate_names_taxonomy_not_approved": lambda r: _gate(r, "the taxonomy artifact is present but not approved"),
+    "gate_names_taxonomy_version_invalid": lambda r: _gate(r, "the taxonomy artifact carries no valid version"),
+    "missing_dependency_status": lambda r: (_f(r)["status"] == "MISSING_DEPENDENCY", _f(r)["status"]),
+    "no_trusted_family": lambda r: (
+        _f(r)["label"] not in ("BOUNDARY", "INTEGRITY", "OVERSIGHT", "OUTCOME") and _f(r)["verified"] is not True
+        and not _decision(r)["recipients"]["notified"], (_f(r)["label"], _f(r)["verified"])),
+    "gate_passes": lambda r: (
+        _f(r)["status"] == "SUBSTANTIVE" and not _f(r).get("missing_evidence")
+        and _b(r, "CT-5")["taxonomy"]["status"] == "APPROVED", (_f(r)["status"], _f(r).get("missing_evidence"))),
+    "disagreement_named_unrelated": lambda r: (
+        bool(_b(r, "CT-5")["disagreement"]["unrelated"]) and not _b(r, "CT-5")["disagreement"]["on_indicating_rows"]
+        and any(x["reason_code"] == "TELEMETRY_QUALITY" and "unrelated" in str(x["detail"])
+                for x in _decision(r)["uncertainty"]["limitations"]), _b(r, "CT-5")["disagreement"]),
+    "no_disputed_family": lambda r: (_b(r, "CT-5")["disputed"] == [] and not _b(r, "CT-1").get("disputed_refs"),
+                                     _b(r, "CT-5")["disputed"]),
+    "disputed_family_named_boundary": lambda r: (
+        _b(r, "CT-5")["disputed"] == ["BOUNDARY"] and "BOUNDARY" not in _b(r, "CT-5")["candidates"]
+        and "BOUNDARY" not in _b(r, "CT-5")["families_not_evaluated"]
+        and _limitation_present(r, "CT-1", "CONFLICTING_SOURCES")
+        and any(x["code"] == "CONFLICTING_SOURCES" for x in _q(r, "CT-1")["sufficiency_reasons"]),
+        (_b(r, "CT-5")["disputed"], _b(r, "CT-5")["candidates"], sorted(_limits(r)))),
+    "disputed_row_contrary": lambda r: (
+        len(_b(r, "CT-1")["disputed_refs"]) == 1 and len(_b(r, "CT-1")["indicating_refs"]) == 2
+        and _b(r, "CT-5")["disputed"] == []
+        and any(c.startswith("CT-1: the collectors disagree on") for c in _f(r)["cop_specific"]["contrary"]),
+        (_b(r, "CT-1").get("disputed_refs"), _f(r)["cop_specific"]["contrary"])),
+    "topological_order_acyclic": lambda r: (len(_order()[0]) == 18, _order()[0]),
+    "ct_after_every_producer": lambda r: (_order()[1], _order()[0]),
+    "topology_doc_matches_runtime_edges": lambda r: _topology_matches(),
+    "same_as_canonical_upstream": lambda r: (
+        _same(_f(r), r["canonical"]) and _same(_f(r), r["alone"]),
+        (_f(r)["label"], r["canonical"]["label"], r["alone"]["label"])),
     "governance_intelligence_reads_classification": lambda r: (
         any(c["consumer"] == "governance_intelligence" and c["finding_id"] == _f(r)["finding_id"]
             for c in r["consumption"]), r["consumption"]),

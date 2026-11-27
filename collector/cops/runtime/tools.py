@@ -444,11 +444,27 @@ def t_get_incident_outcomes(case, a, ctx):
 
 
 # ---- Classification & Tagging
-def t_query_taxonomy(case, a, ctx):
+def taxonomy_problem(case):
+    """Why the case's taxonomy cannot back a label, or None when it is approved and versioned (purvi,
+    2026-11-27, U-CT4). A valid version is a non-empty string: the artifact carries no effective date or
+    expiry, so none is checked (packages/classification_tagging/DECISIONS.md, D-CT17)."""
     tax = case.artifact("taxonomy")
-    if not tax or not tax.get("approved"):
-        return missing("taxonomy", "classification_tagging: approved family definitions",
-                       "an approved, versioned governance-event taxonomy")
+    if not tax:
+        return "no taxonomy artifact"
+    if not tax.get("approved"):
+        return "the taxonomy artifact is present but not approved"
+    v = tax.get("version")
+    if not isinstance(v, str) or not v.strip():
+        return "the taxonomy artifact carries no valid version"
+    return None
+
+
+def t_query_taxonomy(case, a, ctx):
+    why = taxonomy_problem(case)
+    if why:
+        return dict(missing("taxonomy", "classification_tagging: approved family definitions",
+                            "an approved, versioned governance-event taxonomy"), why=why)
+    tax = case.artifact("taxonomy")
     return {"version": tax["version"], "families": tax["families"]}
 
 

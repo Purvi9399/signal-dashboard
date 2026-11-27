@@ -23,7 +23,7 @@ classifications are a semantic choice, listed for agreement in
 docs/cops/PR4_ACCEPTANCE_REPORT.md.
 """
 
-from .tools import latest_policy, _snapshots
+from .tools import latest_policy, _snapshots, taxonomy_problem
 
 REQUIRED, OPTIONAL, NOT_APPLICABLE = "REQUIRED", "OPTIONAL", "NOT_APPLICABLE"
 AVAILABLE, UNAVAILABLE = "AVAILABLE", "UNAVAILABLE"
@@ -54,12 +54,17 @@ AVAILABLE_IF = {
     "policy_store": lambda c: latest_policy(c) is not None,
     "entitlements": lambda c: bool(c.artifact("entitlements")),
     "recovery_records": lambda c: c.artifact("recovery_records") is not None,   # an empty store is a store
-    "taxonomy": lambda c: bool(c.artifact("taxonomy")),
+    # purvi, 2026-11-27 (U-CT4): approval and version validity, not only presence (tools.taxonomy_problem)
+    "taxonomy": lambda c: taxonomy_problem(c) is None,
     "budget_or_quota": _quota,
     "risk_register": lambda c: bool(c.artifact("risk_register")),
     "decision_store": lambda c: c.decision_store is not None,
     "task_classes": lambda c: bool(c.artifact("task_classes")),
 }
+
+# Why an artifact that is present still does not count, where that is checked. Only the taxonomy has one;
+# an absent artifact's detail, and every other artifact's, is unchanged.
+UNAVAILABLE_WHY = {"taxonomy": lambda c: taxonomy_problem(c) if c.artifact("taxonomy") else None}
 
 # cop -> [(artifact, kind, what it backs, applies or None)]
 REQUIREMENTS = {
@@ -103,9 +108,13 @@ def assess_requirements(cop, case):
     for art, kind, backs, applies in REQUIREMENTS.get(cop, ()):
         k = kind if applies is None or applies(case) else NOT_APPLICABLE
         present = AVAILABLE_IF[art](case)
-        out.append({"artifact": art, "kind": k, "backs": backs,
-                    "status": AVAILABLE if present else UNAVAILABLE,
-                    "gates": "all_labels" if (cop, art) in GATES_ALL_LABELS else "quiet_label"})
+        r = {"artifact": art, "kind": k, "backs": backs,
+             "status": AVAILABLE if present else UNAVAILABLE,
+             "gates": "all_labels" if (cop, art) in GATES_ALL_LABELS else "quiet_label"}
+        why = None if present or art not in UNAVAILABLE_WHY else UNAVAILABLE_WHY[art](case)
+        if why:
+            r["why"] = why
+        out.append(r)
     return out
 
 
@@ -245,7 +254,8 @@ def precheck(cop, case, picture, upstream, tool_calls):
                       "resolves_uncertainty": RESOLVES.get(art)})
         if r["kind"] == REQUIRED and st == MISSING_UNAVAILABLE:
             reasons.append({"code": "MISSING_EVIDENCE", "item": f"artifact:{art}",
-                            "detail": f"required for {r['backs']}; supply {RESOLVES.get(art)}",
+                            "detail": f"required for {r['backs']}; supply {RESOLVES.get(art)}"
+                                      + (f" ({r['why']})" if r.get("why") else ""),
                             "gates": r["gates"]})
     for row in picture.get("rows", []):
         ev = row["evidence"]

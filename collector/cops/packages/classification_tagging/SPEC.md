@@ -34,7 +34,8 @@ stands in for any of them.
 ## Taxonomy
 
 The approved, versioned taxonomy (case artifact `taxonomy`, `tools.query_taxonomy`). `requirements.py` gates
-every label on it (unchanged). The package names a family only when its id is in the approved taxonomy; an
+every label on it, and since revision 1 checks that it is approved and carries a non-empty version
+(`tools.taxonomy_problem`, D-CT17). The package names a family only when its id is in the approved taxonomy; an
 indicated family the taxonomy does not define is a limitation, not a label. The package compares ids only; the
 definitions are read by the model for an ambiguous event.
 

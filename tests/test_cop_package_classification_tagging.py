@@ -99,7 +99,7 @@ def test_upstream_edges_are_the_canonical_ones_plus_the_three_named():
 
 def test_harness_meets_every_ground_truth_expectation(bench):
     assert bench["failed"] == [], [(r["scenario"], r["expectation"]) for r in bench["failed"]]
-    assert bench["passed"] == len(bench["expectations"]) == 165
+    assert bench["passed"] == len(bench["expectations"]) == 221   # 165, plus 56 from revision R-CT1
 
 
 def test_every_scenario_publishes_a_valid_decision_with_five_findings(bench):
@@ -246,3 +246,34 @@ def test_the_legacy_rule_function_still_returns_a_finding_without_the_question_t
            "spec": BY_KEY[COP]}
     f = legacy_rule(ctx)
     assert f["label"] == "BOUNDARY" and "unavailable" in f["cop_specific"]["question_assessment"]
+
+
+# ---------------------------------------------------------------- revision 1 (A-CT1, 2026-11-27)
+
+def test_the_gate_checks_taxonomy_approval_and_version_and_nothing_else_changes():
+    from cops.runtime.requirements import AVAILABLE_IF
+    for name, why in (("taxonomy_unapproved_with_indicator", "not approved"),
+                      ("taxonomy_version_missing", "no valid version")):
+        f = H._f(H.run_scenario(name, None))
+        assert f["status"] == "MISSING_DEPENDENCY" and f["label"] == "INCONCLUSIVE"
+        assert any(why in x["reason"] for x in f["missing_evidence"])
+    # only the taxonomy's availability rule changed; an absent taxonomy keeps its earlier detail
+    assert set(AVAILABLE_IF) >= {"policy_store", "budget_or_quota", "taxonomy"}
+
+
+def test_unrelated_disagreement_leaves_the_family_and_disputed_evidence_does_not_establish_one(bench):
+    res = bench["results"]
+    assert H._f(res["unrelated_disagreement_verified"])["label"] == "BOUNDARY"
+    assert H._f(res["unrelated_disagreement_verified"])["verified"] is True
+    assert H._f(res["indicator_disputed"])["label"] == "INCONCLUSIVE"
+    assert H._answers(H._f(res["indicator_disputed"]))["CT-1"] == "INCONCLUSIVE"
+    assert H._f(res["indicator_disputed_with_support"])["label"] == "BOUNDARY"
+    assert H._f(res["disputed_family_beside_another"])["label"] == "INTEGRITY"
+    assert not res["disputed_family_beside_another"]["llm_invocations"]
+
+
+def test_topology_doc_carries_the_runtime_edges_of_classification_tagging_and_the_order_is_acyclic():
+    ok, diff = H._topology_matches()
+    assert ok, diff
+    order, after = H._order()
+    assert len(order) == 18 and after
