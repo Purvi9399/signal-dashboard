@@ -559,7 +559,11 @@ def _rr_questions(ctx, f):
         why = res.get("missing_dependency") or (t.get("assess_recovery_questions") or {}).get("status")
         f["cop_specific"]["question_assessment"] = f"unavailable: {why}"
         return
-    d = decide_recovery_resilience(res["questions"])
+    # P-RR1: Incident Response's earlier-cycle finding, read after the answers and never by them (context only)
+    from .cop_package import rr_earlier_incident
+    earlier = rr_earlier_incident((ctx.get("feedback") or {}).get("incident_response"), ctx["case"].session_id,
+                                  res["questions"])
+    d = decide_recovery_resilience(res["questions"], earlier)
     q = d["questions"]
     legacy = {"label": f["label"], "confidence": f["confidence"], "action": f.get("action"),
               "severity": f.get("severity"), "status": f.get("status")}
@@ -573,6 +577,7 @@ def _rr_questions(ctx, f):
                              recipients=d["recipients"], memory_payload=d["memory_payload"],
                              decided_without_model=d["decided"], decision=d["decision"],
                              recovery_status=d["recovery_status"], category=d["category"], legacy_reading=legacy,
+                             earlier_incident=earlier,
                              # D-RR12: RECOVERED is the quiet label, but after a disruption it is a recovery outcome
                              # worth remembering (graph.validate_memory_update's remember_quiet)
                              remember_quiet=d["label"] == "RECOVERED")

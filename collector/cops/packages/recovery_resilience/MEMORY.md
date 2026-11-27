@@ -22,5 +22,6 @@ action. When a recurrence is listed, RECURRENCE_NOT_WEIGHED is recorded (U-RR4).
 
 ## Not read
 
-This COP reads nothing that Incident Response wrote (incident_outcome is not in its policy, and its finding is not
-an input: D-RR13). It writes nothing but its own record.
+This COP reads no incident_outcome memory (not in its policy). Incident Response's earlier-cycle finding arrives on
+the feedback edge, not through memory; the payload records only its finding_id as `earlier_incident_context`, so a
+finding offered again in a later cycle adds nothing (R-RR1). It writes nothing but its own record.

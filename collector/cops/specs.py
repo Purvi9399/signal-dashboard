@@ -281,11 +281,15 @@ FEEDBACK = {
     "behavior_analytics":  ("anomaly_detection",),
     "resource_management": ("workload_optimization",),
     "incident_response":   ("risk_mitigation",),
+    # P-RR1 (purvi 2026-11-27): Incident Response -> Recovery & Resilience is the reverse of the current-cycle
+    # RR -> IR edge, so it is feedback; context only (packages/recovery_resilience/CONNECTIONS.md)
+    "recovery_resilience": ("incident_response",),
 }
 # Feedback edges on which an unverified finding is withheld rather than delivered
 # as context.
 FEEDBACK_VERIFIED_ONLY = {("anomaly_detection", "behavior_analytics"),
-                          ("risk_mitigation", "incident_response")}
+                          ("risk_mitigation", "incident_response"),
+                          ("incident_response", "recovery_resilience")}
 for _c, _ps in FEEDBACK.items():
     for _p in _ps:
         assert _p in CONSUMES and _p != _c and _p not in CONSUMES[_c], (_p, _c)

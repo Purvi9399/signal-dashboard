@@ -5,6 +5,7 @@ Observation (`cop_package.observe_recovery_resilience`) answers the four questio
 - the session's rows;
 - the recovery records and their recomputed checkpoints;
 - Behavior Analytics' finding, as context;
+- Incident Response's earlier-cycle finding, as context, read after the answers (CONNECTIONS.md);
 - validated memory.
 
 Interpretation (`decide_recovery_resilience`) turns the answers into the label, severity, confidence and action.
@@ -67,9 +68,16 @@ listed and have no effect.
 |---|---|---|
 | IRREVERSIBLE, FAILED_RECOVERY | INTERVENTION_REQUIRED: further restoration is recommended; a person decides and acts | ALERT |
 | PARTIAL_RECOVERY; INCONCLUSIVE after a disruption or with RR-1 unanswered | MONITORING_REQUIRED | WATCH |
-| RECOVERED, with undisputed successful work after the restoration time, no recurrence, no telemetry measure deviating | STABILITY_CONFIRMED | NONE |
+| RECOVERED, with undisputed successful work after the restoration time, no recurrence, no telemetry measure deviating, no unresolved irreversible effect | STABILITY_CONFIRMED: post-restore activity succeeded; sustained stability is not assessed (no approved monitoring window), SUSTAINED_STABILITY_NOT_ASSESSED recorded | NONE |
 | RECOVERED otherwise | MONITORING_REQUIRED, with STABILITY_NOT_CONFIRMED recorded | WATCH |
 | no disruption | NOTHING_TO_CONFIRM | NONE |
+
+## A disputed irreversible command (R-RR1)
+
+A disputed irreversible command grounds nothing. When the restoration is verified, the command is listed in RR-2's
+`unresolved_effects` with its order against the restoration, because no record field names the resource it touched.
+The reading is RECOVERED_CHECKPOINT_ONLY (`verified_scope` "checkpoint only"), IRREVERSIBLE_EFFECT_NOT_RULED_OUT is
+recorded, and RR-4 is MONITORING_REQUIRED.
 
 ## The seven states kept apart (`cop_specific.recovery_status`)
 

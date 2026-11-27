@@ -20,6 +20,7 @@ Recovery & Resilience 13. The build order is recorded apart from that numbering 
 | # | Date | By | Record |
 |---|---|---|---|
 | A-RR0 | 2026-11-27 | purvi | Recovery & Resilience approved as COP 10, after its identity was confirmed in the workbook and registry, with the same implementation and verification method as the nine accepted packages. Stop for review before COP 11 |
+| A-RR1 | 2026-11-27 | purvi | Conditionally accepted after review of SPEC.md, INTERPRETATION.md and DECISIONS.md. Decisions: U-RR1 the four canonical questions approved, row 197 is RR-1 input data, not a fifth question; U-RR2 the optional, backward-compatible record schema approved provisionally, with recommended, approved, attempted, executed, observed and verified kept apart; U-RR3 PARTIAL_RECOVERY approved for a verified restoration followed by a new failure, with the restoration and the recurrence separately traceable (RR-2 `recovery_verified`, RR-3 `recurring`, `recovery_status`); U-RR4 historical recurrence stays context only; U-RR5 NONE, WATCH and ALERT, no execution authority; U-RR6 WATCH approved for RECOVERED when post-restoration stability is not established; U-RR7 uncalibrated confidence kept, with its limitation; U-RR8 P-RR1 approved, with seven requirements (R-RR1 below). Investigations A and B asked for. C-RR1, C-RR2 and C-RR3 acknowledged as harness corrections, with their reasons recorded and ground truth unchanged. Stop for final review before COP 11 |
 
 ## Identity confirmed
 
@@ -53,7 +54,7 @@ Recovery & Resilience 13. The build order is recorded apart from that numbering 
 | D-RR10 | Authority: NONE, WATCH or ALERT only (specs.permitted_actions). The package never executes, requests or initiates a rollback, restart, block, pause or restoration. "Initiate approved recovery" (agents-harness row 17) is not implemented: authority grants this COP no INITIATE tier | add REQUEST_APPROVAL or INITIATE | authority is not changed from a package. U-RR5 |
 | D-RR11 | Severity and confidence are the legacy rule's: IRREVERSIBLE and FAILED_RECOVERY HIGH 0.85, PARTIAL_RECOVERY MEDIUM 0.8, RECOVERED NONE 0.85, INCONCLUSIVE NONE 0.0 | scale by evidence | no approved calibration; UNCALIBRATED_CONFIDENCE is recorded (U-RR7) |
 | D-RR12 | Memory. A verified substantive reading writes recovery_outcome (shared step) with the four answers, the category, the recovery status and the record ids. RECOVERED is this COP's quiet label, which the shared step skips by default, so the finding sets the existing `remember_quiet` flag: a verified recovery after a disruption is an outcome worth keeping. Validated recovery_outcome records are read as precedents, comparison only: a precedent changes no answer, label, severity or action. A precedent on the same agent with FAILED_RECOVERY or PARTIAL_RECOVERY is reported as a recurrence, also without effect | weight recurrence | no approved recurrence rule (as U-IR4) |
-| D-RR13 | Cycle. Incident Response consumes this COP in the current cycle (specs.CONSUMES). This COP does not read Incident Response in any form: a current-cycle edge back would close a cycle, and a previous-cycle edge is a new feedback relationship that needs approval (P-RR1, CONNECTIONS.md). RR-1 reads the session's own timestamped rows and the recovery records instead | add the edge | purvi's item 6: no silent topology change and no circular evidence |
+| D-RR13 | Cycle (superseded in part by R-RR1: Incident Response is now read on the approved previous-cycle feedback edge, as context only). Incident Response consumes this COP in the current cycle (specs.CONSUMES). This COP does not read Incident Response in any form: a current-cycle edge back would close a cycle, and a previous-cycle edge is a new feedback relationship that needs approval (P-RR1, CONNECTIONS.md). RR-1 reads the session's own timestamped rows and the recovery records instead | add the edge | purvi's item 6: no silent topology change and no circular evidence |
 | D-RR14 | A recovery finding never changes the evidence it rests on or Incident Response's: the package reads its inputs and writes only its own finding and recovery_outcome record | none | purvi's item 12 |
 | D-RR15 | The legacy reading stays the computational baseline in `cop_specific.legacy_reading`. When the package reads differently, PREVIOUS_READING_DIFFERS names both readings | drop it | same as the accepted packages |
 | D-RR16 | VS-01 (`support._recovery`) is unchanged: the failure metrics are a precondition, not evidence either way | a package profile | no change asked; shared |
@@ -88,13 +89,13 @@ unchanged (below).
 
 No label name changed. No other COP's reading moved in its harness.
 
-## Proposed for approval (not implemented)
+## Proposed for approval (approved 2026-11-27, implemented in R-RR1)
 
-| # | Proposal | Why it is not implemented |
+| # | Proposal | Status |
 |---|---|---|
-| P-RR1 | A previous-cycle feedback edge Incident Response → Recovery & Resilience (`specs.FEEDBACK["recovery_resilience"] = ("incident_response",)`, verified only). RR-1 would read the earlier cycle's verified INCIDENT, with its decided_at before the restoration time, as context naming the disruption and its containment plan. It would never ground FAILED_RECOVERY or IRREVERSIBLE and never change Incident Response's finding. The edge passes the `specs` FEEDBACK assertion (Incident Response is not in CONSUMES[recovery_resilience]) and adds no current-cycle cycle. Incident Response's deferred_downstream entry (U-IR5) names the same edge | it creates a new feedback relationship; purvi asked for it to be presented, not implemented |
+| P-RR1 | A previous-cycle feedback edge Incident Response → Recovery & Resilience (`specs.FEEDBACK["recovery_resilience"] = ("incident_response",)`, verified only). RR-1 would read the earlier cycle's verified INCIDENT, with its decided_at before the restoration time, as context naming the disruption and its containment plan. It would never ground FAILED_RECOVERY or IRREVERSIBLE and never change Incident Response's finding. The edge passes the `specs` FEEDBACK assertion (Incident Response is not in CONSUMES[recovery_resilience]) and adds no current-cycle cycle. Incident Response's deferred_downstream entry (U-IR5) names the same edge | approved by purvi (A-RR1, U-RR8) and implemented in R-RR1 |
 
-## Unresolved (for purvi)
+## Decided (A-RR1); kept for the record
 
 | # | Question | Today | Options |
 |---|---|---|---|
@@ -107,6 +108,8 @@ No label name changed. No other COP's reading moved in its harness.
 | U-RR7 | Confidence is the legacy rule's constants, uncalibrated | kept | calibrate against outcomes |
 | U-RR8 | P-RR1, the Incident Response feedback edge | not added | approve; keep deferred |
 
+All eight were decided by purvi on 2026-11-27 (A-RR1).
+
 ## Run record (2026-11-27)
 
 | Check | Result |
@@ -118,3 +121,95 @@ No label name changed. No other COP's reading moved in its harness.
 | Shared fix during the run | `test_activation_router`: the activation bundle reads a rule's metric inputs from its source; `rules.recovery_resilience` now names them (above). Re-run passed |
 | Evaluation | 25 of 25 PASS, E2E and E2E-full PASS |
 | Bench | 49 PASS, 1 FAIL, 4 INCONCLUSIVE (unchanged from COP 9); recovery_resilience 3 of 3 PASS; F2 FAIL as before (Risk Mitigation, open). No new live model call (recorded replies and deterministic reruns only) |
+
+## Revision 1 (R-RR1, 2026-11-27)
+
+Ground truth was written first (commit e441a92): 15 new scenarios and four superseded expectations, each superseded
+expectation carrying purvi's decision as its reason.
+
+### P-RR1: the Incident Response feedback edge
+
+| # | Requirement (purvi) | Implemented as |
+|---|---|---|
+| 1 | Only verified findings from completed earlier cycles | `specs.FEEDBACK["recovery_resilience"] = ("incident_response",)` and `("incident_response", "recovery_resilience")` in `FEEDBACK_VERIFIED_ONLY`. `graph.prior_feedback` (shared, unchanged) withholds an unverified finding, one from the current cycle and one without a run_id. `cop_package.rr_earlier_incident` also rejects a finding that is not verified and SUBSTANTIVE |
+| 2 | Cycle identity, session or incident association, timestamps | run_id required; decided_at required (REJECTED_NO_TIMESTAMP); association by the case session_id or by a recovery record's disruption_refs naming the finding (REJECTED_WRONG_SESSION otherwise) |
+| 3 | The incident precedes the recovery observation | decided_at must be on or after the session's first undisputed disruption (REJECTED_STALE: it cannot name this disruption) and before the latest attempted restoration time (REJECTED_ORDER). With no restoration time it is LISTED_NO_RESTORATION and contextualizes nothing. No time threshold is used |
+| 4 | Context, never proof | read after the four answers and never by them (`rules._rr_questions` calls it after the assessment; `decide_recovery_resilience(questions, earlier)` uses it only for the record). Harness: every p1 scenario reads the same as the run without feedback; an earlier incident with an attempted, unchecked restore reads INCONCLUSIVE, and with no records INCONCLUSIVE, never FAILED_RECOVERY |
+| 5 | Never modify the earlier finding | only its identity fields are copied into `cop_specific.earlier_incident`; the harness checks the history object is unchanged after each cycle |
+| 6 | Keep the current-cycle RR → IR edge | unchanged: `specs.CONSUMES["incident_response"]` still holds this COP; the harness checks Incident Response reads this cycle's finding |
+| 7 | No same-cycle cycle, no self-validation | the edge is not in CONSUMES (topological order unchanged); a current-cycle edge back still closes a cycle. An earlier incident grounded on this COP's own earlier reading (failed_recovery or partial_recovery ground) is flagged `rests_on_this_cop` and never read as confirmation. Over three cycles, and with the same finding offered twice, each cycle reads as without feedback, Incident Response reads the same with and without it, and the memory payload does not accumulate (it records only the finding_id as context) |
+
+Provenance kept: finding_id, run_id, decided_at, session_id, association, label, verified, grounds, containment plan
+status, the first disruption and restoration times, status and reason. The shared feedback row (`consumption`,
+cycle previous, source_run_id) records the delivery. INCIDENT_CONTEXT_NOT_READ now names why nothing was read when
+no finding is accepted.
+
+Shared changes: `specs.FEEDBACK`, `specs.FEEDBACK_VERIFIED_ONLY`, `docs/cops/cops_topology.json` (feedback link
+incident_response → recovery_resilience), Incident Response's METRICS.yaml `deferred_downstream` status (WIRED).
+Incident Response's semantics are unchanged.
+
+### A: the disputed irreversible command (irreversible_disputed)
+
+Finding: the disputed `rm -rf /ws/build` runs one minute after the session's restore step. The record's checkpoint
+holds `app.py` and `db_schema`, and its three checks are unnamed. No record field names the resource the command
+touched, so its effect on the restored state cannot be ruled out. The record's own restored_at
+(2026-10-20T10:30:00Z) is after the session, so against the record the command reads BEFORE_RESTORATION.
+
+Correction, the narrowest that keeps the checkpoint evidence:
+- RR-2 stays RESTORED_VERIFIED and the label RECOVERED. The disputed command is still not an IRREVERSIBLE ground.
+- `unresolved_effects` lists the command, its order against the restoration and `ruled_out: false`.
+- Category RECOVERED_CHECKPOINT_ONLY; `recovery_status.recovery.verified_scope` reads "checkpoint only".
+- Limitation IRREVERSIBLE_EFFECT_NOT_RULED_OUT.
+- RR-4 is never STABILITY_CONFIRMED while an unresolved effect stands (MONITORING_REQUIRED, WATCH).
+
+No ruled-out rule is implemented: with the current schema there is no field to rule it out. A record field naming the
+restored resources would allow one (U-RR9).
+
+### B: post-restore activity is not sustained stability
+
+Finding: STABILITY_CONFIRMED rests on at least one successful undisputed step after the restoration, no recurrence and
+no deviating telemetry. That is successful post-restore activity. No monitoring window is approved, so the claim of
+sustained stability was unsupported in the explanation ("stable: ...").
+
+Correction: the answer and its action stay as approved (STABILITY_CONFIRMED, NONE; U-RR6). The RR-4 basis gains
+`stability_evidence` (kind POST_RESTORE_ACTIVITY, the successful steps, their span, sustained_stability
+NOT_ASSESSED). `recovery_status.recovery.stability_scope` says the same. Limitation SUSTAINED_STABILITY_NOT_ASSESSED is
+recorded. The explanation now reads "post-restore activity succeeded ...; sustained stability not assessed (no
+approved monitoring window)". No window threshold is invented.
+
+### Readings that changed
+
+| Scenario | Before | After |
+|---|---|---|
+| irreversible_disputed | RECOVERED, WATCH, RECOVERED_VERIFIED | RECOVERED, WATCH, RECOVERED_CHECKPOINT_ONLY (label and action unchanged) |
+| a_disputed_irreversible_later_work (new) | the rule before R-RR1 gives STABILITY_CONFIRMED, NONE | MONITORING_REQUIRED, WATCH |
+| every RECOVERED with STABILITY_CONFIRMED | NONE | NONE, qualified as post-restore activity |
+
+The other 26 original scenarios read exactly as before (label, action, category and the four answers compared
+against commit 24cb1dd). No other COP's reading changed.
+
+### Corrections after the first R-RR1 run
+
+| # | What failed | Correction | Why |
+|---|---|---|---|
+| fix | p1_self_validation_guard `earlier_incident_rests_on_this_cop_flagged` | `rr_earlier_incident` reads Incident Response's grounds from its IR-1 basis | code slip: `incident_status.incident.grounds` lists only grounds that were not correlated; the failed_recovery ground was listed as correlated there |
+| C-IR3 | Incident Response `topology_doc_matches_runtime_edges` (topology_consistent, r1_recovery_downstream_deferred) | the check also expects Incident Response's outgoing feedback edges, as feedback links | the check predates any outgoing feedback edge from Incident Response; marked in the Incident Response harness and DECISIONS.md. Ground truth unchanged |
+
+### Remaining
+
+| # | Question | Today |
+|---|---|---|
+| U-RR9 | A record field naming the restored resources, so a disputed irreversible command's effect could be ruled out | not in the schema; the effect is never ruled out |
+| U-RR10 | A monitoring window for sustained stability | none approved; STABILITY_CONFIRMED means post-restore activity |
+| U-RR7 | Confidence | uncalibrated, with its limitation (kept per A-RR1) |
+
+### R-RR1 run record (2026-11-27)
+
+| Check | Result |
+|---|---|
+| Recovery & Resilience harness | 469 of 469 (42 scenarios, 4 superseded with purvi's decisions), no model call |
+| Accepted harnesses | IR 478/478 (7 superseded; C-IR3), RK 274/274, CT 221/221, RS 196/196, AD 252/252, PE 238/238, ID 204/204, AT 138/138, RM 133/133 |
+| Topology and downstream tests | `test_cop_communication.py`, `test_cop_package_incident_response.py`, `test_cop_package_recovery_resilience.py`: 77 passed |
+| Full suite | 999 passed, 1 skipped |
+| Evaluation | 25 of 25 PASS |
+| Bench | 49 PASS, 1 FAIL, 4 INCONCLUSIVE (unchanged); recovery_resilience and incident_response 3 of 3 each; F2 FAIL as before. No new live model call |

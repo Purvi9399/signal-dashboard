@@ -4625,10 +4625,16 @@ RR_CATEGORY = {"RECOVERED_VERIFIED": "restoration verified by independent post-r
                "RECOVERY_UNCONFIRMED": "a recovery action was attempted but nothing independently confirms the "
                                        "restored state",
                "CONFLICTING_RECORDS": "recovery records disagree about the same restoration",
-               "INSUFFICIENT_EVIDENCE": "whether a disruption happened cannot be established"}
+               "INSUFFICIENT_EVIDENCE": "whether a disruption happened cannot be established",
+               "RECOVERED_CHECKPOINT_ONLY": "the checkpoint's state is verified by its post-restore checks; the effect "
+                                            "of a disputed irreversible command on the restored resource is not "
+                                            "ruled out"}
 RR_CHECKED = ("VERIFIED", "FAILED_CHECKS", "PARTIAL_CHECKS", "INTEGRITY_FAILED")
-RR_NO_IR = ("Incident Response is downstream of this COP in the current cycle and is not read; a previous-cycle "
-            "edge is proposed for approval (P-RR1)")
+RR_NO_IR = ("Incident Response is downstream of this COP in the current cycle and is not read in it; its earlier-cycle "
+            "verified finding is read on the feedback edge as context only (P-RR1)")
+RR_IR = "incident_response"
+RR_SUSTAINED = ("sustained stability over a monitoring window is not assessed: no monitoring window is approved; the "
+                "evidence is successful activity after the restoration")
 
 
 def _rr_pkg():
@@ -4761,7 +4767,22 @@ def _rr2(a, s, states, pkg, deps, records, checkpoints):
     for i, r in enumerate(srows):
         if _rr_failed(r) and any(x["command"] == r["command"] and not _rr_failed(x) for x in srows[i + 1:]):
             observed.append({"ref": _rr_ref(r), "kind": "failed_command_later_succeeded", "command": r["command"]})
+    ts = EA.signal_traces.ts
+    t_rest = [ts(x["at"]) for x in rec_states if x["attempted"] and x.get("at") and ts(x["at"])]
+    t_rest = max(t_rest) if t_rest else None
+    effects = []
+    for d in rows:
+        if "irreversible" in d["kinds"] and d["disputed"]:
+            t = ts(d["at"]) if d.get("at") else None
+            effects.append({"ref": d["ref"], "command": d["command"], "at": d["at"],
+                            "order": ("UNKNOWN" if not (t and t_rest) else "AFTER_RESTORATION" if t > t_rest
+                                      else "BEFORE_RESTORATION"),
+                            "ruled_out": False,
+                            "why": "no recovery record field names the resource the command touched, so its effect "
+                                   "on the restored state cannot be ruled out; the collectors dispute the row, so it "
+                                   "grounds no irreversible change (R-RR1 A)"})
     basis = {"measures": ms, "irreversible": irrev, "irreversible_disputed": irrev_disputed,
+             "unresolved_effects": effects,
              "records_supplied": records is not None, "records": rec_states, "conflicting": conflicting,
              "recovery_observed": observed,
              "recovery_verified": [x["checkpoint_id"] for x in rec_states if x["state"] == "VERIFIED"],
@@ -4856,7 +4877,12 @@ def _rr4(a, s, states, pkg, deps):
     window = [_rr_ref(r) for r in (s.rows if s else []) if t0 and r.get("observable_type") == "tool_request"
               and r.get("success") is True and r.get("collectors_agree") is not False and ts(r.get("occurred_at"))
               and ts(r["occurred_at"]) > t0 and not _rr_failed(r)]
+    times = sorted(ts(r["occurred_at"]) for r in (s.rows if s else []) if _rr_ref(r) in window)
+    effects = (two.get("basis") or {}).get("unresolved_effects") or []
     basis = {"measures": ms, "telemetry_deviating": tele, "post_recovery_window": window,
+             "stability_evidence": {"kind": "POST_RESTORE_ACTIVITY", "successful_steps": len(window),
+                                    "span_seconds": (times[-1] - t0).total_seconds() if times and t0 else 0,
+                                    "sustained_stability": "NOT_ASSESSED", "why": RR_SUSTAINED},
              "authority": RR_AUTHORITY, "executed_by_this_cop": [], "not_calculated": _rk_not_built(pkg, "RR-4")}
     o2 = two["outcome"]
     if o2 in ("IRREVERSIBLE_CHANGE", "NOT_RESTORED"):
@@ -4864,10 +4890,12 @@ def _rr4(a, s, states, pkg, deps):
         return "INTERVENTION_REQUIRED", basis
     if o2 == "NOTHING_TO_RESTORE":
         return "NOTHING_TO_CONFIRM", basis
-    if o2 == "RESTORED_VERIFIED" and three["outcome"] == "NOT_RECURRING" and window and not tele:
+    if o2 == "RESTORED_VERIFIED" and three["outcome"] == "NOT_RECURRING" and window and not tele and not effects:
         return "STABILITY_CONFIRMED", basis
     basis["stability_not_confirmed"] = (
         "failures recurred after the restoration" if three["outcome"] == "RECURRING" else
+        "the effect of a disputed irreversible command (" + ", ".join(e["ref"] for e in effects) + ") on the restored "
+        "resource is not ruled out" if effects and o2 == "RESTORED_VERIFIED" else
         "no undisputed successful work after the restoration time" if o2 == "RESTORED_VERIFIED" and not window else
         "telemetry in a deviation state: " + ", ".join(tele) if o2 == "RESTORED_VERIFIED" and tele else
         "restoration incomplete" if o2 == "PARTIALLY_RESTORED" else "recovery not established")
@@ -4957,7 +4985,9 @@ def _explain_rr(qid, ans):
             return "no failure or stall after the restoration time"
         return "no verified restoration to follow"
     if o == "STABILITY_CONFIRMED":
-        return f"stable: {len(b['post_recovery_window'])} successful step(s) after the restoration, telemetry not deviating"
+        return (f"post-restore activity succeeded: {len(b['post_recovery_window'])} successful step(s) after the "
+                f"restoration, no recurrence, telemetry not deviating; sustained stability not assessed (no approved "
+                f"monitoring window)")
     if o == "INTERVENTION_REQUIRED":
         return b["recommendation"]
     if o == "MONITORING_REQUIRED":
@@ -4990,6 +5020,15 @@ def _rr_limitations(ans):
     if b2.get("category") == "NO_RECOVERY_RECORD":
         out.append(D.limitation(D.MISSING_EVIDENCE, "RR-2", "recovery_records", EA.MISSING_REFERENCE,
                                 "no recovery record: restoration is not shown"))
+    for e in b2.get("unresolved_effects", []):
+        if ans["RR-2"]["outcome"] in ("RESTORED_VERIFIED", "PARTIALLY_RESTORED"):
+            out.append(D.limitation(D.MISSING_EVIDENCE, "RR-2", e["ref"], "IRREVERSIBLE_EFFECT_NOT_RULED_OUT",
+                                    f"{e['command']} ({e['order'].lower().replace('_', ' ')}) on a disputed row: its "
+                                    "effect on the restored resource is not ruled out; the verification covers the "
+                                    "checkpoint only", [e["ref"]]))
+    if ans["RR-4"]["outcome"] == "STABILITY_CONFIRMED":
+        out.append(D.limitation(D.LIMIT_NOT_APPROVED, "RR-4", "monitoring_window", "SUSTAINED_STABILITY_NOT_ASSESSED",
+                                RR_SUSTAINED))
     if ans["RR-4"]["outcome"] == "MONITORING_REQUIRED" and ans["RR-2"]["outcome"] == "RESTORED_VERIFIED":
         out.append(D.limitation(D.MISSING_EVIDENCE, "RR-4", "post_recovery_window", "STABILITY_NOT_CONFIRMED",
                                 b4.get("stability_not_confirmed", "")))
@@ -5003,7 +5042,6 @@ def _rr_limitations(ans):
         if v["class"] == "ABSENT":
             out.append(D.limitation(D.MISSING_EVIDENCE, "RR-1", k, "UPSTREAM_ABSENT",
                                     f"no {k} finding in this case: context only, nothing is grounded on it"))
-    out.append(D.limitation(D.MISSING_EVIDENCE, "RR-1", "incident_response", "INCIDENT_CONTEXT_NOT_READ", RR_NO_IR))
     for qid in RR_QUESTIONS:
         for x in (ans[qid].get("basis") or {}).get("not_calculated", []):
             out.append(D.limitation(D.NOT_CALCULATED, qid, x["metric"], D.NOT_CALCULATED, x["missing_inputs"]))
@@ -5016,7 +5054,8 @@ def _rr_limitations(ans):
 
 def _rr_category(ans, label):
     if label == "RECOVERED":
-        return "RECOVERED_VERIFIED"
+        return "RECOVERED_CHECKPOINT_ONLY" if (ans["RR-2"].get("basis") or {}).get("unresolved_effects") \
+            else "RECOVERED_VERIFIED"
     if label == "PARTIAL_RECOVERY":
         return "RECOVERY_INCOMPLETE"
     if label == "FAILED_RECOVERY":
@@ -5047,11 +5086,74 @@ def _rr_status(ans, label, category, action):
             "recovery": {"observed": b2.get("recovery_observed", []), "verified": b2.get("recovery_verified", []),
                          "outcome": label, "recurring": [d["ref"] for d in (ans["RR-3"].get("basis") or {}).get(
                              "recurring", [])],
-                         "stability": ans["RR-4"]["outcome"]},
+                         "stability": ans["RR-4"]["outcome"],
+                         "verified_scope": ("checkpoint only: unresolved effects not ruled out"
+                                            if b2.get("unresolved_effects") else "checkpoint and post-restore checks"),
+                         "unresolved_effects": [e["ref"] for e in b2.get("unresolved_effects", [])],
+                         "stability_scope": ("post-restore activity; sustained stability not assessed"
+                                             if ans["RR-4"]["outcome"] == "STABILITY_CONFIRMED" else None)},
             "action": action}
 
 
-def decide_recovery_resilience(questions):
+def rr_earlier_incident(finding, session_id, questions):
+    """Incident Response's earlier-cycle finding on the P-RR1 feedback edge (CONNECTIONS.md), read after the four
+    answers and never by them: context only. graph.prior_feedback has already withheld anything unverified, from the
+    current cycle or without a run_id. This reads it only with a decided_at and an association (the case session, or
+    a recovery record's disruption_refs naming it), and only when decided on or after the session's first undisputed
+    disruption and before the restoration time it contextualizes. It is never modified (a copy of its identity is
+    kept)."""
+    if finding is None:
+        return {"status": "NOT_DELIVERED", "finding_id": None, "label": None,
+                "reason": "no verified earlier-cycle Incident Response finding was delivered (graph feedback)"}
+    ts = EA.signal_traces.ts
+    ans = {q: v["answer"] for q, v in questions.items()}
+    b1, b2 = ans["RR-1"].get("basis") or {}, ans["RR-2"].get("basis") or {}
+    ir1 = (((finding.get("cop_specific") or {}).get("questions") or {}).get("IR-1") or {}).get("basis") or {}
+    grounds = [g.get("kind") for g in ir1.get("grounds") or []]
+    plan = (finding.get("cop_specific") or {}).get("containment_plan") or {}
+    own = [u for u in finding.get("upstream_used") or [] if u.get("cop") == RR]
+    out = {"finding_id": finding.get("finding_id"), "label": finding.get("label"), "run_id": finding.get("run_id"),
+           "decided_at": finding.get("decided_at"), "session_id": finding.get("session_id"),
+           "verified": bool(finding.get("verified")), "grounds": grounds,
+           "containment_plan": plan.get("status"),
+           # IR grounds this COP's FAILED_RECOVERY or IRREVERSIBLE as failed_recovery, PARTIAL_RECOVERY as
+           # partial_recovery (IR_INCIDENT_KINDS, IR_FINDING_KINDS): such an incident is never read as confirmation
+           "rests_on_this_cop": bool({"failed_recovery", "partial_recovery"} & set(grounds)),
+           "this_cop_reading_it_read": [u.get("label") for u in own],
+           "use": "context only: names the earlier disruption and its containment plan; never a ground for "
+                  "FAILED_RECOVERY, IRREVERSIBLE, PARTIAL_RECOVERY or RECOVERED, and never changes an answer"}
+    refs = {str(r) for x in b2.get("records", []) for r in x.get("disruption_refs") or []}
+    by_session = bool(session_id) and finding.get("session_id") == session_id
+    by_incident = bool(out["finding_id"]) and (out["finding_id"] in refs or f"finding:{out['finding_id']}" in refs)
+    out["association"] = "SESSION" if by_session else "INCIDENT" if by_incident else None
+    t = ts(out["decided_at"]) if out["decided_at"] else None
+    first = [ts(d["at"]) for d in b1.get("disruptions", []) if d.get("at") and ts(d["at"])]
+    rest = [ts(x["at"]) for x in b2.get("records", []) if x.get("attempted") and x.get("at") and ts(x["at"])]
+    out["first_disruption_at"] = min(first).isoformat() if first else None
+    out["restoration_at"] = max(rest).isoformat() if rest else None
+    if not finding.get("verified") or finding.get("status") != "SUBSTANTIVE":
+        status, why = "REJECTED_UNVERIFIED", "the earlier finding is not a verified substantive reading"
+    elif not out["run_id"]:
+        status, why = "REJECTED_NO_CYCLE", "the earlier finding names no cycle (run_id)"
+    elif not t:
+        status, why = "REJECTED_NO_TIMESTAMP", "the earlier finding has no usable decided_at"
+    elif not out["association"]:
+        status, why = "REJECTED_WRONG_SESSION", (f"the earlier finding belongs to session {out['session_id']}, not "
+                                                 f"{session_id}, and no recovery record names it")
+    elif first and t < min(first):
+        status, why = "REJECTED_STALE", "decided before this session's first disruption: it cannot name it"
+    elif not rest:
+        status, why = "LISTED_NO_RESTORATION", "no restoration time to contextualize: listed only"
+    elif t >= max(rest):
+        status, why = "REJECTED_ORDER", "decided at or after the restoration: it does not precede the recovery " \
+                                        "observation"
+    else:
+        status, why = "ACCEPTED_AS_CONTEXT", "verified earlier-cycle incident decided before the restoration"
+    out.update(status=status, reason=why)
+    return out
+
+
+def decide_recovery_resilience(questions, earlier=None):
     """The COP decision from the four answers (INTERPRETATION.md). RR-2 gives the label (RR-3 RECURRING turns a
     verified restoration into PARTIAL_RECOVERY), the label the severity and confidence, RR-4 the action. Decided by
     the package; no model."""
@@ -5078,14 +5180,26 @@ def decide_recovery_resilience(questions):
     contrary += [f"RR-1: {k} reads {v['label']}: context, not a ground" for k, v in
                  ((ans["RR-1"].get("basis") or {}).get("upstream") or {}).items() if v.get("present")]
     status = _rr_status(ans, label, category, action)
+    status["earlier_incident"] = earlier
+    lims = _rr_limitations(ans)
+    if not earlier or earlier["status"] != "ACCEPTED_AS_CONTEXT":
+        from . import decision as D
+        lims.append(D.limitation(D.MISSING_EVIDENCE, "RR-1", RR_IR, "INCIDENT_CONTEXT_NOT_READ",
+                                 RR_NO_IR + ": " + ((earlier or {}).get("reason")
+                                                    or "no earlier-cycle Incident Response finding was delivered")))
+    if earlier and earlier.get("finding_id"):
+        contrary.append(f"RR-1: earlier-cycle Incident Response {earlier['label']} ({earlier['status']}): context, "
+                        "never a ground")
     from ..specs import consumers
     pay = {"answers": {q: x["outcome"] for q, x in ans.items()}, "category": category,
            "records": [{k: x[k] for k in ("checkpoint_id", "action", "state")} for x in b2.get("records", [])],
            "intervention": status["intervention"] | {"authority": None},
            "recovery": status["recovery"], "decided_by": "package",
-           "precedents_read": [p["record_id"] for p in (ans["RR-3"].get("basis") or {}).get("precedents", [])]}
+           "precedents_read": [p["record_id"] for p in (ans["RR-3"].get("basis") or {}).get("precedents", [])],
+           "earlier_incident_context": (earlier or {}).get("finding_id") if (earlier or {}).get("status") ==
+           "ACCEPTED_AS_CONTEXT" else None}
     return {"label": label, "confidence": conf, "severity": sev, "action": action, "action_reason": reason,
             "recipients": list(consumers(RR)) if label != INCONCLUSIVE else [],
-            "drivers": drivers, "contrary": contrary, "questions": trace, "limitations": _rr_limitations(ans),
+            "drivers": drivers, "contrary": contrary, "questions": trace, "limitations": lims,
             "decided": True, "memory_payload": pay, "recovery_status": status, "decision": label,
             "category": category}

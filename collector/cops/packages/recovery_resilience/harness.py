@@ -17,7 +17,7 @@ from ...runtime.contracts import VALIDATED
 from ...runtime.cop_package import DECIDED_WITHOUT_MODEL
 from ...runtime.persistence import SQLiteStore
 from ...runtime.triage import LABEL_ACTIONS, TIER_ORDER
-from ...specs import BY_KEY, CONSUMES, FEEDBACK, consumers, topological_order
+from ...specs import BY_KEY, CONSUMES, FEEDBACK, FEEDBACK_VERIFIED_ONLY, consumers, topological_order
 from ..risk_mitigation import harness as RH
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -175,14 +175,140 @@ WORLDS = {
     "evidence_change_changes_decision": STABLE,
     "topology_and_cycle": STABLE,
     "downstream_contracts": (STABLE[0], STABLE[1], WITH_IR),
+    # R-RR1
+    "a_disputed_irreversible_scoped": (lambda: legacy(DISPUTED_RMRF), fixture(3), [COP]),
+    "a_disputed_irreversible_later_work": (lambda: sess(FAIL, REST, LATER, DISPUTED_RMRF), at_restore(3), [COP]),
+    "b_stability_qualified": STABLE,
 }
 
 
 # ---------------------------------------------------------------- running
 
-def _case(name, rows, art, store_=None, cops=None, sid="s1"):
+def _case(name, rows, art, store_=None, cops=None, sid="s1", history_=None):
     rt = E.make_runtime(f"rr-{name}", sid, copy.deepcopy(rows), copy.deepcopy(art), None, store=store_)
-    return G.run_case(rt, cops=list(cops or [COP])), rt
+    return G.run_case(rt, cops=list(cops or [COP]), history=history_), rt
+
+
+# ---------------------------------------------------------------- R-RR1: the feedback world (GROUND_TRUTH.yaml)
+
+LATER_RESTORE = "2026-10-30T10:00:00Z"
+
+
+def fb_rows():
+    return sess(SECRET, FAIL, REST, LATER)
+
+
+def fb_art(records=None, **kw):
+    art = permissive(None)
+    if records is not None:
+        art["recovery_records"] = records
+    return art
+
+
+def published(out, cop=IR):
+    """A finding as an earlier cycle hands it on: the published finding with its cycle's run_id, decided_at and
+    session_id (as the Incident Response harness does for Risk Mitigation)."""
+    r = out["results"][cop]
+    return dict(r["finding"], run_id=r["run_id"], decided_at=r["decided_at"], session_id=r["session_id"])
+
+
+P1_WORLD = {
+    "p1_verified_earlier_incident": {},
+    "p1_unverified_withheld": {"verified": False},
+    "p1_same_cycle_rejected": {"run_id": "eval-rr-p1_same_cycle_rejected"},
+    "p1_missing_cycle_identity": {"run_id": None},
+    "p1_missing_timestamp": {"decided_at": None},
+    "p1_wrong_session": {"session_id": "s9"},
+    "p1_incident_association": {"session_id": "s9"},
+    "p1_after_restoration": {},
+    "p1_stale_timestamp": {"decided_at": "2026-10-01T00:00:00Z"},
+    "p1_repeated_across_cycles": {},
+    "p1_context_not_proof": {},
+}
+
+
+def _p1_records(name, rows, pub):
+    if name == "p1_after_restoration":
+        return [rec(3, at=_restore_time(rows))]
+    if name == "p1_incident_association":
+        return [rec(3, at=LATER_RESTORE, disruption_refs=[f"finding:{pub['finding_id']}"])]
+    return [rec(3, at=LATER_RESTORE)]
+
+
+def run_p1(name):
+    res = {"scenario": name, "cops": UP_IR}
+    if name == "p1_self_validation_guard":
+        rows, cops = legacy(), WITH_IR
+        c1 = _case(f"{name}-c1", rows, {"recovery_records": [rec(0)]}, cops=cops)[0]
+        pub = published(c1)
+        art = {"recovery_records": [rec(0, at=LATER_RESTORE)]}
+    else:
+        rows, cops = fb_rows(), UP_IR
+        c1 = _case(f"{name}-c1", rows, fb_art(), cops=cops)[0]
+        pub = dict(published(c1), **P1_WORLD[name])
+        art = fb_art(_p1_records(name, rows, pub))
+    res["cycle1_rr"] = c1["results"][COP]["finding"]
+    hist = {IR: pub}
+    before = copy.deepcopy(hist)
+    out, rt = _case(name, rows, art, cops=cops, history_=hist)
+    r = out["results"][COP]
+    res["cop"] = {"finding": r["finding"], "result": r}
+    res["llm_invocations"] = r["llm_invocations"]
+    res["downstream"] = {IR: out["results"][IR]}
+    res["consumption"] = out["consumption"]
+    res["history_unmodified"] = hist == before
+    res["offered"] = pub
+    nofb = _case(f"{name}-nofb", rows, art, cops=cops)[0]
+    res["without_fb"] = nofb["results"][COP]["finding"]
+    res["without_fb_ir"] = nofb["results"][IR]["finding"]
+    if name == "p1_repeated_across_cycles":
+        pub2 = published(out)
+        h3, h3b = {IR: pub2}, {IR: copy.deepcopy(pub)}
+        b3, b3b = copy.deepcopy(h3), copy.deepcopy(h3b)
+        c3 = _case(f"{name}-c3", rows, art, cops=cops, history_=h3)[0]
+        c3b = _case(f"{name}-c3b", rows, art, cops=cops, history_=h3b)[0]
+        res["cycles"] = {"c2": r["finding"], "c3": c3["results"][COP]["finding"],
+                         "c3b": c3b["results"][COP]["finding"]}
+        res["histories_unmodified"] = res["history_unmodified"] and h3 == b3 and h3b == b3b
+    if name == "p1_context_not_proof":
+        t = LATER_RESTORE
+        att = fb_art([rec(0, 0, at=t, action="restore", execution={"status": "EXECUTED", "at": t})])
+        res["variants"] = {
+            "attempted_no_checks": _case(f"{name}-att", rows, att, cops=cops, history_={IR: pub})[0]["results"][COP],
+            "no_records": _case(f"{name}-norec", rows, fb_art(), cops=cops, history_={IR: pub})[0]["results"][COP]}
+    return res
+
+
+def _earlier(res):
+    return _cs(res).get("earlier_incident") or {}
+
+
+def _fb_row(res):
+    return next((x for x in _r(res).get("feedback") or [] if x["cop"] == IR), {})
+
+
+def _ei(status):
+    return lambda r: (_earlier(r).get("status") == status, (_earlier(r).get("status"), _earlier(r).get("reason")))
+
+
+def _not_delivered(reason):
+    return lambda r: (_earlier(r).get("status") == "NOT_DELIVERED" and _fb_row(r).get("delivered") is False
+                      and reason in (_fb_row(r).get("reason") or ""), (_fb_row(r), _earlier(r).get("status")))
+
+
+def _feedback_edge():
+    ok = (FEEDBACK.get(COP) == (IR,) and (IR, COP) in FEEDBACK_VERIFIED_ONLY and IR not in CONSUMES[COP]
+          and COP in CONSUMES[IR] and not _cycle_with([]) and _cycle_with([(COP, IR)]))
+    return ok, (FEEDBACK.get(COP), CONSUMES[COP])
+
+
+def _ctx_variants(res):
+    v = {k: (x["finding"]["label"], _answers(x["finding"]).get("RR-2"),
+             (x["finding"]["cop_specific"].get("earlier_incident") or {}).get("status")) for k, x in res["variants"].items()}
+    ok = (v["attempted_no_checks"][:2] == ("INCONCLUSIVE", "INCONCLUSIVE")
+          and v["no_records"][0] == "INCONCLUSIVE" and v["no_records"][1] == "INCONCLUSIVE"
+          and v["no_records"][2] == "LISTED_NO_RESTORATION" and _f(res)["label"] == "RECOVERED")
+    return ok, v
 
 
 def _finding(out):
@@ -201,6 +327,8 @@ def _remembered(store_):
 
 
 def run_scenario(name, t):
+    if name.startswith("p1_"):
+        return run_p1(name)
     mk_rows, mk_art, cops = WORLDS[name]
     rows = mk_rows()
     art = mk_art(rows)
@@ -539,6 +667,91 @@ CHECKS = {
     "feedback_edge_not_added": lambda r: (IR not in FEEDBACK.get(COP, ()), FEEDBACK.get(COP)),
     "topology_document_matches": lambda r: _topology_matches(),
     "order_respected": lambda r: (_order()[1], _order()[0]),
+    # R-RR1: P-RR1 feedback edge
+    "earlier_incident_accepted": _ei("ACCEPTED_AS_CONTEXT"),
+    "earlier_incident_accepted_by_incident": lambda r: (
+        _earlier(r).get("status") == "ACCEPTED_AS_CONTEXT" and _earlier(r).get("association") == "INCIDENT",
+        (_earlier(r).get("status"), _earlier(r).get("association"))),
+    "earlier_incident_provenance": lambda r: (
+        all(_earlier(r).get(k) == r["offered"].get(k) for k in ("finding_id", "run_id", "decided_at", "session_id"))
+        and _earlier(r).get("association") == "SESSION" and _earlier(r).get("verified") is True
+        and _earlier(r)["run_id"] != _r(r)["run_id"], {k: _earlier(r).get(k) for k in ("finding_id", "run_id",
+                                                                                      "decided_at", "association")}),
+    "earlier_incident_not_a_ground": lambda r: (
+        not any(_earlier(r)["finding_id"] in json.dumps(c) for c in _f(r)["claims"])
+        and _b(r, "RR-1")["disruptions"] == r["without_fb"]["cop_specific"]["questions"]["RR-1"]["basis"]["disruptions"]
+        and "context only" in _earlier(r)["use"], _earlier(r).get("use")),
+    "same_without_feedback": lambda r: (_same(_f(r), r["without_fb"]), (_f(r)["label"], r["without_fb"]["label"])),
+    "earlier_ir_finding_unmodified": lambda r: (r["history_unmodified"], r["history_unmodified"]),
+    "earlier_ir_findings_unmodified": lambda r: (r["histories_unmodified"], r["histories_unmodified"]),
+    "current_cycle_ir_reads_this_cop": lambda r: (
+        any(x["consumer"] == IR and x["producer"] == COP and x.get("cycle") != "previous"
+            and x["finding_id"] == _f(r)["finding_id"] for x in r["consumption"]), IR),
+    "feedback_row_previous_cycle": lambda r: (
+        any(x["consumer"] == COP and x["producer"] == IR and x.get("cycle") == "previous"
+            and x["consumed_as"] == "evidence" and x["source_run_id"] == r["offered"]["run_id"]
+            for x in r["consumption"]), [x for x in r["consumption"] if x["consumer"] == COP]),
+    "no_incident_context_limitation": lambda r: (not _has_limit(r, "RR-1", "INCIDENT_CONTEXT_NOT_READ"), _limits(r)),
+    "incident_context_limitation_named": lambda r: (_has_limit(r, "RR-1", "INCIDENT_CONTEXT_NOT_READ", IR),
+                                                    sorted(_limits(r))),
+    "earlier_incident_not_delivered_unverified": _not_delivered("unverified"),
+    "earlier_incident_not_delivered_current_cycle": _not_delivered("current cycle"),
+    "earlier_incident_not_delivered_no_cycle": _not_delivered("does not name the cycle"),
+    "earlier_incident_rejected_no_timestamp": _ei("REJECTED_NO_TIMESTAMP"),
+    "earlier_incident_rejected_wrong_session": _ei("REJECTED_WRONG_SESSION"),
+    "earlier_incident_rejected_order": _ei("REJECTED_ORDER"),
+    "earlier_incident_rejected_stale": _ei("REJECTED_STALE"),
+    "every_cycle_same_without_feedback": lambda r: (
+        all(_same(f, r["without_fb"]) for f in r["cycles"].values()),
+        {k: (f["label"], (f.get("proposed_action") or {}).get("action")) for k, f in r["cycles"].items()}),
+    "ir_same_with_and_without_rr_feedback": lambda r: (
+        _same(r["downstream"][IR]["finding"], r["without_fb_ir"]),
+        (r["downstream"][IR]["finding"]["label"], r["without_fb_ir"]["label"])),
+    "repeated_finding_listed_once": lambda r: (
+        all(isinstance(f["cop_specific"]["earlier_incident"].get("finding_id"), str)
+            and f["cop_specific"]["recovery_status"]["earlier_incident"] == f["cop_specific"]["earlier_incident"]
+            for f in r["cycles"].values())
+        and r["cycles"]["c3b"]["cop_specific"]["earlier_incident"]["finding_id"] == r["offered"]["finding_id"],
+        [f["cop_specific"]["earlier_incident"]["finding_id"] for f in r["cycles"].values()]),
+    "memory_payload_does_not_accumulate": lambda r: (
+        len({json.dumps({k: v for k, v in f["cop_specific"]["memory_payload"].items()
+                         if k != "earlier_incident_context"}, sort_keys=True, default=str)
+             for f in [*r["cycles"].values(), r["without_fb"]]}) == 1,
+        [f["cop_specific"]["memory_payload"].get("earlier_incident_context") for f in r["cycles"].values()]),
+    "earlier_incident_rests_on_this_cop_flagged": lambda r: (
+        _earlier(r).get("rests_on_this_cop") is True and "context only" in _earlier(r)["use"]
+        and r["cycle1_rr"]["label"] == "FAILED_RECOVERY", _earlier(r)),
+    "context_variants_follow_own_evidence": _ctx_variants,
+    "ir_not_read_current_cycle": lambda r: (
+        IR not in CONSUMES[COP] and IR not in (_b(r, "RR-1").get("upstream") or {})
+        and _earlier(r).get("status") == "NOT_DELIVERED" and _has_limit(r, "RR-1", "INCIDENT_CONTEXT_NOT_READ", IR),
+        (CONSUMES[COP], _earlier(r).get("status"))),
+    "feedback_edge_previous_cycle_verified_only": lambda r: _feedback_edge(),
+    "feedback_edge_cycle_safe": lambda r: _feedback_edge(),
+    # R-RR1 A and B
+    "category_checkpoint_only": _cat("RECOVERED_CHECKPOINT_ONLY"),
+    "unresolved_effect_listed": lambda r: (
+        [e["ref"] for e in _b(r, "RR-2")["unresolved_effects"]] == _b(r, "RR-2")["irreversible_disputed"]
+        and all(e["ruled_out"] is False for e in _b(r, "RR-2")["unresolved_effects"])
+        and _f(r)["label"] != "IRREVERSIBLE", _b(r, "RR-2")["unresolved_effects"]),
+    "unresolved_effect_after_restoration": lambda r: (
+        [e["order"] for e in _b(r, "RR-2")["unresolved_effects"]] == ["AFTER_RESTORATION"],
+        _b(r, "RR-2")["unresolved_effects"]),
+    "effect_limitation_named": lambda r: (_has_limit(r, "RR-2", "IRREVERSIBLE_EFFECT_NOT_RULED_OUT"), sorted(_limits(r))),
+    "verified_scope_checkpoint": lambda r: (
+        _status(r)["recovery"]["verified_scope"].startswith("checkpoint only")
+        and _status(r)["recovery"]["unresolved_effects"], _status(r)["recovery"]),
+    "stability_scope_post_restore_activity": lambda r: (
+        _b(r, "RR-4")["stability_evidence"]["kind"] == "POST_RESTORE_ACTIVITY"
+        and _b(r, "RR-4")["stability_evidence"]["successful_steps"] >= 1
+        and _b(r, "RR-4")["stability_evidence"]["sustained_stability"] == "NOT_ASSESSED"
+        and "sustained stability not assessed" in _status(r)["recovery"]["stability_scope"],
+        _b(r, "RR-4")["stability_evidence"]),
+    "sustained_stability_limitation_named": lambda r: (
+        _has_limit(r, "RR-4", "SUSTAINED_STABILITY_NOT_ASSESSED"), sorted(_limits(r))),
+    "explanation_claims_no_sustained_stability": lambda r: (
+        "sustained stability not assessed" in _q(r, "RR-4")["explanation"]
+        and not _q(r, "RR-4")["explanation"].startswith("stable"), _q(r, "RR-4")["explanation"]),
     "gi_consumes_this": lambda r: (COP in CONSUMES["governance_intelligence"]
                                    and "governance_intelligence" in _decision(r)["recipients"]["notified"],
                                    _decision(r)["recipients"]),

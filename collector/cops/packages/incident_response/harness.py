@@ -18,7 +18,7 @@ from ...runtime.contracts import VALIDATED
 from ...runtime.cop_package import DECIDED_WITHOUT_MODEL
 from ...runtime.persistence import SQLiteStore
 from ...runtime.triage import LABEL_ACTIONS, TIER_ORDER
-from ...specs import BY_KEY, CONSUMES, FEEDBACK, consumers, topological_order
+from ...specs import BY_KEY, CONSUMES, FEEDBACK, FEEDBACK_VERIFIED_ONLY, consumers, topological_order
 from ..risk_mitigation import harness as RH
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -389,10 +389,14 @@ def _topology_matches():
     links = {(x["from"], x["to"]): x.get("kind") for x in d["cop_links"]}
     want_in = {(u, COP) for u in CONSUMES[COP]} | {(p, COP) for p in FEEDBACK.get(COP, ())}
     got_in = {x for x in links if x[1] == COP}
-    want_out = {(COP, k) for k in consumers(COP)}
+    # C-IR3 (2026-11-27, R-RR1): P-RR1 adds this COP's first outgoing feedback edge (Incident Response -> Recovery &
+    # Resilience, specs.FEEDBACK). The first form of this check expected only current-cycle consumers as outgoing
+    # links; it now also expects each outgoing feedback edge, as a feedback link. Ground truth unchanged.
+    fb_out = {(COP, c) for c, ps in FEEDBACK.items() if COP in ps}
+    want_out = {(COP, k) for k in consumers(COP)} | fb_out
     got_out = {x for x in links if x[0] == COP}
     cop = next(c for c in d["cops"] if c["id"] == COP)
-    ok = (got_in == want_in and got_out == want_out
+    ok = (got_in == want_in and got_out == want_out and all(links[x] == "feedback" for x in fb_out)
           and all(links[(p, COP)] == "feedback" for p in FEEDBACK.get(COP, ()))
           and all(links[(u, COP)] == "passes_to" for u in CONSUMES[COP])
           and cop["reads_decisions_from"] == list(CONSUMES[COP])
@@ -474,6 +478,18 @@ def _rr_deferred():
     links = {(x["from"], x["to"]) for x in _topology_doc()["cop_links"]}
     ok = (bool(rec) and COP not in CONSUMES["recovery_resilience"] and "recovery_resilience" not in consumers(COP)
           and (COP, "recovery_resilience") not in links and COP not in FEEDBACK.get("recovery_resilience", ()))
+    return ok, rec
+
+
+def _rr_wired():
+    """R-RR1 (P-RR1, purvi 2026-11-27): the relationship deferred as U-IR5 is a previous-cycle, verified-only
+    feedback edge; it adds no current-cycle edge, so Recovery & Resilience still runs before this COP."""
+    m = yaml.safe_load(open(os.path.join(HERE, "METRICS.yaml")))
+    rec = (m.get("deferred_downstream") or {}).get("recovery_resilience") or {}
+    links = {(x["from"], x["to"], x.get("kind")) for x in _topology_doc()["cop_links"]}
+    ok = (str(rec.get("status", "")).startswith("WIRED") and COP in FEEDBACK.get("recovery_resilience", ())
+          and (COP, "recovery_resilience") in FEEDBACK_VERIFIED_ONLY and COP not in CONSUMES["recovery_resilience"]
+          and "recovery_resilience" in CONSUMES[COP] and (COP, "recovery_resilience", "feedback") in links)
     return ok, rec
 
 
@@ -722,6 +738,7 @@ CHECKS = {
         and [c["upstream"] for c in RH._profile("risk_mitigation") if c.get("context_only")] == ["classification_tagging"],
         [k for k in BY_KEY if any(c.get("context_only") for c in RH._profile(k))]),
     "rr_downstream_recorded_not_wired": lambda r: _rr_deferred(),
+    "rr_downstream_wired_previous_cycle": lambda r: _rr_wired(),
     "rr_current_edge_would_cycle": lambda r: (
         _cycle_with([("recovery_resilience", COP)]) and not _cycle_with([]), "IR consumes RR; RR consuming IR closes a cycle"),
     "topological_order_acyclic": lambda r: (len(_order()[0]) == 18, _order()[0]),

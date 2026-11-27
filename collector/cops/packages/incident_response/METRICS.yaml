@@ -331,4 +331,4 @@ deferred_downstream:
     source: agents-harness row 10 (downstream Recovery & Resilience, Governance Intelligence)
     intended: Recovery & Resilience reads a verified INCIDENT and its containment plan to guide restoration
     edge_when_integrated: previous-cycle feedback (specs.FEEDBACK), verified only
-    status: DEFERRED until Recovery & Resilience is packaged
+    status: WIRED as previous-cycle, verified-only feedback (P-RR1, approved by purvi 2026-11-27; specs.FEEDBACK)

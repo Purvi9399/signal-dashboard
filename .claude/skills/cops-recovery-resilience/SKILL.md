@@ -46,9 +46,10 @@ order from that numbering.
    into PARTIAL_RECOVERY. Memory precedents are listed and never change an answer.
 6. **Authority.** Actions are NONE, WATCH or ALERT only. Never propose or execute a rollback, restart, block, pause
    or restoration. Granting "initiate approved recovery" (agents-harness row 17) is purvi's decision (U-RR5).
-7. **Incident Response.** This COP reads no Incident Response finding (D-RR13): IR consumes it in the current
-   cycle. A previous-cycle feedback edge is proposed as P-RR1 and is not implemented. Do not add it without purvi's
-   approval. An INCIDENT never establishes a recovery failure.
+7. **Incident Response.** IR consumes this COP in the current cycle, so never add a current-cycle edge back. Its
+   earlier-cycle verified finding arrives on the approved feedback edge (P-RR1, R-RR1) and is read by
+   `rr_earlier_incident` after the answers: context only, with cycle, timestamp, association and ordering checks,
+   never modified, never a ground. An INCIDENT never establishes a recovery failure.
 8. Never edit GROUND_TRUTH.yaml to match an output. Mark a correction made after a run in the harness and in
    DECISIONS.md, with why. A change that moves another COP's harness is marked in that harness too.
 9. Do not invent metrics or thresholds. Catalogue metrics without an approved threshold are reported, never judged.
@@ -56,6 +57,9 @@ order from that numbering.
    record the need in DECISIONS.md.
 10. Keep `docs/cops/cops_topology.json` in step with this COP's edges in `specs.CONSUMES`, `specs.consumers` and
     `specs.FEEDBACK`.
+11. **Scope of a verified recovery.** A disputed irreversible command keeps RECOVERED scoped to the checkpoint
+    (RECOVERED_CHECKPOINT_ONLY) and blocks STABILITY_CONFIRMED. STABILITY_CONFIRMED means successful post-restore
+    activity; sustained stability is not assessed until a monitoring window is approved. Do not invent one.
 
 ## Checks before you report
 

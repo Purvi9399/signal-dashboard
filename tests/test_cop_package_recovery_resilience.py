@@ -11,7 +11,7 @@ from cops.runtime import cop_package as P, evidence_assessment as EA
 from cops.runtime.rules import DETERMINISTIC_TOOLS
 from cops.runtime.tools import TOOLS
 from cops.runtime.profiles import DETERMINISTIC_COPS
-from cops.specs import BY_KEY, CONSUMES, FEEDBACK, consumers
+from cops.specs import BY_KEY, CONSUMES, FEEDBACK, FEEDBACK_VERIFIED_ONLY, consumers
 
 COP = "recovery_resilience"
 PKG = os.path.join(os.path.dirname(__file__), "..", "collector", "cops", "packages", COP)
@@ -76,7 +76,7 @@ def test_tool_wiring_and_files():
 
 def test_harness_meets_every_ground_truth_expectation(bench):
     assert bench["failed"] == [], [(r["scenario"], r["expectation"], r["got"]) for r in bench["failed"]][:5]
-    assert len(bench["results"]) == len(H.truth()) == 27
+    assert len(bench["results"]) == len(H.truth()) == 42
 
 
 def test_no_model_is_called(bench):
@@ -159,10 +159,46 @@ def test_failed_recovery_carries_checkable_grounds_and_is_unchanged_by_ir(bench)
     assert r["artifacts_unchanged"]
 
 
-def test_this_cop_reads_no_incident_response_finding():
+def test_incident_response_is_read_only_on_the_previous_cycle_edge():
+    # R-RR1 (P-RR1 approved 2026-11-27): verified-only feedback; the current-cycle RR -> IR edge is unchanged
     assert CONSUMES[COP] == ("behavior_analytics",)
-    assert "incident_response" not in FEEDBACK.get(COP, ())
+    assert FEEDBACK[COP] == ("incident_response",) and ("incident_response", COP) in FEEDBACK_VERIFIED_ONLY
     assert set(consumers(COP)) == {"incident_response", "governance_intelligence"}
+
+
+@pytest.mark.parametrize("name,status", [
+    ("p1_verified_earlier_incident", "ACCEPTED_AS_CONTEXT"), ("p1_incident_association", "ACCEPTED_AS_CONTEXT"),
+    ("p1_unverified_withheld", "NOT_DELIVERED"), ("p1_same_cycle_rejected", "NOT_DELIVERED"),
+    ("p1_missing_cycle_identity", "NOT_DELIVERED"), ("p1_missing_timestamp", "REJECTED_NO_TIMESTAMP"),
+    ("p1_wrong_session", "REJECTED_WRONG_SESSION"), ("p1_after_restoration", "REJECTED_ORDER"),
+    ("p1_stale_timestamp", "REJECTED_STALE"),
+])
+def test_earlier_incident_is_read_only_when_valid_and_never_changes_the_answers(bench, name, status):
+    r = res(bench, name)
+    assert fin(bench, name)["cop_specific"]["earlier_incident"]["status"] == status
+    assert H._same(r["cop"]["finding"], r["without_fb"]) and r["history_unmodified"]
+
+
+def test_feedback_does_not_self_validate(bench):
+    r = res(bench, "p1_self_validation_guard")
+    assert r["cop"]["finding"]["cop_specific"]["earlier_incident"]["rests_on_this_cop"] is True
+    assert H._same(r["cop"]["finding"], r["without_fb"])
+    r = res(bench, "p1_repeated_across_cycles")
+    assert all(H._same(f, r["without_fb"]) for f in r["cycles"].values()) and r["histories_unmodified"]
+
+
+def test_disputed_irreversible_scopes_recovered_to_the_checkpoint(bench):
+    for name in ("a_disputed_irreversible_scoped", "a_disputed_irreversible_later_work"):
+        f = fin(bench, name)
+        assert (f["label"], f["proposed_action"]["action"]) == ("RECOVERED", "WATCH"), name
+        assert f["cop_specific"]["recovery_status"]["category"] == "RECOVERED_CHECKPOINT_ONLY", name
+
+
+def test_stability_confirmed_is_qualified_as_post_restore_activity(bench):
+    f = fin(bench, "b_stability_qualified")
+    assert answers(f)["RR-4"] == "STABILITY_CONFIRMED" and f["proposed_action"]["action"] == "NONE"
+    ev = f["cop_specific"]["questions"]["RR-4"]["basis"]["stability_evidence"]
+    assert ev["kind"] == "POST_RESTORE_ACTIVITY" and ev["sustained_stability"] == "NOT_ASSESSED"
 
 
 # ---------------------------------------------------------------- memory, evidence, topology
