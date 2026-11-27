@@ -244,6 +244,23 @@ def _risk():
     return comps
 
 
+def _incident():
+    """Incident Response: the generic profile, with its context producers (METRICS.yaml upstream: no incident,
+    finding or abnormal labels) not applicable evidence. purvi, 2026-11-27 (U-IR3, A-IR1): a context producer is
+    neutral in VS-01 for this COP only; the grounding producers (Policy Enforcement, Recovery & Resilience, Anomaly
+    Detection), the metrics, the tools, the baseline and memory are unchanged."""
+    from . import evidence_assessment as EA
+    pkg_up = EA.load_package("incident_response")["upstream"]
+    ground = ("incident", "finding", "abnormal", "evidence_quality")
+    out = []
+    for c in _generic("incident_response"):
+        u = c.get("upstream")
+        if u and not any((pkg_up.get(u) or {}).get(k) for k in ground):
+            c = {**c, "context_only": True}
+        out.append(c)
+    return out
+
+
 def _runtime_monitoring():
     m = tuple(BY_KEY["runtime_monitoring"].metric_keys)
     comps = [C("telemetry_measures", "metrics", "direct", "all", "telemetry", metrics=m,
@@ -261,7 +278,7 @@ def _recovery():
 
 CUSTOM = {"runtime_monitoring": _runtime_monitoring, "recovery_resilience": _recovery,
           "anomaly_detection": _anomaly, "policy_enforcement": _policy,
-          "workflow_orchestration": _workflow, "risk_mitigation": _risk}
+          "workflow_orchestration": _workflow, "risk_mitigation": _risk, "incident_response": _incident}
 
 
 def profile(cop):
@@ -417,7 +434,8 @@ def _upstream(ctx, comp, cls, label):
     u = comp["upstream"]
     f = (ctx["upstream"] or {}).get(u)
     if comp.get("context_only"):
-        return NA(f"{u} is a context-only input for {ctx['cop']}: listed, not evidence (P-RK3)")
+        return NA(f"{u} is a context-only input for {ctx['cop']}: listed, not evidence "
+                  f"({'U-IR3' if ctx['cop'] == 'incident_response' else 'P-RK3'})")
     if f is None:
         return UNKNOWN(f"{u} finding absent")
     if not (f.get("verified") and f.get("status") == SUBSTANTIVE):

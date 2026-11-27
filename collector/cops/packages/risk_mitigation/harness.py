@@ -463,9 +463,14 @@ CHECKS = {
     "policy_enforcement_counted_independent": lambda r: (
         _up(r, "policy_enforcement")["counted"] is True and _b(r, "RK-2")["signals_counted"] == ["policy_enforcement"]
         and _b(r, "RK-2")["impact"] == 3, (_up(r, "policy_enforcement"), _b(r, "RK-2")["signals_counted"])),
+    # C-RK6 (COP 9 A-IR1, 2026-11-27): with no Incident Response model in this world, Incident Response now keeps its
+    # verified deterministic INCIDENT (before A-IR1 it was INCONCLUSIVE). It is listed as inferred, correlated and not
+    # counted; policy_enforcement stays the only counted signal and the band, score and controls are unchanged.
+    # Ground truth unchanged.
     "risk_status_distinguished": lambda r: (
         "insights.secrets@EXCEPTION" in _status(r)["observed"]["metrics"]
-        and [x["cop"] for x in _status(r)["inferred"]] == ["policy_enforcement"]
+        and [x["cop"] for x in _status(r)["inferred"] if x["cop"] != "incident_response" or x["counted"]]
+        == ["policy_enforcement"]
         and _status(r)["verified"]["band"] == "EMERGING" and _status(r)["verified"]["score"] == 3
         and _status(r)["intervention"]["recommended"] == ["C-block-write"]
         and _status(r)["intervention"]["executed"] == [] and _status(r)["intervention"]["escalated_to_person"] is False,
@@ -646,8 +651,10 @@ CHECKS = {
             and c["item"]["direction"] == "neutral" for c in _vs(r)["components"]),
         [(c.get("name"), c["item"]["direction"], c["item"]["applicable"]) for c in _vs(r)["components"]
          if "classification" in c.get("name", "")]),
+    # C-RK7 (COP 9 U-IR3, purvi 2026-11-27): Incident Response's context producers are now neutral in its own VS-01
+    # too; every other COP's profile is still unchanged. Ground truth unchanged.
     "other_cops_vs01_unchanged": lambda r: (
-        all(not c.get("context_only") for k in BY_KEY if k != COP for c in _profile(k)),
+        all(not c.get("context_only") for k in BY_KEY if k not in (COP, "incident_response") for c in _profile(k)),
         [k for k in BY_KEY if k != COP and any(c.get("context_only") for c in _profile(k))]),
     "sensitivity_range_two_to_six": lambda r: (
         _b(r, "RK-2")["score_range"] == [2, 6] and _b(r, "RK-2")["band"] == "EMERGING"

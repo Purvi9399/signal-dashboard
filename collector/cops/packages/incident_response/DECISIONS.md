@@ -14,6 +14,7 @@ Incident Response 6. The build order is recorded apart from that numbering (proj
 | # | Date | By | Record |
 |---|---|---|---|
 | A-IR0 | 2026-11-27 | purvi | Incident Response approved as COP 9, with the same implementation and verification method as the eight accepted packages. Stop for review before COP 10 |
+| A-IR1 | 2026-11-27 | purvi | Conditionally accepted. U-IR1 approved with a correction: an incident established by verified deterministic evidence is kept whatever the model does, and the containment plan is recorded apart (R-IR1, D-IR21). U-IR2 to U-IR6 decided as listed under Resolved. C-RK5 and C-AD acknowledged, the original expectations unchanged. Ground truth for R-IR1 written first (2c702b9). Stop for final review before COP 10 |
 
 ## Sources read
 
@@ -54,16 +55,20 @@ Incident Response 6. The build order is recorded apart from that numbering (proj
 | D-IR19 | A pending block is read from the producer's own proposal, the published `proposed_action.requested_action` (falling back to `action`). In dry run the published `action` is the authority substitute (ALERT for a BLOCK), so the legacy rule's `action == "BLOCK"` test never fired there and its reading stayed ALERT | read only `action` | the workbook's question is what Policy Enforcement proposes, not what dry run let through; both are kept in IR-1 `basis.upstream` (`action`, `final_action`) |
 | D-IR20 | After an accepted model conclusion the severity is IR-2's and the confidence the lower of the model's and IR-4's; the model's are recorded in `model_check` | keep the model's | IR-2 rates and IR-4 sets the confidence (D-IR10); the model scopes and plans only (D-IR11) |
 
-## Unresolved (for purvi)
+| D-IR21 | Incident and plan decoupled (R-IR1, A-IR1). The read-back publishes the model's finding only when it concludes the package's label with the package's action, passes verification and gives a plan (plan VERIFIED, or UNVERIFIED with no plan text). Otherwise the model output is set aside, and the package's own deterministic finding is handed back (`cop_specific.verify_package_finding`). `graph.independent_verify` verifies it by `graph._verify_candidate`, with the same verifiers and VS-01 and no model baseline. If it passes, INCIDENT is published with the package's severity, evidence and IR-5 response, and the plan reads REJECTED (different label, different action or failed verification) or UNAVAILABLE (no model). The rejected model output and the reason are kept in `containment_plan.model_output`, `rejected_candidate` and `model_verifier_failures`. If the package's own evidence fails verification, the reading is INCONCLUSIVE (category INCIDENT_UNCONFIRMED, severity NONE, limitation INCIDENT_EVIDENCE_NOT_VERIFIED) | INCONCLUSIVE whenever the model is unavailable or rejected (D-IR11 as first built) | purvi, A-IR1: an unsupported model conclusion never overrides verified incident evidence or authorises a stronger intervention. The proposed action stays REQUEST_APPROVAL, a person approves, nothing is executed |
+| D-IR22 | VS-01 profile for Incident Response (`support._incident`): a consumed COP whose METRICS `upstream` entry names no incident, finding, abnormal or evidence-quality label (Interaction Discovery, Workflow Orchestration, Resource Management, Classification & Tagging) is context-only and neutral (NOT_APPLICABLE). The grounding producers (Anomaly Detection, Policy Enforcement, Recovery & Resilience) are read as before | every consumed COP counted | purvi, U-IR3, scoped to Incident Response. Substantive incident verification is unchanged: every other COP's VS-01 is unchanged (harness `other_cops_vs01_unchanged`) |
+| D-IR23 | Recovery & Resilience downstream: recorded in METRICS `deferred_downstream.recovery_resilience` (status DEFERRED), not wired in `specs.CONSUMES` | add the edge now | purvi, U-IR5. A current-cycle IR→RR edge with RR→IR already consumed would make a cycle (harness `rr_current_edge_would_cycle`). When RR is packaged the edge is previous-cycle feedback, as RK→IR |
 
-| # | Question | Today | Options |
-|---|---|---|---|
-| U-IR1 | Should the model keep its containment-plan role (D-IR11)? Without a model, an intervention incident reads INCONCLUSIVE with the package's answers kept (the same as before: no model, no finding) | model consulted for intervention incidents only | remove the model role (publish the package's decision as Risk Mitigation does); keep it; publish the package's decision when the model is unavailable |
-| U-IR2 | APPROVAL_REQUIRED and PARTIAL_RECOVERY as WATCH (D-IR3) | WATCH | NO_INCIDENT as the legacy rule |
-| U-IR3 | VS-01 for Incident Response counts every consumed COP as supporting evidence, Classification & Tagging and the context producers included, so an attention reading upstream can weigh against NO_INCIDENT | unchanged (VS-01 is shared) | the P-RK3 treatment for context-only and context producers here too |
-| U-IR4 | Recurrence and the other three memory types (D-IR13) | listed, no effect | an approved recurrence rule |
-| U-IR5 | Downstream edges named by the workbook (Recovery & Resilience; agents-harness row 10) are not in `specs.CONSUMES` | not added | add the edge when Recovery & Resilience is packaged |
-| U-IR6 | Confidence is the rule's formula, uncalibrated | kept | calibrate against outcomes |
+## Resolved (purvi, A-IR1, 2026-11-27)
+
+| # | Decision |
+|---|---|
+| U-IR1 | Model keeps the containment-planning role, decoupled from incident verification (D-IR21) |
+| U-IR2 | WATCH kept for APPROVAL_REQUIRED and PARTIAL_RECOVERY (D-IR3) |
+| U-IR3 | Context-only producers neutral in VS-01 for Incident Response only (D-IR22) |
+| U-IR4 | Recurrence stays contextual evidence, with no effect, until a rule is approved (D-IR13) |
+| U-IR5 | RR downstream relationship preserved, behavioural integration deferred until RR is packaged; topology consistent and acyclic (D-IR23) |
+| U-IR6 | Confidence stays the rule's formula, uncalibrated, reported in every finding whose IR-1 is decided as limitation UNCALIBRATED_CONFIDENCE (IR-4, `_ir_limitations`) |
 
 ## Changed readings against the legacy rule (harness worlds, synthetic)
 
@@ -75,6 +80,16 @@ Incident Response 6. The build order is recorded apart from that numbering (proj
 | conflicting_disputed_exposure | INCIDENT MEDIUM ALERT | INCONCLUSIVE | D-IR7, D-CT18: a disputed row alone establishes nothing |
 | missing_upstream_quiet | NO_INCIDENT | INCONCLUSIVE | D-IR7: no verified consumed finding, so the absence of an incident is not shown |
 | verified_violation_intervention, simultaneous_findings_one_incident | INCIDENT HIGH ALERT | INCIDENT HIGH REQUEST_APPROVAL | D-IR19: the legacy test read the dry-run substitute ALERT, not Policy Enforcement's BLOCK proposal |
+
+Readings moved by R-IR1 (against the package as first built):
+
+| Scenario | Before R-IR1 | After | Why |
+|---|---|---|---|
+| violation_without_model, r1_verified_incident_model_unavailable | INCONCLUSIVE | INCIDENT HIGH REQUEST_APPROVAL, plan UNAVAILABLE | D-IR21 |
+| adversarial_model_contradicts, r1_model_claims_no_incident | INCONCLUSIVE | INCIDENT HIGH REQUEST_APPROVAL, plan REJECTED | D-IR21 |
+| r1_verified_incident_plan_rejected | INCONCLUSIVE | INCIDENT HIGH REQUEST_APPROVAL, plan REJECTED | D-IR21 |
+| adversarial_model_overreaches, r1_model_requests_block | INCIDENT (model finding, action replaced) | INCIDENT (package finding), plan REJECTED, BLOCK recorded | D-IR21 |
+| r1_incident_evidence_fails_verification | (new) | INCONCLUSIVE, INCIDENT_UNCONFIRMED | D-IR21 |
 
 Every other scenario reads as the legacy rule does. Readings that used to wait on a model, and that now come from
 the package without one, are listed in the verification report (`/mnt/project-files/pr4/verification/
@@ -89,6 +104,11 @@ incident_response/COP9_INCIDENT_RESPONSE.md`).
 | C-RK5 | `risk_mitigation/harness.py` quiet_findings_not_counted (normal_low) | incident_response is accepted in RK-2 `quiet_not_counted` when its finding is a verified NO_INCIDENT | before COP 9, Incident Response had no model in that world and read INCONCLUSIVE. It now decides NO_INCIDENT without one. Nothing is counted either way |
 | C-AD (COP 9) | `anomaly_detection/harness._ir_reads_ad5` | the rule reading is read from `cop_specific.legacy_reading` when Incident Response decides without a model, and from the model finding's `baseline` otherwise | the same rule reading, recorded in a different place. With AD INDETERMINATE, the package reads INCONCLUSIVE, where the rule read WATCH (D-IR7) |
 
+| C-RK6 | `risk_mitigation/harness.py` genuine_risk_emerging, risk_status_distinguished | Incident Response's INCIDENT in that world is listed among the inferred and correlated readings, not counted. Band EMERGING, score 3 and the controls are unchanged | the incident used to read INCONCLUSIVE in that world (no model). It is now kept (D-IR21), and RK-2 already correlates it on the same source items |
+| C-RK7 | `risk_mitigation/harness.py` context_only_neutral_in_vs01, other_cops_vs01_unchanged | incident_response is left out of the "other COPs" set | U-IR3 gives Incident Response its own approved profile (D-IR22). The check still covers every other COP |
+| R-IR1 superseded | `GROUND_TRUTH.yaml` `superseded:` | violation_without_model, adversarial_model_contradicts (cop_label INCONCLUSIVE → INCIDENT) and adversarial_model_overreaches (model_action_replaced → plan_rejected, model_action_block_recorded, deterministic_finding_published) | purvi-approved semantics (A-IR1). The original expectations are kept in the file with the reason |
+| R-IR1 fault injection | `harness._tamper_package_finding` | scenario 5 only: a false CRITICAL insights.secrets claim is added to the package's computational INCIDENT candidate, so its own evidence fails MC-01 and SC-01 | the only way to make deterministic evidence fail independent verification in a synthetic world; no other scenario uses it |
+
 ## Shared tests restated (COP 9)
 
 Each of these tests used Incident Response as the example of a model COP, or as a COP that proposes BLOCK. The
@@ -102,6 +122,8 @@ change is marked in the test with why. No assertion about the shared machinery w
 | `test_runtime_live_eval.py::test_deterministic_cops_make_no_model_calls` | incident_response is added to the COPs that decide without a model in E2E-full |
 | `test_runtime_root_causes.py::test_root_causes_can_co_occur_and_use_the_defined_codes` | incident_response:missing co-occurs EXPECTED_INCONCLUSIVE and MISSING_EVIDENCE. There is no model candidate, so there is no VERIFIER_REJECTED |
 | `test_evidence_assessment.py` | the Incident Response harness is added to the files that read the package |
+| `test_cop_package_risk_mitigation.py::test_vs01_context_only_component_is_not_applicable_for_risk_mitigation_only` (R-IR1) | incident_response left out of the "other COPs" set, as C-RK7: its context-only profile is approved (U-IR3, D-IR22). Every other COP is still checked |
+| `test_runtime_llm.py` (R-IR1: wiring, unavailable, timeout for incident_response) | helper `no_model_conclusion`: without a usable model conclusion Incident Response publishes its verified deterministic INCIDENT, origin computational, plan UNAVAILABLE, execution NOT_EXECUTED. Other model COPs keep INCONCLUSIVE |
 
 ## Run record (2026-11-27, offline, synthetic, every model reply scripted and simulated)
 
@@ -112,3 +134,13 @@ change is marked in the test with why. No assertion about the shared machinery w
 | Full suite (`pytest ../tests`) | 958 passed, 1 skipped |
 | Evaluation | 25 of 25 PASS (C05, C06, C10a/b, C15, D-IR, E2E and E2E-full included) |
 | Bench | 49 PASS, 1 FAIL, 4 INCONCLUSIVE, unchanged. incident_response normal NO_INCIDENT, abnormal INCIDENT, missing INCONCLUSIVE, all PASS. Fleet F2 still FAIL, as before COP 9 |
+
+## Run record, R-IR1 (2026-11-27, offline, synthetic, every model reply scripted and simulated)
+
+| Run | Result |
+|---|---|
+| Incident Response harness | 478 of 478, 6 superseded (R-IR1) |
+| Risk Mitigation, Classification & Tagging, Resource Management, Anomaly Detection, Policy Enforcement, Interaction Discovery, Audit & Traceability, Runtime Monitoring harnesses | 274/274 (C-RK5, C-RK6, C-RK7), 221/221, 196/196, 252/252 (C-AD), 238/238, 204/204, 138/138, 133/133 |
+| Full suite (`pytest ../tests`) | 959 passed, 1 failed, 1 skipped. The failure was the RK context-only test; it was restated as C-RK7 above and passes when re-run alone. The full suite was not re-run |
+| Evaluation | 25 of 25 PASS |
+| Bench | 49 PASS, 1 FAIL, 4 INCONCLUSIVE, unchanged. Fleet F2 still FAIL, as before COP 9 |

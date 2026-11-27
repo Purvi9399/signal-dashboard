@@ -278,7 +278,9 @@ def test_vs01_context_only_component_is_not_applicable_for_risk_mitigation_only(
     from cops.runtime.support import profile
     ct = [c for c in profile(COP) if c["name"] == "upstream:classification_tagging"]
     assert len(ct) == 1 and ct[0]["context_only"] is True
-    assert not [c for k in BY_KEY if k != COP for c in profile(k) if c.get("context_only")]
+    # C-RK7 (COP 9 R-IR1): Incident Response has its own purvi-approved context-only profile (U-IR3, D-IR22);
+    # every other COP is still checked
+    assert not [c for k in BY_KEY if k not in (COP, "incident_response") for c in profile(k) if c.get("context_only")]
 
 
 def test_unapproved_or_unversioned_register_is_unavailable():

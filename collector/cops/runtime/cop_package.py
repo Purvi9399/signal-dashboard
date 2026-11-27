@@ -4462,68 +4462,146 @@ def decide_incident_response(questions):
             "category": category}
 
 
-def interpreted_incident_response(f, baseline):
-    """After verification, for a finding the model concluded on an intervention incident: the model scopes the
-    incident and drafts the containment plan; the package checks its conclusion against its own answers (D-IR11).
-    The label must be INCIDENT and the action the package's IR-5 action: a different action is replaced and
-    recorded; a different label, or no verified conclusion, leaves the finding INCONCLUSIVE with the package's
-    answers and the rejected candidate kept. A finding the package decided is returned as it is."""
+PLAN_VERIFIED, PLAN_UNVERIFIED, PLAN_REJECTED, PLAN_UNAVAILABLE = "VERIFIED", "UNVERIFIED", "REJECTED", "UNAVAILABLE"
+
+
+def _ir_plan(f, cs):
+    """The containment plan's own status, apart from the incident (A-IR1, U-IR1). VERIFIED: the model concluded
+    the package's label with the package's action, its finding passed verification, and it gave a plan. UNVERIFIED:
+    the same, but with no plan to check. REJECTED: a verifier rejected the model's finding, or it concluded another
+    label, or it asked for another (stronger or weaker) action. UNAVAILABLE: no model conclusion at all."""
+    want_label = cs.get("decision")
+    want_action = (cs.get("incident_status") or {}).get("intervention", {}).get("action")
+    detail = (f.get("cop_specific") or {}).get("detail") or {}
+    rej = f.get("rejected_candidate") or {}
+    concluded = f["label"] if f["status"] == "SUBSTANTIVE" else rej.get("label")
+    action = (f.get("proposed_action") or {}).get("action") if f["status"] == "SUBSTANTIVE" else \
+        (rej.get("proposed_action") or {}).get("action")
+    rec = {"by": "llm", "model_label": concluded, "model_status": f["status"], "model_verified": bool(f.get("verified")),
+           "model_action": action, "model_confidence": f.get("confidence") if f["status"] == "SUBSTANTIVE"
+           else rej.get("confidence"), "package_label": want_label, "package_action": want_action,
+           "scope_entities": detail.get("scope_entities", []), "plan": detail.get("response_proposal"),
+           "upstream_basis": detail.get("upstream_basis", []),
+           "stop_reason": (f.get("cop_specific") or {}).get("stop_reason")}
+    if concluded is None:
+        rec.update(status=PLAN_UNAVAILABLE, reason="no model conclusion: " + str(rec["stop_reason"] or f.get("rationale", ""))[:200])
+    elif f["status"] != "SUBSTANTIVE":
+        rec.update(status=PLAN_REJECTED, reason=f"a verifier rejected the model's {concluded}: "
+                                                + str(f.get("rationale", ""))[:240])
+    elif concluded != want_label:
+        rec.update(status=PLAN_REJECTED, reason=f"the model concluded {concluded}; the verified answers establish "
+                                                f"{want_label}")
+    elif action != want_action:
+        rec.update(status=PLAN_REJECTED, reason=f"the model asked for {action}; the answers support {want_action} "
+                                                f"only, and a model never authorises a stronger intervention")
+    elif not f.get("verified"):
+        rec.update(status=PLAN_REJECTED, reason="the model's finding is not verified")
+    elif not rec["plan"]:
+        rec.update(status=PLAN_UNVERIFIED, reason="the model concluded the package's incident and response but gave "
+                                                  "no containment plan to check")
+    else:
+        rec.update(status=PLAN_VERIFIED, reason="the model's verified conclusion matches the package's label and "
+                                                "response; its plan is recorded for the person who approves")
+    return rec
+
+
+def _ir_plan_limitation(plan):
+    from . import decision as D
+    if plan["status"] == PLAN_VERIFIED:
+        return []
+    out = [D.limitation(D.MISSING_EVIDENCE, "IR-5", "containment_plan", "CONTAINMENT_PLAN_NOT_CONFIRMED",
+                        f"containment plan {plan['status']}: {plan['reason']}")]
+    if plan["status"] == PLAN_REJECTED and plan.get("model_action") not in (None, plan["package_action"]):
+        out.append(D.limitation(D.LIMIT_NOT_APPROVED, "IR-5", "model_action", "MODEL_ACTION_REPLACED",
+                                f"the model proposed {plan['model_action']}; the package's response "
+                                f"{plan['package_action']} stands"))
+    return out
+
+
+def interpreted_incident_response(f, baseline, plan=None, model_results=None):
+    """After verification, for an intervention incident the model was consulted on (D-IR11, A-IR1).
+
+    First call (plan None), on the model's verified finding: when the model concluded the package's INCIDENT with
+    the package's IR-5 action and passed verification, its finding is published, with IR-2's severity and the lower
+    confidence, and the plan VERIFIED or UNVERIFIED. Otherwise the model's output is set aside and the package's own
+    deterministic incident (the baseline) is returned under `cop_specific.verify_package_finding` for the graph to
+    verify independently, by the same checks.
+
+    Second call (plan given), on that independently verified deterministic finding: when it passed, the incident
+    keeps its label, severity, evidence and deterministic response, the plan is recorded REJECTED or UNAVAILABLE, and
+    the model's output is kept as the rejected candidate. When the deterministic evidence itself failed verification
+    the finding is INCONCLUSIVE (INCIDENT_UNCONFIRMED) with the answers kept. A finding the package decided is
+    returned as it is."""
     import copy
     from .contracts import ORIGIN_LLM
+    from . import decision as D
+    if plan is not None:
+        out = dict(f)
+        cs = copy.deepcopy(out.get("cop_specific") or {})
+        cs.pop("verify_package_finding", None)
+        status = cs.get("incident_status") or {}
+        lims = list(cs.get("limitations", [])) + _ir_plan_limitation(plan)
+        model_out = plan.get("model_output")
+        from .contracts import REJECTED as _REJECTED
+        if out.get("status") == _REJECTED:
+            # the deterministic incident evidence itself failed the existing verification
+            why = out.get("rationale", "")
+            status = {**status, "category": "INCIDENT_UNCONFIRMED", "meaning": IR_CATEGORY["INCIDENT_UNCONFIRMED"]}
+            lims.append(D.limitation(D.MISSING_EVIDENCE, "IR-1", "incident_evidence", "INCIDENT_EVIDENCE_NOT_VERIFIED",
+                                     f"the package's incident finding failed verification: {why}"[:400]))
+            cs.update(recipients=[], decision=INCONCLUSIVE)
+            out["severity"] = "NONE"
+        else:
+            out["rejected_candidate"] = model_out
+            why = "; ".join(f"{x} {cs['questions'][x]['answer']}" for x in cs.get("drivers", []))
+            out["rationale"] = (f"{out['label']} from {why}, verified on the package's deterministic evidence; "
+                                f"containment plan {plan['status']}: {plan['reason']}; nothing paused, blocked or "
+                                f"contained")[:600]
+        plan = dict(plan)
+        plan["model_verifier_failures"] = [{"check_id": r.get("check_id"), "reason_code": r.get("reason_code")}
+                                           for r in (model_results or []) if r.get("result") == "FAIL"]
+        status = {**status, "intervention": {**status.get("intervention", {}), "containment_plan": plan["status"]}}
+        cs.update(limitations=lims, incident_status=status, containment_plan=plan, model_check=plan,
+                  memory_payload={**(cs.get("memory_payload") or {}), "containment_plan": plan["status"],
+                                  "model_check": plan})
+        out["cop_specific"] = cs
+        return out
     cs = (baseline or {}).get("cop_specific") or {}
     if f.get("origin") != ORIGIN_LLM or not cs.get("questions"):
         return f
-    q = copy.deepcopy(cs["questions"])
-    want_label, want_action = cs.get("decision"), (cs.get("incident_status") or {}).get("intervention", {}).get("action")
-    detail = (f.get("cop_specific") or {}).get("detail") or {}
-    got_action = (f.get("proposed_action") or {}).get("action")
-    out = dict(f)
-    # the model's own conclusion: its label, or the candidate a verifier rejected
-    concluded = f["label"] if f["status"] == "SUBSTANTIVE" else (f.get("rejected_candidate") or {}).get("label")
-    check = {"by": "package", "model_label": concluded, "model_status": f["status"],
-             "model_verified": bool(f.get("verified")), "model_action": got_action, "package_label": want_label,
-             "package_action": want_action, "scope_entities": detail.get("scope_entities", []),
-             "containment_plan": detail.get("response_proposal"), "upstream_basis": detail.get("upstream_basis", [])}
+    rec = _ir_plan(f, cs)
+    rec["accepted"] = rec["status"] in (PLAN_VERIFIED, PLAN_UNVERIFIED)
+    rec["action_replaced"] = rec["model_action"] not in (None, rec["package_action"]) and rec["model_label"] == \
+        rec["package_label"]
     status = copy.deepcopy(cs.get("incident_status") or {})
-    lims = list(cs.get("limitations", []))
-    from . import decision as D
-    check["model_confidence"] = f.get("confidence")
-    if f["status"] == "SUBSTANTIVE" and f["label"] == want_label:
-        check["accepted"] = True
-        # IR-2 gives the severity and IR-4 the confidence; the model scopes and plans, it does not rate
+    if rec["accepted"]:
+        out = dict(f)
+        q = copy.deepcopy(cs["questions"])
+        q["IR-5"]["basis"] = {**(q["IR-5"]["basis"] or {}), "containment_plan_by_model": rec["plan"],
+                              "scope_by_model": rec["scope_entities"]}
+        # IR-2 gives the severity and IR-4 the confidence; the model scopes and plans, it does not rate (D-IR20)
         out.update(severity=(baseline or {}).get("severity") or f.get("severity"),
                    confidence=min(f.get("confidence") or 0.0, (baseline or {}).get("confidence") or 0.0))
-        if got_action != want_action:
-            check["action_replaced"] = True
-            out["proposed_action"] = {"action": want_action,
-                                      "reason": f"the package's IR-5 response ({want_action}); the model proposed "
-                                                f"{got_action}, which the answers do not support"}
-            lims.append(D.limitation(D.LIMIT_NOT_APPROVED, "IR-5", "model_action", "MODEL_ACTION_REPLACED",
-                                     f"the model proposed {got_action}; the package's response {want_action} stands"))
-        q["IR-5"]["basis"] = {**(q["IR-5"]["basis"] or {}), "containment_plan_by_model": check["containment_plan"],
-                              "scope_by_model": check["scope_entities"]}
-    else:
-        check["accepted"] = False
-        cand = f["label"] if f["status"] == "SUBSTANTIVE" else (f.get("rejected_candidate") or {}).get("label")
-        why = (f"the model concluded {cand}; the package's answers establish {want_label}" if cand else
-               "no verified model conclusion: " + str((f.get("cop_specific") or {}).get("stop_reason")
-                                                       or f.get("rationale", ""))[:200])
-        check["reason"] = why
-        out.update(label=INCONCLUSIVE, status="INCONCLUSIVE", confidence=0.0, verified=False,
-                   rejected_candidate={"label": cand, "confidence": f.get("confidence"), "reason": why}
-                   if cand else f.get("rejected_candidate"),
-                   rationale=f"INCONCLUSIVE: {why}; the incident and its response stay in the answers for a person"[:600])
-        out["proposed_action"] = {"action": "WATCH", "reason": "the containment plan was not confirmed; a person "
-                                                               "reviews the recorded answers"}
-        status["category"] = "INCIDENT_UNCONFIRMED"
-        status["meaning"] = IR_CATEGORY["INCIDENT_UNCONFIRMED"]
-        lims.append(D.limitation(D.MISSING_EVIDENCE, "IR-5", "containment_plan", "CONTAINMENT_PLAN_NOT_CONFIRMED",
-                                 why + "; the package's answers are kept (U-IR1)"))
-    out["cop_specific"] = {**(f.get("cop_specific") or {}), "questions": q, "drivers": cs.get("drivers", []),
-                           "limitations": lims, "contrary": cs.get("contrary", []),
-                           "recipients": cs.get("recipients", []) if check["accepted"] else [],
-                           "memory_payload": {**(cs.get("memory_payload") or {}), "model_check": check},
-                           "incident_status": status, "model_check": check,
-                           "decision": out["label"], "legacy_reading": cs.get("legacy_reading"),
-                           "previous_cycle": cs.get("previous_cycle")}
+        status["intervention"] = {**status.get("intervention", {}), "containment_plan": rec["status"]}
+        out["cop_specific"] = {**(f.get("cop_specific") or {}), "questions": q, "drivers": cs.get("drivers", []),
+                               "limitations": list(cs.get("limitations", [])) + _ir_plan_limitation(rec),
+                               "contrary": cs.get("contrary", []), "recipients": cs.get("recipients", []),
+                               "memory_payload": {**(cs.get("memory_payload") or {}), "containment_plan": rec["status"],
+                                                  "model_check": rec},
+                               "incident_status": status, "model_check": rec, "containment_plan": rec,
+                               "decision": out["label"], "legacy_reading": cs.get("legacy_reading"),
+                               "previous_cycle": cs.get("previous_cycle")}
+        return out
+    # the model's output is set aside; the package's deterministic incident is verified on its own (graph)
+    rej = f.get("rejected_candidate") or {}
+    rec["model_output"] = ({k: f.get(k) for k in ("label", "confidence", "claims", "rationale", "status",
+                                                    "proposed_action")} if f["status"] == "SUBSTANTIVE"
+                           else (rej or None))
+    if rec["model_output"]:
+        rec["model_output"] = {**rec["model_output"], "reason": rec["reason"], "origin": ORIGIN_LLM}
+    pkg = copy.deepcopy({k: v for k, v in (baseline or {}).items() if k != "baseline_note"})
+    pkg["cop_specific"] = {**pkg.get("cop_specific", {}), "containment_plan": rec,
+                           "stop_reason": rec["stop_reason"] or "containment_plan_" + rec["status"].lower()}
+    out = dict(f)
+    out["cop_specific"] = {**(f.get("cop_specific") or {}), "verify_package_finding": pkg}
     return out

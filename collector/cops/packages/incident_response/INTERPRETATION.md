@@ -3,7 +3,7 @@
 Observation (`cop_package.observe_incident_response`) answers the five questions from the metrics, the exposure
 check (`tools.t_check_exposure`), the verified upstream findings and validated memory. Interpretation
 (`decide_incident_response`) turns the answers into the label, severity, action and confidence. Both are
-deterministic. The model is consulted for one reading only (D-IR11, U-IR1).
+deterministic. The model is consulted for one reading only, and only to plan containment (D-IR11, D-IR21, A-IR1).
 
 ## IR-1: grounds, counted once
 
@@ -78,11 +78,16 @@ Validated precedents are listed with their recurrence, and they have no effect. 
 
 After verification, `interpreted_incident_response` (`graph.INTERPRETED`) reads the model's conclusion back:
 
-| Model conclusion | Result |
-|---|---|
-| INCIDENT, verified, with the package's action | accepted. The plan and scope go to IR-5 `basis`. Severity is the package's; confidence is the lower of the model's and the package's |
-| INCIDENT with a different action (e.g. BLOCK) | accepted, with the action replaced by the package's. MODEL_ACTION_REPLACED is recorded |
-| any other label, rejected by a verifier, or no model | INCONCLUSIVE. The package's answers are kept, the model's label goes to `rejected_candidate`, the category is INCIDENT_UNCONFIRMED, the action is WATCH, and CONTAINMENT_PLAN_NOT_CONFIRMED is recorded |
+| Model conclusion | Result | Plan |
+|---|---|---|
+| INCIDENT, verified, with the package's action and a plan | the model's finding is published. Severity is the package's; confidence is the lower of the model's and the package's | VERIFIED (UNVERIFIED when no plan text is given) |
+| INCIDENT with a different action (e.g. BLOCK) | the model output is set aside and the package's deterministic INCIDENT is verified on its own and published. MODEL_ACTION_REPLACED is recorded | REJECTED |
+| any other label (e.g. NO_INCIDENT), or rejected by a verifier | the package's deterministic INCIDENT is verified on its own and published; the model output goes to `rejected_candidate` and `containment_plan.model_output`, with the reason | REJECTED |
+| no model (unavailable, timeout) | the package's deterministic INCIDENT is verified on its own and published | UNAVAILABLE |
+| the package's own incident evidence fails verification | INCONCLUSIVE, category INCIDENT_UNCONFIRMED, severity NONE, INCIDENT_EVIDENCE_NOT_VERIFIED recorded | as above |
+
+Any plan status other than VERIFIED records CONTAINMENT_PLAN_NOT_CONFIRMED. The response stays REQUEST_APPROVAL:
+a person approves any block, and nothing is executed.
 
 The model can never produce NO_INCIDENT, a lower severity, or a stronger action than the package's.
 

@@ -720,39 +720,27 @@ def _lineage(f, upstream):
     return sorted(lin)
 
 
-@timed("independent_verify")
-def independent_verify(state):
-    rec = state.get("recovery") or {}
-    if rec.get("restored_prior_rejection"):
-        # nothing new to verify: the first rejection and its results stand unchanged
-        return {"finding": state["finding"], "verifier_results": rec["prior_verifier_results"],
-                "recovery": {**rec, "outcome": "no_candidate"}}
+def _verify_candidate(state, f, rerun=None, baseline=None):
+    """The shared verification of one candidate finding: the verifiers, VS-01 (graded support), lineage,
+    qualifications and the evidence ceiling. Returns (finding, verifier results, blocking results)."""
     rt = _rt(state)
     cop = state["cop"]
     spec = BY_KEY[cop]
-    f = dict(state["finding"])
+    f = dict(f)
     up = state.get("upstream") or {}
     calls = {c["tool_call_id"]: c for c in state["tool_calls"]}
     ceiling = evidence_conf(up)
-    rerun = None
-    if state["classification"] == "deterministic":
-        # RP-01 only: the same rules again. Diagnostic, never counted as verification.
-        try:
-            rerun = RULES[cop](_rule_ctx(rt, state, [c for c in state["tool_calls"]
-                                                      if c["requested_by"] == "rules"]))["label"]
-        except Exception:
-            rerun = None
     results = verify_finding({"finding": f, "spec": spec, "picture": state["picture"],
                               "events": _events(rt, cop, state["picture"]), "case": rt.case,
                               "tool_calls": calls, "upstream": up, "memory": rt.memory, "cop": cop,
                               "memory_view": state.get("memory_view") or {},
-                              "evidence_ceiling": ceiling, "baseline": state.get("baseline"),
+                              "evidence_ceiling": ceiling, "baseline": baseline,
                               "rule_rerun": rerun})
     results = [r if isinstance(r, dict) else r.to_dict() for r in results]
     # graded layer: how far valid evidence supports the candidate (runtime/support.py)
     sup = SUP.assess(cop, f, results, state["picture"].get("rows", []), state["tool_calls"], up,
                      state.get("memory_view") or {},
-                     state.get("baseline") if state["classification"] == "llm" else None, rt.case, ceiling)
+                     baseline, rt.case, ceiling)
     if f.get("status") != SUBSTANTIVE and not f.get("rejected_candidate"):
         vs = ("NOT_RUN", "NOT_SUBSTANTIVE", f"finding status {f.get('status')}: {sup['basis']}")
     else:
@@ -779,9 +767,45 @@ def independent_verify(state):
             f["confidence"] = round(ceiling, 3)
     f["qualifications"] = quals
     f["verifier_registry"] = REGISTRY_VERSION
+    return f, results, blocked
+
+
+@timed("independent_verify")
+def independent_verify(state):
+    rec = state.get("recovery") or {}
+    if rec.get("restored_prior_rejection"):
+        # nothing new to verify: the first rejection and its results stand unchanged
+        return {"finding": state["finding"], "verifier_results": rec["prior_verifier_results"],
+                "recovery": {**rec, "outcome": "no_candidate"}}
+    rt = _rt(state)
+    cop = state["cop"]
+    spec = BY_KEY[cop]
+    f = dict(state["finding"])
+    up = state.get("upstream") or {}
+    calls = {c["tool_call_id"]: c for c in state["tool_calls"]}
+    ceiling = evidence_conf(up)
+    rerun = None
+    if state["classification"] == "deterministic":
+        # RP-01 only: the same rules again. Diagnostic, never counted as verification.
+        try:
+            rerun = RULES[cop](_rule_ctx(rt, state, [c for c in state["tool_calls"]
+                                                      if c["requested_by"] == "rules"]))["label"]
+        except Exception:
+            rerun = None
+    f, results, blocked = _verify_candidate(state, f, rerun,
+                                            state.get("baseline") if state["classification"] == "llm" else None)
     if state["classification"] == "llm" and cop in INTERPRETED:
         # the package reads the verified interpretation back into its last question
         f = INTERPRETED[cop](f, state.get("baseline"))
+        pkg = (f.get("cop_specific") or {}).pop("verify_package_finding", None)
+        if pkg is not None:
+            # Incident Response (U-IR1, A-IR1): the model's containment plan was not confirmed, so the package's own
+            # deterministic incident is verified independently, by the same checks, and published if it passes; the
+            # model's output stays in cop_specific.containment_plan and rejected_candidate
+            model_results = results
+            f, results, blocked = _verify_candidate(state, pkg, rerun, None)
+            f = INTERPRETED[cop](f, None, plan=pkg["cop_specific"]["containment_plan"],
+                                 model_results=model_results)
     out = {"finding": f, "verifier_results": results}
     rec = state.get("recovery")
     if rec:

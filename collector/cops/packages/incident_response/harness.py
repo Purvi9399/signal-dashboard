@@ -116,6 +116,46 @@ def ir_block_steps():
     return _ir_conclude("INCIDENT", "BLOCK", "block the agent now")
 
 
+def ir_bad_plan_steps():
+    """R-IR1 (simulated): INCIDENT with the package's REQUEST_APPROVAL, but the plan cites an exposure row the
+    session does not contain; the claim's value does not match the tool's result, so a verifier rejects it."""
+    def s0(p):
+        return FX.plan("upstream findings may amount to an incident", [], ["exposure"], [],
+                       FX.req("get_verified_findings", "verified findings"), FX.req("check_exposure", "exposure"))
+
+    def s1(p):
+        bad = FX.ct(p, "check_exposure", "secret_rows", value=["observable:s1-999"],
+                    statement="the secret was read at observable:s1-999")
+        return FX.conclude("contain the exposure", "INCIDENT", 0.7, [bad], "contain the exposure", "REQUEST_APPROVAL",
+                           "block the write after approval",
+                           detail={"scope_entities": ["observable:s1-999"], "exposure": ["observable:s1-999"],
+                                   "upstream_basis": ["policy_enforcement"],
+                                   "response_proposal": "block the write and rotate the key at observable:s1-999"})
+    return [s0, s1]
+
+
+TAMPER = FX.cm_false("insights.secrets", "CRITICAL", "insights.secrets is CRITICAL")
+
+
+class _tamper_package_finding:
+    """R-IR1 scenario 5 (fault injection, harness only): one claim of the package's own deterministic incident
+    finding is replaced by a metric-state claim the session contradicts, before the existing verifiers run on it.
+    The model's finding, every other COP and every verifier are untouched."""
+    def __enter__(self):
+        from ...runtime.contracts import ORIGIN_RULES
+        self.real = G._verify_candidate
+
+        def wrapped(state, f, *a, **k):
+            if state["cop"] == COP and f.get("origin") == ORIGIN_RULES and f.get("label") == "INCIDENT":
+                f = dict(f, claims=list(f.get("claims") or []) + [TAMPER])
+            return self.real(state, f, *a, **k)
+        G._verify_candidate = wrapped
+        return self
+
+    def __exit__(self, *exc):
+        G._verify_candidate = self.real
+
+
 # name: (rows, artifacts, scripted models {cop: steps()} or None, COPs run)
 WORLDS = {
     "normal_no_incident": (lambda: history() + session(), permissive, None, UP),
@@ -156,6 +196,19 @@ WORLDS = {
     "downstream_contracts": (lambda: history() + session(SECRET), lambda: permissive(risk_register=S.risk_register()),
                              None, WITH_RK),
     "topology_consistent": (lambda: history() + session(SECRET), permissive, None, UP),
+    # R-IR1
+    "r1_verified_incident_model_unavailable": (lambda: history() + session(SECRET), genuine, None, UP),
+    "r1_verified_incident_plan_rejected": (lambda: history() + session(SECRET), genuine, {COP: ir_bad_plan_steps}, UP),
+    "r1_model_claims_no_incident": (lambda: history() + session(SECRET), genuine, {COP: ir_contradict_steps}, UP),
+    "r1_model_requests_block": (lambda: history() + session(SECRET), genuine, {COP: ir_block_steps}, UP),
+    "r1_incident_evidence_fails_verification": (lambda: history() + session(SECRET), genuine, None, UP),
+    "r1_approval_required_without_violation": (lambda: history() + session(), RH.staging_art, None, UP),
+    "r1_partial_recovery_without_incident": (lambda: history() + E.recovery_session("s1", 9), lambda: recovery(1),
+                                             None, UP_RR),
+    "r1_context_producers_neutral_in_vs01": (lambda: history() + session(MCP),
+                                             lambda: permissive(entitlements={S.OPS: {"mcp_servers": ["prod-db"]}}),
+                                             None, UP),
+    "r1_recovery_downstream_deferred": (lambda: history() + session(SECRET), permissive, None, UP),
 }
 
 
@@ -190,7 +243,11 @@ def run_scenario(name, t):
     if name == "memory_precedent":
         store_ = SQLiteStore()
         res["remembered"] = _remembered(store_)
-    out, rt = _case(name, rows, art, models, store_, cops)
+    if name == "r1_incident_evidence_fails_verification":
+        with _tamper_package_finding():
+            out, rt = _case(name, rows, art, models, store_, cops)
+    else:
+        out, rt = _case(name, rows, art, models, store_, cops)
     r = out["results"][COP]
     res["cop"] = {"finding": r["finding"], "result": r}
     before = cops[:cops.index(COP)]
@@ -373,6 +430,52 @@ def _variant(res, k):
 
 
 Q = lambda f, qid: f["cop_specific"]["questions"][qid]["answer"]
+
+def _plan(res):
+    return _cs(res).get("containment_plan") or {}
+
+
+def _vs(res):
+    return _f(res).get("verification_support") or {"components": []}
+
+
+def _vs_item(res, name):
+    return next((c["item"] for c in _vs(res)["components"] if c.get("name") == name), None)
+
+
+def _context_producers():
+    up = yaml.safe_load(open(os.path.join(HERE, "METRICS.yaml")))["upstream"]
+    ground = ("incident", "finding", "abnormal", "evidence_quality")
+    return sorted(u for u, v in up.items() if not any(v.get(k) for k in ground))
+
+
+def _cycle_with(extra):
+    """Whether specs.CONSUMES plus the extra (consumer, producer) edges has a cycle."""
+    g = {k: set(v) for k, v in CONSUMES.items()}
+    for c, p in extra:
+        g.setdefault(c, set()).add(p)
+    seen, stack = set(), set()
+
+    def visit(k):
+        if k in stack:
+            return True
+        if k in seen:
+            return False
+        seen.add(k), stack.add(k)
+        hit = any(visit(p) for p in g.get(k, ()))
+        stack.discard(k)
+        return hit
+    return any(visit(k) for k in list(g))
+
+
+def _rr_deferred():
+    m = yaml.safe_load(open(os.path.join(HERE, "METRICS.yaml")))
+    rec = (m.get("deferred_downstream") or {}).get("recovery_resilience") or {}
+    links = {(x["from"], x["to"]) for x in _topology_doc()["cop_links"]}
+    ok = (bool(rec) and COP not in CONSUMES["recovery_resilience"] and "recovery_resilience" not in consumers(COP)
+          and (COP, "recovery_resilience") not in links and COP not in FEEDBACK.get("recovery_resilience", ()))
+    return ok, rec
+
 
 CHECKS = {
     "decision_contract_valid": lambda r: (_r(r)["decision_problems"] == [], _r(r)["decision_problems"]),
@@ -574,6 +677,53 @@ CHECKS = {
         tuple(BY_KEY[COP].interpretations) == ("NO_INCIDENT", "WATCH", "INCIDENT")
         and _f(r)["label"] in BY_KEY[COP].interpretations + ("INCONCLUSIVE",), BY_KEY[COP].interpretations),
     "topology_doc_matches_runtime_edges": lambda r: _topology_matches(),
+    # R-IR1 checks (GROUND_TRUTH.yaml, revision R-IR1)
+    "plan_unavailable": lambda r: (_plan(r).get("status") == "UNAVAILABLE", _plan(r).get("status")),
+    "plan_rejected": lambda r: (_plan(r).get("status") == "REJECTED" and bool(_plan(r).get("reason")),
+                                (_plan(r).get("status"), _plan(r).get("reason"))),
+    "deterministic_finding_published": lambda r: (
+        _f(r)["origin"] == "computational" and _f(r)["verified"] is True and _f(r)["label"] == "INCIDENT"
+        and _f(r)["severity"] == "HIGH" and _proposal(r) == _status(r)["intervention"]["action"]
+        and _status(r)["intervention"]["containment_plan"] == _plan(r).get("status"),
+        (_f(r)["origin"], _f(r)["verified"], _f(r)["label"], _proposal(r))),
+    "model_output_preserved": lambda r: (
+        (_f(r).get("rejected_candidate") or {}).get("origin") == "llm_hypothesis"
+        and bool((_f(r).get("rejected_candidate") or {}).get("reason"))
+        and (_decision(r)["extensions"][COP].get("containment_plan") or {}).get("model_output") is not None,
+        _f(r).get("rejected_candidate")),
+    "model_label_no_incident_recorded": lambda r: (
+        _plan(r).get("model_label") == "NO_INCIDENT" and (_f(r).get("rejected_candidate") or {}).get("label")
+        == "NO_INCIDENT", (_plan(r).get("model_label"), (_f(r).get("rejected_candidate") or {}).get("label"))),
+    "model_action_block_recorded": lambda r: (
+        _plan(r).get("model_action") == "BLOCK" and _has_limit(r, "IR-5", "MODEL_ACTION_REPLACED")
+        and "stronger intervention" in _plan(r).get("reason", ""), (_plan(r).get("model_action"), _plan(r).get("reason"))),
+    "incident_evidence_rejection_named": lambda r: (
+        _f(r)["status"] == "REJECTED_BY_VERIFIER" and _has_limit(r, "IR-1", "INCIDENT_EVIDENCE_NOT_VERIFIED", "incident_evidence")
+        and (_f(r).get("rejected_candidate") or {}).get("label") == "INCIDENT",
+        (_f(r)["status"], (_f(r).get("rejected_candidate") or {}).get("label"))),
+    "no_containment_plan": lambda r: (not _plan(r) and not r["llm_invocations"], _plan(r)),
+    "partial_recovery_is_finding_not_incident": lambda r: (
+        _b(r, "IR-1")["finding_grounds"] == ["partial_recovery"] and _b(r, "IR-1")["incident_grounds"] == [],
+        _b(r, "IR-1")["finding_grounds"]),
+    "never_resolved_or_contained": lambda r: (_answers(_f(r))["IR-3"] not in ("RESOLVED", "CONTAINED"),
+                                              _answers(_f(r))["IR-3"]),
+    "vs01_context_producers_neutral": lambda r: (
+        _context_producers() == ["classification_tagging", "interaction_discovery", "resource_management",
+                                 "workflow_orchestration"]
+        and all((_vs_item(r, f"upstream:{u}") or {}).get("applicable") is False
+                and (_vs_item(r, f"upstream:{u}") or {}).get("direction") == "neutral" for u in _context_producers()),
+        {u: _vs_item(r, f"upstream:{u}") for u in _context_producers()}),
+    "vs01_grounding_producers_unchanged": lambda r: (
+        all(not c.get("context_only") for c in RH._profile(COP)
+            if c.get("upstream") in ("anomaly_detection", "policy_enforcement", "recovery_resilience")),
+        [(c.get("name"), c.get("context_only")) for c in RH._profile(COP) if c.get("upstream")]),
+    "other_cops_vs01_unchanged": lambda r: (
+        all(not c.get("context_only") for k in BY_KEY if k not in (COP, "risk_mitigation") for c in RH._profile(k))
+        and [c["upstream"] for c in RH._profile("risk_mitigation") if c.get("context_only")] == ["classification_tagging"],
+        [k for k in BY_KEY if any(c.get("context_only") for c in RH._profile(k))]),
+    "rr_downstream_recorded_not_wired": lambda r: _rr_deferred(),
+    "rr_current_edge_would_cycle": lambda r: (
+        _cycle_with([("recovery_resilience", COP)]) and not _cycle_with([]), "IR consumes RR; RR consuming IR closes a cycle"),
     "topological_order_acyclic": lambda r: (len(_order()[0]) == 18, _order()[0]),
     "ir_before_its_consumers": lambda r: (_order()[1], _order()[0]),
 }

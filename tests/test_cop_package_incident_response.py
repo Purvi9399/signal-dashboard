@@ -76,7 +76,7 @@ def test_every_package_file_exists():
 
 def test_harness_meets_every_ground_truth_expectation(bench):
     assert bench["failed"] == [], [(r["scenario"], r["expectation"], r["got"]) for r in bench["failed"]][:5]
-    assert len(bench["results"]) == len(H.truth()) == 30
+    assert len(bench["results"]) == len(H.truth()) == 39
 
 
 def test_every_scripted_model_call_is_simulated(bench):
@@ -92,7 +92,10 @@ def test_every_scripted_model_call_is_simulated(bench):
     ("approval_required_without_violation", "WATCH", "VERIFIED_FINDING"),
     ("exposure_attention", "INCIDENT", "INCIDENT_ATTENTION"),
     ("verified_violation_intervention", "INCIDENT", "INCIDENT_INTERVENTION"),
-    ("violation_without_model", "INCONCLUSIVE", "INCIDENT_UNCONFIRMED"),
+    # A-IR1: a verified deterministic incident is kept when no model is available; only incident evidence that fails
+    # verification is INCIDENT_UNCONFIRMED
+    ("violation_without_model", "INCIDENT", "INCIDENT_INTERVENTION"),
+    ("r1_incident_evidence_fails_verification", "INCONCLUSIVE", "INCIDENT_UNCONFIRMED"),
     ("incomplete_telemetry_insufficient", "INCONCLUSIVE", "INSUFFICIENT_EVIDENCE"),
 ])
 def test_categories_are_kept_apart(bench, name, label, category):
@@ -127,27 +130,48 @@ def test_the_package_never_proposes_pause_block_or_instruct(bench):
         assert f["cop_specific"].get("incident_status", {}).get("intervention", {}).get("executed", []) == [], name
 
 
-def _model_finding(label, action, status="SUBSTANTIVE"):
+def _model_finding(label, action, status="SUBSTANTIVE", plan="plan"):
     return {"origin": ORIGIN_LLM, "label": label, "status": status, "verified": status == "SUBSTANTIVE",
             "confidence": 0.9, "severity": "NONE", "proposed_action": {"action": action, "reason": "x"},
-            "cop_specific": {"detail": {"scope_entities": ["s1"], "response_proposal": "plan"}}}
+            "cop_specific": {"detail": {"scope_entities": ["s1"], "response_proposal": plan}}}
 
 
-def test_read_back_accepts_replaces_and_rejects(bench):
+def test_read_back_publishes_only_a_matching_plan_and_hands_back_the_package_incident(bench):
     base = res(bench, "verified_violation_intervention")["cop"]["finding"]
-    baseline = {"cop_specific": copy.deepcopy(base["cop_specific"]), "severity": "HIGH", "confidence": 0.8}
+    baseline = {"cop_specific": copy.deepcopy(base["cop_specific"]), "severity": "HIGH", "confidence": 0.8,
+                "label": "INCIDENT", "origin": "computational"}
     baseline["cop_specific"]["decision"] = "INCIDENT"
     ok = P.interpreted_incident_response(_model_finding("INCIDENT", "REQUEST_APPROVAL"), baseline)
     assert ok["label"] == "INCIDENT" and ok["severity"] == "HIGH" and ok["confidence"] == 0.8
-    assert ok["cop_specific"]["model_check"]["accepted"] is True
-    rep = P.interpreted_incident_response(_model_finding("INCIDENT", "BLOCK"), baseline)
-    assert rep["proposed_action"]["action"] == "REQUEST_APPROVAL" and rep["cop_specific"]["model_check"]["action_replaced"]
-    rej = P.interpreted_incident_response(_model_finding("NO_INCIDENT", "NONE"), baseline)
-    assert rej["label"] == "INCONCLUSIVE" and rej["rejected_candidate"]["label"] == "NO_INCIDENT"
-    assert answers(rej)["IR-1"] == "INCIDENT_INDICATED" and rej["proposed_action"]["action"] == "WATCH"
-    # a package-decided finding passes through unchanged
+    assert ok["cop_specific"]["containment_plan"]["status"] == "VERIFIED"
+    noplan = P.interpreted_incident_response(_model_finding("INCIDENT", "REQUEST_APPROVAL", plan=None), baseline)
+    assert noplan["cop_specific"]["containment_plan"]["status"] == "UNVERIFIED"
+    # anything else: the model's output is set aside and the package's own incident goes back for verification
+    for model, why in ((_model_finding("INCIDENT", "BLOCK"), "stronger intervention"),
+                       (_model_finding("NO_INCIDENT", "NONE"), "concluded NO_INCIDENT")):
+        out = P.interpreted_incident_response(model, baseline)
+        pkg = out["cop_specific"]["verify_package_finding"]
+        assert pkg["label"] == "INCIDENT" and pkg["origin"] == "computational"
+        assert pkg["cop_specific"]["containment_plan"]["status"] == "REJECTED"
+        assert why in pkg["cop_specific"]["containment_plan"]["reason"]
+        assert pkg["cop_specific"]["containment_plan"]["model_output"]["label"] == model["label"]
+    gone = P.interpreted_incident_response({**_model_finding("INCONCLUSIVE", "WATCH", status="INCONCLUSIVE"),
+                                            "cop_specific": {"stop_reason": "llm_unavailable"}}, baseline)
+    assert gone["cop_specific"]["verify_package_finding"]["cop_specific"]["containment_plan"]["status"] == "UNAVAILABLE"
     plain = {"origin": "computational", "label": "WATCH"}
     assert P.interpreted_incident_response(plain, baseline) is plain
+
+
+def test_an_incident_is_kept_whatever_the_model_does_unless_its_own_evidence_fails(bench):
+    for name, plan in (("r1_verified_incident_model_unavailable", "UNAVAILABLE"),
+                       ("r1_verified_incident_plan_rejected", "REJECTED"), ("r1_model_claims_no_incident", "REJECTED"),
+                       ("r1_model_requests_block", "REJECTED"), ("verified_violation_intervention", "VERIFIED")):
+        f = res(bench, name)["cop"]["finding"]
+        assert (f["label"], f["severity"], f["proposed_action"]["action"], f["verified"]) == \
+            ("INCIDENT", "HIGH", "REQUEST_APPROVAL", True), name
+        assert f["cop_specific"]["containment_plan"]["status"] == plan, name
+    f = res(bench, "r1_incident_evidence_fails_verification")["cop"]["finding"]
+    assert f["label"] == "INCONCLUSIVE" and answers(f)["IR-1"] == "INCIDENT_INDICATED"
 
 
 # ---------------------------------------------------------------- decision influence

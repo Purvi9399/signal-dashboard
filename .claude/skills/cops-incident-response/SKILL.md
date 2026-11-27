@@ -55,9 +55,10 @@ order from that numbering.
    confidence and never erases a ground. Disputed rows alone establish nothing. IR-3 is never RESOLVED until
    resolution records exist.
 7. **The model** is called only for INCIDENT with IR-4 INTERVENTION_JUSTIFIED. It scopes the incident and plans
-   containment. It never sets the label, severity or response: a different action is replaced, and a different
-   label or no conclusion gives INCONCLUSIVE with the answers kept. Tests and the harness use scripted replies
-   (simulated) only.
+   containment. It never sets the label, severity or response. The incident and the plan are separate (D-IR21):
+   a verified deterministic incident is published whatever the model does, and the plan reads VERIFIED,
+   UNVERIFIED, REJECTED or UNAVAILABLE. Only the package's own evidence failing verification gives INCONCLUSIVE.
+   Keep the rejected model output and reason. Tests and the harness use scripted replies (simulated) only.
 8. **Memory and feedback.** Memory precedents and Risk Mitigation's previous-cycle feedback never change an answer.
    Risk Mitigation's current-cycle finding is never an input (no circular reasoning).
 9. Never edit GROUND_TRUTH.yaml to match an output. Mark a correction made after a run in the harness and in

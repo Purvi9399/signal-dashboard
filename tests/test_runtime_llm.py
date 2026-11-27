@@ -48,6 +48,15 @@ def one(cop, provider, budget=None):
     return rt, out["result"], out["finding"]
 
 
+def no_model_conclusion(cop, f):
+    """The finding when the model reached no conclusion. A-IR1 (purvi, 2026-11-27): Incident Response keeps its
+    verified deterministic incident and records the containment plan UNAVAILABLE; every other COP is INCONCLUSIVE."""
+    if cop == "incident_response":
+        return (f["label"] == "INCIDENT" and f["verified"] and f["origin"] == "computational"
+                and f["cop_specific"]["containment_plan"]["status"] == "UNAVAILABLE")
+    return f["label"] == "INCONCLUSIVE" and f["status"] == "INCONCLUSIVE" and not f["verified"]
+
+
 def test_allocation_is_fixed_ten_and_eight():
     assert len(LLM_COPS) == 10 and len(DETERMINISTIC_COPS) == 8
     assert set(LLM_COPS) | set(DETERMINISTIC_COPS) == set(BY_KEY)
@@ -81,15 +90,20 @@ def test_wiring_through_the_provider_interface(cop):
     assert all(i["simulated"] and i["prompt_version"] == f"{cop}/prompt-{PROMPT_REVISION.get(cop, 2)}" for i in inv)
     assert all(i["tools_exposed"] == list(build_profiles()[cop].tools) for i in inv)
     assert all(i["cost_basis"] == "unpriced" and i["cost_usd"] is None for i in inv)   # no price configured
-    assert f["status"] == "INCONCLUSIVE" and f["cop_specific"]["stop_reason"] == "model_inconclusive"
+    assert no_model_conclusion(cop, f) and f["cop_specific"]["stop_reason"] == "model_inconclusive"
 
 
 @pytest.mark.parametrize("cop", MODEL_PATH_COPS)
 def test_unavailable_provider_is_recorded_not_fabricated(cop):
     rt, r, f = one(cop, UnavailableProvider())
-    assert f["label"] == "INCONCLUSIVE" and f["status"] == "INCONCLUSIVE" and not f["verified"]
+    assert no_model_conclusion(cop, f)
     assert f["cop_specific"]["stop_reason"] == "llm_unavailable"
     assert r["llm_invocations"][0]["error"].startswith("unavailable")
+    if cop == "incident_response":
+        # A-IR1: the published finding is the package's own verified incident (origin computational); its
+        # REQUEST_APPROVAL is recorded, never executed, in dry run
+        assert r["proposed_action"]["execution_status"].startswith("NOT_EXECUTED")
+        return
     # the computational baseline is kept, labelled, and not substituted
     assert f["baseline"] is not None and f["baseline"]["origin"] == "computational"
     assert r["proposed_action"]["execution_status"] in ("NOT_EXECUTED_NO_ACTION",)
@@ -100,7 +114,7 @@ def test_timeout_retries_then_stops(cop):
     rt, r, f = one(cop, FixtureProvider(lambda *a: ProviderTimeout("slow")))
     inv = r["llm_invocations"]
     assert [i["retry_count"] for i in inv] == [0, 1] and all(i["timed_out"] for i in inv)
-    assert f["cop_specific"]["stop_reason"] == "llm_timeout" and f["label"] == "INCONCLUSIVE"
+    assert f["cop_specific"]["stop_reason"] == "llm_timeout" and no_model_conclusion(cop, f)
 
 
 @pytest.mark.parametrize("cop", MODEL_PATH_COPS)

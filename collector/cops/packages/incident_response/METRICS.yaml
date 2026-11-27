@@ -322,3 +322,13 @@ operations:
   authority_check: {by: deterministic, code: collector/cops/authority.py:check}
   memory_write: {by: deterministic, code: collector/cops/runtime/graph.py:validate_memory_update}
   decision_record: {by: deterministic, code: collector/cops/runtime/decision.py:build}
+
+# U-IR5 (purvi, 2026-11-27): the intended downstream relationship, recorded and not wired. Recovery & Resilience is
+# a current-cycle input of this COP (specs.CONSUMES), so a current-cycle edge back would close a cycle; behavioural
+# integration waits until Recovery & Resilience is packaged, as a previous-cycle (feedback) edge.
+deferred_downstream:
+  recovery_resilience:
+    source: agents-harness row 10 (downstream Recovery & Resilience, Governance Intelligence)
+    intended: Recovery & Resilience reads a verified INCIDENT and its containment plan to guide restoration
+    edge_when_integrated: previous-cycle feedback (specs.FEEDBACK), verified only
+    status: DEFERRED until Recovery & Resilience is packaged
