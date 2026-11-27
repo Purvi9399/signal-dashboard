@@ -12,6 +12,8 @@ Numbering: COP 8 in the build order; the workbook and `docs/cops/cop_catalogue.j
 
 | # | Date | By | Record |
 |---|---|---|---|
+| A-RK2 | 2026-11-27 | purvi | Revision 1 approved with three final changes: P-RK1 approved, P-RK2 approved with her rule, P-RK3 approved ("Final changes", below). Ground truth first (c4902d9, GROUND_TRUTH.yaml revision R-RK2). With those changes verified, COP 8 is recorded as ACCEPTED (A-RK3) |
+| A-RK3 | 2026-11-27 | recorded on purvi's instruction | ACCEPTED: the final changes meet the approved semantics and every verification run passes (run record under "Final changes"). Stop before COP 9 |
 | A-RK1 | 2026-11-27 | purvi | Conditionally accepted after review of SPEC.md, INTERPRETATION.md and DECISIONS.md. Decisions on U-RK1 to U-RK10 below ("Revision 1"). Ground truth for the new scenarios was written and committed before the code (b8fe5cc, GROUND_TRUTH.yaml revision R-RK1). Final review is due before COP 9 starts |
 
 ## Made in this package
@@ -125,6 +127,53 @@ Shared changes in this revision: `specs.TOPOLOGY_CONSUMES`, `tools` (register va
 calculate_risk_components), `requirements.AVAILABLE_IF` and `UNAVAILABLE_WHY` for risk_register,
 `synthetic.risk_register` (`approved: true`), `cops_topology.json`. VS-01, triage, the verifiers, `specs.metric_keys`,
 `cops/interpret.py`, labels, authority and the scoring formula are unchanged.
+
+## Final changes (A-RK2): P-RK1, P-RK2, P-RK3
+
+purvi's decisions, as given:
+
+- **P-RK1, approved.** "Bind the impact calculation to the evidence supporting the actual counted risk. Use the proposed supporting-evidence sensitivity method, not the highest unrelated sensitivity tier in the session. Preserve the existing risk-register thresholds and formula, and ensure VS-01 independently recomputes the same inputs. Where supporting sensitivity cannot be established, preserve uncertainty rather than assuming a safe value."
+- **P-RK2, approved with this rule.** "APPROVAL_REQUIRED is a pending authorization condition, not a verified violation. It must not independently increase the risk score without additional, independently supported risk evidence. Incident Response WATCH is an advisory condition, not equivalent to INCIDENT; use its underlying independently verified evidence, if any, rather than counting WATCH as an additional signal. Preserve both findings and their reasons in the decision record. Do not double-count evidence or suppress required approval/escalation workflows."
+- **P-RK3, approved.** "Make context-only upstream inputs neutral in VS-01's Risk Mitigation support assessment. Classification & Tagging must remain available as context but neither inflate the score nor count as contradictory risk evidence solely because its classification exists. Do not weaken VS-01 for substantive risk findings or other COPs."
+
+| # | Decision | Alternatives considered | Rationale |
+|---|---|---|---|
+| D-RK19 (P-RK1) | Impact is the highest register impact at the highest recorded `sensitivity_tier` among the supporting rows: this COP's observed rows (counted metrics in a deviation state), its undisputed irreversible rows, and the rows the counted signals cite (`cop_package.rk_supporting_sensitivity`). A counted item is established when one of its rows records a tier; a proposed operation records none. Impact is decided when every counted item is established, or when the recorded tier already reaches the register's highest `min_sensitivity_tier`. Otherwise it lies between the impact at the recorded tier (the tier-0 risks when none is recorded) and the register's highest impact (`rk_impact_bounds`). The same band at both ends is decided. A LOW lower end with a higher upper end leaves RK-2 INCONCLUSIVE (MISSING_DATA, requirement `supporting_sensitivity`). An EMERGING or MATERIAL lower end stands on its positive evidence, and the higher band is named as not excluded (`band_not_excluded`, limitation SUPPORTING_SENSITIVITY_UNKNOWN, contrary line). Thresholds and impact x (signals + irreversible) are unchanged. `tools.calculate_risk_components` returns `supporting_sensitivity_tier` and `supporting_sensitivity_unestablished`, and VS-01 (`support._risk_recomputation`) recomputes the band from them with the same function (`rk_band_range`); an undetermined band is UNKNOWN there. `max_sensitivity_tier` stays for the legacy baseline, and the reading at that tier is recorded (`session_tier_reading`, limitation SESSION_TIER_READING_DIFFERS) | an unrecorded tier as 0 (revision 1's proposal); INCONCLUSIVE whenever the range spans two bands | purvi P-RK1. Taking 0 is the safe value she ruled out. Making an EMERGING lower end INCONCLUSIVE would drop positive evidence (as D-RK7) |
+| D-RK20 (P-RK2) | APPROVAL_REQUIRED (Policy Enforcement) and WATCH (Incident Response) are conditions (`METRICS.yaml upstream ... condition`, `cop_package.RK_CONDITIONS`): kinds PENDING_AUTHORIZATION and ADVISORY. They are never counted and never correlated; each is kept in RK-1 `basis.conditions` and in `risk_status.conditions` with its reason, its source items, the items it shares with counted or own evidence, and the verified upstream findings it cites (`underlying_findings`, with whether each producer is counted). Other independently supported evidence counts on its own; the condition adds nothing to it, so nothing is counted twice. Policy Enforcement's and Incident Response's own findings and proposed actions are untouched (Risk Mitigation runs after them and changes neither) | count APPROVAL_REQUIRED when another signal is present | purvi's rule: "must not independently increase the risk score"; counting it beside other evidence would add a second signal for one risk. The reading is stated for her review |
+| D-RK21 (P-RK3) | In `support._risk`, the component of a context-only producer (`METRICS.yaml upstream ... context_only`) carries `context_only` and `_upstream` returns it as not applicable (`NA`: neutral, excluded from weights). No other component changes, and no other COP's profile carries the flag (test `test_vs01_context_only_component_is_not_applicable_for_risk_mitigation_only`) | relevance "contextual" (still weighed) | purvi P-RK3. Not applicable is the same as the component's absence before revision 1, so VS-01 is neither weakened nor inflated by C&T's presence |
+
+### Ground truth (R-RK2) and superseded expectations
+
+The original 237 expectations stay in GROUND_TRUTH.yaml. 21 of them are replaced by purvi's approved semantics, listed under `superseded` with the reason; the harness reports each as SUPERSEDED and evaluates its replacement. 216 originals are evaluated unchanged.
+
+| Scenario | Replaced | Before | Now | Why |
+|---|---|---|---|---|
+| false_positive_policy_concern | RK-2, RK-4, label, confidence, policy_concern_counted_impact_one, action_none | LOW, impact 1, score 1 | INCONCLUSIVE; impact 1 to 3, score 1 to 3 | the denied write records no tier and the session records none; 0 was assumed (P-RK1) |
+| unrelated_high_sensitivity_low_impact | RK-2, label, confidence, verified, score_three, impact_from_session_tier_kept, bound_impact_proposal_low, impact_binding_limitation_named | EMERGING (session tier 3) | INCONCLUSIVE; impact 1 to 3 | the tier-3 customer read supports no counted risk; the denied write records no tier. Revision 1's proposal read LOW, which assumed 0 |
+| approval_required_without_violation | RK-2, RK-4, label, approval_required_counted_provisionally, pending_approval_flagged, action_watch | EMERGING, score 3 | LOW, score 0; PENDING_AUTHORIZATION recorded; Policy Enforcement still proposes its approval action | P-RK2 |
+| multiple_findings_same_metric | policy_enforcement_correlated_by_source | PE read as a correlated risk finding | PE read as a condition resting on the same secret row; label LOW unchanged | P-RK2 |
+
+New scenarios: approval_required_with_independent_risk (EMERGING: over quota counts alone, the approval adds nothing), preventive_control_succeeded (LOW, score 0: a blocked call, Incident Response WATCH recorded as advisory, C&T OVERSIGHT context and not applicable in VS-01; revision 1 counted WATCH, score 1), supporting_sensitivity_unknown_two_signals (EMERGING, score 2 to 6, MATERIAL not excluded), context_only_neutral_in_vs01, downstream_contracts.
+
+### Changed readings (against revision 1)
+
+| Case | Revision 1 | Final |
+|---|---|---|
+| false_positive_policy_concern | LOW (VS-01 SUPPORTED) | INCONCLUSIVE, no record written |
+| unrelated_high_sensitivity_low_impact | EMERGING | INCONCLUSIVE |
+| approval_required_without_violation | EMERGING, score 3 | LOW, score 0 (VS-01 PROVISIONALLY_SUPPORTED: Policy Enforcement's APPROVAL_REQUIRED is a substantive attention finding that VS-01, unchanged, weighs against LOW) |
+| false_positive_resource_spike | LOW, VS-01 SUPPORTED | LOW, VS-01 PROVISIONALLY_SUPPORTED. This is the first build's decision (checked at f338a5a): revision 1's absent C&T component counted as unknown evidence and raised it; not applicable removes that |
+| every other scenario | | unchanged label, score and VS-01 decision |
+
+Downstream contracts (scenario downstream_contracts, `harness._ir_contract`, `_gi_contract`): Incident Response still receives a verified finding on the previous-cycle edge with finding_id, run_id, decided_at and a label from LOW, EMERGING, MATERIAL, and Risk Mitigation has no current-cycle consumer. Governance Intelligence consumes Classification & Tagging, Recovery & Resilience and Incident Response, not Risk Mitigation, and reads it only from the decision store by label; the vocabulary is unchanged. More INCONCLUSIVE readings can reach the decision store (missing supporting sensitivity), which Governance Intelligence counts as blind spots, as for every COP.
+
+Run record (2026-11-27, final): Risk Mitigation harness 274 of 274 with 21 originals superseded (216 originals
+evaluated unchanged). The first run was 273 of 274: a code defect, not a ground-truth issue. decide_risk_mitigation
+read the new `supporting_sensitivity` reason as a register problem, so the legacy LOW stood and VS-01 rejected it
+(a memory record was written). It was fixed in `register_problem` (only `risk_register*` requirements). The seven
+accepted harnesses are unchanged (RM 133, ID 204, AT 138, PE 238, AD 252, ResM 196, C&T 221). Suite 936 passed, 1
+skipped. Evaluation 25 of 25 (C05 EMERGING, E2E EMERGING, E2E-full LOW). Bench 49 PASS, 1 FAIL, 4 INCONCLUSIVE,
+unchanged; risk_mitigation 3 of 3 PASS; F2 still the recorded live run; no new live call. No paid model was called.
 
 ## Harness corrections after the first run
 

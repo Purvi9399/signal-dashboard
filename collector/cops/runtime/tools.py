@@ -547,22 +547,30 @@ def t_calculate_risk_components(case, a, ctx):
     """The register formula's inputs. A signal is a verified substantive upstream finding with a risk-bearing label
     (packages/risk_mitigation/METRICS.yaml upstream) whose lineage is independent (rules.independent_upstream); a
     quiet or undetermined reading is listed, not counted. An irreversible operation on a row the collectors
-    disagree on is listed as disputed, not counted (packages/risk_mitigation/DECISIONS.md, D-RK3, D-RK6)."""
+    disagree on is listed as disputed, not counted (packages/risk_mitigation/DECISIONS.md, D-RK3, D-RK6). A pending
+    authorization (APPROVAL_REQUIRED) or advisory (WATCH) condition is listed, never counted (P-RK2). The supporting
+    sensitivity is the impact input (P-RK1); max_sensitivity_tier stays for the legacy baseline."""
     up = ctx.get("upstream") or {}
     rows = case.session.rows if case.session else []
     irrev = [r for r in rows if IRREVERSIBLE.search(str(r.get("command") or ""))]
     # this COP's own observed evidence (D-RK16, U-RK3): the rows behind its counted metrics in a deviation state,
     # and the undisputed irreversible operations; a finding resting only on these is the same signal seen again
-    own = {r for e in case.case_events(set(cop_package.rk_counted_metrics()))
-           if e.state in ("EXCEPTION", "CRITICAL") for r in (e.evidence_refs or [])}
-    own |= {f"observable:{r['observable_id']}" for r in irrev if r.get("collectors_agree") is not False}
-    split = cop_package.rk_signal_split(up, own)
+    observed = {r for e in case.case_events(set(cop_package.rk_counted_metrics()))
+                if e.state in ("EXCEPTION", "CRITICAL") for r in (e.evidence_refs or [])}
+    undisputed = [f"observable:{r['observable_id']}" for r in irrev if r.get("collectors_agree") is not False]
+    split = cop_package.rk_signal_split(up, observed | set(undisputed))
+    # P-RK1: the sensitivity of the evidence supporting the counted risk, which VS-01 recomputes from
+    sup = cop_package.rk_supporting_sensitivity(rows, observed, undisputed, split["independent"])
     reverted = [r for r in rows if r.get("reverted_to_earlier")]
     sens = max([r.get("sensitivity_tier") or 0 for r in rows] or [0])
     return {"independent_verified_signals": [u["cop"] for u in split["independent"]],
             "correlated_not_counted": [u["cop"] for u in split["correlated"]],
             "quiet_not_counted": split["quiet"], "undetermined_not_counted": split["undetermined"],
             "context_not_counted": split["context"],
+            "conditions_not_counted": [c["cop"] for c in split["conditions"]],
+            "supporting_sensitivity_tier": sup["supporting_tier"],
+            "supporting_sensitivity_unestablished": sup["unestablished"],
+            "supporting_refs": sup["supporting_refs"],
             "max_sensitivity_tier": sens,
             "irreversible_operations": [f"observable:{r['observable_id']}" for r in irrev
                                         if r.get("collectors_agree") is not False],

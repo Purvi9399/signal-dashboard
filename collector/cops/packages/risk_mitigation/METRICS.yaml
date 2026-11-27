@@ -185,9 +185,11 @@ not_calculated:
 upstream:
   anomaly_detection: {risk: [ANOMALOUS], quiet: [NORMAL]}
   interaction_discovery: {risk: [NEW_ROUTE, PROPAGATING], quiet: [CONTAINED]}
-  policy_enforcement: {risk: [VIOLATION, APPROVAL_REQUIRED], quiet: [ALLOWED]}
+  # purvi, 2026-11-27 (P-RK2): APPROVAL_REQUIRED is a pending authorization condition and WATCH an advisory
+  # condition; both are recorded with their reasons and never counted as a signal
+  policy_enforcement: {risk: [VIOLATION], condition: [APPROVAL_REQUIRED], quiet: [ALLOWED]}
   resource_management: {risk: [EXCESSIVE, UNAUTHORIZED], quiet: [NORMAL, INEFFICIENT]}
-  incident_response: {risk: [INCIDENT, WATCH], quiet: [NO_INCIDENT]}
+  incident_response: {risk: [INCIDENT], condition: [WATCH], quiet: [NO_INCIDENT]}
   # purvi, 2026-11-27 (U-RK1): consumed as context only. A family is a kind, not a risk: listed, never counted
   classification_tagging: {risk: [], quiet: [UNCLASSIFIED], context_only: true}
 

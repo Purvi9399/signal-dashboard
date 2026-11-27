@@ -23,11 +23,12 @@ This is COP 8 in the per-COP build order. The workbook and `docs/cops/cop_catalo
 ## Rules
 
 1. Change METRICS.yaml first, then the code. `cop_package.validate("risk_mitigation")` must return `[]`.
-2. Keep the register formula: impact (highest applicable register impact at the session's highest sensitivity tier) x (independent signals + 1 for an undisputed irreversible operation); thresholds from the register only. Never supply a threshold, impact or likelihood.
+2. Keep the register formula: impact (highest applicable register impact at the supporting evidence's sensitivity tier, P-RK1) x (independent signals + 1 for an undisputed irreversible operation); thresholds from the register only. Never supply a threshold, impact or likelihood.
 3. A signal is a verified substantive consumed finding with a risk-bearing label (`METRICS.yaml upstream`) whose lineage is independent (`rules.independent_upstream`) and which rests on at least one source item not already carried by this COP's own observed evidence or a counted signal (`cop_package.rk_signal_split`, U-RK3). Tool-call ids are never source items. Quiet, undetermined and unverified readings are never signals; Classification & Tagging is context only (U-RK1). A row with `collectors_agree` false never counts as an irreversible operation.
-3a. APPROVAL_REQUIRED and Incident Response WATCH keep a weight of one signal and are flagged (U-RK2). Do not change a weight without purvi's approved rule.
+3a. APPROVAL_REQUIRED and Incident Response WATCH are conditions (P-RK2): recorded with their reasons, never counted or correlated. Do not double-count the evidence under them.
 3b. A register that is not approved or carries no version is unavailable (`tools.risk_register_problem`, U-RK8).
-3c. The bound-impact reading (U-RK7) is a recorded proposal (`impact_binding.applied` false). Do not apply it without approval.
+3c. Impact follows the supporting evidence's recorded sensitivity (P-RK1, `rk_supporting_sensitivity`, `rk_band_range`). Never assume a tier for a row or proposed operation that records none: keep the range. VS-01 recomputes from the same tool fields.
+3d. Classification & Tagging is context only and not applicable evidence in VS-01 (P-RK3).
 4. Keep observed, inferred, verified risk and justified intervention apart (`risk_status`). Observed risk alone is not verified risk. An anomaly, new route or policy concern is not by itself grounds for mitigation.
 5. Controls are recommended, never applied. The action comes from `METRICS.yaml decision` and stays within `specs.permitted_actions`, the triage ceiling and `authority.check`. Never propose BLOCK, PAUSE or INSTRUCT from this package. Never accept residual risk.
 6. A LOW band with RK-1 unanswered is INCONCLUSIVE. A missing register or thresholds keeps MISSING_DEPENDENCY.

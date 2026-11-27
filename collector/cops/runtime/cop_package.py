@@ -3202,10 +3202,15 @@ def _rk_irreversible(session):
 
 
 RK_DECISION_ITEMS = ("DENY", "REQUIRE_APPROVAL")
-# U-RK2 (purvi, 2026-11-27): the mapping is kept; these labels count as one signal, as VIOLATION and INCIDENT do,
-# and are flagged so the reader sees what kind of signal was counted
-RK_SIGNAL_KIND = {("policy_enforcement", "APPROVAL_REQUIRED"): "pending approval: not a verified violation",
-                  ("incident_response", "WATCH"): "watch: not a verified incident"}
+# P-RK2 (purvi, 2026-11-27): conditions, recorded with their reasons and never counted as a signal or correlated
+RK_CONDITIONS = {
+    ("policy_enforcement", "APPROVAL_REQUIRED"): (
+        "PENDING_AUTHORIZATION", "a pending authorization condition, not a verified violation: it does not increase "
+                                 "the score on its own; the approval workflow stays with Policy Enforcement"),
+    ("incident_response", "WATCH"): (
+        "ADVISORY", "an advisory condition, not an incident: the independently verified evidence under it counts "
+                    "through its own producer, never WATCH itself"),
+}
 
 
 def rk_counted_metrics():
@@ -3280,7 +3285,7 @@ def rk_signal_split(upstream, own_refs=()):
     from .rules import independent_upstream
     from ..specs import CONSUMES, topological_order
     pkg = _rk_pkg()
-    risky, quiet, und, context = {}, [], [], []
+    risky, quiet, und, context, conds = {}, [], [], [], {}
     for k in CONSUMES[RK]:
         f = (upstream or {}).get(k)
         if not (f and f.get("verified") and f.get("status") == "SUBSTANTIVE"):
@@ -3288,6 +3293,8 @@ def rk_signal_split(upstream, own_refs=()):
         spec = pkg["upstream"][k]
         if spec.get("context_only"):
             context.append(k)
+        elif f["label"] in spec.get("condition", []):
+            conds[k] = f
         elif f["label"] in spec["risk"]:
             risky[k] = f
         elif f["label"] in spec["quiet"]:
@@ -3300,10 +3307,9 @@ def rk_signal_split(upstream, own_refs=()):
     indep, corr = [], []
     for k in [x for x in topological_order(list(risky)) if x in risky]:
         f = risky[k]
-        kind = RK_SIGNAL_KIND.get((k, f["label"]))
         lin = set(f.get("lineage") or [])
         src = rk_source_items(f, upstream)
-        row = {"cop": k, "label": f["label"], "sources": sorted(src), **({"kind": kind} if kind else {})}
+        row = {"cop": k, "label": f["label"], "sources": sorted(src)}
         if not lin:
             corr.append(dict(row, why="no lineage recorded; cannot show independence"))
         elif lin & seen_lin:
@@ -3318,9 +3324,72 @@ def rk_signal_split(upstream, own_refs=()):
             indep.append(dict(row, lineage=sorted(lin), distinct_sources=sorted(src - seen_src)))
             seen_lin |= lin
             seen_src |= src
-    legacy = [x["cop"] for x in independent_upstream(own, risky)["independent"]]
+    counted = {x["cop"] for x in indep}
+    conditions = []
+    for k in [x for x in topological_order(list(conds)) if x in conds]:
+        f = conds[k]
+        kind, reason = RK_CONDITIONS[(k, f["label"])]
+        src = rk_source_items(f, upstream)
+        byid = {u.get("finding_id"): (c, u) for c, u in (upstream or {}).items() if u}
+        under = [{"cop": byid[r[8:]][0], "label": byid[r[8:]][1].get("label"),
+                  "verified": bool(byid[r[8:]][1].get("verified")), "counted": byid[r[8:]][0] in counted}
+                 for c in f.get("claims") or [] for r in c.get("evidence_refs") or []
+                 if str(r).startswith("finding:") and r[8:] in byid]
+        conditions.append({"cop": k, "label": f["label"], "kind": kind, "reason": reason, "counted": False,
+                           "sources": sorted(src), "shares_counted_or_own": sorted(src & seen_src),
+                           "underlying_findings": under, "finding_id": f.get("finding_id")})
+    # the D-RK5 reading (lineage only, conditions still counted then), recorded for comparison
+    legacy = [x["cop"] for x in independent_upstream(own, {**risky, **conds})["independent"]]
     return {"independent": indep, "correlated": corr, "quiet": quiet, "undetermined": und, "context": context,
-            "lineage_only_independent": legacy}
+            "conditions": conditions, "lineage_only_independent": legacy}
+
+
+def rk_supporting_sensitivity(rows, observed_refs, irreversible_refs, independent):
+    """P-RK1 (purvi, 2026-11-27): the sensitivity of the evidence that supports the counted risk. Supporting rows are
+    this COP's observed rows (counted metrics in a deviation state), its undisputed irreversible rows and the rows
+    the counted signals cite. A counted item (each signal, the irreversible operation) is established when one of its
+    rows carries a recorded sensitivity_tier; a proposed operation carries none."""
+    num = EA.signal_metrics.num
+    by = {f"observable:{r.get('observable_id')}": r for r in rows or []}
+    tier_of = lambda refs: [num(by[x].get("sensitivity_tier")) for x in refs
+                            if x in by and by[x].get("sensitivity_tier") is not None]
+    items = {x["cop"]: sorted(r for r in x.get("sources", []) if str(r).startswith("observable:"))
+             for x in independent}
+    if irreversible_refs:
+        items["irreversible_operation"] = sorted(irreversible_refs)
+    refs = set(observed_refs or ()) | {r for v in items.values() for r in v}
+    known = tier_of(refs)
+    return {"supporting_refs": sorted(refs), "supporting_tier": max(known) if known else None,
+            "items": {k: {"refs": v, "tier": max(tier_of(v)) if tier_of(v) else None} for k, v in items.items()},
+            "unestablished": sorted(k for k, v in items.items() if not tier_of(v))}
+
+
+def rk_impact_bounds(register, supporting):
+    """The impact range from the supporting sensitivity (P-RK1). Lower end: the highest register impact at the
+    highest recorded supporting tier (tier 0 risks when none is recorded). Upper end: the same when every counted item
+    is established or the recorded tier already reaches the register's highest min_sensitivity_tier; otherwise the
+    register's highest impact. No safe value is assumed for an unrecorded tier."""
+    risks = register.get("risks", [])
+    tier = supporting.get("supporting_tier")
+    lo, applies = _rk_impact(register, tier if tier is not None else 0)
+    top = max([r.get("min_sensitivity_tier", 0) for r in risks] or [0])
+    decided = not supporting.get("unestablished") or (tier is not None and tier >= top)
+    hi = lo if decided else max([r.get("impact", 0) for r in risks] or [0])
+    return {"low": lo, "high": hi, "applicable_risks": applies, "decided": decided}
+
+
+def rk_band_range(register, supporting, n):
+    """(band, band not excluded or None, decided) for n counted items: the same band at both ends is decided; a LOW
+    lower end with a higher upper end is undetermined; an EMERGING or MATERIAL lower end stands on its positive
+    evidence and the higher band is named as not excluded."""
+    th = register["thresholds"]
+    b = rk_impact_bounds(register, supporting)
+    lo, hi = _rk_band(b["low"] * n, th), _rk_band(b["high"] * n, th)
+    if lo == hi:
+        return lo, None, True, b
+    if lo == "LOW":
+        return None, hi, False, b
+    return lo, hi, True, b
 
 
 def _rk_own_refs(a1, s, states):
@@ -3363,6 +3432,7 @@ def _rk_upstream(upstream, pkg, own_refs=()):
             continue
         ok = bool(f.get("verified")) and f.get("status") == "SUBSTANTIVE"
         cls = ("CONTEXT" if pkg["upstream"][k].get("context_only") else
+               "CONDITION" if f["label"] in pkg["upstream"][k].get("condition", []) else
                "RISK" if f["label"] in pkg["upstream"][k]["risk"] else
                "QUIET" if f["label"] in pkg["upstream"][k]["quiet"] else "UNDETERMINED") if ok else "NOT_VERIFIED"
         out[k] = {"present": True, "label": f.get("label"), "finding_id": f.get("finding_id"),
@@ -3371,12 +3441,15 @@ def _rk_upstream(upstream, pkg, own_refs=()):
     split = rk_signal_split(up, own_refs)
     for x in split["independent"]:
         out[x["cop"]].update(counted=True, why="independent verified risk signal", sources=x["sources"],
-                             distinct_sources=x["distinct_sources"], **({"kind": x["kind"]} if "kind" in x else {}))
+                             distinct_sources=x["distinct_sources"])
     for x in split["correlated"]:
-        out[x["cop"]].update(why=f"correlated, not counted: {x['why']}", sources=x["sources"],
-                             **({"kind": x["kind"]} if "kind" in x else {}))
+        out[x["cop"]].update(why=f"correlated, not counted: {x['why']}", sources=x["sources"])
+    for x in split["conditions"]:
+        out[x["cop"]].update(why=f"{x['kind']}: {x['reason']}", sources=x["sources"], kind=x["kind"],
+                             shares_counted_or_own=x["shares_counted_or_own"],
+                             underlying_findings=x["underlying_findings"])
     for k, v in out.items():
-        if v["class"] == "RISK":
+        if v["class"] in ("RISK", "CONDITION"):
             v["lineage_only_counted"] = k in split["lineage_only_independent"]
         v.setdefault("why", {"QUIET": f"{v.get('label')} is a quiet reading, not a risk signal",
                              "CONTEXT": f"{v.get('label')}: context only (U-RK1); a family is a kind, not a risk, "
@@ -3396,7 +3469,7 @@ def _rk1(a, s, states, pkg, view):
                  "sources": v.get("sources", []), "lineage_only_counted": v.get("lineage_only_counted"),
                  **({"kind": v["kind"]} if "kind" in v else {})}
                 for k, v in view.items() if v["class"] == "RISK"]
-    verified_up = [k for k, v in view.items() if v["class"] in ("RISK", "QUIET", "UNDETERMINED")]
+    verified_up = [k for k, v in view.items() if v["class"] in ("RISK", "CONDITION", "QUIET", "UNDETERMINED")]
     basis = {"measures": counted, "observed": [f"{m['metric']}@{m['state']}" for m in observed],
              "observed_refs": sorted({r for m in observed for r in m.get("evidence_refs") or []}),
              "irreversible": irrev, "irreversible_disputed": disputed, "inferred": inferred,
@@ -3405,6 +3478,12 @@ def _rk1(a, s, states, pkg, view):
              "not_verified": [{"cop": k, "label": v["label"]} for k, v in view.items() if v["class"] == "NOT_VERIFIED"],
              "context": [{"cop": k, "label": v["label"], "finding_id": v["finding_id"], "counted": False,
                           "why": v["why"]} for k, v in view.items() if v["class"] == "CONTEXT"],
+             "conditions": [{"cop": k, "label": v["label"], "finding_id": v["finding_id"], "kind": v["kind"],
+                             "reason": v["why"], "counted": False, "sources": v.get("sources", []),
+                             "shares_counted_or_own": v.get("shares_counted_or_own", []),
+                             "underlying_findings": v.get("underlying_findings", []),
+                             "lineage_only_counted": v.get("lineage_only_counted")}
+                            for k, v in view.items() if v["class"] == "CONDITION"],
              "absent": [k for k, v in view.items() if v["class"] == "ABSENT"],
              "verified_upstream": verified_up, "telemetry": tel,
              "telemetry_deviating": [m["metric"] for m in tel if m["verdict"] == DEVIATES],
@@ -3467,51 +3546,56 @@ def _rk2(a, s, states, pkg, deps, register, components, upstream):
         basis["previous_reading"] = None
         return INCONCLUSIVE, basis
     th = register["thresholds"]
-    impact, applies = _rk_impact(register, basis["max_sensitivity_tier"])
     signals = [x["cop"] for x in one["inferred"] if x["counted"]]
     irrev = 1 if one["irreversible"] else 0
-    score = impact * (len(signals) + irrev)
-    band = _rk_band(score, th)
-    basis.update(register_version=register.get("version"), thresholds=th, impact=impact, applicable_risks=applies,
+    n = len(signals) + irrev
+    # P-RK1 (purvi, 2026-11-27): impact from the evidence supporting the counted risk, not the session's highest tier
+    sup = rk_supporting_sensitivity(s.rows if s else [], one["observed_refs"], one["irreversible"],
+                                    [x for x in one["inferred"] if x["counted"]])
+    band, not_excluded, decided, bounds = rk_band_range(register, sup, n)
+    impact, applies = bounds["low"], bounds["applicable_risks"]
+    score = impact * n
+    s_impact, _ = _rk_impact(register, basis["max_sensitivity_tier"])
+    s_band = _rk_band(s_impact * n, th)
+    basis.update(register_version=register.get("version"), thresholds=th, impact=impact,
+                 impact_range=[bounds["low"], bounds["high"]], applicable_risks=applies,
+                 supporting_sensitivity=sup,
                  signals_counted=signals + (["irreversible_operation"] if irrev else []),
                  correlated_not_counted=[x["cop"] for x in one["inferred"] if not x["counted"]],
+                 conditions_not_counted=[x["cop"] for x in one["conditions"]],
                  quiet_not_counted=[x["cop"] for x in one["quiet_not_counted"]],
                  irreversible_disputed_not_counted=one["irreversible_disputed"],
-                 score=score, formula=f"impact {impact} x (independent signals {len(signals)} + irreversible {irrev})",
-                 band=band, components={k: comp.get(k) for k in ("independent_verified_signals",
-                                                                "irreversible_operations", "max_sensitivity_tier")},
+                 score=score, score_range=[bounds["low"] * n, bounds["high"] * n],
+                 formula=(f"impact {impact}" + (f" to {bounds['high']}" if bounds["high"] != impact else "")
+                          + f" x (independent signals {len(signals)} + irreversible {irrev})"),
+                 band=band, band_not_excluded=not_excluded,
+                 components={k: comp.get(k) for k in ("independent_verified_signals", "irreversible_operations",
+                                                      "supporting_sensitivity_tier",
+                                                      "supporting_sensitivity_unestablished", "max_sensitivity_tier")},
                  previous_reading=_rk_previous_reading(upstream, s, register, basis["max_sensitivity_tier"]),
-                 signal_kinds={x["cop"]: x["kind"] for x in one["inferred"] if x["counted"] and x.get("kind")},
-                 lineage_only_reading=_rk_lineage_only(one, impact, irrev, th),
-                 impact_binding=_rk_bound_impact(s, register, one, signals, irrev, th, impact))
+                 session_tier_reading={"impact": s_impact, "score": s_impact * n, "band": s_band,
+                                       "differs": s_band != band,
+                                       "note": "the formula before P-RK1: impact at the session's highest "
+                                               "sensitivity tier"},
+                 lineage_only_reading=_rk_lineage_only(one, impact, irrev, th))
+    if not decided:
+        basis["interpretation_reasons"] = [{
+            "code": EA.MISSING_DATA, "requirement": "supporting_sensitivity", "check": None,
+            "detail": (f"no sensitivity tier is recorded for the evidence behind {', '.join(sup['unestablished'])}: "
+                       f"impact is {bounds['low']} to {bounds['high']}, score {bounds['low'] * n} (LOW) to "
+                       f"{bounds['high'] * n} ({not_excluded}); no safe value is assumed (P-RK1)")}]
+        return INCONCLUSIVE, basis
     return {"MATERIAL": "MATERIAL_LEVEL", "EMERGING": "EMERGING_LEVEL", "LOW": "BELOW_THRESHOLDS"}[band], basis
 
 
 def _rk_lineage_only(one, impact, irrev, th):
     """The reading under D-RK5 alone (lineage overlap), before U-RK3 added source-evidence overlap."""
-    sig = [x["cop"] for x in one["inferred"] if x.get("lineage_only_counted")]
+    sig = [x["cop"] for x in one["inferred"] + one["conditions"] if x.get("lineage_only_counted")]
     score = impact * (len(sig) + irrev)
     return {"signals": sig, "score": score, "band": _rk_band(score, th),
-            "note": "D-RK5 counted a finding whose lineage (tool-call ids included) did not overlap; U-RK3 also "
-                    "requires a source item not already carried by this COP's own evidence or a counted signal"}
-
-
-def _rk_bound_impact(s, register, one, signals, irrev, th, impact):
-    """U-RK7 proposal, recorded and never applied: impact from the highest sensitivity tier among the rows that
-    support the counted risk (this COP's observed rows, the irreversible rows and the rows the counted signals
-    cite), not the session's highest tier. A proposed operation carries no tier. No asset criticality is used."""
-    refs = set(one["observed_refs"]) | set(one["irreversible"])
-    for x in one["inferred"]:
-        if x["counted"]:
-            refs |= {r for r in x.get("sources", []) if r.startswith("observable:")}
-    rows = [r for r in (s.rows if s else []) if f"observable:{r.get('observable_id')}" in refs]
-    tier = max([EA.signal_metrics.num(r.get("sensitivity_tier")) for r in rows] or [0])
-    bound, applies = _rk_impact(register, tier)
-    score = bound * (len(signals) + irrev)
-    return {"applied": False, "proposal": "U-RK7", "supporting_refs": sorted(refs), "supporting_tier": tier,
-            "impact": bound, "applicable_risks": applies, "score": score, "band": _rk_band(score, th),
-            "differs": bound != impact,
-            "note": "proposed, not applied: the label keeps the accepted formula (session's highest tier)"}
+            "note": "D-RK5 counted a finding whose lineage (tool-call ids included) did not overlap, conditions "
+                    "included; U-RK3 also requires a source item not already carried by this COP's own evidence or "
+                    "a counted signal, and P-RK2 never counts a condition"}
 
 
 def _rk3(a, s, states, pkg, deps):
@@ -3628,14 +3712,16 @@ def _explain_rk(qid, ans):
             s += f"; disputed irreversible, not counted: {', '.join(b['irreversible_disputed'])}"
         return s
     if qid == "RK-2":
-        ib = b.get("impact_binding") or {}
-        return (f"{b['formula']} = {b['score']} against register {b['register_version']} thresholds "
+        return (f"{b['formula']} = {b['score']}"
+                + (f" to {b['score_range'][1]}" if b["score_range"][1] != b["score"] else "")
+                + f" against register {b['register_version']} thresholds "
                 f"{b['thresholds']}: {b['band']}" + (f"; counted {', '.join(b['signals_counted'])}" if
                                                        b["signals_counted"] else "")
                 + (f"; correlated, not counted: {', '.join(b['correlated_not_counted'])}" if
                    b["correlated_not_counted"] else "")
-                + "".join(f"; {c} is a {k}" for c, k in (b.get("signal_kinds") or {}).items())
-                + (f"; proposed bound impact (U-RK7, not applied) reads {ib['band']}" if ib.get("differs") else ""))
+                + (f"; conditions, not counted: {', '.join(b['conditions_not_counted'])}"
+                   if b.get("conditions_not_counted") else "")
+                + (f"; {b['band_not_excluded']} not excluded" if b.get("band_not_excluded") else ""))
     if qid == "RK-3":
         if o == "NO_EXPOSURE_IDENTIFIED":
             return "no event or finding carries a risk; " + RK_NO_INVENTORY
@@ -3691,23 +3777,29 @@ def _rk_limitations(ans):
                 out.append(D.limitation(D.NOT_CALCULATED, qid, x["metric"], D.NOT_CALCULATED, x["missing_inputs"]))
         for k, v in pkg["not_calculated"].items():
             out.append(D.limitation(D.NOT_CALCULATED, "RK-2", k, D.NOT_CALCULATED, " ".join(v.split())))
-    for cop, kind in (b2.get("signal_kinds") or {}).items():
-        out.append(D.limitation(D.LIMIT_NOT_APPROVED, "RK-2", cop, "SIGNAL_WEIGHT_PROVISIONAL",
-                                f"{cop} counted as one signal, the same weight as a verified violation or incident: "
-                                f"{kind} (U-RK2, mapping kept provisionally)"))
+    for x in b1.get("conditions", []):
+        out.append(D.limitation(D.LIMIT_NOT_APPROVED, "RK-1", x["cop"], "CONDITION_NOT_COUNTED",
+                                f"{x['cop']} reads {x['label']}: {x['reason']} (P-RK2)"))
     lo = b2.get("lineage_only_reading")
     if lo and lo["band"] != b2.get("band"):
         out.append(D.limitation(D.LIMIT_NOT_APPROVED, "RK-2", "lineage_only_reading", "LINEAGE_ONLY_READING_DIFFERS",
                                 f"by lineage alone (D-RK5) the score would be {lo['score']} ({lo['band']}, signals "
                                 f"{lo['signals']}); findings resting on the same source evidence are one signal "
                                 f"(U-RK3)"))
-    ib = b2.get("impact_binding")
-    if ib and ib["differs"]:
-        out.append(D.limitation(D.LIMIT_NOT_APPROVED, "RK-2", "impact", "IMPACT_NOT_BOUND",
-                                f"impact {b2['impact']} comes from the session's highest sensitivity tier "
-                                f"{b2['max_sensitivity_tier']}; the rows supporting the counted risk reach tier "
-                                f"{ib['supporting_tier']} (impact {ib['impact']}, score {ib['score']}, "
-                                f"{ib['band']}). Proposed correction U-RK7, not applied"))
+    sup = b2.get("supporting_sensitivity") or {}
+    if sup.get("unestablished") and b2.get("impact_range") and b2["impact_range"][0] != b2["impact_range"][1]:
+        out.append(D.limitation(D.MISSING_EVIDENCE, "RK-2", "supporting_sensitivity", "SUPPORTING_SENSITIVITY_UNKNOWN",
+                                f"no sensitivity tier recorded for the evidence behind {', '.join(sup['unestablished'])}: "
+                                f"impact {b2['impact_range'][0]} to {b2['impact_range'][1]}, score "
+                                f"{b2['score_range'][0]} to {b2['score_range'][1]}"
+                                + (f"; {b2['band_not_excluded']} is not excluded" if b2.get("band_not_excluded")
+                                   and b2.get("band") else "")))
+    st = b2.get("session_tier_reading")
+    if st and st["differs"]:
+        out.append(D.limitation(D.LIMIT_NOT_APPROVED, "RK-2", "session_tier_reading", "SESSION_TIER_READING_DIFFERS",
+                                f"at the session's highest sensitivity tier {b2['max_sensitivity_tier']} the formula "
+                                f"would read {st['band']} (impact {st['impact']}, score {st['score']}); impact now "
+                                f"follows the supporting evidence (P-RK1)"))
     if b2.get("band"):
         out.append(D.limitation(D.LIMIT_NOT_APPROVED, "RK-2", "confidence", "UNCALIBRATED_CONFIDENCE",
                                 "confidence 0.75 is the legacy rule's fixed value, not calibrated against outcomes "
@@ -3730,6 +3822,8 @@ def _rk_status(ans, label):
                          "disputed": b1.get("irreversible_disputed", [])},
             "inferred": [{k: x[k] for k in ("cop", "label", "finding_id", "counted")} for x in b1.get("inferred", [])],
             "context": [{k: x[k] for k in ("cop", "label", "finding_id")} for x in b1.get("context", [])],
+            "conditions": [{k: x[k] for k in ("cop", "label", "finding_id", "kind", "reason")}
+                           for x in b1.get("conditions", [])],
             "verified": {"band": label if label in ("EMERGING", "MATERIAL") else None,
                          "score": b2.get("score"), "signals_counted": b2.get("signals_counted", []),
                          "register_version": b2.get("register_version")},
@@ -3772,11 +3866,10 @@ def decide_risk_mitigation(questions, evidence_scale=1.0):
                  for r in b1.get("irreversible_disputed", [])]
     contrary += [f"RK-2: {m} in a deviation state, observed as likelihood context and not counted"
                  for m in b2.get("likelihood_context_deviating", [])]
-    contrary += [f"RK-2: {c} counted as {k}" for c, k in (b2.get("signal_kinds") or {}).items()]
-    if (b2.get("impact_binding") or {}).get("differs"):
-        ib = b2["impact_binding"]
-        contrary.append(f"RK-2: impact {b2['impact']} rests on the session's highest sensitivity tier, not on the rows "
-                        f"supporting the counted risk (tier {ib['supporting_tier']}, impact {ib['impact']})")
+    contrary += [f"RK-1: {x['cop']} reads {x['label']}: {x['reason']}; not counted" for x in b1.get("conditions", [])]
+    if b2.get("band_not_excluded") and b2.get("band"):
+        contrary.append(f"RK-2: the supporting evidence's sensitivity is not recorded: {b2['band_not_excluded']} is "
+                        f"not excluded (score up to {b2['score_range'][1]})")
     if label in ("LOW",) and b1.get("observed"):
         contrary.append(f"RK-1: observed {', '.join(b1['observed'])} without an independent verified signal: observed "
                         f"risk, not verified risk")
@@ -3789,6 +3882,7 @@ def decide_risk_mitigation(questions, evidence_scale=1.0):
             "action_reason": reason, "recipients": ["incident_response"] if label in ("EMERGING", "MATERIAL") else [],
             "drivers": drivers, "also_held": [], "contrary": contrary, "questions": trace,
             "limitations": _rk_limitations(ans), "decided": True, "memory_payload": pay, "risk_status": status,
-            "register_problem": (b2.get("interpretation_reasons") or [{}])[0].get("requirement")
+            "register_problem": next((x["requirement"] for x in b2.get("interpretation_reasons") or []
+                                      if str(x.get("requirement", "")).startswith("risk_register")), None)
             if two == INCONCLUSIVE else None,
             "previous_reading": b2.get("previous_reading"), "decision": label}

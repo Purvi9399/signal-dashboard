@@ -48,18 +48,21 @@ counted metrics in a deviation state and its undisputed irreversible operations)
 Producers are taken first (`specs.topological_order`). The lineage-only reading is recorded
 (`basis.lineage_only_reading`, limitation LINEAGE_ONLY_READING_DIFFERS).
 
-APPROVAL_REQUIRED and Incident Response WATCH keep their weight of one signal (U-RK2) and are flagged
-(`basis.signal_kinds`, limitation SIGNAL_WEIGHT_PROVISIONAL). Classification & Tagging is context only (U-RK1):
+APPROVAL_REQUIRED (Policy Enforcement) is a pending authorization condition and WATCH (Incident Response) an
+advisory condition (P-RK2, D-RK20): never counted or correlated, kept in RK-1 `basis.conditions` with their reasons
+and the verified findings they cite, limitation CONDITION_NOT_COUNTED. Classification & Tagging is context only (U-RK1):
 listed in RK-1 `basis.context`, never counted, correlated or scored.
 
 The register must be approved and versioned (U-RK8, `tools.risk_register_problem`). An unapproved or unversioned
 register is treated as unavailable: INCONCLUSIVE, status MISSING_DEPENDENCY, the reason named
 (`risk_register.approval` or `risk_register.version`).
 
-Impact still comes from the session's highest sensitivity tier. The bound-impact reading (U-RK7: the highest tier
-among the rows that support the counted risk; a proposed operation carries no tier) is recorded in
-`basis.impact_binding` with `applied: false`, and named as IMPACT_NOT_BOUND when it differs. It is a proposal and
-changes no label.
+Impact comes from the evidence supporting the counted risk (P-RK1, D-RK19): the highest recorded sensitivity tier
+among this COP's observed rows, its irreversible rows and the rows the counted signals cite. When a counted item has
+no recorded tier and the recorded tiers do not reach the register's highest tier, impact is a range
+(`basis.impact_range`, `score_range`): the same band at both ends is decided; a LOW lower end with a higher upper end
+is INCONCLUSIVE; an EMERGING or MATERIAL lower end stands and the higher band is named as not excluded. The reading
+at the session's highest tier is recorded (`basis.session_tier_reading`).
 
 ## RK-3
 

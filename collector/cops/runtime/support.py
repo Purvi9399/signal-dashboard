@@ -234,8 +234,13 @@ def _risk():
     comps = [C("register_score", "risk_recomputation", "direct", "all", "authoritative_record",
                artifact="risk_register", tools=("read_risk_register", "calculate_risk_components")),
              C("exposure_metrics", "metrics", "supporting", None, "telemetry", metrics=m)]
+    from . import evidence_assessment as EA
+    pkg_up = EA.load_package("risk_mitigation")["upstream"]
     for u in CONSUMES["risk_mitigation"]:
-        comps.append(C(f"upstream:{u}", "upstream", "supporting", None, f"upstream:{u}", upstream=u))
+        # purvi, 2026-11-27 (P-RK3): a context-only input (Classification & Tagging) is not evidence for or against
+        # a Risk Mitigation reading; every other component, and every other COP, is unchanged
+        extra = {"context_only": True} if (pkg_up.get(u) or {}).get("context_only") else {}
+        comps.append(C(f"upstream:{u}", "upstream", "supporting", None, f"upstream:{u}", upstream=u, **extra))
     return comps
 
 
@@ -411,6 +416,8 @@ def _record(ctx, comp, cls, label):
 def _upstream(ctx, comp, cls, label):
     u = comp["upstream"]
     f = (ctx["upstream"] or {}).get(u)
+    if comp.get("context_only"):
+        return NA(f"{u} is a context-only input for {ctx['cop']}: listed, not evidence (P-RK3)")
     if f is None:
         return UNKNOWN(f"{u} finding absent")
     if not (f.get("verified") and f.get("status") == SUBSTANTIVE):
@@ -638,12 +645,25 @@ def _risk_recomputation(ctx, comp, cls, label):
     if not comp_c:
         return UNKNOWN("risk components not calculated", ("calculate_risk_components",))
     cp = _result(comp_c[-1])
-    impact = max([r.get("impact", 0) for r in reg.get("risks", [])
-                  if r.get("min_sensitivity_tier", 0) <= cp.get("max_sensitivity_tier", 0)] or [0])
     signals = len(cp.get("independent_verified_signals") or [])
     irrev = 1 if cp.get("irreversible_operations") else 0
+    if "supporting_sensitivity_tier" in cp:
+        # P-RK1 (purvi, 2026-11-27): impact from the supporting evidence's sensitivity, recomputed here from the
+        # tool's inputs; an unrecorded tier is a range, never a safe value
+        from .cop_package import rk_band_range
+        sup = {"supporting_tier": cp["supporting_sensitivity_tier"],
+               "unestablished": cp.get("supporting_sensitivity_unestablished") or []}
+        got, _, decided, b = rk_band_range(reg, sup, signals + irrev)
+        if not decided:
+            return UNKNOWN(f"register {reg.get('version')}: supporting sensitivity not recorded; impact {b['low']} to "
+                           f"{b['high']}, the band is not determined")
+        impact = b["low"]
+    else:
+        impact = max([r.get("impact", 0) for r in reg.get("risks", [])
+                      if r.get("min_sensitivity_tier", 0) <= cp.get("max_sensitivity_tier", 0)] or [0])
+        got = None
     score = impact * (signals + irrev)
-    got = "MATERIAL" if score >= th["MATERIAL"] else "EMERGING" if score >= th["EMERGING"] else "LOW"
+    got = got or ("MATERIAL" if score >= th["MATERIAL"] else "EMERGING" if score >= th["EMERGING"] else "LOW")
     basis = (f"register {reg.get('version')}: impact {impact} x (independent signals {signals} + irreversible "
              f"{irrev}) = {score}; thresholds EMERGING {th['EMERGING']}, MATERIAL {th['MATERIAL']} -> {got}")
     refs = [f"tool:{reg_c[-1].get('tool_call_id')}", f"tool:{comp_c[-1].get('tool_call_id')}"]

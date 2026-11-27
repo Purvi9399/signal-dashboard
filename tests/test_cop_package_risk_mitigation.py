@@ -96,7 +96,10 @@ def test_labels_actions_and_edges_are_the_existing_ones():
 
 def test_harness_meets_every_ground_truth_expectation(bench):
     assert bench["failed"] == [], bench["failed"][:3]
-    assert bench["passed"] == len(bench["expectations"]) == 237
+    # R-RK2: 21 of the original 237 are superseded with their reasons (GROUND_TRUTH.yaml superseded); every other
+    # original expectation and every replacement is met
+    assert bench["passed"] == len(bench["expectations"]) == 274 and len(bench["superseded"]) == 21
+    assert all(x["status"] == "SUPERSEDED" and x["reason"] for x in bench["superseded"])
 
 
 def test_every_decided_scenario_publishes_a_valid_decision_with_four_findings(bench):
@@ -133,8 +136,10 @@ def test_actions_never_exceed_authority_and_nothing_is_executed(bench):
 
 DENIED_WRITE = {"drivers": ["PE-2"], "questions": {"PE-2": {"basis": {"violations": [
     {"ref": None, "action": "write", "resource": "/prod/x", "decision": "DENY", "stage": "proposed"}]}}}}
-APPROVAL_ON_ROW = {"drivers": ["PE-3"], "questions": {"PE-3": {"basis": {"required": [
-    {"ref": "observable:s1-8", "action": "read", "resource": "/ws/.env", "decision": "REQUIRE_APPROVAL"}]}}}}
+DENY_ON_ROW = {"drivers": ["PE-2"], "questions": {"PE-2": {"basis": {"violations": [
+    {"ref": "observable:s1-8", "action": "read", "resource": "/ws/.env", "decision": "DENY"}]}}}}
+APPROVAL_PENDING = {"drivers": ["PE-3"], "questions": {"PE-3": {"basis": {"required": [
+    {"ref": None, "action": "write", "resource": "/staging/x", "decision": "REQUIRE_APPROVAL"}]}}}}
 
 
 def test_quiet_and_correlated_findings_are_not_signals():
@@ -206,8 +211,8 @@ def test_topology_doc_carries_the_runtime_edges_of_risk_mitigation():
 # ---------------------------------------------------------------- revision 1 (A-RK1)
 
 def test_findings_on_the_same_row_are_one_signal_whatever_their_tool_call_ids():
-    pe = {"verified": True, "status": "SUBSTANTIVE", "label": "APPROVAL_REQUIRED", "lineage": ["tool_call:x"],
-          "cop_specific": APPROVAL_ON_ROW}
+    pe = {"verified": True, "status": "SUBSTANTIVE", "label": "VIOLATION", "lineage": ["tool_call:x"],
+          "cop_specific": DENY_ON_ROW}
     split = P.rk_signal_split({"policy_enforcement": pe}, {"observable:s1-8"})
     assert split["independent"] == [] and split["lineage_only_independent"] == ["policy_enforcement"]
     assert "already carried" in split["correlated"][0]["why"]
@@ -237,10 +242,43 @@ def test_classification_tagging_is_context_and_never_a_signal():
     assert split["context"] == ["classification_tagging"] and split["independent"] == split["correlated"] == []
 
 
-def test_pending_approval_and_watch_are_flagged_not_reweighted(bench):
-    b = bench["results"]["approval_required_without_violation"]["cop"]["finding"]["cop_specific"]["questions"]["RK-2"]
-    assert b["basis"]["score"] == 3 and "not a verified violation" in b["basis"]["signal_kinds"]["policy_enforcement"]
-    assert P.RK_SIGNAL_KIND[("incident_response", "WATCH")] == "watch: not a verified incident"
+def test_approval_required_and_watch_are_conditions_never_signals():
+    pe = {"verified": True, "status": "SUBSTANTIVE", "label": "APPROVAL_REQUIRED", "lineage": ["tool_call:x"],
+          "cop_specific": APPROVAL_PENDING}
+    ir = {"verified": True, "status": "SUBSTANTIVE", "label": "WATCH", "lineage": ["insights.blocked"]}
+    split = P.rk_signal_split({"policy_enforcement": pe, "incident_response": ir})
+    assert split["independent"] == split["correlated"] == []
+    assert [(c["cop"], c["kind"], c["counted"]) for c in split["conditions"]] == [
+        ("policy_enforcement", "PENDING_AUTHORIZATION", False), ("incident_response", "ADVISORY", False)]
+
+
+def test_watch_records_its_underlying_verified_finding_which_counts_through_its_producer():
+    pe = {"verified": True, "status": "SUBSTANTIVE", "label": "VIOLATION", "lineage": ["tool_call:a"],
+          "finding_id": "pe1", "cop_specific": DENIED_WRITE}
+    ir = {"verified": True, "status": "SUBSTANTIVE", "label": "WATCH", "lineage": ["tool_call:b"],
+          "claims": [{"kind": "upstream_finding", "evidence_refs": ["finding:pe1"]}]}
+    split = P.rk_signal_split({"policy_enforcement": pe, "incident_response": ir})
+    assert [x["cop"] for x in split["independent"]] == ["policy_enforcement"]
+    assert split["conditions"][0]["underlying_findings"] == [
+        {"cop": "policy_enforcement", "label": "VIOLATION", "verified": True, "counted": True}]
+
+
+def test_impact_follows_supporting_evidence_and_keeps_uncertainty():
+    reg = S.risk_register()
+    known = {"supporting_tier": 3, "unestablished": ["policy_enforcement"]}
+    assert P.rk_band_range(reg, known, 1)[:3] == ("EMERGING", None, True)        # tier 3 reaches the top tier
+    none = {"supporting_tier": None, "unestablished": ["policy_enforcement"]}
+    assert P.rk_band_range(reg, none, 1)[:3] == (None, "EMERGING", False)        # 1 to 3: LOW to EMERGING
+    assert P.rk_band_range(reg, none, 2)[:3] == ("EMERGING", "MATERIAL", True)   # 2 to 6: EMERGING stands
+    assert P.rk_band_range(reg, {"supporting_tier": 0, "unestablished": []}, 1)[:3] == ("LOW", None, True)
+    assert P.rk_band_range(reg, none, 0)[:3] == ("LOW", None, True)              # nothing counted
+
+
+def test_vs01_context_only_component_is_not_applicable_for_risk_mitigation_only():
+    from cops.runtime.support import profile
+    ct = [c for c in profile(COP) if c["name"] == "upstream:classification_tagging"]
+    assert len(ct) == 1 and ct[0]["context_only"] is True
+    assert not [c for k in BY_KEY if k != COP for c in profile(k) if c.get("context_only")]
 
 
 def test_unapproved_or_unversioned_register_is_unavailable():
@@ -252,9 +290,8 @@ def test_unapproved_or_unversioned_register_is_unavailable():
     assert "version" in risk_register_problem(case(dict(S.risk_register(), version=" ")))
 
 
-def test_impact_binding_is_recorded_and_never_applied(bench):
-    for name, res in bench["results"].items():
-        ib = (res["cop"]["finding"]["cop_specific"]["questions"]["RK-2"]["basis"] or {}).get("impact_binding")
-        assert ib is None or ib["applied"] is False, name
+def test_impact_change_is_explained_by_the_session_tier_reading(bench):
     b = bench["results"]["unrelated_high_sensitivity_low_impact"]["cop"]["finding"]
-    assert b["label"] == "EMERGING" and b["cop_specific"]["questions"]["RK-2"]["basis"]["impact_binding"]["band"] == "LOW"
+    basis = b["cop_specific"]["questions"]["RK-2"]["basis"]
+    assert b["label"] == "INCONCLUSIVE" and basis["session_tier_reading"]["band"] == "EMERGING"
+    assert basis["impact_range"] == [1, 3]

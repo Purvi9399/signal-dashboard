@@ -33,6 +33,12 @@ def truth():
         return yaml.safe_load(f)["scenarios"]
 
 
+def superseded():
+    """R-RK2: expectations replaced by purvi's approved P-RK1/P-RK2 semantics, with the reason (GROUND_TRUTH.yaml)."""
+    with open(os.path.join(HERE, "GROUND_TRUTH.yaml")) as f:
+        return yaml.safe_load(f).get("superseded") or {}
+
+
 QUOTA = {"quotas": {S.OPS: {"token_budget": 10_000_000, "synthetic": True}}}
 
 
@@ -104,6 +110,24 @@ IR_MODEL = {"incident_response": E.ir_steps}
 # simulated), as the C&T harness uses. Ground truth unchanged.
 CT_MODEL = {"classification_tagging": lambda: E.ct_steps(None)}
 
+# R-RK2 rows and scripted replies (GROUND_TRUTH.yaml, revision R-RK2)
+BLOCKED_CALL = dict(observable_type="tool_request", tool_name="Bash", command="curl http://x", tool_use_id="s1-blk",
+                    policy_rule_matched="deny-network", permission_decision="deny", tool_arguments={"c": "curl"},
+                    success=False)
+
+
+def ir_watch_steps():
+    """Incident Response's scripted reply (simulated): a deny rule stopped the call, nothing was exposed: WATCH."""
+    def s0(p):
+        return FX.plan("a deny rule fired", [], ["was anything exposed"], [],
+                       FX.req("get_verified_findings", "verified findings"), FX.req("check_exposure", "exposure"))
+
+    def s1(p):
+        return FX.conclude("a deny rule stopped the call; nothing was exposed", "WATCH", 0.6,
+                           [FX.cm(p, "insights.blocked")], "the control worked; the attempt is worth noting",
+                           "WATCH", "the attempt is worth noting")
+    return [s0, s1]
+
 # R-RK1 rows and artifacts (GROUND_TRUTH.yaml, revision R-RK1)
 PERM_CSV = dict(observable_type="permission_request", tool_name="Read", tool_use_id="s1-csv", permission_decision="allow")
 CUSTOMER_READ = dict(observable_type="tool_request", tool_name="Read", file_path="/ws/data/customers.csv",
@@ -164,6 +188,17 @@ WORLDS = {
     "ct_context_no_inflation": (lambda: history() + session(SECRET), lambda: dict(genuine(), taxonomy=S.taxonomy()),
                                 CT_MODEL, UP_CT),
     "material_escalates_never_applies": (lambda: history() + session(SECRET, RMRF), genuine, IR_MODEL, UP),
+    # R-RK2
+    "approval_required_with_independent_risk": (lambda: history() + session(SECRET, tokens=1500),
+                                                lambda: dict(staging_art(), **OVER_QUOTA), None, UP),
+    "preventive_control_succeeded": (lambda: history() + session(BLOCKED_CALL),
+                                     lambda: dict(permissive(), taxonomy=S.taxonomy()),
+                                     {"incident_response": ir_watch_steps}, UP_CT),
+    "supporting_sensitivity_unknown_two_signals": (lambda: history() + session(tokens=1500),
+                                                   lambda: dict(genuine(), **OVER_QUOTA), None, UP),
+    "context_only_neutral_in_vs01": (lambda: history() + session(SECRET), lambda: dict(genuine(), taxonomy=S.taxonomy()),
+                                     CT_MODEL, UP_CT),
+    "downstream_contracts": (lambda: history() + session(SECRET), genuine, None, UP),
 }
 
 
@@ -214,6 +249,8 @@ def run_scenario(name, t):
     res["cop"] = {"finding": r["finding"], "result": r}
     res["upstream"] = {k: out["results"][k]["finding"] for k in cops[:cops.index(COP)]}
     res["llm_invocations"] = r["llm_invocations"]
+    res["upstream_actions"] = {k: (out["results"][k].get("proposed_action") or {}).get("action")
+                               for k in cops[:cops.index(COP)]}
     if name == "memory_precedent":
         res["without_memory"] = _finding(_case("nomem", rows, art)[0])
     if name == "adversarial_instruction_text":
@@ -302,6 +339,38 @@ def _not_executed(res):
     ok = (not st.startswith("EXECUTED") and (rs.get("intervention") or {}).get("executed") == []
           and pa["action"] not in ("BLOCK", "PAUSE"))
     return ok, (pa["action"], st, (rs.get("intervention") or {}).get("executed"))
+
+
+def _vs(res):
+    return _f(res).get("verification_support") or {"components": []}
+
+
+def _profile(cop):
+    from ...runtime.support import profile
+    return profile(cop)
+
+
+def _ir_contract(res):
+    """Incident Response reads this COP's verified finding on the previous-cycle edge, by finding_id, run_id,
+    decided_at and a label from this COP's interpretations (rules.incident_response, earlier_risk_assessment)."""
+    from ...specs import FEEDBACK, FEEDBACK_VERIFIED_ONLY
+    f, r = _f(res), _r(res)
+    ok = (COP in FEEDBACK["incident_response"] and (COP, "incident_response") in FEEDBACK_VERIFIED_ONLY
+          and f["label"] in BY_KEY[COP].interpretations and f["verified"] is True and bool(f.get("finding_id"))
+          and bool(r.get("run_id")) and bool(r.get("decided_at"))
+          and _decision(res)["recipients"]["notified"] == ["incident_response"]
+          and not [k for k, ups in CONSUMES.items() if COP in ups])
+    return ok, (f["label"], f["verified"], _decision(res)["recipients"])
+
+
+def _gi_contract(res):
+    """Governance Intelligence consumes Classification & Tagging, Recovery & Resilience and Incident Response, not
+    this COP; it reads this COP only from the decision store, by label. The label vocabulary is unchanged."""
+    gi = list(CONSUMES["governance_intelligence"])
+    ok = (COP not in gi and set(gi) == {"classification_tagging", "recovery_resilience", "incident_response"}
+          and set(BY_KEY[COP].interpretations) == {"LOW", "EMERGING", "MATERIAL"}
+          and _f(res)["label"] in set(BY_KEY[COP].interpretations) | {"INCONCLUSIVE"})
+    return ok, (gi, BY_KEY[COP].interpretations)
 
 
 def _topology_doc():
@@ -547,6 +616,55 @@ CHECKS = {
         and "C-block-write" not in json.dumps(_r(r)["proposed_action"].get("executed") or [], default=str)
         and _status(r)["intervention"]["executed"] == [] and _b(r, "RK-4")["executed"] == [],
         (_r(r).get("executed"), _r(r)["proposed_action"].get("execution_status"))),
+    # R-RK2 checks (GROUND_TRUTH.yaml, revision R-RK2)
+    "approval_condition_recorded_not_counted": lambda r: (
+        _up(r, "policy_enforcement")["class"] == "CONDITION" and _up(r, "policy_enforcement")["counted"] is False
+        and [(x["cop"], x["kind"]) for x in _b(r, "RK-1")["conditions"] if x["cop"] == "policy_enforcement"]
+        == [("policy_enforcement", "PENDING_AUTHORIZATION")]
+        and "policy_enforcement" not in _b(r, "RK-2")["signals_counted"]
+        and "policy_enforcement" not in _b(r, "RK-2")["correlated_not_counted"]
+        and any(x["cop"] == "policy_enforcement" and x["reason"] for x in _status(r)["conditions"])
+        and _limitation_present(r, "RK-1", "CONDITION_NOT_COUNTED", "policy_enforcement"),
+        (_up(r, "policy_enforcement"), _b(r, "RK-2").get("signals_counted"))),
+    "approval_condition_same_source": lambda r: (
+        bool(_up(r, "policy_enforcement").get("shares_counted_or_own")), _up(r, "policy_enforcement")),
+    "resource_management_counted_alone": lambda r: (_b(r, "RK-2")["signals_counted"] == ["resource_management"],
+                                                    _b(r, "RK-2")["signals_counted"]),
+    "watch_condition_recorded_not_counted": lambda r: (
+        _up(r, "incident_response")["label"] == "WATCH" and _up(r, "incident_response")["class"] == "CONDITION"
+        and _up(r, "incident_response")["counted"] is False
+        and [x["kind"] for x in _b(r, "RK-1")["conditions"] if x["cop"] == "incident_response"] == ["ADVISORY"]
+        and "incident_response" not in _b(r, "RK-2")["signals_counted"], _up(r, "incident_response")),
+    "vs01_context_not_applicable": lambda r: (
+        any(c.get("name") == "upstream:classification_tagging" and c["item"]["applicable"] is False
+            and c["item"]["direction"] == "neutral" for c in _vs(r)["components"]),
+        [(c.get("name"), c["item"]["direction"], c["item"]["applicable"]) for c in _vs(r)["components"]
+         if "classification" in c.get("name", "")]),
+    "other_cops_vs01_unchanged": lambda r: (
+        all(not c.get("context_only") for k in BY_KEY if k != COP for c in _profile(k)),
+        [k for k in BY_KEY if k != COP and any(c.get("context_only") for c in _profile(k))]),
+    "sensitivity_range_two_to_six": lambda r: (
+        _b(r, "RK-2")["score_range"] == [2, 6] and _b(r, "RK-2")["band"] == "EMERGING"
+        and _b(r, "RK-2")["band_not_excluded"] == "MATERIAL"
+        and _b(r, "RK-2")["supporting_sensitivity"]["supporting_tier"] is None,
+        (_b(r, "RK-2").get("score_range"), _b(r, "RK-2").get("band_not_excluded"))),
+    "material_not_excluded_named": lambda r: (
+        _limitation_present(r, "RK-2", "SUPPORTING_SENSITIVITY_UNKNOWN")
+        and any("MATERIAL is not excluded" in c for c in _f(r)["cop_specific"]["contrary"]), sorted(_limits(r))),
+    "sensitivity_unestablished_named": lambda r: (
+        any(x.get("requirement") == "supporting_sensitivity" for x in _q(r, "RK-2")["sufficiency_reasons"])
+        and _b(r, "RK-2")["band"] is None, _q(r, "RK-2")["sufficiency_reasons"]),
+    "policy_enforcement_counted": lambda r: (_up(r, "policy_enforcement")["counted"] is True, _up(r, "policy_enforcement")),
+    "unrelated_row_not_supporting": lambda r: (
+        _b(r, "RK-2")["max_sensitivity_tier"] == 3 and _b(r, "RK-2")["supporting_sensitivity"]["supporting_tier"] is None
+        and _b(r, "RK-2")["session_tier_reading"]["band"] == "EMERGING",
+        (_b(r, "RK-2").get("supporting_sensitivity"), _b(r, "RK-2").get("session_tier_reading"))),
+    "approval_workflow_not_suppressed": lambda r: (
+        r["upstream"]["policy_enforcement"]["label"] == "APPROVAL_REQUIRED"
+        and r["upstream_actions"]["policy_enforcement"] not in (None, "NONE"),
+        r["upstream_actions"].get("policy_enforcement")),
+    "incident_response_feedback_contract": lambda r: _ir_contract(r),
+    "governance_intelligence_contract": lambda r: _gi_contract(r),
     "topological_order_acyclic": lambda r: (len(_order()[0]) == 18, _order()[0]),
     "rk_after_every_producer": lambda r: (_order()[1], _order()[0]),
     "topology_doc_matches_runtime_edges": lambda r: _topology_matches(),
@@ -576,18 +694,30 @@ def evaluate(name, t, res):
 
 
 def run_all():
-    T = truth()
-    results, rows = {}, []
+    T, SUP = truth(), superseded()
+    results, rows, replaced = {}, [], []
     for name, t in T.items():
         results[name] = run_scenario(name, t)
-        rows += evaluate(name, t, results[name])
+        got = evaluate(name, t, results[name])
+        sup = SUP.get(name)
+        if sup:
+            # the original expectations stay in GROUND_TRUTH.yaml and in this report, marked SUPERSEDED with the
+            # reason; their replacements are evaluated instead
+            out = set(sup["replaces"])
+            replaced += [dict(r, status="SUPERSEDED", reason=" ".join(sup["reason"].split()))
+                         for r in got if r["expectation"] in out]
+            got = [r for r in got if r["expectation"] not in out]
+            got += [dict(r, replacement=True) for r in evaluate(name, {k: v for k, v in sup.items()
+                                                                     if k not in ("reason", "replaces")},
+                                                                results[name])]
+        rows += got
     return {"expectations": rows, "passed": sum(r["ok"] for r in rows), "failed": [r for r in rows if not r["ok"]],
-            "results": results}
+            "superseded": replaced, "results": results}
 
 
 if __name__ == "__main__":
     out = run_all()
-    print(f"{out['passed']} of {len(out['expectations'])} expectations met")
+    print(f"{out['passed']} of {len(out['expectations'])} expectations met; {len(out['superseded'])} superseded")
     for r in out["failed"]:
         print(f"  FAIL {r['scenario']} {r['expectation']}: expected {r['expected']}, got {str(r['got'])[:300]}")
     if len(sys.argv) > 1:
