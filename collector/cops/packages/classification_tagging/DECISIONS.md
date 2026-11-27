@@ -1,7 +1,7 @@
 # Classification & Tagging: decisions
 
 Proposed on 2026-11-26 for purvi's review. Conditionally accepted on 2026-11-27 (A-CT1); revision 1 (D-CT17 to
-D-CT19, R-CT1) awaits her final review. Nothing here changes a label name, the behavioural question, a threshold,
+D-CT19, R-CT1) accepted on 2026-11-27 (A-CT2), the final acceptance of COP 7. The open limitations below stay open. Nothing here changes a label name, the behavioural question, a threshold,
 the taxonomy, `specs.metric_keys`, the legacy rule in `cops/interpret.py`, the metrics engine, VS-01, triage, the
 verifiers or the model prompt. The shared changes are the three upstream edges in D-CT9 and the taxonomy check in
 the requirements gate (D-CT17), both on purvi's instruction, and the matching edges in `cops_topology.json`
@@ -12,6 +12,7 @@ the requirements gate (D-CT17), both on purvi's instruction, and the matching ed
 | # | Date | What purvi decided |
 |---|---|---|
 | A-CT1 | 2026-11-27 | COP 7 conditionally accepted. U-CT1, U-CT2: keep the conservative rules; no category mappings and no observational metric as a trigger without approval. U-CT3: tell unrelated collector disagreement from disagreement on the family indicator; directly disputed evidence cannot by itself establish a verified family (D-CT18). U-CT4: the shared requirements gate checks taxonomy approval and version validity, other COPs unchanged (D-CT17). U-CT5: INCONCLUSIVE approved for missing required classification evidence. U-CT6: reconcile `cops_topology.json` with the approved upstream; validate order, no cycles, downstream (D-CT19). U-CT7: keep the four unavailable metrics with their missing dependencies. U-CT8: specs.py stays the question contract. U-CT9: keep the diagnostic baseline comparison, no label change. U-CT10: keep the confidence formula, marked uncalibrated. Final review before COP 8 |
+| A-CT2 | 2026-11-27 | Revision 1 accepted (8babdef, c6314e6): final acceptance of COP 7. Preserved: U-CT11 (cops_topology.json differs from the runtime outside this COP), U-CT12 (no taxonomy effective date, expiry or supersession), and the documented limitations U-CT1, U-CT2, U-CT7 (four NOT_CALCULATED metrics), U-CT9 and U-CT10 (confidence uncalibrated); a row not cross-checked counts as undisputed. COP 8 authorized |
 
 ## Made in this package
 
