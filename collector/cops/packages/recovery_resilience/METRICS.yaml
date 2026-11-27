@@ -1,0 +1,311 @@
+# Recovery & Resilience: machine-readable question contract.
+# Loaded by collector/cops/runtime/cop_package.py and validated by
+# tests/test_cop_package_recovery_resilience.py. The Markdown files beside it
+# explain this file; where they differ, this file is what the runtime uses.
+#
+# Build order: the tenth COP packaged (COP 10 of the per-COP verification, approved by purvi 2026-11-27). The
+# workbook and docs/cops/cop_catalogue.json number Recovery & Resilience 13; their numbering is not a build order.
+
+cop: recovery_resilience
+contract: cop_metrics/1
+version: 2026-11-27.1
+
+sources:
+  questions: >-
+    RR-1 to RR-4: COPS- implementation 1.xlsx, sheet COMPLETE_DELEGATION_DATA, rows 195, 199, 201, 203
+    (behavioural question row 195, column 2: "Has the system recovered from disruption, and can it continue
+    operating reliably?"); field lists in column 4 of each row; external data in column 5 of rows 197 to 203;
+    metric list row 205 (31 metrics). Row 197 carries a field list and external data ("Upstream Incident Response
+    findings, governance intervention records, workflow state before disruption and event timestamps") and no
+    question text: it is read as RR-1's inputs (DECISIONS.md D-RR1, U-RR1). Inputs, tools and authority: sheet
+    agents-harness row 17 ("Incident/action outcome, restored state, retries, post-intervention evidence";
+    "Incident history, service/agent-state lookup, health checks, recovery-status tool"; "Observe, verify
+    recovery, recommend further restoration, initiate approved recovery"; "Must verify actual recovery, not just
+    action success. Monitor recurrence, time-to-recovery, partial restoration"; "Establish baseline -> inspect
+    recovery -> verify system health -> compare residual issues -> close/escalate"). Sheet1 row 75 ("Rules.
+    Checks recovery records to see whether failures were resolved") and row 92 (tools get_recovery_records,
+    validate_checkpoints). many-to-many mapping row 18 (actions WATCH, ALERT). cops/specs.py keeps its own
+    wording ("After failure or intervention, did the system return to a viable state without compounding the
+    problem?"), unchanged.
+  metric_mapping: >-
+    COPS_METRIC_MAPPING.md, sha256 5bd3c16f1ba26b297644259faaedfe75c1f219980e5c046a9bb56308c38e951e
+    (collector/metric_registry.json, consumers = recovery_resilience: 31 metrics; 15 category E,
+    IMPLEMENTED_EXISTING; 6 category S, IMPLEMENTED in the opt-in catalogue with no approved threshold; 10
+    NOT_IMPLEMENTED: 1 category S, 4 category A, 2 category D, 1 category Q, 2 category O). The document lists the
+    metrics per COP, not per question: each metric is assigned to the question its meaning answers (D-RR2). No
+    code-only pair.
+  rule: >-
+    cops/runtime/rules.py recovery_resilience (there is no RuleInterpreter method), in this order: an
+    irreversible command (tools.IRREVERSIBLE on the command field) is IRREVERSIBLE 0.85 HIGH ALERT; no recovery
+    record store is INCONCLUSIVE (MISSING_DEPENDENCY; WATCH when a failure metric is in a deviation state, else
+    NONE); an empty store is INCONCLUSIVE ("no recovery in this case"); a checkpoint whose recomputed hash does not
+    match, or every restore passing none of its post-restore checks, is FAILED_RECOVERY 0.85 HIGH ALERT; every
+    restore passing all of its checks is RECOVERED 0.85 NONE; otherwise PARTIAL_RECOVERY 0.8 MEDIUM WATCH. This
+    package keeps the grounds, severities, confidences and actions, and changes what is recorded around them
+    (DECISIONS.md).
+  labels: >-
+    cops/specs.py interpretations: RECOVERED, PARTIAL_RECOVERY, FAILED_RECOVERY, IRREVERSIBLE. permitted_actions:
+    NONE, WATCH, ALERT (cops/authority.py tiers OBSERVE, RECORD, ALERT). profiles.DETERMINISTIC_COPS: decided by
+    rules, no model.
+
+mapping:
+  insights.failed: {used_by: [RR-1]}
+  insights.stalled: {used_by: [RR-1]}
+  insights.blocked: {used_by: [RR-1]}
+  recovery_disruption_count:
+    used_by: [RR-1]
+    note_reported: >-
+      IMPLEMENTED catalogue metric with no approved threshold (state NO_THRESHOLD): its value is reported, never
+      judged.
+  insights.reverted: {used_by: [RR-2]}
+  recovery_time:
+    used_by: [RR-2]
+    note_reported: >-
+      IMPLEMENTED catalogue metric with no approved threshold (state NO_THRESHOLD): its value is reported, never
+      judged. cops/specs.py still lists recovery_time as missing; the catalogue now computes it.
+  recovery_workflow_resumption_rate:
+    used_by: [RR-2]
+    note_reported: >-
+      IMPLEMENTED catalogue metric with no approved threshold (state NO_THRESHOLD): its value is reported, never
+      judged. Work resuming after a failure is recovery observed, not recovery verified.
+  recovery_action_success_rate:
+    used_by: [RR-2]
+    note: >-
+      NOT_CALCULATED. Registry category A, NOT_IMPLEMENTED: needs records of COPS actions and their outcomes; none
+      are stored yet. RR-2 lists each recovery record's execution status instead and computes no rate.
+  recovery_action_completion:
+    used_by: [RR-2]
+    note: >-
+      NOT_CALCULATED. Registry category A, NOT_IMPLEMENTED: needs records of COPS actions and their outcomes; none
+      are stored yet.
+  recovery_state_restoration:
+    used_by: [RR-2]
+    note: >-
+      NOT_CALCULATED. Registry category S, NOT_IMPLEMENTED. Missing input: the definition (what counts as a
+      failure that touched files); proposal file_modify rows with reverted_to_earlier = true / failures that
+      touched files, not approved. RR-2 reads restoration from the recovery records' post-restore checks.
+  recovery_verification_success_rate:
+    used_by: [RR-2]
+    note: >-
+      NOT_CALCULATED as a metric. Registry category A, NOT_IMPLEMENTED: needs records of COPS actions and their
+      outcomes. RR-2 lists each record's post-restore checks and checkpoint integrity; it computes no rate.
+  insights.retry: {used_by: [RR-3]}
+  insights.repetition: {used_by: [RR-3]}
+  recovery_failure_rate:
+    used_by: [RR-3]
+    note_reported: >-
+      IMPLEMENTED catalogue metric with no approved threshold (state NO_THRESHOLD): its value is reported, never
+      judged.
+  recovery_retry_recurrence:
+    used_by: [RR-3]
+    note_reported: >-
+      IMPLEMENTED catalogue metric with no approved threshold (state NO_THRESHOLD): its value is reported, never
+      judged.
+  recovery_stability_duration:
+    used_by: [RR-3]
+    note_reported: >-
+      IMPLEMENTED catalogue metric with no approved threshold (state NO_THRESHOLD): its value is reported, never
+      judged.
+  recovery_post_intervention_failure_rate:
+    used_by: [RR-3]
+    note: >-
+      NOT_CALCULATED as a metric. Registry category A, NOT_IMPLEMENTED: needs intervention records plus later
+      observables. RR-3 lists failures recorded after the latest restoration time instead and computes no rate.
+  recovery_incident_recurrence_rate:
+    used_by: [RR-3]
+    note: >-
+      NOT_CALCULATED. Registry category D, NOT_IMPLEMENTED: repeat Incident Response decisions for the same
+      session or operator, which this COP cannot read in the current cycle (Incident Response consumes it:
+      CONNECTIONS.md, P-RR1). Validated recovery_outcome precedents are listed instead, with no effect.
+  insights.duration_outlier: {used_by: [RR-3]}
+  insights.token_outlier: {used_by: [RR-3]}
+  activity.action_rate_ratio: {used_by: [RR-3]}
+  telemetry.collector_coverage: {used_by: [RR-4]}
+  telemetry.source_agreement: {used_by: [RR-4]}
+  telemetry.turn_linkage: {used_by: [RR-4]}
+  telemetry.lane_linkage: {used_by: [RR-4]}
+  telemetry.unknown_share: {used_by: [RR-4]}
+  insights.outside: {used_by: [RR-4]}
+  recovery_evidence_sufficiency:
+    used_by: [RR-4]
+    note: >-
+      NOT_CALCULATED as a metric. Registry category D, NOT_IMPLEMENTED; the proposal (evidence_confidence of the
+      Behavior Analytics decision) is not approved. RR-4 lists the telemetry measures and the post-recovery window
+      instead.
+  recovery_post_recovery_health_score:
+    used_by: [RR-4]
+    note: >-
+      NOT_CALCULATED. Registry category Q, NOT_IMPLEMENTED. Missing input: a definition (composite; definition
+      needed). No health score is approximated.
+  recovery_residual_failure_risk:
+    used_by: [RR-4]
+    note: >-
+      NOT_CALCULATED as a metric. Registry category O, NOT_IMPLEMENTED: RR's own assessment, not a calculated
+      metric. Residual risk is Risk Mitigation's question.
+  recovery_additional_intervention_required:
+    used_by: [RR-4]
+    note: >-
+      NOT_CALCULATED as a metric. Registry category O, NOT_IMPLEMENTED: RR's own decision. RR-4's answer
+      (MONITORING_REQUIRED, INTERVENTION_REQUIRED) is that decision.
+
+# cops/specs.py missing_metrics for this COP that are not computed. recovery_time is now a catalogue metric
+# (mapped above). Each is reported as NOT_CALCULATED with the input it lacks. None is approximated.
+not_calculated:
+  recovery_success_after_failure: >-
+    NOT_CALCULATED as a metric. No registry metric. RR-2 reads each recovery record's post-restore checks and
+    checkpoint integrity instead (rules.recovery_resilience).
+  irreversible_change: >-
+    NOT_CALCULATED as a metric. No registry metric. RR-2 reads irreversible commands with tools.IRREVERSIBLE (the
+    legacy rule's pattern) on rows the collectors do not dispute; it computes no measure.
+
+# Consumed COPs (specs.CONSUMES["recovery_resilience"]): Behavior Analytics only. Its finding is context: a
+# behaviour pattern rests on the same failure metrics this COP reads, so it is listed with its source items and
+# never grounds a recovery reading (D-RR8). Incident Response is downstream in the current cycle and is not read
+# (CONNECTIONS.md; P-RR1 proposes a previous-cycle edge for approval).
+upstream:
+  behavior_analytics: {context: [POOR_RECOVERY, LOOPING, DRIFTING, OVER_EXPLORING], quiet: [STABLE]}
+
+# Optional fields of a recovery record (case artifact recovery_records), read only when present. The legacy record
+# (checkpoint_id, checkpoint_content, checkpoint_hash, restored_at, post_restore_checks) keeps its meaning: a
+# restoration that ran at restored_at, verified by its post-restore checks. Sources: COMPLETE_DELEGATION_DATA row
+# 199 column 5 ("Intended recovery action, action execution record, expected recovery outcome and verification
+# results") and row 197 column 5 ("governance intervention records ... event timestamps"). D-RR4, U-RR2.
+record_fields:
+  action: the intended recovery action (rollback, restore, restart, retry, block, ...)
+  recommended_by: who recommended it
+  approval: "{status: APPROVED | PENDING | REJECTED | NOT_REQUIRED, by, at}"
+  execution: "{status: NOT_STARTED | ATTEMPTED | EXECUTED | FAILED, at, ref}: ref is the observable id of the step"
+  expected_outcome: the restored state the action should produce
+  disruption_refs: observable ids of the failure, stall or block the recovery answers
+
+questions:
+  RR-1:
+    question: Has a failure, incident or governance intervention disrupted the agent's workflow?
+    fields: [observable_id, observable_type, session_id, turn_id, agent_id, agent_type, operator_id, tool_use_id,
+             tool_name, tool_arguments, tool_result, tool_interrupted, tool_timeout_ms, tool_duration_ms, success,
+             status, error_type, error_message, exit_code, command, file_path, file_change_kind,
+             reverted_to_earlier, hung_seconds, loop_count, turn_count, stop_reason, permission_decision,
+             denial_reason, escalation_flag, risk_markers, background_tasks, scheduled_jobs, raw_ref]
+    requires:
+      - {metric: insights.failed, kind: REQUIRED}
+      - {metric: insights.stalled, kind: OPTIONAL}
+      - {metric: insights.blocked, kind: OPTIONAL}
+      - {metric: recovery_disruption_count, kind: OPTIONAL}
+    verified: []
+    blocking: []
+    outcomes: [DISRUPTED, NOT_DISRUPTED]
+
+  RR-2:
+    question: Has the affected system, resource or workflow been restored to an acceptable state?
+    fields: [observable_id, observable_type, session_id, turn_id, agent_id, tool_name, tool_arguments, tool_result,
+             success, status, error_type, error_message, exit_code, file_path, file_change_kind, content_hash,
+             reverted_to_earlier, workspace, repo_name, git_branch, git_commit, plan_item, plan_status,
+             response_is_final, background_tasks, raw_ref]
+    requires:
+      - {metric: insights.reverted, kind: REQUIRED_WHEN_APPLICABLE}
+      - {metric: recovery_time, kind: OPTIONAL}
+      - {metric: recovery_workflow_resumption_rate, kind: OPTIONAL}
+      - {metric: recovery_action_success_rate, kind: OPTIONAL}
+      - {metric: recovery_action_completion, kind: OPTIONAL}
+      - {metric: recovery_state_restoration, kind: OPTIONAL}
+      - {metric: recovery_verification_success_rate, kind: OPTIONAL}
+    verified: []
+    blocking: []
+    depends_on: [RR-1]
+    outcomes: [RESTORED_VERIFIED, PARTIALLY_RESTORED, NOT_RESTORED, IRREVERSIBLE_CHANGE, NOTHING_TO_RESTORE]
+
+  RR-3:
+    question: Are failures, retries or incidents recurring after recovery?
+    fields: [observable_id, observable_type, session_id, turn_id, agent_id, tool_use_id, tool_name, tool_arguments,
+             tool_result, tool_duration_ms, success, status, error_type, error_message, exit_code, loop_count,
+             turn_count, hung_seconds, tool_interrupted, permission_decision, violation_count, risk_markers, raw_ref]
+    requires:
+      - {metric: insights.retry, kind: REQUIRED_WHEN_APPLICABLE}
+      - {metric: insights.repetition, kind: OPTIONAL}
+      - {metric: recovery_failure_rate, kind: OPTIONAL}
+      - {metric: recovery_retry_recurrence, kind: OPTIONAL}
+      - {metric: recovery_stability_duration, kind: OPTIONAL}
+      - {metric: recovery_post_intervention_failure_rate, kind: OPTIONAL}
+      - {metric: recovery_incident_recurrence_rate, kind: OPTIONAL}
+      - {metric: insights.duration_outlier, kind: OPTIONAL}
+      - {metric: insights.token_outlier, kind: OPTIONAL}
+      - {metric: activity.action_rate_ratio, kind: OPTIONAL}
+    verified: []
+    blocking: []
+    depends_on: [RR-2]
+    outcomes: [RECURRING, NOT_RECURRING, NO_RECOVERY_TO_FOLLOW]
+
+  RR-4:
+    question: Is there sufficient post-recovery evidence to confirm stability, or is additional monitoring or intervention required?
+    fields: [observable_id, observable_type, collector, session_id, turn_id, agent_id, parent_agent_id, tool_use_id,
+             tool_name, tool_result, tool_duration_ms, success, status, error_type, error_message, hung_seconds,
+             loop_count, turn_count, permission_decision, violation_count, risk_markers, background_tasks,
+             scheduled_jobs, raw_ref]
+    requires:
+      - {metric: telemetry.collector_coverage, kind: OPTIONAL}
+      - {metric: telemetry.source_agreement, kind: OPTIONAL}
+      - {metric: telemetry.turn_linkage, kind: OPTIONAL}
+      - {metric: telemetry.lane_linkage, kind: OPTIONAL}
+      - {metric: telemetry.unknown_share, kind: OPTIONAL}
+      - {metric: insights.outside, kind: OPTIONAL}
+      - {metric: recovery_evidence_sufficiency, kind: OPTIONAL}
+      - {metric: recovery_post_recovery_health_score, kind: OPTIONAL}
+      - {metric: recovery_residual_failure_risk, kind: OPTIONAL}
+      - {metric: recovery_additional_intervention_required, kind: OPTIONAL}
+    verified: []
+    blocking: []
+    depends_on: [RR-1, RR-2, RR-3]
+    outcomes: [STABILITY_CONFIRMED, MONITORING_REQUIRED, INTERVENTION_REQUIRED, NOTHING_TO_CONFIRM]
+
+# RR-2 and RR-3 give the label: IRREVERSIBLE_CHANGE -> IRREVERSIBLE; NOT_RESTORED -> FAILED_RECOVERY;
+# PARTIALLY_RESTORED -> PARTIAL_RECOVERY; RESTORED_VERIFIED -> RECOVERED, or PARTIAL_RECOVERY when RR-3 reads
+# RECURRING (D-RR7). NOTHING_TO_RESTORE, and an RR-2 that cannot be answered, give INCONCLUSIVE with the recovery
+# category named. Severity follows the label (the legacy rule's); the action is RR-4's.
+labels:
+  IRREVERSIBLE_CHANGE: IRREVERSIBLE
+  NOT_RESTORED: FAILED_RECOVERY
+  PARTIALLY_RESTORED: PARTIAL_RECOVERY
+  RESTORED_VERIFIED: RECOVERED
+  NOTHING_TO_RESTORE: INCONCLUSIVE
+  INCONCLUSIVE: INCONCLUSIVE
+recurring_label: PARTIAL_RECOVERY
+
+severity:
+  IRREVERSIBLE: HIGH
+  FAILED_RECOVERY: HIGH
+  PARTIAL_RECOVERY: MEDIUM
+  RECOVERED: NONE
+  INCONCLUSIVE: NONE
+
+confidence:
+  IRREVERSIBLE: 0.85
+  FAILED_RECOVERY: 0.85
+  RECOVERED: 0.85
+  PARTIAL_RECOVERY: 0.8
+  INCONCLUSIVE: 0.0
+
+# RR-4's answer -> the action proposed. Never above ALERT (specs.permitted_actions); nothing is executed by this COP.
+responses:
+  INTERVENTION_REQUIRED: ALERT
+  MONITORING_REQUIRED: WATCH
+  STABILITY_CONFIRMED: NONE
+  NOTHING_TO_CONFIRM: NONE
+
+# No model: every reading is decided by the package (profiles.DETERMINISTIC_COPS; Sheet1 row 75 "Rules").
+model_role: none
+
+# Metric states that count as observed (the states cops/interpret.py treats as hot). WARNING does not count.
+deviation_states: [EXCEPTION, CRITICAL]
+
+operations:
+  compute_metrics: {by: deterministic, code: collector/signal_metrics.py:compute}
+  read_recovery_records: {by: deterministic, code: collector/cops/runtime/tools.py:t_get_recovery_records}
+  validate_checkpoints: {by: deterministic, code: collector/cops/runtime/tools.py:t_validate_checkpoints}
+  assess_evidence: {by: deterministic, code: collector/cops/runtime/evidence_assessment.py:assess}
+  observe_questions: {by: deterministic, code: collector/cops/runtime/cop_package.py:observe_recovery_resilience}
+  decide_label: {by: deterministic, code: collector/cops/runtime/cop_package.py:decide_recovery_resilience}
+  verify_finding: {by: deterministic, code: collector/cops/runtime/verifiers.py}
+  select_action: {by: deterministic, code: collector/cops/runtime/triage.py}
+  authority_check: {by: deterministic, code: collector/cops/authority.py:check}
+  memory_write: {by: deterministic, code: collector/cops/runtime/graph.py:validate_memory_update}
+  decision_record: {by: deterministic, code: collector/cops/runtime/decision.py:build}
