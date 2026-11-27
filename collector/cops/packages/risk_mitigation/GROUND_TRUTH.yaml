@@ -179,3 +179,95 @@ scenarios:
     description: the genuine-risk session with every producer of Risk Mitigation run before it
     cop_label: [EMERGING]
     checks: [topological_order_acyclic, rk_after_every_producer, topology_doc_matches_runtime_edges]
+
+  # ------------------------------------------------------------------------------------------------------------
+  # Revision R-RK1 (2026-11-27), written before the revision's code, from purvi's decisions on U-RK1 to U-RK10
+  # (DECISIONS.md, A-RK1). The scenarios above keep their expectations unchanged. The rules these follow:
+  #   - U-RK3: a risk-bearing finding counts only when it rests on at least one source item that this COP's own
+  #     observed evidence and the signals already counted do not carry. Source items are the observable rows,
+  #     metrics, proposed operations and quota records a finding cites (lineage metric ids, claims, and the driver
+  #     questions' decision items and deviating measures). Tool-call ids are not source items: two findings with
+  #     different tool-call ids over the same row are one signal. Findings are taken producers first
+  #     (specs.topological_order), so a finding derived from another is not counted ahead of its source.
+  #   - U-RK1: Classification & Tagging is consumed as context only; it is listed and never counted, correlated
+  #     or scored.
+  #   - U-RK2: the label mapping is kept; APPROVAL_REQUIRED and Incident Response WATCH still count as one signal
+  #     each when independent, and each is flagged as not a verified violation or incident.
+  #   - U-RK8: a register is valid only when approved is true and version is a non-empty string; otherwise it is
+  #     treated as unavailable (status MISSING_DEPENDENCY): it establishes no band and no control.
+  #   - U-RK7: the label keeps the accepted formula (impact from the session's highest sensitivity tier). The
+  #     bound-impact reading (impact from the highest tier among the rows that support the counted risk; a proposed
+  #     operation carries no tier) is recorded as a proposal, never applied.
+  # "staging policy": read * allow, write /staging/* require_approval, exec and tool allow, with the proposed write
+  # /staging/app.cfg. "customer read": an approval request for the call, then a Read of /ws/data/customers.csv at
+  # sensitivity_tier 3 with no secret. "over quota": 1,500 tokens against a quota of 1,200 for the agent.
+
+  multiple_findings_same_metric:
+    description: >-
+      the secret under the sensitive policy and no proposed write; Incident Response runs with a scripted model
+      (simulated) and Classification & Tagging with the synthetic taxonomy. Policy Enforcement's approval finding,
+      Incident Response's incident and Classification & Tagging's family all rest on the secret row this COP
+      observes itself
+    questions: {RK-1: RISK_INDICATED, RK-2: BELOW_THRESHOLDS, RK-4: NOT_REQUIRED}
+    # LOW when VS-01 supports it. VS-01 is unchanged (purvi) and reads upstream independence by lineage; if it does
+    # not support LOW the verifier's conservative INCONCLUSIVE stands, and the band is still below thresholds
+    cop_label: [LOW, INCONCLUSIVE]
+    checks: [decided_without_model, no_signal_counted, policy_enforcement_correlated_by_source,
+             incident_response_correlated_not_counted, classification_tagging_context_only,
+             lineage_only_reading_recorded, observed_secret_named, no_escalation]
+
+  independent_distinct_evidence:
+    description: the secret, the prod write that Policy Enforcement denies, and over quota
+    questions: {RK-1: RISK_INDICATED, RK-2: MATERIAL_LEVEL, RK-3: EXPOSURE_IDENTIFIED, RK-4: CONTROL_AVAILABLE}
+    cop_label: [MATERIAL]
+    confidence: 0.75
+    checks: [decided_without_model, verified, score_six, two_independent_by_source, proposes_escalate,
+             nothing_executed, action_within_authority]
+
+  unrelated_high_sensitivity_low_impact:
+    description: >-
+      the customer read and the prod write that Policy Enforcement denies; no secret and no counted metric in an
+      exception state. The only tier-3 row supports no counted risk
+    questions: {RK-1: RISK_INDICATED, RK-2: EMERGING_LEVEL}
+    cop_label: [EMERGING]
+    confidence: 0.75
+    checks: [decided_without_model, verified, score_three, impact_from_session_tier_kept,
+             bound_impact_proposal_low, impact_binding_limitation_named]
+
+  approval_required_without_violation:
+    description: the secret under the staging policy; the proposed staging write needs approval, nothing is denied
+    questions: {RK-1: RISK_INDICATED, RK-2: EMERGING_LEVEL, RK-4: CONTROL_AVAILABLE}
+    cop_label: [EMERGING]
+    confidence: 0.75
+    checks: [decided_without_model, approval_required_counted_provisionally, pending_approval_flagged,
+             action_watch, nothing_executed]
+
+  unapproved_register:
+    description: the genuine-risk session with the register marked approved false
+    questions: {RK-2: INCONCLUSIVE, RK-4: INCONCLUSIVE}
+    cop_label: [INCONCLUSIVE]
+    checks: [missing_dependency_status, no_model_call, register_named_unapproved, no_band_established,
+             no_record_written, no_recipients]
+
+  register_version_missing:
+    description: the genuine-risk session with a register that carries no version
+    questions: {RK-2: INCONCLUSIVE, RK-4: INCONCLUSIVE}
+    cop_label: [INCONCLUSIVE]
+    checks: [missing_dependency_status, no_model_call, register_named_unversioned, no_band_established]
+
+  ct_context_no_inflation:
+    description: >-
+      the genuine-risk session with Classification & Tagging run before Risk Mitigation (synthetic taxonomy); the
+      same without it
+    questions: {RK-1: RISK_INDICATED, RK-2: EMERGING_LEVEL}
+    cop_label: [EMERGING]
+    confidence: 0.75
+    checks: [decided_without_model, classification_tagging_context_only, score_three, same_as_without_ct]
+
+  material_escalates_never_applies:
+    description: the simultaneous-findings session (MATERIAL) with the control's prerequisite met
+    questions: {RK-2: MATERIAL_LEVEL, RK-4: CONTROL_AVAILABLE}
+    cop_label: [MATERIAL]
+    confidence: 0.75
+    checks: [proposes_escalate, escalated_to_person, control_recommended_not_executed, nothing_executed,
+             no_control_in_any_executed_list, action_within_authority]
