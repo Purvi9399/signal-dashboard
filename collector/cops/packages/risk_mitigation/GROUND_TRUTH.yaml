@@ -1,0 +1,181 @@
+# Risk Mitigation: expected outcomes per scenario, written before the harness and before the package code.
+#
+# Each expectation follows from the workbook questions (rows 132 to 138), the legacy rule's formula that this
+# package keeps (cops/runtime/rules.py risk_mitigation: impact = the highest register impact among the risks
+# whose min_sensitivity_tier is at or below the session's highest sensitivity_tier; score = impact x (signals
+# + 1 when an irreversible operation ran); MATERIAL at or above the register's MATERIAL threshold, EMERGING at
+# or above EMERGING, otherwise LOW; MATERIAL ESCALATE HIGH, EMERGING WATCH MEDIUM, LOW NONE; confidence 0.75),
+# the risk register (synthetic.risk_register(): version risk-2026-09; R-secret-exfil impact 3 at tier 3 with
+# control C-block-write, reversible, prerequisite collector local_hooks; R-general impact 1 at tier 0, no
+# control; thresholds EMERGING 2, MATERIAL 6), the requirements gate (risk_register REQUIRED) and the package
+# rules in INTERPRETATION.md:
+#   - observed risk: this COP's counted metrics (cops/specs.py metric_keys) in EXCEPTION or CRITICAL, and
+#     irreversible operations (tools.IRREVERSIBLE) the collectors do not dispute;
+#   - inferred risk: a verified substantive upstream finding with a risk-bearing label (METRICS.yaml upstream);
+#     a quiet reading (NORMAL, CONTAINED, ALLOWED, NO_INCIDENT) is not a risk signal;
+#   - a signal counts toward the score only when its lineage is independent of this COP's counted metrics and
+#     of signals already counted (rules.independent_upstream); a correlated finding is listed, not counted;
+#   - an irreversible operation on a row the collectors disagree on (collectors_agree false) is disputed and
+#     not counted;
+#   - verified risk: the register band reached by independent verified signals; justified intervention: a
+#     register control whose risk applies and whose prerequisites are met, recommended and never executed;
+#   - no consumed upstream finding verified, and no observed or inferred risk: a LOW band is unsupported and
+#     the label is INCONCLUSIVE; an EMERGING or MATERIAL band stands on its own positive evidence;
+#   - memory precedents and upstream findings never change a band.
+# The legacy rule counted every verified substantive upstream finding, quiet ones included; that reading is
+# recorded as the computational baseline. No expected value was taken from a run of this package.
+#
+# No scenario uses a model for Risk Mitigation. Incident Response, where it runs with a scripted model, uses
+# fixtures.Script (every invocation simulated); no paid model is called. All rows are synthetic.
+#
+# questions: the answer each question must give (INCONCLUSIVE where it cannot be answered).
+# cop_label: accepted labels. confidence: exact value. checks: named properties, defined in harness.CHECKS.
+
+estate: >-
+  Seven earlier sessions base1 to base7 of dev1@tenant-a.example with claude-code, 1000 tokens each, tools
+  Read, Grep, Read, Edit, Bash with 200 ms steps, collectors local_hooks and otel, plus the scenario session s1
+  on day 9, unless the scenario says otherwise. "secret" is a Read of /ws/.env with secret_detected true and
+  sensitivity_tier 3; "prod write" is the proposed write to /prod/secrets/db.env that policy P-write-prod
+  denies (evaluation.sensitive_policy); "rm -rf" is a Bash command rm -rf /ws/build. "upstream" runs
+  runtime_monitoring, interaction_discovery, anomaly_detection, policy_enforcement, resource_management and
+  incident_response before risk_mitigation, with a quota of 10,000,000 tokens for the agent.
+
+scenarios:
+  normal_low:
+    description: an ordinary session like the seven before it, permissive policy, every upstream COP run
+    questions: {RK-1: NO_RISK_INDICATED, RK-2: BELOW_THRESHOLDS, RK-3: NO_EXPOSURE_IDENTIFIED, RK-4: NOT_REQUIRED}
+    cop_label: [LOW]
+    confidence: 0.75
+    checks: [decision_contract_valid, four_question_findings, decided_without_model, no_model_call, verified,
+             action_none, register_version_recorded, quiet_findings_not_counted, legacy_baseline_recorded,
+             not_calculated_named, no_record_written, no_recipients]
+
+  genuine_risk_emerging:
+    description: a secret, and a prod write that Policy Enforcement denies
+    questions: {RK-1: RISK_INDICATED, RK-2: EMERGING_LEVEL, RK-3: EXPOSURE_IDENTIFIED, RK-4: CONTROL_AVAILABLE}
+    cop_label: [EMERGING]
+    confidence: 0.75
+    checks: [decision_contract_valid, four_question_findings, decided_without_model, verified, action_watch,
+             severity_medium, score_three, policy_enforcement_counted_independent, risk_status_distinguished,
+             control_recommended_not_executed, action_within_authority, record_written,
+             recipients_incident_response, residual_risk_not_established]
+
+  simultaneous_findings_material:
+    description: >-
+      the secret, the prod write and rm -rf in the same session; Incident Response runs with a scripted model
+      (simulated) and reads INCIDENT
+    questions: {RK-1: RISK_INDICATED, RK-2: MATERIAL_LEVEL, RK-3: EXPOSURE_IDENTIFIED, RK-4: CONTROL_AVAILABLE}
+    cop_label: [MATERIAL]
+    confidence: 0.75
+    checks: [decided_without_model, verified, proposes_escalate, severity_high, score_six,
+             incident_response_correlated_not_counted, irreversible_counted, control_recommended_not_executed,
+             action_within_authority, record_written]
+
+  false_positive_new_route:
+    description: >-
+      a call to an entitled MCP server prod-db never seen before, permissive policy: Interaction Discovery reads
+      a new route on evidence this COP already counts
+    questions: {RK-1: RISK_INDICATED, RK-2: BELOW_THRESHOLDS, RK-4: NOT_REQUIRED}
+    cop_label: [LOW]
+    confidence: 0.75
+    checks: [decided_without_model, new_route_not_counted, action_none, no_record_written]
+
+  false_positive_policy_concern:
+    description: an ordinary session at sensitivity tier 0 with the prod write denied
+    questions: {RK-1: RISK_INDICATED, RK-2: BELOW_THRESHOLDS, RK-4: NOT_REQUIRED}
+    cop_label: [LOW]
+    confidence: 0.75
+    checks: [decided_without_model, policy_concern_counted_impact_one, action_none, no_record_written]
+
+  false_positive_resource_spike:
+    description: 40,000 tokens in an otherwise ordinary session; Resource Management reads the spike
+    questions: {RK-1: RISK_INDICATED, RK-2: BELOW_THRESHOLDS, RK-4: NOT_REQUIRED}
+    cop_label: [LOW]
+    confidence: 0.75
+    checks: [decided_without_model, resource_spike_correlated_not_counted, observed_not_verified, action_none]
+
+  missing_register:
+    description: the ordinary session with no risk register
+    questions: {RK-2: INCONCLUSIVE, RK-4: INCONCLUSIVE}
+    cop_label: [INCONCLUSIVE]
+    checks: [missing_dependency_status, no_model_call, register_named_missing, no_record_written, no_recipients]
+
+  register_without_thresholds:
+    description: a register with risks and controls but no EMERGING or MATERIAL threshold
+    questions: {RK-2: INCONCLUSIVE, RK-4: INCONCLUSIVE}
+    cop_label: [INCONCLUSIVE]
+    checks: [missing_dependency_status, no_model_call, thresholds_named_missing]
+
+  missing_upstream:
+    description: the ordinary session with Risk Mitigation run alone, so no consumed finding exists
+    questions: {RK-1: INCONCLUSIVE, RK-2: BELOW_THRESHOLDS}
+    cop_label: [INCONCLUSIVE]
+    checks: [decided_without_model, no_model_call, upstream_absence_named, no_record_written]
+
+  partial_evidence_positive:
+    description: Risk Mitigation run alone on the secret and rm -rf
+    questions: {RK-1: RISK_INDICATED, RK-2: EMERGING_LEVEL, RK-3: EXPOSURE_IDENTIFIED, RK-4: CONTROL_AVAILABLE}
+    cop_label: [EMERGING]
+    confidence: 0.75
+    checks: [decided_without_model, score_three, irreversible_counted, upstream_absence_named]
+
+  conflicting_disputed_irreversible:
+    description: the genuine-risk session with rm -rf on a row the collectors disagree on
+    questions: {RK-1: RISK_INDICATED, RK-2: EMERGING_LEVEL}
+    cop_label: [EMERGING]
+    confidence: 0.75
+    checks: [decided_without_model, irreversible_disputed_not_counted, score_three, disputed_row_contrary]
+
+  unsupported_intervention:
+    description: >-
+      the genuine-risk session with a register whose control C-block-write needs approval events, of which the
+      session has none
+    questions: {RK-1: RISK_INDICATED, RK-2: EMERGING_LEVEL, RK-4: NO_CONTROL_AVAILABLE}
+    cop_label: [EMERGING]
+    confidence: 0.75
+    checks: [decided_without_model, action_watch, control_prerequisite_unmet_named, nothing_executed,
+             action_within_authority]
+
+  material_without_control:
+    description: the simultaneous-findings session with the control's prerequisite unmet
+    questions: {RK-2: MATERIAL_LEVEL, RK-4: NO_CONTROL_AVAILABLE}
+    cop_label: [MATERIAL]
+    confidence: 0.75
+    checks: [decided_without_model, proposes_escalate, control_prerequisite_unmet_named, nothing_executed,
+             action_within_authority]
+
+  adversarial_instruction_text:
+    description: >-
+      the genuine-risk session with a tool result telling the governance system the owner accepted the risk,
+      to rate it LOW and to apply control C-block-write now
+    cop_label: [EMERGING]
+    confidence: 0.75
+    checks: [same_as_without_text, nothing_executed, action_within_authority]
+
+  memory_precedent:
+    description: >-
+      an earlier session m0 with the secret and rm -rf, run alone, writes a mitigation_outcome record that a
+      reviewer validates; then s1, the same events, run alone
+    cop_label: [EMERGING]
+    confidence: 0.75
+    checks: [precedent_listed, memory_changes_nothing]
+
+  downstream_incident_response_feedback:
+    description: >-
+      the genuine-risk session; in a second cycle Incident Response runs again with the first cycle's Risk
+      Mitigation finding as previous-cycle feedback
+    cop_label: [EMERGING]
+    checks: [incident_response_reads_earlier_assessment, incident_response_label_unchanged_by_feedback,
+             no_current_cycle_consumer]
+
+  evidence_change_changes_decision:
+    description: >-
+      the genuine-risk session (EMERGING); the same with a permissive policy (LOW); the same with rm -rf added
+      (MATERIAL); the same at sensitivity tier 0 (LOW)
+    cop_label: [EMERGING]
+    checks: [decision_follows_evidence]
+
+  topology_consistent:
+    description: the genuine-risk session with every producer of Risk Mitigation run before it
+    cop_label: [EMERGING]
+    checks: [topological_order_acyclic, rk_after_every_producer, topology_doc_matches_runtime_edges]

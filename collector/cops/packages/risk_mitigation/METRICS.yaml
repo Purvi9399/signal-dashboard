@@ -1,0 +1,329 @@
+# Risk Mitigation: machine-readable question contract.
+# Loaded by collector/cops/runtime/cop_package.py and validated by
+# tests/test_cop_package_risk_mitigation.py. The Markdown files beside it
+# explain this file; where they differ, this file is what the runtime uses.
+#
+# Build order: this is the eighth COP packaged (COP 8 of the per-COP verification). The workbook and
+# docs/cops/cop_catalogue.json number Risk Mitigation 9 (their number 8 is Policy Enforcement, packaged fourth).
+
+cop: risk_mitigation
+contract: cop_metrics/1
+version: 2026-11-27.1
+
+sources:
+  questions: >-
+    RK-1 to RK-4: COPS- implementation 1.xlsx, sheet COMPLETE_DELEGATION_DATA, rows 132, 134, 136, 138
+    (behavioural question row 132, column 1: "What risks arise from the current findings, and how should they
+    be reduced?"); field lists in column 3 of each row; external data column per question; metric list row
+    140 (40 metrics); partial-input rule row 13 ("Combined upstream findings, severity, likelihood, residual
+    risk, mitigation state."). cops/specs.py keeps its own wording of the behavioural question ("Do the
+    combined findings create a material or emerging risk, and what residual risk remains after available
+    controls?"), unchanged. The prefix is RK, because RM is Runtime Monitoring's.
+  metric_mapping: >-
+    COPS_METRIC_MAPPING.md, sha256 5bd3c16f1ba26b297644259faaedfe75c1f219980e5c046a9bb56308c38e951e
+    (collector/metric_registry.json, consumers = risk_mitigation: 40 metrics; 25 category E,
+    IMPLEMENTED_EXISTING; 15 NOT_IMPLEMENTED: 5 category R, 4 category O, 4 category D, 2 category A). No
+    code-only pair.
+  rule: >-
+    cops/runtime/rules.py risk_mitigation: no register is MISSING_DEPENDENCY; a register without EMERGING and
+    MATERIAL thresholds is MISSING_DEPENDENCY; impact = the highest register impact among the risks whose
+    min_sensitivity_tier is at or below the session's highest sensitivity_tier; score = impact x (independent
+    verified upstream signals + 1 when an irreversible operation ran); MATERIAL at or above the MATERIAL
+    threshold, EMERGING at or above EMERGING, otherwise LOW; MATERIAL ESCALATE HIGH, EMERGING WATCH MEDIUM,
+    LOW NONE; confidence 0.75. Independence is rules.independent_upstream; irreversible operations are
+    tools.IRREVERSIBLE on the command field. This package keeps the formula and the thresholds and changes one
+    input (signals, below).
+  register: >-
+    The risk register (case artifact risk_register, read by tools.read_risk_register; requirements.py:
+    REQUIRED for LOW). It supplies impact, the thresholds and the controls. The runtime has no thresholds or
+    impact scores of its own; none is invented here. Controls' prerequisites are read by
+    tools.evaluate_control_prerequisites.
+  labels: >-
+    cops/specs.py interpretations: LOW, EMERGING, MATERIAL. permitted_actions: NONE, WATCH, INSTRUCT, ESCALATE,
+    PASS_TO_COP (cops/authority.py: NONE OBSERVE, WATCH RECORD, PASS_TO_COP NOTIFY, INSTRUCT RECOMMEND,
+    ESCALATE INITIATE). triage.LABEL_ACTIONS ceilings: EMERGING RECOMMEND, MATERIAL INITIATE.
+
+mapping:
+  insights.secrets: {used_by: [RK-1]}
+  insights.sensitive_unasked: {used_by: [RK-1]}
+  insights.outside: {used_by: [RK-1]}
+  insights.reverted: {used_by: [RK-1]}
+  insights.token_outlier: {used_by: [RK-1]}
+  telemetry.collector_coverage: {used_by: [RK-1]}
+  telemetry.source_agreement: {used_by: [RK-1]}
+  telemetry.turn_linkage: {used_by: [RK-1]}
+  telemetry.unknown_share: {used_by: [RK-1]}
+  risk_evidence_sufficiency:
+    used_by: [RK-1]
+    note: >-
+      NOT_CALCULATED. Registry category D, NOT_IMPLEMENTED: read from upstream COP findings along the Block 1
+      edges, computed in the COPS runtime (Block 2.4); the registry's proposal is not approved. Proposal:
+      upstream evidence_confidence. RK-1 lists each upstream finding's verification status instead and
+      computes no score.
+  insights.failed: {used_by: [RK-2]}
+  insights.repetition: {used_by: [RK-2]}
+  insights.retry: {used_by: [RK-2]}
+  insights.stalled: {used_by: [RK-2]}
+  insights.duration_outlier: {used_by: [RK-2]}
+  activity.action_rate_ratio: {used_by: [RK-2]}
+  path.transition_novelty: {used_by: [RK-2]}
+  access.first_seen_mcp: {used_by: [RK-2]}
+  risk_likelihood_score:
+    used_by: [RK-2]
+    note: >-
+      NOT_CALCULATED. Registry category R, NOT_IMPLEMENTED. Missing input: the asset_inventory reference
+      (asset, criticality, owner, impact criteria, likelihood criteria, playbook and cost), supplied by the
+      enterprise administrator; location not chosen. RK-2 counts independent verified signals, as the legacy
+      rule does; that count is not a likelihood score.
+  risk_impact_score:
+    used_by: [RK-2]
+    note: >-
+      NOT_CALCULATED. Registry category R, NOT_IMPLEMENTED. Missing input: the asset_inventory reference
+      (asset, criticality, owner, impact criteria, likelihood criteria, playbook and cost), supplied by the
+      enterprise administrator; location not chosen. RK-2 reads the risk register's impact for the risks that
+      apply at the session's highest sensitivity tier; that register value is not an asset impact score.
+  risk_severity_score:
+    used_by: [RK-2]
+    note: >-
+      NOT_CALCULATED as a metric. Registry category O, NOT_IMPLEMENTED: a decision field of the consuming COP,
+      not a calculated metric. The finding's severity (MATERIAL HIGH, EMERGING MEDIUM, LOW NONE) is the legacy
+      rule's mapping.
+  risk_recurrence_rate:
+    used_by: [RK-2]
+    note: >-
+      NOT_CALCULATED. Registry category D, NOT_IMPLEMENTED: read from upstream COP findings along the Block 1
+      edges, computed in the COPS runtime (Block 2.4); the registry's proposal is not approved. Proposal:
+      repeat of the label in cop_decisions. Validated mitigation_outcome precedents are listed for comparison
+      only.
+  interaction.subagent_lanes: {used_by: [RK-3]}
+  interaction.mcp_servers: {used_by: [RK-3]}
+  telemetry.lane_linkage: {used_by: [RK-3]}
+  insights.unattributed: {used_by: [RK-3]}
+  risk_exposure_score:
+    used_by: [RK-3]
+    note: >-
+      NOT_CALCULATED. Registry category R, NOT_IMPLEMENTED. Missing input: the asset_inventory reference
+      (asset, criticality, owner, impact criteria, likelihood criteria, playbook and cost), supplied by the
+      enterprise administrator; location not chosen.
+  risk_asset_criticality:
+    used_by: [RK-3]
+    note: >-
+      NOT_CALCULATED. Registry category R, NOT_IMPLEMENTED. Missing input: the asset_inventory reference
+      (asset, criticality, owner, impact criteria, likelihood criteria, playbook and cost), supplied by the
+      enterprise administrator; location not chosen.
+  risk_affected_entity_count:
+    used_by: [RK-3]
+    note: >-
+      NOT_CALCULATED. Registry category D, NOT_IMPLEMENTED: read from upstream COP findings along the Block 1
+      edges, computed in the COPS runtime (Block 2.4); the registry's proposal is not approved. Proposal:
+      entities in upstream evidence_refs. RK-3 lists the exposed entities; it computes no count metric.
+  risk_propagation_potential:
+    used_by: [RK-3]
+    note: >-
+      NOT_CALCULATED. Registry category D, NOT_IMPLEMENTED: read from upstream COP findings along the Block 1
+      edges, computed in the COPS runtime (Block 2.4); the registry's proposal is not approved. Proposal: the
+      Interaction Discovery route graph. RK-3 reports Interaction Discovery's label as context.
+  insights.blocked: {used_by: [RK-4]}
+  insights.no_oversight: {used_by: [RK-4]}
+  oversight.fast_approvals: {used_by: [RK-4]}
+  oversight.declined_inferred: {used_by: [RK-4]}
+  risk_response_proportionality:
+    used_by: [RK-4]
+    note: >-
+      NOT_CALCULATED as a metric. Registry category O, NOT_IMPLEMENTED: a decision field of the consuming COP,
+      not a calculated metric. RK-4 lists the register's controls whose prerequisites are met, and whether
+      each is reversible; it does not rank them.
+  risk_residual_score:
+    used_by: [RK-4]
+    note: >-
+      NOT_CALCULATED as a metric. Registry category O, NOT_IMPLEMENTED: a decision field of the consuming COP,
+      not a calculated metric.
+  risk_escalation_required:
+    used_by: [RK-4]
+    note: >-
+      NOT_CALCULATED as a metric. Registry category O, NOT_IMPLEMENTED: a decision field of the consuming COP,
+      not a calculated metric. The action (ESCALATE for MATERIAL) is the legacy rule's mapping, bounded by
+      triage and authority.
+  risk_intervention_cost:
+    used_by: [RK-4]
+    note: >-
+      NOT_CALCULATED. Registry category R, NOT_IMPLEMENTED. Missing input: the asset_inventory reference
+      (asset, criticality, owner, impact criteria, likelihood criteria, playbook and cost), supplied by the
+      enterprise administrator; location not chosen.
+  risk_mitigation_effectiveness:
+    used_by: [RK-4]
+    note: >-
+      NOT_CALCULATED. Registry category A, NOT_IMPLEMENTED: needs records of COPS actions and their outcomes;
+      none are stored yet.
+  risk_mitigation_completion:
+    used_by: [RK-4]
+    note: >-
+      NOT_CALCULATED. Registry category A, NOT_IMPLEMENTED: needs records of COPS actions and their outcomes;
+      none are stored yet.
+
+# cops/specs.py missing_metrics for this COP. They are not in the metric registry, so they are not mapped
+# above; each is reported as NOT_CALCULATED with the input it lacks. None is approximated.
+not_calculated:
+  compound_risk_score: >-
+    NOT_CALCULATED. No registry metric. The legacy score (impact x signals) is reported as the register band's
+    basis; it is not a compound risk score. Missing input: an approved compound-risk method over likelihood,
+    impact and exposure (registry risk_likelihood_score, risk_impact_score, risk_exposure_score, none built).
+  reversibility: >-
+    NOT_CALCULATED as a metric. No registry metric. Irreversible operations are observed (tools.IRREVERSIBLE on
+    the command field) and counted as the legacy rule counts them; a reversibility measure of the session's
+    effects is not. Missing input: records of which effects can be restored (Recovery & Resilience
+    checkpoints), not consumed by this COP.
+  residual_risk: >-
+    NOT_CALCULATED. No registry metric (registry risk_residual_score is a decision field, NOT_IMPLEMENTED).
+    Missing input: approved mitigation effectiveness (risk_mitigation_effectiveness) and records of applied
+    mitigations; none are stored. The residual risk after available controls is reported as not established.
+
+# The consumed COPs' labels that carry risk. Only a verified substantive finding with one of these labels is
+# inferred risk; a quiet reading (each COP's first interpretation) is not a risk signal, and an undetermined
+# reading (INDETERMINATE, PATH_PARTIAL, UNCERTAIN, INCONCLUSIVE) is a limitation, not a signal. INEFFICIENT is
+# a waste reading (Workload Optimization's question), not a risk.
+upstream:
+  anomaly_detection: {risk: [ANOMALOUS], quiet: [NORMAL]}
+  interaction_discovery: {risk: [NEW_ROUTE, PROPAGATING], quiet: [CONTAINED]}
+  policy_enforcement: {risk: [VIOLATION, APPROVAL_REQUIRED], quiet: [ALLOWED]}
+  resource_management: {risk: [EXCESSIVE, UNAUTHORIZED], quiet: [NORMAL, INEFFICIENT]}
+  incident_response: {risk: [INCIDENT, WATCH], quiet: [NO_INCIDENT]}
+
+questions:
+  RK-1:
+    question: What risks are indicated by the combined findings of the relevant COPs?
+    external_data: >-
+      Upstream COP findings from Anomaly Detection, Policy Enforcement, Classification & Tagging, Incident
+      Response and other relevant COPs, including their evidence status and uncertainty.
+    fields: [observable_id, observable_type, collector, session_id, turn_id, agent_id, agent_type,
+             operator_id, org_id, team_id, tool_name, tool_arguments, tool_result, permission_decision,
+             denial_reason, outside_workspace, sensitivity_tier, secret_detected, injection_markers,
+             risk_markers, violation_count, escalation_flag, policy_rule_matched, success, status, error_type,
+             raw_ref]
+    requires:
+      - {metric: insights.secrets, kind: REQUIRED}
+      - {metric: insights.sensitive_unasked, kind: REQUIRED}
+      - {metric: insights.outside, kind: REQUIRED}
+      - {metric: insights.reverted, kind: REQUIRED}
+      - {metric: insights.token_outlier, kind: REQUIRED}
+      - {metric: telemetry.collector_coverage, kind: OPTIONAL}
+      - {metric: telemetry.source_agreement, kind: OPTIONAL}
+      - {metric: telemetry.turn_linkage, kind: OPTIONAL}
+      - {metric: telemetry.unknown_share, kind: OPTIONAL}
+      - {metric: risk_evidence_sufficiency, kind: OPTIONAL}
+    verified: []
+    blocking: []
+    outcomes: [RISK_INDICATED, NO_RISK_INDICATED]
+
+  RK-2:
+    question: How likely are those risks to materialize, and how severe would their consequences be?
+    external_data: >-
+      Historical incident frequencies, asset criticality, threat likelihood, severity criteria, business impact
+      and organizational risk tolerance.
+    fields: [observable_id, observable_type, session_id, agent_id, agent_type, org_id, team_id, tool_name,
+             tool_arguments, tool_result, command, file_path, file_change_kind, file_size, sensitivity_tier,
+             outside_workspace, secret_detected, injection_markers, risk_markers, violation_count,
+             permission_decision, denial_reason, success, status, error_type, loop_count, raw_ref]
+    requires:
+      - {metric: insights.failed, kind: OPTIONAL}
+      - {metric: insights.repetition, kind: OPTIONAL}
+      - {metric: insights.retry, kind: OPTIONAL}
+      - {metric: insights.stalled, kind: OPTIONAL}
+      - {metric: insights.duration_outlier, kind: OPTIONAL}
+      - {metric: activity.action_rate_ratio, kind: OPTIONAL}
+      - {metric: path.transition_novelty, kind: OPTIONAL}
+      - {metric: access.first_seen_mcp, kind: OPTIONAL}
+      - {metric: risk_likelihood_score, kind: OPTIONAL}
+      - {metric: risk_impact_score, kind: OPTIONAL}
+      - {metric: risk_severity_score, kind: OPTIONAL}
+      - {metric: risk_recurrence_rate, kind: OPTIONAL}
+    verified: []
+    blocking: []
+    depends_on: [RK-1]
+    outcomes: [MATERIAL_LEVEL, EMERGING_LEVEL, BELOW_THRESHOLDS]
+
+  RK-3:
+    question: Which agents, resources, workflows or organizational assets are exposed?
+    external_data: >-
+      Enterprise asset inventory, resource ownership, asset criticality, workflow dependencies and interaction
+      graph.
+    fields: [observable_id, observable_type, session_id, turn_id, agent_id, agent_type, parent_agent_id,
+             is_multi_agent, multi_agent_source, delegation_depth, operator_id, org_id, team_id, hostname,
+             machine_id, workspace, repo_name, file_path, file_extension, file_size, sensitivity_tier,
+             outside_workspace, tool_name, tool_arguments, command, mcp_server, mcp_tool, mcp_transport,
+             secret_detected, risk_markers, raw_ref]
+    requires:
+      - {metric: interaction.subagent_lanes, kind: OPTIONAL}
+      - {metric: interaction.mcp_servers, kind: OPTIONAL}
+      - {metric: telemetry.lane_linkage, kind: OPTIONAL}
+      - {metric: insights.unattributed, kind: OPTIONAL}
+      - {metric: risk_exposure_score, kind: OPTIONAL}
+      - {metric: risk_asset_criticality, kind: OPTIONAL}
+      - {metric: risk_affected_entity_count, kind: OPTIONAL}
+      - {metric: risk_propagation_potential, kind: OPTIONAL}
+    verified: []
+    blocking: []
+    depends_on: [RK-1]
+    outcomes: [EXPOSURE_IDENTIFIED, NO_EXPOSURE_IDENTIFIED]
+
+  RK-4:
+    question: What mitigation measures are available, and which would reduce the risk proportionately?
+    external_data: >-
+      Available mitigation actions, intervention authority, response playbooks, expected effectiveness,
+      intervention cost, approval requirements and operational consequences.
+    fields: [observable_id, observable_type, session_id, turn_id, agent_id, operator_id, org_id, team_id,
+             permission_mode, permission_decision, permission_source, permission_scope, permission_options,
+             denial_reason, sandboxed, escalation_flag, policy_rule_matched, tool_name, tool_arguments,
+             tool_result, tool_interrupted, success, status, error_type, outside_workspace, sensitivity_tier,
+             risk_markers, violation_count, raw_ref]
+    requires:
+      - {metric: insights.blocked, kind: OPTIONAL}
+      - {metric: insights.no_oversight, kind: OPTIONAL}
+      - {metric: oversight.fast_approvals, kind: OPTIONAL}
+      - {metric: oversight.declined_inferred, kind: OPTIONAL}
+      - {metric: risk_response_proportionality, kind: OPTIONAL}
+      - {metric: risk_residual_score, kind: OPTIONAL}
+      - {metric: risk_escalation_required, kind: OPTIONAL}
+      - {metric: risk_intervention_cost, kind: OPTIONAL}
+      - {metric: risk_mitigation_effectiveness, kind: OPTIONAL}
+      - {metric: risk_mitigation_completion, kind: OPTIONAL}
+    verified: []
+    blocking: []
+    depends_on: [RK-2]
+    outcomes: [CONTROL_AVAILABLE, NO_CONTROL_AVAILABLE, NOT_REQUIRED]
+
+# RK-2's band gives the label. RK-1 unanswered (no consumed finding verified) leaves a LOW band unsupported:
+# the label is INCONCLUSIVE. An EMERGING or MATERIAL band stands on its own positive evidence.
+labels:
+  MATERIAL_LEVEL: MATERIAL
+  EMERGING_LEVEL: EMERGING
+  BELOW_THRESHOLDS: LOW
+  INCONCLUSIVE: INCONCLUSIVE
+
+# The legacy rule's action, severity and confidence for each label (rules.risk_mitigation), bounded by triage
+# and authority. No label proposes INSTRUCT, PASS_TO_COP, BLOCK or PAUSE; controls are recommended in the
+# decision record and never executed by this COP.
+decision:
+  MATERIAL: {action: ESCALATE, severity: HIGH, confidence: 0.75}
+  EMERGING: {action: WATCH, severity: MEDIUM, confidence: 0.75}
+  LOW: {action: NONE, severity: NONE, confidence: 0.75}
+
+# Metric states that count as observed risk: the states cops/interpret.py treats as hot. The thresholds are
+# metrics_config.json's; WARNING does not count.
+deviation_states: [EXCEPTION, CRITICAL]
+
+operations:
+  compute_metrics: {by: deterministic, code: collector/signal_metrics.py:compute}
+  read_register: {by: deterministic, code: collector/cops/runtime/tools.py:t_read_risk_register}
+  risk_components: {by: deterministic, code: collector/cops/runtime/tools.py:t_calculate_risk_components}
+  control_prerequisites: {by: deterministic, code: collector/cops/runtime/tools.py:t_evaluate_control_prerequisites}
+  assess_evidence: {by: deterministic, code: collector/cops/runtime/evidence_assessment.py:assess}
+  observe_questions: {by: deterministic, code: collector/cops/runtime/cop_package.py:observe_risk_mitigation}
+  split_upstream: {by: deterministic, code: collector/cops/runtime/cop_package.py:_rk_upstream}
+  decide_label: {by: deterministic, code: collector/cops/runtime/cop_package.py:decide_risk_mitigation}
+  gate_quiet_label: {by: deterministic, code: collector/cops/runtime/requirements.py}
+  verify_finding: {by: deterministic, code: collector/cops/runtime/verifiers.py}
+  select_action: {by: deterministic, code: collector/cops/runtime/triage.py}
+  authority_check: {by: deterministic, code: collector/cops/authority.py:check}
+  memory_write: {by: deterministic, code: collector/cops/runtime/graph.py:validate_memory_update}
+  decision_record: {by: deterministic, code: collector/cops/runtime/decision.py:build}
