@@ -157,6 +157,30 @@
       "warning": 3,
       "exception": 6,
       "critical": 12
+    },
+    "telemetry.evidence_score": {
+      "direction": "below",
+      "warning": 0.75,
+      "exception": 0.5,
+      "critical": 0.25
+    },
+    "telemetry.event_freshness": {
+      "direction": "above",
+      "warning": 900,
+      "exception": 3600,
+      "critical": 86400
+    },
+    "lifecycle.version_change": {
+      "direction": "above",
+      "warning": 1
+    },
+    "lifecycle.model_change": {
+      "direction": "above",
+      "warning": 1
+    },
+    "lifecycle.new_machine": {
+      "direction": "above",
+      "warning": 1
     }
   },
   "fast_approval_ms": 1000,
@@ -194,5 +218,9 @@
       "antigravity": false,
       "_why": "cursor: sandbox auto-approves, no permission events ever fired; codex/antigravity: not yet seen, unverified"
     }
-  }
+  },
+  "evidence_excludes": [
+    "lifecycle."
+  ],
+  "evidence_excludes_comment": "Metrics with these id prefixes describe change over time, not whether this session's evidence is complete, so they do not count toward the evidence score."
 }
