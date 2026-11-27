@@ -234,3 +234,85 @@ scenarios:
       the outside read; Incident Response and Governance Intelligence run after Classification & Tagging
     cop_label: [BOUNDARY]
     checks: [incident_response_reads_classification, governance_intelligence_reads_classification]
+
+  # ---------------------------------------------------------------- revision R-CT1 (2026-11-27)
+  # purvi's conditional acceptance (A-CT1): U-CT3, U-CT4 and U-CT6. Written and committed before the gate,
+  # disagreement and topology corrections were implemented; no expected value below was taken from a run.
+  # Each follows from her decisions:
+  #   - U-CT4: the shared requirements gate checks the taxonomy's approval and version validity, not only the
+  #     artifact's presence. An unapproved or unversioned taxonomy is a missing dependency: no label at all,
+  #     no model call, no record. A valid version is a non-empty string (the only version field the taxonomy
+  #     artifact carries; no effective date or expiry is defined, so none is checked).
+  #   - U-CT3: collector disagreement on rows that do not indicate a family is unrelated; the family stands
+  #     (as source_disagreement). Disagreement on every row behind a family's indicating metric means the
+  #     family is directly disputed and cannot be established: its question is INCONCLUSIVE and it is not a
+  #     candidate. One undisputed indicating row is independent support and the family stands.
+  #   - U-CT6: cops_topology.json carries the approved Classification & Tagging edges; the runtime order has
+  #     no cycle; the added upstream changes no label.
+  # "disputed outside read" is the outside read with collectors_agree false; "second outside read" is a Read
+  # of /etc/passwd with outside_workspace true and no collectors_agree (not cross-checked, so undisputed).
+
+  taxonomy_unapproved_with_indicator:
+    description: the outside read, with a taxonomy artifact whose approved is false
+    cop_label: [INCONCLUSIVE]
+    confidence: 0.0
+    checks: [gate_names_taxonomy_not_approved, missing_dependency_status, no_model_call, no_record_written,
+             no_trusted_family]
+
+  taxonomy_version_missing:
+    description: the outside read, with an approved taxonomy that carries no version
+    cop_label: [INCONCLUSIVE]
+    confidence: 0.0
+    checks: [gate_names_taxonomy_version_invalid, missing_dependency_status, no_model_call, no_record_written,
+             no_trusted_family]
+
+  taxonomy_valid_gate_passes:
+    description: the outside read, with the approved, versioned taxonomy; the gate passes as before
+    questions: {CT-1: FAMILY_INDICATED, CT-5: CLASSIFIED}
+    cop_label: [BOUNDARY]
+    confidence: 0.75
+    checks: [gate_passes, decided_without_model]
+
+  unrelated_disagreement_verified:
+    description: >-
+      the outside read and an Edit the collectors disagree on. The disagreement is on a row that indicates no
+      family, so it is unrelated: the verified BOUNDARY stands, the disagreement is a limitation that says it
+      does not touch the indicating rows
+    questions: {CT-1: FAMILY_INDICATED, CT-5: CLASSIFIED}
+    cop_label: [BOUNDARY]
+    confidence: 0.75
+    checks: [verified, disagreement_named_unrelated, no_disputed_family]
+
+  indicator_disputed:
+    description: the disputed outside read, nothing else. BOUNDARY's only indicating row is disputed
+    questions: {CT-1: INCONCLUSIVE, CT-2: NOT_INDICATED, CT-3: NOT_INDICATED, CT-5: UNDETERMINED}
+    cop_label: [INCONCLUSIVE]
+    confidence: 0.0
+    checks: [disputed_family_named_boundary, no_model_call, no_record_written]
+
+  indicator_disputed_with_support:
+    description: >-
+      the disputed outside read and the second outside read. One indicating row is undisputed: independent
+      support, so BOUNDARY stands, with the disputed row as contrary evidence
+    questions: {CT-1: FAMILY_INDICATED, CT-5: CLASSIFIED}
+    cop_label: [BOUNDARY]
+    confidence: 0.75
+    checks: [decided_without_model, disputed_row_contrary]
+
+  disputed_family_beside_another:
+    description: >-
+      the disputed outside read and a secret. BOUNDARY is disputed and is not a candidate, so INTEGRITY is the
+      one candidate: no model, where without the dispute the event would be ambiguous
+    questions: {CT-1: INCONCLUSIVE, CT-3: FAMILY_INDICATED, CT-5: CLASSIFIED}
+    cop_label: [INTEGRITY]
+    confidence: 0.75
+    checks: [decided_without_model, no_model_call, disputed_family_named_boundary]
+
+  topology_consistent:
+    description: >-
+      the outside read, with every upstream COP of Classification & Tagging run first and Incident Response and
+      Governance Intelligence after it
+    cop_label: [BOUNDARY]
+    confidence: 0.75
+    checks: [topological_order_acyclic, ct_after_every_producer, topology_doc_matches_runtime_edges,
+             same_as_canonical_upstream]
