@@ -206,7 +206,10 @@ def _extract_claude(raw: Mapping[str, Any], when: Optional[datetime]):
 
 
 def _extract_cursor(raw: Mapping[str, Any], when: Optional[datetime]):
-    return extract_cursor_hook(_ensure_hook_event_name(raw), when)
+    fields = extract_cursor_hook(_ensure_hook_event_name(raw), when)
+    if fields and fields.get("observable_type") == "other":
+        fields = extract_claude_hook(_ensure_hook_event_name(raw), when)
+    return fields
 
 
 _HOOK_EXTRACTORS = {

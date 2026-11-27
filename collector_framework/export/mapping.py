@@ -32,6 +32,8 @@ _COLLECTOR_ALIASES = {
     "mcp_proxy": "mcp_proxy",
     "fs_watcher": "fs_watcher",
     "webhook": "webhook",
+    "telemetry": "local_hooks",
+    "cascade": "local_hooks",
     "derived": "derived",
 }
 
