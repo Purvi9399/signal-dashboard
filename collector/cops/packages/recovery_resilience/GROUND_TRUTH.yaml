@@ -277,3 +277,172 @@ scenarios:
     cop_label: [RECOVERED]
     confidence: 0.85
     checks: [ir_reads_recovered_as_quiet, gi_consumes_this, recipients_downstream]
+
+  # ---------------------------------------------------------------- Revision 1 (R-RR1, purvi 2026-11-27)
+  # Written before the code. P-RR1 approved: a previous-cycle, verified-only feedback edge Incident Response -> this
+  # COP. The earlier finding is context only (requirements 1 to 7 of purvi's approval):
+  #   - delivered by the shared feedback step only when verified and from a cycle other than the current one
+  #     (graph.prior_feedback); read by this COP only when it carries a run_id, a decided_at and an association
+  #     (the same session_id as the case session, or a recovery record whose disruption_refs names its finding_id);
+  #   - used only when its decided_at falls on or after the session's first undisputed disruption (else STALE: it
+  #     cannot name this disruption) and before the restoration time it contextualizes (else ORDER: it does not
+  #     precede the recovery observation); with no restoration time it is listed and contextualizes nothing;
+  #   - never a ground: every answer, label, severity, confidence and action equals the run without the feedback;
+  #     the earlier finding is never modified; an earlier incident resting on this COP's own earlier finding is
+  #     flagged and never read as confirmation.
+  # "the feedback world" is a session s1 that reads .env (the exposure), then deploy fails, restore, later work, run
+  # with Runtime Monitoring, Interaction Discovery, Anomaly Detection, Policy Enforcement (allow-all), Resource
+  # Management, this COP and Incident Response. Cycle 1 has no record store: this COP reads INCONCLUSIVE and Incident
+  # Response INCIDENT on the exposure, decided at the evaluation clock 2026-10-29T00:00:00Z. Cycle 2 runs the same
+  # session with the record passing 3 of 3 checks restored at 2026-10-30T10:00:00Z (after the incident and after the
+  # session's rows), and receives cycle 1's Incident Response finding with that cycle's run_id, decided_at and
+  # session_id. Nothing follows the restoration time, so stability is not confirmed.
+
+  p1_verified_earlier_incident:
+    description: the feedback world, cycle 2
+    questions: {RR-1: DISRUPTED, RR-2: RESTORED_VERIFIED, RR-3: NOT_RECURRING, RR-4: MONITORING_REQUIRED}
+    cop_label: [RECOVERED]
+    confidence: 0.85
+    checks: [decision_contract_valid, action_watch, earlier_incident_accepted, earlier_incident_provenance,
+             earlier_incident_not_a_ground, same_without_feedback, earlier_ir_finding_unmodified,
+             current_cycle_ir_reads_this_cop, feedback_row_previous_cycle, no_incident_context_limitation]
+
+  p1_unverified_withheld:
+    description: the feedback world, cycle 2, with cycle 1's Incident Response finding marked unverified
+    questions: {RR-1: DISRUPTED, RR-2: RESTORED_VERIFIED, RR-3: NOT_RECURRING, RR-4: MONITORING_REQUIRED}
+    cop_label: [RECOVERED]
+    checks: [earlier_incident_not_delivered_unverified, same_without_feedback, earlier_ir_finding_unmodified,
+             incident_context_limitation_named]
+
+  p1_same_cycle_rejected:
+    description: the feedback world, cycle 2, offered a finding that names cycle 2's own run_id
+    questions: {RR-1: DISRUPTED, RR-2: RESTORED_VERIFIED, RR-3: NOT_RECURRING, RR-4: MONITORING_REQUIRED}
+    cop_label: [RECOVERED]
+    checks: [earlier_incident_not_delivered_current_cycle, same_without_feedback]
+
+  p1_missing_cycle_identity:
+    description: the feedback world, cycle 2, offered cycle 1's finding without a run_id
+    questions: {RR-1: DISRUPTED, RR-2: RESTORED_VERIFIED, RR-3: NOT_RECURRING, RR-4: MONITORING_REQUIRED}
+    cop_label: [RECOVERED]
+    checks: [earlier_incident_not_delivered_no_cycle, same_without_feedback]
+
+  p1_missing_timestamp:
+    description: the feedback world, cycle 2, offered cycle 1's finding without a decided_at
+    questions: {RR-1: DISRUPTED, RR-2: RESTORED_VERIFIED, RR-3: NOT_RECURRING, RR-4: MONITORING_REQUIRED}
+    cop_label: [RECOVERED]
+    checks: [earlier_incident_rejected_no_timestamp, same_without_feedback]
+
+  p1_wrong_session:
+    description: the feedback world, cycle 2, offered cycle 1's finding naming session s9; no record names it
+    questions: {RR-1: DISRUPTED, RR-2: RESTORED_VERIFIED, RR-3: NOT_RECURRING, RR-4: MONITORING_REQUIRED}
+    cop_label: [RECOVERED]
+    checks: [earlier_incident_rejected_wrong_session, same_without_feedback]
+
+  p1_incident_association:
+    description: >-
+      the feedback world, cycle 2, offered cycle 1's finding naming session s9, with the record's disruption_refs
+      naming that finding's finding_id
+    questions: {RR-1: DISRUPTED, RR-2: RESTORED_VERIFIED, RR-3: NOT_RECURRING, RR-4: MONITORING_REQUIRED}
+    cop_label: [RECOVERED]
+    checks: [earlier_incident_accepted_by_incident, same_without_feedback]
+
+  p1_after_restoration:
+    description: >-
+      the feedback world, cycle 2, with the record restored at the restore step's time (2026-10-09, before the
+      incident was decided); later work follows the restoration
+    questions: {RR-1: DISRUPTED, RR-2: RESTORED_VERIFIED, RR-3: NOT_RECURRING, RR-4: STABILITY_CONFIRMED}
+    cop_label: [RECOVERED]
+    checks: [earlier_incident_rejected_order, same_without_feedback, action_none]
+
+  p1_stale_timestamp:
+    description: >-
+      the feedback world, cycle 2, offered cycle 1's finding with decided_at 2026-10-01T00:00:00Z, before the
+      session's first row (an adversarial timestamp)
+    questions: {RR-1: DISRUPTED, RR-2: RESTORED_VERIFIED, RR-3: NOT_RECURRING, RR-4: MONITORING_REQUIRED}
+    cop_label: [RECOVERED]
+    checks: [earlier_incident_rejected_stale, same_without_feedback]
+
+  p1_repeated_across_cycles:
+    description: >-
+      the feedback world over three cycles: cycle 2 reads cycle 1's Incident Response finding; cycle 3 reads cycle
+      2's; a second cycle 3 is offered cycle 1's finding again
+    questions: {RR-1: DISRUPTED, RR-2: RESTORED_VERIFIED, RR-3: NOT_RECURRING, RR-4: MONITORING_REQUIRED}
+    cop_label: [RECOVERED]
+    checks: [every_cycle_same_without_feedback, ir_same_with_and_without_rr_feedback, repeated_finding_listed_once,
+             memory_payload_does_not_accumulate, earlier_ir_findings_unmodified]
+
+  p1_self_validation_guard:
+    description: >-
+      failed_recovery_grounds_incident's world over two cycles: in cycle 1 this COP reads FAILED_RECOVERY and
+      Incident Response reads INCIDENT on that finding; cycle 2 runs the same session (the record still passes 0 of
+      3 checks, restored at 2026-10-30T10:00:00Z) and receives that incident
+    questions: {RR-1: DISRUPTED, RR-2: NOT_RESTORED, RR-3: NO_RECOVERY_TO_FOLLOW, RR-4: INTERVENTION_REQUIRED}
+    cop_label: [FAILED_RECOVERY]
+    checks: [earlier_incident_rests_on_this_cop_flagged, same_without_feedback, failed_grounds_checkable,
+             earlier_ir_finding_unmodified]
+
+  p1_context_not_proof:
+    description: >-
+      the feedback world, cycle 2, and variants that receive the same earlier incident: the record attempted
+      (executed) at 2026-10-30T10:00:00Z with no post-restore checks (INCONCLUSIVE, not RECOVERED); no record store
+      (INCONCLUSIVE, not FAILED_RECOVERY)
+    questions: {RR-1: DISRUPTED, RR-2: RESTORED_VERIFIED, RR-3: NOT_RECURRING, RR-4: MONITORING_REQUIRED}
+    cop_label: [RECOVERED]
+    checks: [context_variants_follow_own_evidence]
+
+  # Investigation A: a disputed irreversible command whose effect on the restored resource cannot be ruled out.
+  # The record names a checkpoint (files app.py, db_schema) and three unnamed checks; no record field names the
+  # resource the command touched, so its effect is not ruled out. The checkpoint evidence stands (RR-2
+  # RESTORED_VERIFIED, label RECOVERED, never IRREVERSIBLE), but the reading is scoped to the checkpoint: category
+  # RECOVERED_CHECKPOINT_ONLY, the command listed as an unresolved effect with its order against the restoration,
+  # limitation IRREVERSIBLE_EFFECT_NOT_RULED_OUT, and RR-4 never STABILITY_CONFIRMED (MONITORING_REQUIRED, WATCH).
+
+  a_disputed_irreversible_scoped:
+    description: irreversible_disputed's world
+    questions: {RR-1: DISRUPTED, RR-2: RESTORED_VERIFIED, RR-3: NOT_RECURRING, RR-4: MONITORING_REQUIRED}
+    cop_label: [RECOVERED]
+    confidence: 0.85
+    checks: [action_watch, category_checkpoint_only, unresolved_effect_listed, effect_limitation_named,
+             verified_scope_checkpoint, disputed_irreversible_listed_not_ground]
+
+  a_disputed_irreversible_later_work:
+    description: >-
+      deploy fails, restore, later work, then an rm -rf /ws/build on a row the collectors disagree on; the record
+      passes 3 of 3 checks, restored at the restore step (without the disputed command this world reads
+      STABILITY_CONFIRMED and NONE)
+    questions: {RR-1: DISRUPTED, RR-2: RESTORED_VERIFIED, RR-3: NOT_RECURRING, RR-4: MONITORING_REQUIRED}
+    cop_label: [RECOVERED]
+    confidence: 0.85
+    checks: [action_watch, category_checkpoint_only, unresolved_effect_after_restoration, effect_limitation_named]
+
+  # Investigation B: successful post-restore activity is not sustained stability. No monitoring window is approved,
+  # so STABILITY_CONFIRMED and its NONE stay as approved (U-RR6), qualified: the RR-4 basis names its evidence as
+  # post-restore activity (the successful steps and their span), sustained stability NOT_ASSESSED, limitation
+  # SUSTAINED_STABILITY_NOT_ASSESSED, and the explanation claims no sustained stability.
+
+  b_stability_qualified:
+    description: recovered_verified_stable's world
+    questions: {RR-1: DISRUPTED, RR-2: RESTORED_VERIFIED, RR-3: NOT_RECURRING, RR-4: STABILITY_CONFIRMED}
+    cop_label: [RECOVERED]
+    confidence: 0.85
+    checks: [action_none, stability_scope_post_restore_activity, sustained_stability_limitation_named,
+             explanation_claims_no_sustained_stability]
+
+superseded:
+  recovered_verified_stable:
+    reason: >-
+      R-RR1 (U-RR8, P-RR1 approved by purvi 2026-11-27): Incident Response is now read on a previous-cycle,
+      verified-only feedback edge. It is still not a current-cycle input; in a single-cycle run nothing is delivered
+      and the limitation names why
+    replaces: [ir_not_read]
+    checks: [ir_not_read_current_cycle]
+  incident_does_not_establish_failure:
+    reason: R-RR1 (P-RR1), as recovered_verified_stable
+    replaces: [ir_not_read]
+    checks: [ir_not_read_current_cycle]
+  topology_and_cycle:
+    reason: >-
+      R-RR1 (P-RR1 approved): the previous-cycle edge Incident Response -> this COP is added, verified only; the
+      current-cycle edge back still closes a cycle and is not added
+    replaces: [feedback_edge_not_added, proposed_feedback_edge_cycle_safe]
+    checks: [feedback_edge_previous_cycle_verified_only, feedback_edge_cycle_safe]

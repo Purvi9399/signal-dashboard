@@ -420,3 +420,10 @@ superseded:
       finding with the action replaced
     replaces: [model_action_replaced]
     checks: [plan_rejected, model_action_block_recorded, deterministic_finding_published]
+  r1_recovery_downstream_deferred:
+    reason: >-
+      R-RR1 (U-RR8, P-RR1 approved by purvi 2026-11-27): the deferred relationship (U-IR5) is now wired as a
+      previous-cycle, verified-only feedback edge Incident Response -> Recovery & Resilience. The current-cycle
+      Recovery & Resilience -> Incident Response edge is unchanged and the current-cycle edge back still closes a cycle
+    replaces: [rr_downstream_recorded_not_wired]
+    checks: [rr_downstream_wired_previous_cycle]
