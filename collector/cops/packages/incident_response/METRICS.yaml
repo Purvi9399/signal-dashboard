@@ -1,0 +1,324 @@
+# Incident Response: machine-readable question contract.
+# Loaded by collector/cops/runtime/cop_package.py and validated by
+# tests/test_cop_package_incident_response.py. The Markdown files beside it
+# explain this file; where they differ, this file is what the runtime uses.
+#
+# Build order: the ninth COP packaged (COP 9 of the per-COP verification, approved by purvi 2026-11-27). The
+# workbook and docs/cops/cop_catalogue.json number Incident Response 6; their numbering is not a build order.
+
+cop: incident_response
+contract: cop_metrics/1
+version: 2026-11-27.1
+
+sources:
+  questions: >-
+    IR-1 to IR-5: COPS- implementation 1.xlsx, sheet COMPLETE_DELEGATION_DATA, rows 94, 96, 98, 100, 102
+    (behavioural question row 94, column 1: "Do the current findings constitute an incident, and what should
+    happen now?"); field lists in column 3 of each row; metric list row 104 (20 metrics). The sheet has no
+    external-data column for these rows. Partial-input rule: sheet agents-harness row 10 ("Upstream COP
+    decisions, evidence status, severity, current incident state. Partial upstream evidence should reduce
+    certainty, not erase findings."); authority: same row ("Watch, alert, escalate, recommend, request approval,
+    initiate controlled response. Direct intervention only with authority."; "Recommended != attempted !=
+    confirmed action."). Inputs: sheet many-to-many mapping row 11 ("insights.secrets, insights.sensitive_unasked,
+    insights.blocked, findings from Anomaly Detection and Policy Enforcement, affected entities"). cops/specs.py
+    keeps its own wording ("Do the current findings constitute an actionable incident, and what should happen
+    now?"), unchanged.
+  metric_mapping: >-
+    COPS_METRIC_MAPPING.md, sha256 5bd3c16f1ba26b297644259faaedfe75c1f219980e5c046a9bb56308c38e951e
+    (collector/metric_registry.json, consumers = incident_response: 34 metrics; 20 category E,
+    IMPLEMENTED_EXISTING, the workbook's row-104 list exactly; 14 NOT_IMPLEMENTED: 4 category D, 5 category O,
+    1 category R, 4 category A). No code-only pair.
+  rule: >-
+    cops/interpret.py RuleInterpreter.incident_response and cops/runtime/rules.py incident_response, in this
+    order: a verified Policy Enforcement VIOLATION is INCIDENT HIGH ALERT; a verified Anomaly Detection ANOMALOUS
+    with a secret or sensitive-path exposure (insights.secrets or insights.sensitive_unasked in EXCEPTION or
+    CRITICAL) is INCIDENT HIGH ESCALATE; an exposure alone is INCIDENT MEDIUM ALERT; ANOMALOUS with Anomaly
+    Detection's ALERT is WATCH MEDIUM ALERT; ANOMALOUS otherwise WATCH LOW WATCH; insights.blocked in a
+    deviation state is WATCH LOW WATCH ("a deny rule fired; the control worked"); Runtime Monitoring
+    INSUFFICIENT is WATCH LOW WATCH; otherwise NO_INCIDENT. A verified Recovery & Resilience FAILED_RECOVERY or
+    IRREVERSIBLE is INCIDENT HIGH ESCALATE. A verified VIOLATION whose proposed action is BLOCK makes the action
+    REQUEST_APPROVAL ("blocking it needs a person's approval"). Confidence: the lowest confidence of the
+    verified Runtime Monitoring, Anomaly Detection, Policy Enforcement and Interaction Discovery findings used,
+    or 0.8 x the evidence level. This package keeps the grounds, severities and actions, and changes what is
+    recorded around them (DECISIONS.md).
+  labels: >-
+    cops/specs.py interpretations: NO_INCIDENT, WATCH, INCIDENT. permitted_actions: NONE, WATCH, ALERT,
+    INSTRUCT, REQUEST_APPROVAL, PAUSE, BLOCK, ESCALATE (cops/authority.py tiers: REQUEST_APPROVAL REQUEST,
+    ESCALATE INITIATE, PAUSE and BLOCK INTERVENE). triage.LABEL_ACTIONS: WATCH (WATCH, ALERT ceiling), INCIDENT
+    (OPEN_INCIDENT, INTERVENE ceiling); triage.SPECIALISTS: Incident Response "cannot pause, block or stop a
+    session: those need a human approval".
+
+mapping:
+  insights.secrets: {used_by: [IR-1]}
+  insights.sensitive_unasked: {used_by: [IR-1]}
+  insights.blocked: {used_by: [IR-1]}
+  insights.outside: {used_by: [IR-1]}
+  incident_trigger_score:
+    used_by: [IR-1]
+    note: >-
+      NOT_CALCULATED. Registry category D, NOT_IMPLEMENTED: read from upstream COP findings along the Block 1
+      edges, computed in the COPS runtime (Block 2.4); the registry's proposal (from upstream cop_decisions
+      severity/action) is not approved. IR-1 lists each consumed finding with its class and verification instead
+      and computes no score.
+  interaction.subagent_lanes: {used_by: [IR-2]}
+  interaction.mcp_servers: {used_by: [IR-2]}
+  access.first_seen_mcp: {used_by: [IR-2]}
+  insights.unattributed: {used_by: [IR-2]}
+  incident_severity_score:
+    used_by: [IR-2]
+    note: >-
+      NOT_CALCULATED as a metric. Registry category O, NOT_IMPLEMENTED: IR's own decision, not a calculated
+      metric. The severity (HIGH, MEDIUM, LOW, NONE) is the legacy rule's mapping of its grounds.
+  incident_scope:
+    used_by: [IR-2]
+    note: >-
+      NOT_CALCULATED as a metric. Registry category D, NOT_IMPLEMENTED; the registry's proposal (entities touched
+      by the steps cited in upstream decisions' evidence_refs) is not approved. IR-2 lists the entities (events,
+      agent lanes, resources, findings) behind the grounds; it computes no scope measure.
+  incident_impact_score:
+    used_by: [IR-2]
+    note: >-
+      NOT_CALCULATED. Registry category R, NOT_IMPLEMENTED. Missing input: the asset_inventory reference (asset,
+      criticality, owner, impact criteria, likelihood criteria, playbook and cost), supplied by the enterprise
+      administrator; location not chosen. IR-2 reports the recorded sensitivity tiers of the rows involved; that
+      is not an impact score.
+  insights.failed: {used_by: [IR-3]}
+  insights.reverted: {used_by: [IR-3]}
+  insights.retry: {used_by: [IR-3]}
+  insights.stalled: {used_by: [IR-3]}
+  incident_active_duration:
+    used_by: [IR-3]
+    note: >-
+      NOT_CALCULATED. Registry category A, NOT_IMPLEMENTED: needs open/close times of IR findings and the actions
+      taken; none are stored yet.
+  incident_containment_status:
+    used_by: [IR-3]
+    note: >-
+      NOT_CALCULATED as a metric. Registry category A, NOT_IMPLEMENTED: needs COPS action records plus later
+      observables; none are stored yet. IR-3 reads containment from the session itself (a deny rule that stopped
+      the operation, a denied operation still pending, outbound calls after a secret was read).
+  incident_resolution_status:
+    used_by: [IR-3]
+    note: >-
+      NOT_CALCULATED. Registry category A, NOT_IMPLEMENTED: needs resolution records; none are stored. IR-3 never
+      answers RESOLVED until they are.
+  telemetry.collector_coverage: {used_by: [IR-4]}
+  telemetry.source_agreement: {used_by: [IR-4]}
+  telemetry.turn_linkage: {used_by: [IR-4]}
+  telemetry.lane_linkage: {used_by: [IR-4]}
+  telemetry.unknown_share: {used_by: [IR-4]}
+  incident_evidence_sufficiency:
+    used_by: [IR-4]
+    note: >-
+      NOT_CALCULATED as a metric. Registry category D, NOT_IMPLEMENTED; the registry's proposal (evidence_confidence
+      of the consumed decisions) is not approved. IR-4 lists each consumed finding's verification and Runtime
+      Monitoring's evidence label instead and computes no score.
+  incident_upstream_agreement:
+    used_by: [IR-4]
+    note: >-
+      NOT_CALCULATED as a metric. Registry category D, NOT_IMPLEMENTED; the registry's proposal (agreement between
+      the consumed decisions) is not approved. IR-4 records which grounds are independent and which rest on the
+      same source evidence; it computes no agreement measure.
+  insights.no_oversight: {used_by: [IR-5]}
+  oversight.fast_approvals: {used_by: [IR-5]}
+  oversight.declined_inferred: {used_by: [IR-5]}
+  incident_response_urgency:
+    used_by: [IR-5]
+    note: >-
+      NOT_CALCULATED as a metric. Registry category O, NOT_IMPLEMENTED: IR's own decision, not a calculated
+      metric. The response follows the legacy rule's mapping, bounded by triage and authority.
+  incident_escalation_required:
+    used_by: [IR-5]
+    note: >-
+      NOT_CALCULATED as a metric. Registry category O, NOT_IMPLEMENTED: IR's own decision. ESCALATE comes from the
+      legacy rule's grounds (failed recovery; an exposure with an independent anomaly).
+  incident_human_approval_required:
+    used_by: [IR-5]
+    note: >-
+      NOT_CALCULATED as a metric. Registry category O, NOT_IMPLEMENTED: IR's own decision. REQUEST_APPROVAL comes
+      from the legacy rule (a verified violation whose operation Policy Enforcement proposes to block).
+  incident_intervention_success:
+    used_by: [IR-5]
+    note: >-
+      NOT_CALCULATED. Registry category A, NOT_IMPLEMENTED: needs intervention records and post-intervention
+      observables; none are stored yet.
+  incident_residual_risk:
+    used_by: [IR-5]
+    note: >-
+      NOT_CALCULATED as a metric. Registry category O, NOT_IMPLEMENTED: IR's own assessment. Residual risk is Risk
+      Mitigation's question and is not established there either (no approved mitigation effectiveness).
+
+# cops/specs.py missing_metrics for this COP. They are not in the metric registry, so they are not mapped above;
+# each is reported as NOT_CALCULATED with the input it lacks. None is approximated.
+not_calculated:
+  time_to_harm: >-
+    NOT_CALCULATED. No registry metric. Missing input: an approved method and the asset inventory's impact
+    criteria; no time-to-harm is estimated. The urgency of the response follows the legacy rule's grounds.
+  intervention_available: >-
+    NOT_CALCULATED as a metric. No registry metric. Which interventions this COP may propose is authority's
+    (cops/authority.py GRANTS, specs.permitted_actions); whether one would work in this environment is not
+    recorded anywhere (no intervention records).
+  affected_entities: >-
+    NOT_CALCULATED as a metric. No registry metric (registry incident_scope is NOT_IMPLEMENTED). IR-2 lists the
+    entities behind the grounds; it computes no count.
+
+# How each consumed COP's verified substantive finding is read (specs.CONSUMES["incident_response"]). Only the
+# labels the approved rule and inputs name can ground an incident or a watch (many-to-many mapping row 11:
+# Anomaly Detection and Policy Enforcement; rules.incident_response: Recovery & Resilience). Every other consumed
+# finding is context: listed in IR-1 and IR-2 with its entities, never a ground. A quiet reading (each COP's first
+# interpretation) grounds nothing; an undetermined reading (INDETERMINATE, PATH_PARTIAL, UNCERTAIN) is a
+# limitation. Runtime Monitoring is evidence quality, never a ground.
+upstream:
+  runtime_monitoring: {evidence_quality: true, insufficient: [INSUFFICIENT], degraded: [DEGRADED],
+                       quiet: [SUFFICIENT]}
+  anomaly_detection: {abnormal: [ANOMALOUS], quiet: [NORMAL]}
+  policy_enforcement: {incident: [VIOLATION], finding: [APPROVAL_REQUIRED], quiet: [ALLOWED]}
+  recovery_resilience: {incident: [FAILED_RECOVERY, IRREVERSIBLE], finding: [PARTIAL_RECOVERY], quiet: [RECOVERED]}
+  interaction_discovery: {context: [NEW_ROUTE, PROPAGATING], quiet: [CONTAINED]}
+  workflow_orchestration: {context: [DRIFTING, STALLED, EXCESSIVE_DELEGATION, UNEXPECTED_BRANCH], quiet: [NORMAL]}
+  resource_management: {context: [INEFFICIENT, EXCESSIVE, UNAUTHORIZED], quiet: [NORMAL]}
+  classification_tagging: {context_only: true, quiet: [UNCLASSIFIED]}
+
+questions:
+  IR-1:
+    question: Do the available findings indicate an actionable incident?
+    fields: [observable_id, observable_type, session_id, turn_id, agent_id, collector, tool_use_id, tool_name,
+             tool_arguments, tool_result, success, status, error_type, error_message, permission_decision,
+             denial_reason, outside_workspace, secret_detected, injection_markers, risk_markers, violation_count,
+             escalation_flag, policy_rule_matched, raw_ref]
+    requires:
+      - {metric: insights.secrets, kind: REQUIRED}
+      - {metric: insights.sensitive_unasked, kind: REQUIRED}
+      - {metric: insights.blocked, kind: REQUIRED}
+      - {metric: insights.outside, kind: OPTIONAL}
+      - {metric: incident_trigger_score, kind: OPTIONAL}
+    verified: []
+    blocking: []
+    outcomes: [INCIDENT_INDICATED, FINDING_WITHOUT_INCIDENT, NO_INCIDENT_INDICATED]
+
+  IR-2:
+    question: What is the severity, scope and potential impact of the incident?
+    fields: [observable_id, session_id, agent_id, parent_agent_id, delegation_depth, operator_id, org_id,
+             team_id, tool_name, tool_arguments, command, file_path, file_change_kind, file_size,
+             sensitivity_tier, outside_workspace, secret_detected, risk_markers, violation_count, mcp_server,
+             mcp_tool, success, status, raw_ref]
+    requires:
+      - {metric: interaction.subagent_lanes, kind: OPTIONAL}
+      - {metric: interaction.mcp_servers, kind: OPTIONAL}
+      - {metric: access.first_seen_mcp, kind: OPTIONAL}
+      - {metric: insights.unattributed, kind: OPTIONAL}
+      - {metric: incident_severity_score, kind: OPTIONAL}
+      - {metric: incident_scope, kind: OPTIONAL}
+      - {metric: incident_impact_score, kind: OPTIONAL}
+    verified: []
+    blocking: []
+    depends_on: [IR-1]
+    outcomes: [SEVERITY_HIGH, SEVERITY_MEDIUM, SEVERITY_LOW, NOTHING_TO_RATE]
+
+  IR-3:
+    question: Is the incident ongoing, contained, resolved or still uncertain?
+    fields: [observable_id, observable_type, session_id, turn_id, agent_id, tool_use_id, tool_name, tool_result,
+             success, status, error_type, error_message, tool_interrupted, permission_decision, denial_reason,
+             violation_count, escalation_flag, reverted_to_earlier, background_tasks, scheduled_jobs, raw_ref]
+    requires:
+      - {metric: insights.failed, kind: OPTIONAL}
+      - {metric: insights.reverted, kind: OPTIONAL}
+      - {metric: insights.retry, kind: OPTIONAL}
+      - {metric: insights.stalled, kind: OPTIONAL}
+      - {metric: incident_active_duration, kind: OPTIONAL}
+      - {metric: incident_containment_status, kind: OPTIONAL}
+      - {metric: incident_resolution_status, kind: OPTIONAL}
+    verified: []
+    blocking: []
+    depends_on: [IR-1]
+    # "still uncertain" is the INCONCLUSIVE answer, with the reason named
+    outcomes: [ONGOING, CONTAINED, RESOLVED, NO_INCIDENT_STATE]
+
+  IR-4:
+    question: Do upstream COP findings provide sufficient evidence to justify intervention?
+    fields: [observable_id, observable_type, collector, session_id, turn_id, agent_id, parent_agent_id,
+             tool_use_id, tool_name, tool_arguments, tool_result, success, status, error_type,
+             permission_decision, policy_rule_matched, risk_markers, violation_count, raw_ref]
+    requires:
+      - {metric: telemetry.collector_coverage, kind: OPTIONAL}
+      - {metric: telemetry.source_agreement, kind: OPTIONAL}
+      - {metric: telemetry.turn_linkage, kind: OPTIONAL}
+      - {metric: telemetry.lane_linkage, kind: OPTIONAL}
+      - {metric: telemetry.unknown_share, kind: OPTIONAL}
+      - {metric: incident_evidence_sufficiency, kind: OPTIONAL}
+      - {metric: incident_upstream_agreement, kind: OPTIONAL}
+    verified: []
+    blocking: []
+    depends_on: [IR-1, IR-3]
+    outcomes: [INTERVENTION_JUSTIFIED, ATTENTION_JUSTIFIED, NOT_JUSTIFIED]
+
+  IR-5:
+    question: What immediate response is warranted, and does it require escalation or human approval?
+    fields: [observable_id, observable_type, session_id, agent_id, operator_id, operator_email, org_id, team_id,
+             permission_mode, permission_decision, permission_source, permission_scope, permission_options,
+             denial_reason, escalation_flag, violation_count, policy_rule_matched, outside_workspace,
+             sensitivity_tier, secret_detected, risk_markers, tool_name, tool_arguments, tool_interrupted, status,
+             raw_ref]
+    requires:
+      - {metric: insights.no_oversight, kind: OPTIONAL}
+      - {metric: oversight.fast_approvals, kind: OPTIONAL}
+      - {metric: oversight.declined_inferred, kind: OPTIONAL}
+      - {metric: incident_response_urgency, kind: OPTIONAL}
+      - {metric: incident_escalation_required, kind: OPTIONAL}
+      - {metric: incident_human_approval_required, kind: OPTIONAL}
+      - {metric: incident_intervention_success, kind: OPTIONAL}
+      - {metric: incident_residual_risk, kind: OPTIONAL}
+    verified: []
+    blocking: []
+    depends_on: [IR-2, IR-4]
+    outcomes: [REQUEST_APPROVAL, ESCALATE_TO_PERSON, ALERT, WATCH, NO_RESPONSE]
+
+# IR-1 gives the label. INCIDENT_INDICATED: a verified VIOLATION, a verified FAILED_RECOVERY or IRREVERSIBLE, or an
+# undisputed exposure. FINDING_WITHOUT_INCIDENT: a verified ANOMALOUS, APPROVAL_REQUIRED or PARTIAL_RECOVERY, or the
+# deny rule fired (insights.blocked). Severity is IR-2's and the action IR-5's.
+labels:
+  INCIDENT_INDICATED: INCIDENT
+  FINDING_WITHOUT_INCIDENT: WATCH
+  NO_INCIDENT_INDICATED: NO_INCIDENT
+  INCONCLUSIVE: INCONCLUSIVE
+
+# IR-5's answer -> the action proposed (the legacy rule's actions). triage and authority bound it; nothing is
+# executed by this COP, and PAUSE, BLOCK and INSTRUCT are never proposed from this package.
+responses:
+  REQUEST_APPROVAL: REQUEST_APPROVAL
+  ESCALATE_TO_PERSON: ESCALATE
+  ALERT: ALERT
+  WATCH: WATCH
+  NO_RESPONSE: NONE
+
+severity:
+  SEVERITY_HIGH: HIGH
+  SEVERITY_MEDIUM: MEDIUM
+  SEVERITY_LOW: LOW
+  NOTHING_TO_RATE: NONE
+
+# Which decided readings need the model (INTERPRETATION.md). Only an incident whose intervention IR-4 justifies is
+# passed to the model, to scope the incident and draft the containment plan; the package checks the model's
+# conclusion against its own answers (cop_package.interpreted_incident_response).
+model_role:
+  needed_when: {IR-4: INTERVENTION_JUSTIFIED}
+  must_match: [label, action]
+
+# Metric states that count as observed (the states cops/interpret.py treats as hot). WARNING does not count.
+deviation_states: [EXCEPTION, CRITICAL]
+
+operations:
+  compute_metrics: {by: deterministic, code: collector/signal_metrics.py:compute}
+  check_exposure: {by: deterministic, code: collector/cops/runtime/tools.py:t_check_exposure}
+  assess_evidence: {by: deterministic, code: collector/cops/runtime/evidence_assessment.py:assess}
+  observe_questions: {by: deterministic, code: collector/cops/runtime/cop_package.py:observe_incident_response}
+  split_upstream: {by: deterministic, code: collector/cops/runtime/cop_package.py:_ir_upstream}
+  decide_label: {by: deterministic, code: collector/cops/runtime/cop_package.py:decide_incident_response}
+  containment_plan: {by: llm, code: collector/cops/runtime/profiles.py PROMPTS incident_response}
+  check_model_conclusion: {by: deterministic,
+                           code: collector/cops/runtime/cop_package.py:interpreted_incident_response}
+  verify_finding: {by: deterministic, code: collector/cops/runtime/verifiers.py}
+  select_action: {by: deterministic, code: collector/cops/runtime/triage.py}
+  authority_check: {by: deterministic, code: collector/cops/authority.py:check}
+  memory_write: {by: deterministic, code: collector/cops/runtime/graph.py:validate_memory_update}
+  decision_record: {by: deterministic, code: collector/cops/runtime/decision.py:build}
