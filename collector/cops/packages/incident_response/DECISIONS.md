@@ -141,6 +141,6 @@ change is marked in the test with why. No assertion about the shared machinery w
 |---|---|
 | Incident Response harness | 478 of 478, 6 superseded (R-IR1) |
 | Risk Mitigation, Classification & Tagging, Resource Management, Anomaly Detection, Policy Enforcement, Interaction Discovery, Audit & Traceability, Runtime Monitoring harnesses | 274/274 (C-RK5, C-RK6, C-RK7), 221/221, 196/196, 252/252 (C-AD), 238/238, 204/204, 138/138, 133/133 |
-| Full suite (`pytest ../tests`) | 959 passed, 1 failed, 1 skipped. The failure was the RK context-only test; it was restated as C-RK7 above and passes when re-run alone. The full suite was not re-run |
+| Full suite (`pytest ../tests`) | 960 passed, 1 skipped (full re-run on 5ab16e0). The first run had 959 passed, 1 failed: the RK context-only test, restated as C-RK7 above |
 | Evaluation | 25 of 25 PASS |
 | Bench | 49 PASS, 1 FAIL, 4 INCONCLUSIVE, unchanged. Fleet F2 still FAIL, as before COP 9 |
