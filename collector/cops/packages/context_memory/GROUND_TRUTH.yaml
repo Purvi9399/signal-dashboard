@@ -468,6 +468,22 @@ scenarios:
       UNVALIDATED record never supports
     checks: [vs01_other_cop_supports]
 
+  own_current_output:
+    description: >-
+      Added before its code (2026-11-28, D-CM22): with D-CM21 Context & Memory also serves COPs that ran earlier in
+      the case, after they wrote. A requester is never served its own output of this same run and case (it already
+      holds it, and it can never corroborate itself): Anomaly Detection asks for session s1 and gets its earlier case's
+      record; its record written in this run is excluded OWN_CURRENT_OUTPUT. Another COP's current-cycle record is
+      still returned (earlier_cycles)
+    store: [ad_s1_prev, ad_s1_curr]
+    request: {requesting_cop: anomaly_detection, memory_types: [anomaly_observation], session_scope: same_session}
+    status: RETRIEVED
+    label: MEMORY_RETURNED
+    answers: {CM-1: REQUEST_COMPLETE, CM-2: RELEVANT_MEMORY_FOUND, CM-3: ALL_ATTRIBUTABLE, CM-4: COMPLETE}
+    returned: [ad_s1_prev]
+    excluded: {ad_s1_curr: OWN_CURRENT_OUTPUT}
+    checks: [store_unchanged]
+
 # Expectations superseded by purvi's decisions (A-CM1, 2026-11-28). The replaced expectations are kept above as
 # written and reported as SUPERSEDED by the harness.
 superseded:
