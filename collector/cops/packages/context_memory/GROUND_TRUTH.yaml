@@ -471,18 +471,34 @@ scenarios:
   own_current_output:
     description: >-
       Added before its code (2026-11-28, D-CM22): with D-CM21 Context & Memory also serves COPs that ran earlier in
-      the case, after they wrote. A requester is never served its own output of this same run and case (it already
-      holds it, and it can never corroborate itself): Anomaly Detection asks for session s1 and gets its earlier case's
-      record; its record written in this run is excluded OWN_CURRENT_OUTPUT. Another COP's current-cycle record is
-      still returned (earlier_cycles)
+      the case, after they wrote. In Context & Memory's case bundle (request exclude_own_current) a requester is never
+      served its own output of this same run and case (it already holds it, and it can never corroborate itself):
+      Anomaly Detection asks for session s1 and gets its earlier case's record; its record written in this run is
+      excluded OWN_CURRENT_OUTPUT. Revised 2026-11-28 before acceptance: the exclusion is scoped to the case bundle
+      (exclude_own_current), because applied to every retrieval it removed a COP's own current-cycle record from its
+      working memory view (tests/test_cop_package_runtime_monitoring.py, accepted COP 1); see
+      own_current_output_working_view
     store: [ad_s1_prev, ad_s1_curr]
-    request: {requesting_cop: anomaly_detection, memory_types: [anomaly_observation], session_scope: same_session}
+    request: {requesting_cop: anomaly_detection, memory_types: [anomaly_observation], session_scope: same_session,
+              exclude_own_current: true}
     status: RETRIEVED
     label: MEMORY_RETURNED
     answers: {CM-1: REQUEST_COMPLETE, CM-2: RELEVANT_MEMORY_FOUND, CM-3: ALL_ATTRIBUTABLE, CM-4: COMPLETE}
     returned: [ad_s1_prev]
     excluded: {ad_s1_curr: OWN_CURRENT_OUTPUT}
     checks: [store_unchanged]
+
+  own_current_output_working_view:
+    description: >-
+      D-CM22 as revised: the same request without exclude_own_current (a COP's working memory view,
+      graph.retrieve_memory and tools._memory_lookup) is unchanged from the first build: both records are returned,
+      the current one marked CURRENT_CYCLE, and the requester's own records never corroborate it
+    store: [ad_s1_prev, ad_s1_curr]
+    request: {requesting_cop: anomaly_detection, memory_types: [anomaly_observation], session_scope: same_session}
+    status: RETRIEVED
+    label: MEMORY_RETURNED
+    returned: [ad_s1_prev, ad_s1_curr]
+    checks: [cycles_distinguished, own_earlier_output_not_independent, store_unchanged]
 
 # Expectations superseded by purvi's decisions (A-CM1, 2026-11-28). The replaced expectations are kept above as
 # written and reported as SUPERSEDED by the harness.
