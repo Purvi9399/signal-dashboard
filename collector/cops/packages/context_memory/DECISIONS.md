@@ -36,7 +36,7 @@ Context & Memory 4. The build order is recorded apart from that numbering (proje
 | `requirements.REQUIREMENTS` | context_snapshots REQUIRED | removed for this COP (retrieval needs no snapshot) |
 | `triage.LABEL_ACTIONS`, `NON_REMEDIAL_LABELS`, specialist | previous labels | replaced by this package's labels; all non-remedial |
 | `evidence_query`, `live_eval`, `signal_pages_export` | previous evidence and cases | this COP's own entries updated |
-| Evaluation C09, D-CM, D-IR, E2E-full (`runtime/evaluation.py`) | CONTEXT_LOSS, PRECEDENT_FOUND, CONTEXT_OK withheld for context_snapshots, a verified substantive reading | the expectations about this COP are migrated (D-CM19); the previous expectations are kept verbatim below |
+| Evaluation C09, D-CM, E2E, E2E-full (`runtime/evaluation.py`) | CONTEXT_LOSS, PRECEDENT_FOUND, CONTEXT_OK withheld for context_snapshots, a verified substantive reading | the expectations about this COP are migrated (D-CM19); the previous expectations are kept verbatim below |
 
 No accepted COP's ground truth expects a real Context & Memory finding: Behavior Analytics' harness and
 `tests/test_runtime_graph.py`, `tests/test_cop_influence.py` hand Behavior Analytics a synthetic CONTEXT_LOSS
@@ -64,7 +64,7 @@ finding, which still exercises BA's contract for that input.
 | D-CM16 | Runtime Monitoring stays a consumed edge (no topology change) and is context only. The shared precheck still withholds the quiet NO_RELEVANT_MEMORY while Runtime Monitoring verifies telemetry INSUFFICIENT: current-cycle records may be missing too | drop the edge | an edge change ripples through the topology; the precheck is shared |
 | D-CM17 | Time: event time is provenance.evaluated_at (the producing case's evaluation time); a record with an event after the request's as_of is FUTURE_EVENT and excluded; since and until bound it. created_at is the gateway's recording time and is returned, not compared with as_of (they come from different clocks). A record is CURRENT_CYCLE when written in the request's run and case, else PREVIOUS_CYCLE; CYCLE_UNKNOWN without run_id | compare created_at | in the runtime the gateway clock and the case's evaluation time are independent; comparing them would exclude every record |
 | D-CM18 | Routing: every COP's memory reads in the runtime go through this contract: graph.retrieve_memory (the working memory view) and tools._memory_lookup (the package tools). The view keeps its shape (established, verified_pending, unverified, excluded) and adds the bundle; records set apart (insufficient provenance, instruction-shaped, future, duplicate) are no longer in the buckets. On a gateway denial both behave as before (unavailable view; MemoryAccessDenied from the tool) | a separate opt-in call | purvi item 6: other COPs request memory through the existing retrieval contract and receive a structured bundle |
-| D-CM19 | The evaluation's expectations about this COP are migrated: C09 and D-CM now expect no retired label, no fabricated integrity finding for Behavior Analytics and a retrieval bundle; D-IR no longer expects a withheld CONTEXT_OK for context_snapshots; E2E-full keeps "verified substantive". The previous expectations are kept below | leave them failing | they test the retired detector, not another COP's contract |
+| D-CM19 | The evaluation's expectations about this COP are migrated: C09 and D-CM now expect no retired label, no fabricated integrity finding for Behavior Analytics and a retrieval bundle; E2E no longer expects a withheld CONTEXT_OK for context_snapshots (it expects no context_snapshots dependency and no retired label); E2E-full keeps "verified substantive". The bench cases context_memory:normal, :abnormal and :missing (`runtime/live_eval.py` CASES) become retrieval worlds: an empty store (NO_RELEVANT_MEMORY), a validated record beside a forged VALIDATED one (MEMORY_PARTIAL), thin telemetry with an empty store (INCONCLUSIVE). `docs/cops/cops_topology.json` carries this COP's new question, labels and an illustrative response, and its consumed edge (the Runtime Monitoring link added and `reads_decisions_from` corrected from [] to [runtime_monitoring], as Behavior Analytics did for its own entry); `docs/cops/cop_catalogue.json` is a dated read-only extraction and is left as it was. The previous expectations are kept below | leave them failing | they test the retired detector, not another COP's contract |
 | D-CM20 | This COP writes no memory (`cop_specific.memory_write_policy: none`, read by graph.validate_memory_update). Its POLICIES entry keeps context_integrity_finding so earlier records stay readable and owned | write each bundle | purvi item 7: no competing historical truth and no duplicate entries |
 
 ## Previous evaluation expectations (kept verbatim)
@@ -78,8 +78,11 @@ finding, which still exercises BA's contract for that input.
 | D-CM | first: incomplete evidence, tool requests, revision, CONTEXT_LOSS verified |
 | D-CM | first: stored as VERIFIED |
 | D-CM | second: retrieves and cites the validated record, verified |
-| D-IR | Context & Memory withholds CONTEXT_OK: no context snapshots |
+| E2E | Context & Memory withholds CONTEXT_OK: no context snapshots |
 | E2E-full | the five COPs gated in E2E reach a verified substantive finding (kept) |
+| bench context_memory:normal | compaction keeps every constraint: CONTEXT_OK |
+| bench context_memory:abnormal | compaction drops C1, then a migration file is written: CONTEXT_LOSS |
+| bench context_memory:missing | compaction, no context snapshots: INCONCLUSIVE |
 
 ## Proposed for approval (not implemented)
 

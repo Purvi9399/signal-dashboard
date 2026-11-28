@@ -54,6 +54,8 @@ from .evidence import assess, usable
 from .requirements import assess_requirements, required_unavailable, precheck as evidence_precheck_fn
 from .memory import MemoryAccessDenied, POLICIES, VERIFIED
 from .rules import RULES, DETERMINISTIC_TOOLS, evidence_conf
+from .cop_package import retrieve_memory as retrieve_memory_bundle, runtime_request, bundle_view, memory_buckets, \
+    ACCESS_DENIED, STORAGE_UNAVAILABLE, INVALID_REQUEST
 from .cop_package import DECIDED_WITHOUT_MODEL, interpreted_anomaly_detection, ad_case_events, LEAVE_ONE_OUT_COPS, \
     interpreted_classification_tagging, interpreted_incident_response
 from . import decision
@@ -207,7 +209,7 @@ def _events(rt, cop, picture=None):
 
 
 def _tool_ctx(rt, state):
-    return {"case_id": rt.case.case_id, "tenant_id": rt.case.tenant_id,
+    return {"case_id": rt.case.case_id, "tenant_id": rt.case.tenant_id, "run_id": rt.run_id,
             "agent_scope": rt.case.agent_scope, "upstream": state.get("upstream") or {}}
 
 
@@ -262,27 +264,27 @@ def validate_evidence(state):
     return {"picture": pic, "missing_evidence": miss}
 
 
-def _mem_view(r):
-    return {"record_id": r["record_id"], "record_type": r["record_type"],
-            "status": r["validation_status"], "payload": r["payload"],
-            "from_case": (r["provenance"] or {}).get("case_id")}
-
-
 @timed("retrieve_memory")
 def retrieve_memory(state):
+    """The COP's memory, through Context & Memory's retrieval contract (packages/context_memory/DECISIONS.md D-CM18):
+    the requester's own policy, the gateway's rules, provenance and integrity checks. The view keeps its buckets and
+    adds the bundle; records set apart are not in the buckets."""
     rt = _rt(state)
     if rt.memory is None:
         return {"memory_view": {"available": False}}
-    try:
-        got = rt.memory.read(state["cop"], rt.case.case_id, rt.case.tenant_id,
-                             agent_scope=rt.case.agent_scope)
-    except MemoryAccessDenied as e:
-        return {"memory_view": {"available": False, "denied": str(e)}}
-    return {"memory_view": {"available": True,
-                            "established": [_mem_view(r) for r in got["established"]],
-                            "verified_pending": [_mem_view(r) for r in got["verified_pending"]],
-                            "unverified": [_mem_view(r) for r in got["unverified"]],
-                            "excluded": got["excluded"]}}
+    b = retrieve_memory_bundle(rt.memory, runtime_request(state["cop"], rt.case, rt.run_id,
+                                                          purpose="working memory view"))
+    if b["retrieval_status"] == ACCESS_DENIED:
+        return {"memory_view": {"available": False, "denied": b["denied"] or "no readable memory type",
+                                "retrieval": bundle_view(b)}}
+    if b["retrieval_status"] in (STORAGE_UNAVAILABLE, INVALID_REQUEST):
+        return {"memory_view": {"available": False, "unavailable": b["storage_error"] or b["retrieval_status"],
+                                "retrieval": bundle_view(b)}}
+    shape = lambda v: {"record_id": v["record_id"], "record_type": v["record_type"], "status": v["validation_status"],
+                       "payload": v["payload"], "from_case": v["case_id"]}
+    k = memory_buckets(b, shape)
+    return {"memory_view": {"available": True, **k, "excluded": b["gateway_excluded"],
+                            "retrieval": bundle_view(b)}}
 
 
 def _rule_ctx(rt, state, calls):
@@ -1162,6 +1164,9 @@ def validate_memory_update(state):
     quiet = spec.interpretations[0] if spec.interpretations else None
     if rt.memory is None:
         return {"memory_write": {"written": False, "reason": "no memory gateway"}}
+    if (f.get("cop_specific") or {}).get("memory_write_policy") == "none":
+        # Context & Memory retrieves; it keeps no competing record of what it returned (D-CM20)
+        return {"memory_write": {"written": False, "reason": f"{cop} writes no memory (retrieval only)"}}
     remember = (f.get("cop_specific") or {}).get("remember_quiet")   # a quiet label that explains a deviation
     if f["status"] == SUBSTANTIVE and (f["label"] != quiet or remember):
         status, label = (VERIFIED if f["verified"] else UNVALIDATED), f["label"]

@@ -508,7 +508,12 @@ def test_expectations_are_unchanged_and_independent_of_outputs(bench):
     cases, _ = bench
     old = json.load(open(os.path.join(DOCS, "test_bench_results_before_fixes.json")))
     exp = {c["id"]: c["expected"] for c in old["cases"]}
-    assert all(exp[c["id"]] == c["expected"] for c in cases)
+    # Context & Memory's three cases were migrated with its retrieval-only contract (COP 12, 2026-11-28,
+    # packages/context_memory/DECISIONS.md D-CM19, which keeps the previous expectations verbatim)
+    migrated = {"context_memory:normal": ["CONTEXT_OK"], "context_memory:abnormal": ["CONTEXT_LOSS"],
+                "context_memory:missing": ["INCONCLUSIVE"]}
+    assert {k: list(exp[k]) for k in migrated} == migrated
+    assert all(exp[c["id"]] == c["expected"] for c in cases if c["id"] not in migrated)
 
 
 # Interaction Discovery now answers thin telemetry with its own reading, PATH_PARTIAL, from its

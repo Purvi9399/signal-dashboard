@@ -36,7 +36,7 @@ from .contracts import (Claim, CLAIM_METRIC_STATE, CLAIM_METRIC_VALUE, CLAIM_TOO
 from ..interpret import EVIDENCE_LEVEL
 from ..specs import BY_KEY, SPEC_CONSUMES
 from .cop_package import aggregate_runtime_monitoring, decide_audit_traceability, decide_interaction_discovery, \
-    decide_policy_enforcement, decide_anomaly_detection, decide_resource_management, decide_classification_tagging, decide_risk_mitigation, decide_incident_response, decide_recovery_resilience, decide_behavior_analytics, AT_CLEAN, CEILING, DECIDED_WITHOUT_MODEL
+    decide_policy_enforcement, decide_anomaly_detection, decide_resource_management, decide_classification_tagging, decide_risk_mitigation, decide_incident_response, decide_recovery_resilience, decide_behavior_analytics, decide_context_memory, AT_CLEAN, CEILING, DECIDED_WITHOUT_MODEL
 
 _RI = RuleInterpreter()
 HOT = ("EXCEPTION", "CRITICAL")
@@ -55,8 +55,8 @@ DETERMINISTIC_TOOLS = {
     # computed from the same sources the model can ask for.
     "workflow_orchestration": ("get_task_milestones", "analyse_execution_transitions"),
     "anomaly_detection": ("assess_anomaly_questions",),
-    "context_memory": ("get_context_snapshots", "compare_instruction_versions",
-                       "inspect_context_references", "verify_context_provenance"),
+    # retrieval only (packages/context_memory): the previous four snapshot tools are kept for comparison
+    "context_memory": ("assess_context_memory_questions",),
     "incident_response": ("check_exposure", "assess_incident_questions"),
     "classification_tagging": ("query_taxonomy", "inspect_event_metadata", "assess_classification_questions"),
     "risk_mitigation": ("read_risk_register", "calculate_risk_components", "assess_risk_questions"),
@@ -997,6 +997,35 @@ def _ct_questions(ctx, f):
 
 
 def context_memory(ctx):
+    """Context & Memory: the memory bundles it retrieved for its current-cycle consumers, and the retrieval label
+    (cop_package.decide_context_memory). Retrieval only: no context-loss, contradiction or other governance reading,
+    no action, no memory write, no model (packages/context_memory/INTERPRETATION.md)."""
+    t = ctx["tools"]
+    res = result(t, "assess_context_memory_questions")
+    cs = {"decided_without_model": True, "memory_write_policy": "none", "stop_reason": DECIDED_WITHOUT_MODEL}
+    if not res.get("questions"):
+        why = res.get("missing_dependency") or res.get("error") or \
+            (t.get("assess_context_memory_questions") or {}).get("status")
+        return F(INCONCLUSIVE, 0.0, "NONE", "", f"retrieval assessment unavailable: {why}"[:300],
+                 status="INCONCLUSIVE", cop_specific={**cs, "question_assessment": f"unavailable: {why}"})
+    d = decide_context_memory(res["questions"], res["bundles"])
+    q = d["questions"]
+    claims = [tclaim(t, "assess_context_memory_questions", f"questions.{qid}.answer.outcome", x["answer"],
+                     f"{qid} answered {x['answer']}: {x['explanation']}"[:240]).to_dict() for qid, x in q.items()]
+    cs.update(questions=q, drivers=d["drivers"], contrary=d["contrary"], limitations=d["limitations"],
+              recipients=d["recipients"], memory_payload=None, decision=d["decision"],
+              retrieval_status=d["retrieval_status"], bundles=res["bundles"],
+              retired_labels="CONTEXT_OK, STALE, CONTRADICTORY, CONTEXT_LOSS and PRECEDENT_FOUND are not produced",
+              authority={"enforces": [], "interprets_records": False})
+    status = SUBSTANTIVE if d["label"] != INCONCLUSIVE else "INCONCLUSIVE"
+    return F(d["label"], d["confidence"], d["action"], d["action_reason"],
+             (d["rationale_head"] + "; nothing enforced by this COP")[:600], claims, d["severity"], status,
+             cop_specific=cs)
+
+
+def _context_memory_previous_contract(ctx):
+    """The previous Context & Memory rule (context-loss and contradiction detection), kept for comparison only and
+    never called by the runtime (packages/context_memory/DECISIONS.md D-CM2). It reads the four snapshot tools."""
     t = ctx["tools"]
     miss = missing_of(t, "get_context_snapshots")
     if miss:

@@ -125,6 +125,11 @@ class MemoryGateway:
             "operation": op, "record_type": rtype, "record_id": rid,
             "outcome": outcome, "reason": reason}])
 
+    def log(self, cop, case_id, tenant_id, op, rtype, rid, outcome, reason=""):
+        """One row in cop_memory_access_log for an operation outside read and write (Context & Memory records each
+        retrieval it serves here, packages/context_memory/DECISIONS.md D-CM7)."""
+        self._log(cop, case_id, tenant_id, op, rtype, rid, outcome, reason)
+
     def access_log(self, tenant_id=None, outcome=None):
         rows = self.store.select("cop_memory_access_log")
         return [r for r in rows if (tenant_id is None or r["tenant_id"] == tenant_id)
@@ -211,8 +216,10 @@ class MemoryGateway:
 
     # ---------------------------------------------------------- read
     def read(self, cop, case_id, tenant_id, record_types=None, agent_scope=None,
-             requested_tenant=None):
-        """Records this COP may see, in three buckets by standing."""
+             requested_tenant=None, include_excluded=False):
+        """Records this COP may see, in three buckets by standing. include_excluded adds excluded_records: the
+        expired and rejected records the same rules withhold, each with its id, type, owner, status and reason, so a
+        caller can say what was withheld (they are still never returned as records)."""
         pol = POLICIES.get(cop)
         want = tuple(record_types or (pol["reads"] if pol else ()))
         if requested_tenant is not None and requested_tenant != tenant_id:
@@ -226,6 +233,7 @@ class MemoryGateway:
             raise MemoryAccessDenied(f"{cop} may not read {bad}")
         now = self.clock().isoformat()
         out = {"established": [], "verified_pending": [], "unverified": [], "excluded": 0}
+        withheld = []
         for r in self.store.select("cop_memory_records"):
             if r["record_type"] not in want:
                 continue
@@ -235,6 +243,7 @@ class MemoryGateway:
                 continue
             if r["expires_at"] and r["expires_at"] < now:
                 out["excluded"] += 1
+                withheld.append((r, "EXPIRED"))
                 continue
             s = r["validation_status"]
             if s == VALIDATED:
@@ -245,6 +254,11 @@ class MemoryGateway:
                 out["unverified"].append(r)
             else:
                 out["excluded"] += 1
+                withheld.append((r, s if s in (REJECTED_RECORD, EXPIRED) else "UNKNOWN_STATUS"))
+        if include_excluded:
+            out["excluded_records"] = [{"record_id": r["record_id"], "record_type": r["record_type"],
+                                        "owner_cop": r["owner_cop"], "validation_status": r["validation_status"],
+                                        "expires_at": r["expires_at"], "reason": why} for r, why in withheld]
         for k in ("established", "verified_pending", "unverified"):
             out[k].sort(key=lambda r: r["created_at"])
         self._log(cop, case_id, tenant_id, "read", ",".join(want), None, "OK",

@@ -72,8 +72,8 @@ UNAVAILABLE_WHY = {"taxonomy": lambda c: taxonomy_problem(c) if c.artifact("taxo
 REQUIREMENTS = {
     "workflow_orchestration": [
         ("task_plan", REQUIRED, "NORMAL: progress against the declared objective", None)],
-    "context_memory": [
-        ("context_snapshots", REQUIRED, "CONTEXT_OK: continuity across compaction", None)],
+    # context_memory: none. Retrieval reads COP memory through the MemoryGateway, not context snapshots
+    # (packages/context_memory/DECISIONS.md); the previous requirement was context_snapshots for CONTEXT_OK.
     "agent_lifecycle_management": [
         ("agent_registry", REQUIRED, "UNCHANGED: comparison with the approved configuration", None)],
     "policy_enforcement": [

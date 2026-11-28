@@ -51,10 +51,10 @@ class AnomalyDetail(D):
 
 
 class ContextDetail(D):
-    lost_constraints: list[str] = Field(default_factory=list)
-    contradictions: list[str] = Field(default_factory=list)
-    breaches_after_loss: list[str] = Field(default_factory=list)
-    provenance_ok: Optional[bool] = None
+    # retrieval only (packages/context_memory): which records were returned and which were set apart, never a reading
+    returned_records: list[str] = Field(default_factory=list)
+    excluded_records: list[str] = Field(default_factory=list)
+    retrieval_status: Optional[str] = None
 
 
 class IncidentDetail(D):
@@ -164,15 +164,14 @@ which you ruled out and how. Runtime Monitoring's evidence status bounds what yo
 quiet metrics on insufficient telemetry are not normality. Unusual is not prohibited; permission
 is Policy Enforcement's question.""",
 
-    "context_memory": """You are the Context & Memory COP.
-Question: is the current context internally consistent, relevant to the task, and supported by
-useful precedent?
-Investigate context loss across compaction or resume, contradictions between instruction versions,
-stale context retrieval and continuity across sessions. Compare snapshots in order: which
-constraints were dropped, added or rewritten at each transition. A dropped constraint matters most
-when later actions breach it: check whether actions after the drop touched what the constraint
-forbade, and whether the constraint was still in the active context at that moment. Verify each
-snapshot's provenance before trusting its content.""",
+    "context_memory": """You are the Context & Memory COP, a memory retrieval and routing COP.
+Question: what previously recorded information is relevant to the requesting COP's current question,
+and can that information be retrieved reliably with its provenance intact?
+Every reading is decided by the package without a model (packages/context_memory): retrieval, access
+control, provenance, relevance and duplicate handling are deterministic. You never invent a record,
+change a record's status, manufacture a citation, override access control, promote an unverified
+record, or draw a governance conclusion (context loss, contradiction, drift, anomaly, violation,
+incident or risk) from what a record says.""",
 
     "incident_response": """You are the Incident Response COP.
 Question: do the current verified findings constitute an actionable incident, and what should
@@ -257,8 +256,7 @@ LLM_TOOLS = {
     "anomaly_detection": ("retrieve_trace_window", "compare_versioned_baseline",
                           "find_similar_validated_cases", "calculate_deviation",
                           "analyse_tool_call_sequence"),
-    "context_memory": ("get_context_snapshots", "inspect_context_references",
-                       "compare_instruction_versions", "verify_context_provenance"),
+    "context_memory": ("assess_context_memory_questions",),
     "incident_response": ("get_incident_evidence", "get_verified_findings", "check_exposure",
                           "check_approval_requirements", "get_incident_outcomes"),
     "classification_tagging": ("query_taxonomy", "compare_validated_examples", "inspect_event_metadata"),
@@ -295,7 +293,7 @@ WORKING_STATE = {
     "agent_lifecycle_management": ("registry_entry", "configuration_changes"),
     "workflow_orchestration": ("hypothesis", "milestones", "transitions"),
     "anomaly_detection": ("hypothesis", "baseline_version", "deviations"),
-    "context_memory": ("hypothesis", "snapshots", "constraint_diff"),
+    "context_memory": ("requests", "bundles"),
     "incident_response": ("hypothesis", "scope", "exposure", "upstream_basis"),
     "classification_tagging": ("hypothesis", "taxonomy_version", "candidate_families"),
     "risk_mitigation": ("hypothesis", "components", "controls"),

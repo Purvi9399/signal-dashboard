@@ -79,10 +79,11 @@ def test_deterministic_cops_make_no_model_calls():
     # Anomaly Detection's package decides a session with no deviation without the model (D-AD1), and
     # Classification & Tagging's an event with one candidate family or none (COP 7, D-CT4), and Risk
     # Mitigation's every reading (COP 8, D-RK9), and Incident Response's every reading but an intervention incident
-    # (COP 9, D-IR11)
+    # (COP 9, D-IR11), and Context & Memory's every reading: retrieval only (COP 12, D-CM10)
     decided = {k for k in LLM_COPS if (out["cops"][k].get("cop_specific") or {}).get("stop_reason")
                == "decided_by_package_without_model"}
-    assert decided == {"anomaly_detection", "classification_tagging", "risk_mitigation", "incident_response"}
+    assert decided == {"anomaly_detection", "classification_tagging", "risk_mitigation", "incident_response",
+                       "context_memory"}
     assert all(out["cops"][k]["llm_calls"] == 0 for k in decided)
     assert all(out["cops"][k]["llm_calls"] >= 1 for k in set(LLM_COPS) - decided)
 

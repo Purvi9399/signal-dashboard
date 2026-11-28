@@ -54,9 +54,12 @@ TIER_ORDER = [OBSERVE, RECORD, ALERT, NOTIFY, REQUEST, RECOMMEND, INITIATE, INTE
 # ---------------------------------------------------------------- label semantics per COP
 # Labels that are verified readings but state uncertainty: outcome INCONCLUSIVE.
 INDETERMINATE_LABELS = {"anomaly_detection": ("INDETERMINATE",), "policy_enforcement": ("UNCERTAIN",),
-                        "resource_management": ("INDETERMINATE",), "interaction_discovery": ("PATH_PARTIAL",)}
+                        "resource_management": ("INDETERMINATE",), "interaction_discovery": ("PATH_PARTIAL",),
+                        # memory could not be read: the requesting COPs work without it (packages/context_memory)
+                        "context_memory": ("MEMORY_UNAVAILABLE",)}
 # Non-quiet labels that report nothing needing remedy: outcome PASS.
-NON_REMEDIAL_LABELS = {"context_memory": ("PRECEDENT_FOUND",)}
+# Context & Memory's retrieval labels report what was retrieved, never a finding (packages/context_memory).
+NON_REMEDIAL_LABELS = {"context_memory": ("MEMORY_RETURNED", "MEMORY_PARTIAL")}
 
 # ---------------------------------------------------------------- evidence-support score
 CHECK_FACTUAL = ("SC-01", "MC-01", "DS-03")          # the data contradicts the candidate
@@ -384,7 +387,7 @@ THRESHOLDS = {
                             "default bands"),
     "workflow_orchestration": T(0.78, 0.58, 0.35, "guidance actions are reversible and approval-gated "
                                 "when supervised; slightly lower autonomous bar"),
-    "context_memory": T(0.75, 0.55, 0.30, "observational: WATCH is its strongest action"),
+    "context_memory": T(0.75, 0.55, 0.30, "retrieval only: it proposes no action"),
     "interaction_discovery": T(0.80, 0.60, 0.35, "route findings feed policy and risk; default bands"),
     "agent_lifecycle_management": T(0.82, 0.62, 0.38, "identity and configuration drift feed policy "
                                     "enforcement; a wrong reading propagates"),
@@ -417,8 +420,7 @@ LABEL_ACTIONS = {
                                "UNEXPECTED_BRANCH": ("ALERT", RECOMMEND)},
     "runtime_monitoring": {"DEGRADED": ("WATCH", ALERT), "INSUFFICIENT": ("ALERT", NOTIFY)},
     "anomaly_detection": {"ANOMALOUS": ("ALERT", NOTIFY)},
-    "context_memory": {"STALE": ("WATCH", RECORD), "CONTRADICTORY": ("WATCH", NOTIFY),
-                       "CONTEXT_LOSS": ("WATCH", NOTIFY)},
+    "context_memory": {},
     "interaction_discovery": {"PROPAGATING": ("REQUEST_COP_SUPPORT", NOTIFY),
                               "NEW_ROUTE": ("REQUEST_COP_SUPPORT", NOTIFY)},
     "incident_response": {"WATCH": ("WATCH", ALERT), "INCIDENT": ("OPEN_INCIDENT", INTERVENE)},
@@ -474,10 +476,11 @@ SPECIALISTS = {
         tools=("compare_versioned_baseline", "find_similar_validated_cases", "retrieve_trace_window"),
         decides="ANOMALOUS or NORMAL against a wider baseline", cannot="block or pause the agent"),
     "context_memory": dict(
-        responsibility="unresolved context provenance, compaction or semantic contradiction",
-        receiver="specialist:context_provenance", support_cops=("audit_traceability",),
-        tools=("verify_context_provenance", "compare_instruction_versions", "get_context_snapshots"),
-        decides="which context version is authoritative", cannot="rewrite the agent's context or memory"),
+        responsibility="memory records whose provenance cannot be established or whose retrieval failed",
+        receiver="specialist:memory_provenance", support_cops=("audit_traceability",),
+        tools=("assess_context_memory_questions",),
+        decides="whether a record's provenance can be established from the memory store",
+        cannot="change a record's status, write memory, or interpret what a record says"),
     "interaction_discovery": dict(
         responsibility="complex agent-to-agent or MCP route reconstruction",
         receiver="specialist:route_reconstruction", support_cops=("audit_traceability",),

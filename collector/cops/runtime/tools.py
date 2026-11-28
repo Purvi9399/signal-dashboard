@@ -210,16 +210,32 @@ def t_inspect_delegation_traces(case, a, ctx):
 
 
 def _memory_lookup(ctx, rtype):
+    """One memory type for the calling COP, through Context & Memory's retrieval contract
+    (cop_package.retrieve_memory; packages/context_memory/DECISIONS.md D-CM18). A gateway denial raises as before."""
+    from .memory import MemoryAccessDenied
     g = ctx.get("memory")
     if g is None:
         return missing("memory_gateway", rtype, "a MemoryGateway bound to the case")
-    out = g.read(ctx["cop"], ctx["case_id"], ctx["tenant_id"], (rtype,), ctx.get("agent_scope"))
+    req = {"requesting_cop": ctx["cop"], "tenant_id": ctx["tenant_id"], "case_id": ctx["case_id"],
+           "behavioural_question": BY_KEY[ctx["cop"]].behavioural_question if ctx["cop"] in BY_KEY else None,
+           "agent_scope": ctx.get("agent_scope"), "session_id": ctx.get("session_id"), "run_id": ctx.get("run_id"),
+           "memory_types": [rtype], "as_of": ctx.get("as_of"), "purpose": f"tool read of {rtype}"}
+    b = cop_package.retrieve_memory(g, req)
+    if b["retrieval_status"] == cop_package.ACCESS_DENIED:
+        raise MemoryAccessDenied(b["denied"] or "; ".join(t["detail"] for t in b["not_entitled"]))
+    if b["retrieval_status"] in (cop_package.STORAGE_UNAVAILABLE, cop_package.INVALID_REQUEST):
+        return missing("memory_store", rtype, b["storage_error"] or "a readable memory store")
     view = lambda r: {"record_id": r["record_id"], "status": r["validation_status"],
-                      "payload": r["payload"], "case_id": (r["provenance"] or {}).get("case_id")}
+                      "payload": r["payload"], "case_id": r["case_id"]}
+    k = cop_package.memory_buckets(b, view)
     return {"record_type": rtype,
-            "established": [view(r) for r in out["established"]],
-            "verified_pending": [view(r) for r in out["verified_pending"]],
-            "unverified_count": len(out["unverified"]),
+            "established": k["established"],
+            "verified_pending": k["verified_pending"],
+            "unverified_count": len(k["unverified"]),
+            "insufficiently_supported_count": len(k["insufficiently_supported"]),
+            "retrieval": {"bundle_id": b["bundle_id"], "retrieval_status": b["retrieval_status"],
+                          "excluded": [{x: e.get(x) for x in ("record_id", "reason", "duplicate_of")}
+                                       for e in b["excluded"]]},
             "note": "only established records are precedent; unverified observations are not evidence"}
 
 
@@ -1326,6 +1342,23 @@ def t_assess_recovery_questions(case, a, ctx):
             "upstream_supplied": sorted((ctx.get("upstream") or {})), "evaluated_at": case.computed_at}
 
 
+def t_assess_context_memory_questions(case, a, ctx):
+    """Context & Memory's four questions: one retrieval per current-cycle consumer of this COP (specs.consumers),
+    each under that consumer's own memory policy (cop_package.retrieve_memory). Retrieval only; nothing is
+    interpreted (packages/context_memory/DECISIONS.md)."""
+    from ..specs import consumers
+    bundles = {}
+    for r in consumers(cop_package.CM):
+        req = {"requesting_cop": r, "tenant_id": ctx["tenant_id"], "case_id": ctx["case_id"],
+               "behavioural_question": BY_KEY[r].behavioural_question, "agent_scope": ctx.get("agent_scope"),
+               "session_id": case.session_id, "run_id": ctx.get("run_id"), "memory_types": None,
+               "as_of": case.computed_at, "purpose": f"current-cycle bundle for {r}"}
+        bundles[r] = cop_package.retrieve_memory(ctx.get("memory"), req)
+    q = cop_package.assess_context_memory(bundles)
+    return {"questions": q, "bundles": {r: cop_package.bundle_view(b) for r, b in bundles.items()},
+            "requesters": sorted(bundles), "evaluated_at": case.computed_at}
+
+
 def t_assess_behaviour_questions(case, a, ctx):
     """The four Behavior Analytics questions for the case session (cop_package), read against the estate's metric
     history, validated behaviour_baseline, context_integrity_finding and workflow_failure memory (context only) and
@@ -1421,6 +1454,7 @@ TOOLS = {
     "assess_incident_questions": (t_assess_incident_questions, {}),
     "assess_recovery_questions": (t_assess_recovery_questions, {}),
     "assess_behaviour_questions": (t_assess_behaviour_questions, {}),
+    "assess_context_memory_questions": (t_assess_context_memory_questions, {}),
     "compute_sequence_statistics": (t_compute_sequence_statistics, {}),
     "compare_behaviour_history": (t_compare_behaviour_history, {}),
     "get_recovery_records": (t_get_recovery_records, {}),
@@ -1535,7 +1569,9 @@ class ToolGateway:
         rec = self._record(cop, tool, args, requested_by)
         budget["tool_calls"] += 1
         try:
-            result = TOOLS[tool][0](self.case, args or {}, {**ctx, "cop": cop, "memory": self.memory})
+            result = TOOLS[tool][0](self.case, args or {}, {"session_id": self.case.session_id,
+                                                            "as_of": self.case.computed_at, **ctx, "cop": cop,
+                                                            "memory": self.memory})
             rec["status"] = "MISSING_DEPENDENCY" if "missing_dependency" in result else "OK"
         except Exception as e:                       # a broken tool is a fact, not a crash
             result = {"error": f"{type(e).__name__}: {e}"[:300]}

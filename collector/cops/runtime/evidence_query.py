@@ -116,10 +116,9 @@ ASSESSMENT = {
         "CaseData.metric_history over the in-memory estate", ["behaviour_history"],
         "history limited to the sessions loaded into the case estate"),
     "context_memory": _A(
-        "context_memory", "context snapshots and instruction versions",
-        ["get_context_snapshots", "compare_instruction_versions", "inspect_context_references",
-         "verify_context_provenance"], "CaseData.artifact('context_snapshots') (synthetic in evaluation)",
-        ["context_snapshots"], "no authoritative context snapshot store"),
+        "context_memory", "earlier COP memory for the requesting COP (retrieval only)",
+        ["assess_context_memory_questions"], "MemoryGateway over the local SQLiteStore (cop_memory_records)",
+        ["decision_history"], "memory limited to the records the local store holds"),
     "audit_traceability": _A(
         "audit_traceability", "trace reconstruction and decision linkage",
         ["reconstruct_trace", "check_decision_linkage"], "CaseData.session (in-memory trace)",

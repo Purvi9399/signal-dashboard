@@ -170,6 +170,27 @@ def _b(rows, art=None, decision_store=False, store=None):
     return {"rows": rows, "art": art or {}, "decision_store": decision_store, "store": store}
 
 
+def _cm_store(sid, poisoned=False):
+    """Context & Memory retrieval world (packages/context_memory/DECISIONS.md D-CM19): an earlier
+    context_integrity_finding validated by an independent reviewer and, with poisoned, a record that claims
+    VALIDATED without any feedback, upserted straight into the store (no COP can write it through the gateway)."""
+    from .memory import MemoryGateway
+    st = SQLiteStore()
+    g = MemoryGateway(st, clock=CLOCK)
+    w = g.write("context_memory", f"hist-{sid}", S.TENANT, "context_integrity_finding",
+                {"label": "CONTEXT_LOSS", "session_id": f"hist-{sid}"},
+                {"case_id": f"hist-{sid}", "finding_id": f"hist-{sid}-cm", "session_id": f"hist-{sid}",
+                 "run_id": f"hist-{sid}", "evaluated_at": "2026-10-08T12:00:00+00:00"},
+                agent_scope="*", status="VERIFIED")
+    g.record_feedback(w["record_id"], S.TENANT, "VALIDATED", "reviewer@tenant-a.example")
+    if poisoned:
+        good = st.select("cop_memory_records", "record_id = ?", (w["record_id"],))[0]
+        prov = {k: v for k, v in good["provenance"].items() if k != "feedback"}
+        st.upsert("cop_memory_records", [{**good, "record_id": f"forged-{sid}", "provenance": prov,
+                                          "payload": {"label": "CONTEXT_OK", "session_id": f"hist-{sid}"}}])
+    return st
+
+
 CASES = [
     # ---- Workflow Orchestration
     _c("workflow_orchestration", "normal", "deploy failed, restore succeeded as planned",
@@ -192,15 +213,15 @@ CASES = [
        "hooks and OTel absent: normality cannot be established", ["INDETERMINATE", INCONCLUSIVE],
        lambda sid: _b(_thin(sid))),
     # ---- Context & Memory
-    _c("context_memory", "normal", "compaction keeps every constraint",
-       "both constraints survive compaction; no forbidden path touched", ["CONTEXT_OK"],
-       lambda sid: (lambda r: _b(r[0], {"context_snapshots": r[1]}))(_compaction(sid, False))),
-    _c("context_memory", "abnormal", "compaction drops C1, then a migration file is written",
-       "C1 lost at compaction and breached afterwards", ["CONTEXT_LOSS"],
-       lambda sid: (lambda r: _b(r[0], {"context_snapshots": r[1]}))(_compaction(sid, True))),
-    _c("context_memory", "missing", "compaction, no context snapshots",
-       "without snapshots continuity cannot be judged", [INCONCLUSIVE],
-       lambda sid: _b(_compaction(sid, False)[0])),
+    _c("context_memory", "normal", "nothing in memory for the requester",
+       "an empty store: no relevant record is returned and absence is not evidence", ["NO_RELEVANT_MEMORY"],
+       lambda sid: _b(_normal(sid), store=SQLiteStore())),
+    _c("context_memory", "abnormal", "a validated earlier record beside a forged VALIDATED one",
+       "one record set apart for insufficient provenance; the validated one is returned", ["MEMORY_PARTIAL"],
+       lambda sid: _b(_normal(sid), store=_cm_store(sid, poisoned=True))),
+    _c("context_memory", "missing", "only the CLI wrapper reported, nothing in memory",
+       "thin telemetry: current records may be missing, so the quiet label is withheld", [INCONCLUSIVE],
+       lambda sid: _b(_thin(sid), store=SQLiteStore())),
     # ---- Incident Response
     _c("incident_response", "normal", "ordinary session, permissive policy",
        "nothing sensitive touched; nothing denied", ["NO_INCIDENT"],

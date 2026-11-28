@@ -5681,3 +5681,583 @@ def decide_behavior_analytics(questions, evidence_scale=1.0):
             "recipients": list(consumers(BA)) if label != INCONCLUSIVE else [], "drivers": drivers,
             "contrary": contrary, "questions": trace, "limitations": _ba_limitations(ans), "decided": True,
             "memory_payload": pay, "behaviour_status": status, "decision": label}
+
+
+# ---------------------------------------------------------------- Context & Memory (COP 12, retrieval only)
+#
+# A dedicated memory retrieval and routing COP (packages/context_memory/DECISIONS.md D-CM1). The workflow: request ->
+# scope determination -> memory lookup -> access validation -> provenance validation -> relevance filtering ->
+# structured response -> consumption record (D-CM7). It reads through MemoryGateway.read as the requesting COP, so the
+# requester's own memory.POLICIES entry is the authorization (D-CM12). It never changes a record, writes no memory and
+# draws no governance conclusion from what it returns.
+
+CM = "context_memory"
+CM_QUESTIONS = ("CM-1", "CM-2", "CM-3", "CM-4")
+CM_BUNDLE = "cm_bundle/1"
+ESTABLISHED, VERIFIED_NOT_VALIDATED, UNVERIFIED_OBSERVATION, INSUFFICIENTLY_SUPPORTED = (
+    "ESTABLISHED", "VERIFIED_NOT_VALIDATED", "UNVERIFIED_OBSERVATION", "INSUFFICIENTLY_SUPPORTED")
+STANDING_RANK = {ESTABLISHED: 0, VERIFIED_NOT_VALIDATED: 1, UNVERIFIED_OBSERVATION: 2, INSUFFICIENTLY_SUPPORTED: 3}
+RETRIEVED, PARTIAL, NO_RELEVANT_MEMORY, NO_MEMORY_IN_SCOPE = "RETRIEVED", "PARTIAL", "NO_RELEVANT_MEMORY", \
+    "NO_MEMORY_IN_SCOPE"
+ACCESS_DENIED, STORAGE_UNAVAILABLE, INVALID_REQUEST = "ACCESS_DENIED", "STORAGE_UNAVAILABLE", "INVALID_REQUEST"
+FAILED_RETRIEVAL = (ACCESS_DENIED, STORAGE_UNAVAILABLE, INVALID_REQUEST)
+# Exclusion reasons that make a request PARTIAL: something the requester asked for and may need was withheld
+# (provenance and integrity are CM-3; entitlement and limit are CM-4). The others are outside what was asked.
+WITHHELD_FOR_REQUEST = ("INSTRUCTION_SHAPED_CONTENT", "LIMIT_REACHED")
+RETIRED_LABELS = ("CONTEXT_OK", "STALE", "CONTRADICTORY", "CONTEXT_LOSS", "PRECEDENT_FOUND")
+CM_USE = {
+    ESTABLISHED: "validated precedent: the requesting COP may compare against it; its conclusion is the producing "
+                 "COP's, not a finding of this retrieval",
+    VERIFIED_NOT_VALIDATED: "verified by the producing COP, not validated by a reviewer: context, not precedent",
+    UNVERIFIED_OBSERVATION: "recorded without verification: never evidence",
+    INSUFFICIENTLY_SUPPORTED: "provenance cannot be established: never evidence",
+}
+_CM = {}
+
+
+def _cm_pkg():
+    if "pkg" not in _CM:
+        _CM["pkg"] = EA.load_package(CM)
+    return _CM["pkg"]
+
+
+def _cm_get(rec, path):
+    cur = rec
+    for seg in path.split("."):
+        if not isinstance(cur, dict):
+            return None
+        cur = cur.get(seg)
+    return cur
+
+
+def _cm_time(v):
+    return EA.signal_traces.ts(v) if v else None
+
+
+def _cm_after(a, b):
+    """a strictly after b; None when either is missing or they cannot be compared."""
+    ta, tb = _cm_time(a), _cm_time(b)
+    if ta is None or tb is None:
+        return None
+    try:
+        return ta > tb
+    except TypeError:
+        return None
+
+
+def cm_request(request):
+    """CM-1: the request as supplied, normalized, with the required identifiers it lacks. Nothing is filled in."""
+    from .memory import POLICIES
+    pkg = _cm_pkg()
+    r = dict(request or {})
+    req = {k: r.get(k) for k in pkg["request"]["required"] + pkg["request"]["optional"]}
+    req["session_scope"] = req.get("session_scope") or "any"
+    if req.get("memory_types") is not None:
+        req["memory_types"] = list(req["memory_types"])
+    missing = [k for k in pkg["request"]["required"] if not req.get(k)]
+    problems = [f"{k} not supplied" for k in missing]
+    if req.get("requesting_cop") and req["requesting_cop"] not in POLICIES:
+        problems.append(f"requesting_cop {req['requesting_cop']!r} is not a COP with a memory policy")
+    if req["session_scope"] not in pkg["request"]["session_scopes"]:
+        problems.append(f"session_scope {req['session_scope']!r} is not one of {pkg['request']['session_scopes']}")
+    if req["session_scope"] != "any" and not req.get("session_id"):
+        problems.append(f"session_scope {req['session_scope']} needs a session_id")
+    if req.get("max_results") is not None and (not isinstance(req["max_results"], int) or req["max_results"] < 1):
+        problems.append(f"max_results {req['max_results']!r} is not a positive integer")
+    return req, missing, problems
+
+
+def cm_scope(req):
+    """Scope determination: which memory types the requester may read (its own memory.POLICIES), and the boundaries
+    applied to them. A type outside its reads is NOT_ENTITLED and never asked of the gateway."""
+    from .memory import POLICIES
+    pol = POLICIES[req["requesting_cop"]]
+    asked = list(req.get("memory_types") or pol["reads"])
+    entitled = [t for t in asked if t in pol["reads"]]
+    return {"policy_of": req["requesting_cop"], "policy_reads": list(pol["reads"]), "policy_scope": pol["scope"],
+            "asked": asked, "entitled": entitled, "not_entitled": [t for t in asked if t not in pol["reads"]],
+            "authorized_tenant": req["tenant_id"], "requested_tenant": req.get("requested_tenant"),
+            "agent_scope": req.get("agent_scope") if pol["scope"] == "agent" else None,
+            "agent_boundary": "agent" if pol["scope"] == "agent" else "tenant",
+            "session_scope": req["session_scope"], "session_id": req.get("session_id")}
+
+
+def cm_provenance(rec, requester):
+    """CM-3 for one record: required and expected provenance, whether its own provenance supports its status, and
+    instruction-shaped text in its payload. Nothing missing is filled in (D-CM13)."""
+    from .memory import independent_reviewer, VERIFIED
+    from .contracts import VALIDATED, UNVALIDATED
+    from .tools import scan
+    pkg = _cm_pkg()["provenance"]
+    status = rec.get("validation_status")
+    prov = rec.get("provenance") or {}
+    missing_req = [f for f in pkg["required"] if _cm_get(rec, f) in (None, "", [])]
+    missing_exp = [f for f in pkg["expected"] if _cm_get(rec, f) in (None, "", [])]
+    if status == VALIDATED:
+        fb = prov.get("feedback") or {}
+        supported = fb.get("outcome") == VALIDATED and independent_reviewer(fb.get("reviewer"))
+        why = None if supported else "VALIDATED without feedback from an independent reviewer"
+    elif status == VERIFIED:
+        supported = prov.get("verified") is not False
+        why = None if supported else "VERIFIED while its provenance records verified false"
+    elif status == UNVALIDATED:
+        supported, why = True, None
+    else:
+        supported, why = False, f"status {status!r} is not one the gateway returns"
+    flags = scan({"payload": rec.get("payload"), "provenance": {k: v for k, v in prov.items() if k != "re_observed"}})
+    if missing_req or not supported:
+        state = "INSUFFICIENT"
+    elif missing_exp:
+        state = "PARTIAL"
+    else:
+        state = "SUPPORTED"
+    return {"provenance_status": state, "missing_required": missing_req, "missing_expected": missing_exp,
+            "status_supported": supported, "status_problem": why, "instruction_flags": flags}
+
+
+def _cm_standing(status, prov_state):
+    from .memory import VERIFIED
+    from .contracts import VALIDATED
+    if prov_state == "INSUFFICIENT":
+        return INSUFFICIENTLY_SUPPORTED
+    return {VALIDATED: ESTABLISHED, VERIFIED: VERIFIED_NOT_VALIDATED}.get(status, UNVERIFIED_OBSERVATION)
+
+
+def _cm_view(rec, req, pv):
+    """One returned record: its own fields unchanged, with provenance, standing, cycle, session and independence."""
+    prov = rec.get("provenance") or {}
+    pay = rec.get("payload") or {}
+    standing = _cm_standing(rec.get("validation_status"), pv["provenance_status"])
+    sess = pay.get("session_id") or prov.get("session_id")
+    rel = "SESSION_UNKNOWN" if not sess or not req.get("session_id") else \
+        "SAME_SESSION" if sess == req["session_id"] else "CROSS_SESSION"
+    if not prov.get("run_id") or not req.get("run_id"):
+        cycle = "CYCLE_UNKNOWN"
+    else:
+        cycle = "CURRENT_CYCLE" if prov["run_id"] == req["run_id"] and prov.get("case_id") == req["case_id"] \
+            else "PREVIOUS_CYCLE"
+    own = rec.get("owner_cop") == req["requesting_cop"]
+    return {"record_id": rec.get("record_id"), "record_type": rec.get("record_type"), "decision_type": rec.get("record_type"),
+            "owner_cop": rec.get("owner_cop"), "tenant_id": rec.get("tenant_id"), "agent_scope": rec.get("agent_scope"),
+            "validation_status": rec.get("validation_status"), "standing": standing,
+            "created_at": rec.get("created_at"), "expires_at": rec.get("expires_at"),
+            "event_time": prov.get("evaluated_at"), "session_id": sess, "case_id": prov.get("case_id"),
+            "finding_id": prov.get("finding_id"), "run_id": prov.get("run_id"),
+            "source_evidence": list(prov.get("lineage") or []),
+            "versions": {k: prov.get(k) for k in ("verifier_registry", "contract_version", "metric_version")},
+            "feedback": prov.get("feedback"), "label": pay.get("label"), "payload": rec.get("payload"),
+            **pv, "session_relation": rel, "cycle": cycle, "independent_of_requester": not own,
+            "may_corroborate": standing == ESTABLISHED and not own,
+            "use": ("own earlier output: context only, never independent verification of the current finding; "
+                    if own else "") + CM_USE[standing],
+            "matching_basis": [], "disagrees_with": []}
+
+
+def cm_relevance(view, req):
+    """Relevance filtering for one record (D-CM12 order of checks after integrity): event time against as_of, since
+    and until; session scope; the request's entities. Returns (reason or None, matching basis)."""
+    t = view["event_time"]
+    if req.get("as_of") and _cm_after(t, req["as_of"]):
+        return "FUTURE_EVENT", [f"event {t} after the request's decision time {req['as_of']}"]
+    if req.get("since") and _cm_after(req["since"], t):
+        return "OUTSIDE_TIME_RANGE", [f"event {t} before since {req['since']}"]
+    if req.get("until") and _cm_after(t, req["until"]):
+        return "OUTSIDE_TIME_RANGE", [f"event {t} after until {req['until']}"]
+    scope = req["session_scope"]
+    if scope == "same_session" and view["session_relation"] != "SAME_SESSION":
+        return "OUT_OF_SESSION_SCOPE", [f"session {view['session_id']}, not the request's {req.get('session_id')}"]
+    if scope == "cross_session" and view["session_relation"] != "CROSS_SESSION":
+        return "OUT_OF_SESSION_SCOPE", [f"session {view['session_id']}: the request asks for other sessions"]
+    basis = []
+    for field, want in (req.get("entities") or {}).items():
+        want = list(want) if isinstance(want, (list, tuple, set)) else [want]
+        have = (view["payload"] or {}).get(field)
+        if have is None:
+            have = view.get(field)
+        vals = list(have) if isinstance(have, (list, tuple, set)) else [have]
+        hit = sorted({str(v) for v in vals if v in want})
+        if not hit:
+            return "NOT_RELEVANT", [f"{field} {have!r} matches none of {want}"]
+        basis.append(f"{field} matches {', '.join(hit)}")
+    return None, basis or ["SCOPE_ONLY: no entities named; every in-scope record is relevant by scope"]
+
+
+def _cm_identity(view):
+    pay = view["payload"] or {}
+    for k in _cm_pkg()["event_identity_keys"]:
+        if pay.get(k):
+            return k, str(pay[k])
+    return None
+
+
+def _cm_rank(v):
+    t = _cm_time(v["event_time"])
+    return (STANDING_RANK[v["standing"]], -(t.timestamp()) if t else float("inf"), str(v["record_id"]))
+
+
+def _cm_limit(kind, subject, code, detail, refs=()):
+    from . import decision as D
+    return D.limitation({"m": D.MISSING_EVIDENCE, "l": D.LIMIT_NOT_APPROVED, "n": D.NOT_CALCULATED}[kind], "CM-4",
+                        subject, code, detail, refs)
+
+
+def retrieve_memory(gateway, request, retrieved_at=None):
+    """The retrieval workflow for one request (D-CM7). gateway: a memory.MemoryGateway, or None. Returns the
+    structured bundle; never raises for a denied or failed read; never writes a memory record."""
+    from .memory import MemoryAccessDenied
+    from .contracts import stable_id
+    pkg = _cm_pkg()
+    req, missing, problems = cm_request(request)
+    clock = getattr(gateway, "clock", None)
+    at = retrieved_at or (clock().isoformat() if callable(clock) else None)
+    bid = stable_id(CM_BUNDLE, json.dumps(req, sort_keys=True, default=str), at)
+    b = {"contract": CM_BUNDLE, "bundle_id": bid, "package_version": pkg["version"], "request": req,
+         "retrieved_at": at, "scope": None, "retrieval_status": None, "records": [], "excluded": [],
+         "not_entitled": [], "disagreements": [], "missing": [], "limitations": [], "source_references": [],
+         "absence_is_evidence": False, "denied": None, "storage_error": None, "stages": [],
+         "operations": {**{k: v["by"] for k, v in pkg["operations"].items()},
+                        **{k: "UNAVAILABLE" for k in pkg.get("unavailable_operations", {})}},
+         "gateway_excluded": 0, "in_scope_count": 0}
+    stage = lambda name, inp, out, failure=None: b["stages"].append(
+        {"stage": name, "input": inp, "output": out, "failure": failure})
+    stage("request", {"supplied": sorted(k for k, v in (request or {}).items() if v not in (None, "", []))},
+          {"missing": missing, "problems": problems}, INVALID_REQUEST if problems else None)
+    if problems:
+        b["retrieval_status"] = INVALID_REQUEST
+        b["missing"] = [{"item": k, "why": "required request identifier not supplied"} for k in missing]
+        b["limitations"].append(_cm_limit("m", "request", INVALID_REQUEST, "; ".join(problems)))
+        return _cm_finish(gateway, b)
+    sc = cm_scope(req)
+    b["scope"] = sc
+    b["not_entitled"] = [{"record_type": t, "reason": "NOT_ENTITLED",
+                          "detail": f"{req['requesting_cop']}'s memory policy does not read {t}"} for t in sc["not_entitled"]]
+    stage("scope_determination", {"asked": sc["asked"], "policy_of": sc["policy_of"]},
+          {"entitled": sc["entitled"], "not_entitled": sc["not_entitled"], "agent_boundary": sc["agent_boundary"]},
+          ACCESS_DENIED if not sc["entitled"] else None)
+    if not sc["entitled"]:
+        b["retrieval_status"] = ACCESS_DENIED
+        b["limitations"].append(_cm_limit("m", "scope", ACCESS_DENIED, "no requested memory type is readable by "
+                                          f"{req['requesting_cop']}: " + ", ".join(sc["not_entitled"])))
+        return _cm_finish(gateway, b)
+    if gateway is None:
+        b["retrieval_status"], b["storage_error"] = STORAGE_UNAVAILABLE, "no MemoryGateway is bound to this run"
+        stage("memory_lookup", {"types": sc["entitled"]}, None, STORAGE_UNAVAILABLE)
+        b["limitations"].append(_cm_limit("m", "memory_store", STORAGE_UNAVAILABLE, b["storage_error"]))
+        return _cm_finish(gateway, b)
+    try:
+        got = gateway.read(req["requesting_cop"], req["case_id"], req["tenant_id"], tuple(sc["entitled"]),
+                           sc["agent_scope"] or req.get("agent_scope"), requested_tenant=req.get("requested_tenant"),
+                           include_excluded=True)
+    except MemoryAccessDenied as e:
+        b["retrieval_status"], b["denied"] = ACCESS_DENIED, str(e)
+        stage("memory_lookup", {"types": sc["entitled"]}, None, ACCESS_DENIED)
+        stage("access_validation", {"requested_tenant": req.get("requested_tenant")}, None, str(e))
+        b["limitations"].append(_cm_limit("m", "access", ACCESS_DENIED, f"the gateway denied the read: {e}"))
+        return _cm_finish(gateway, b)
+    except Exception as e:                                        # the store could not be read
+        b["retrieval_status"], b["storage_error"] = STORAGE_UNAVAILABLE, f"{type(e).__name__}: {e}"[:300]
+        stage("memory_lookup", {"types": sc["entitled"]}, None, STORAGE_UNAVAILABLE)
+        b["limitations"].append(_cm_limit("m", "memory_store", STORAGE_UNAVAILABLE,
+                                          f"the memory store could not be read ({b['storage_error']}); this is not "
+                                          "evidence that no memory exists"))
+        return _cm_finish(gateway, b)
+    raw = got["established"] + got["verified_pending"] + got["unverified"]
+    gx = got.get("excluded_records") or []
+    b["gateway_excluded"], b["in_scope_count"] = got.get("excluded", 0), len(raw) + len(gx)
+    stage("memory_lookup", {"types": sc["entitled"], "agent_scope": sc["agent_scope"]},
+          {"returned_by_gateway": len(raw), "withheld_by_gateway": len(gx)})
+    stage("access_validation", {"tenant": req["tenant_id"], "requested_tenant": req.get("requested_tenant")},
+          {"tenant_isolation": "gateway: other tenants' records are never visible, not even as a count",
+           "expired_or_rejected": len(gx)})
+    for x in gx:
+        b["excluded"].append({**x, "detail": {"EXPIRED": "past its retention (expires_at); the gateway never returns "
+                                              "it", "REJECTED": "rejected by an independent reviewer"}.get(
+                                                  x["reason"], "status the gateway does not return")})
+    views, held = [], []
+    for rec in raw:
+        pv = cm_provenance(rec, req["requesting_cop"])
+        v = _cm_view(rec, req, pv)
+        if pv["instruction_flags"]:
+            held.append({"record_id": v["record_id"], "record_type": v["record_type"], "owner_cop": v["owner_cop"],
+                         "validation_status": v["validation_status"], "reason": "INSTRUCTION_SHAPED_CONTENT",
+                         "detail": "payload carries instruction-shaped text: " + ", ".join(pv["instruction_flags"][:3])})
+            continue
+        views.append(v)
+    stage("provenance_validation", {"records": len(raw)},
+          {"supported": sum(v["provenance_status"] == "SUPPORTED" for v in views),
+           "partial": sum(v["provenance_status"] == "PARTIAL" for v in views),
+           "insufficient": sum(v["provenance_status"] == "INSUFFICIENT" for v in views),
+           "instruction_shaped": len(held)})
+    b["excluded"] += held
+    kept = []
+    for v in views:
+        why, basis = cm_relevance(v, req)
+        if why:
+            b["excluded"].append({"record_id": v["record_id"], "record_type": v["record_type"],
+                                  "owner_cop": v["owner_cop"], "validation_status": v["validation_status"],
+                                  "reason": why, "detail": "; ".join(basis), "event_time": v["event_time"]})
+            continue
+        v["matching_basis"] = basis
+        kept.append(v)
+    groups = {}
+    for v in kept:
+        ident = _cm_identity(v)
+        if ident:
+            groups.setdefault((v["record_type"], v["owner_cop"]) + ident, []).append(v)
+    dup = set()
+    for key, vs in groups.items():
+        if len(vs) < 2:
+            continue
+        vs = sorted(vs, key=lambda v: (STANDING_RANK[v["standing"]], v["created_at"] or "", str(v["record_id"])))
+        for d in vs[1:]:
+            dup.add(d["record_id"])
+            b["excluded"].append({"record_id": d["record_id"], "record_type": d["record_type"],
+                                  "owner_cop": d["owner_cop"], "validation_status": d["validation_status"],
+                                  "reason": "DUPLICATE_OF", "duplicate_of": vs[0]["record_id"],
+                                  "detail": f"same {key[2]} {key[3]} as {vs[0]['record_id']}: one event, recorded "
+                                            "again (own status kept)"})
+    kept = sorted((v for v in kept if v["record_id"] not in dup), key=_cm_rank)
+    limit = req.get("max_results")
+    if limit is not None and len(kept) > limit:
+        for v in kept[limit:]:
+            b["excluded"].append({"record_id": v["record_id"], "record_type": v["record_type"],
+                                  "owner_cop": v["owner_cop"], "validation_status": v["validation_status"],
+                                  "reason": "LIMIT_REACHED", "detail": f"max_results {limit} reached"})
+        kept = kept[:limit]
+    elif limit is None:
+        b["limitations"].append(_cm_limit("l", "max_results", "NO_APPROVED_LIMIT",
+                                          "no retrieval limit is approved and the request named none: nothing was "
+                                          "truncated (U-CM8)"))
+    stage("relevance_filtering", {"candidates": len(views), "entities": req.get("entities"),
+                                  "session_scope": req["session_scope"], "as_of": req.get("as_of")},
+          {"relevant": len(kept), "excluded": {r: sum(x["reason"] == r for x in b["excluded"])
+                                               for r in sorted({x["reason"] for x in b["excluded"]})}})
+    by = {}
+    for v in kept:
+        if v["session_id"] and v["label"] is not None:
+            by.setdefault((v["record_type"], v["session_id"]), []).append(v)
+    for (rt_, sess), vs in sorted(by.items()):
+        if len({str(v["label"]) for v in vs}) > 1:
+            ids = [v["record_id"] for v in vs]
+            for v in vs:
+                v["disagrees_with"] = [i for i in ids if i != v["record_id"]]
+            b["disagreements"].append({"record_type": rt_, "session_id": sess,
+                                       "records": [{"record_id": v["record_id"], "label": v["label"],
+                                                    "validation_status": v["validation_status"],
+                                                    "owner_cop": v["owner_cop"]} for v in vs],
+                                       "resolution": "NOT_RESOLVED: the records are returned with their own "
+                                                     "statuses; interpreting them belongs to the requesting COP"})
+    b["records"] = kept
+    b["source_references"] = [f"memory:{v['record_id']}" for v in kept]
+    for v in kept:
+        if v["missing_expected"]:
+            b["limitations"].append(_cm_limit("m", v["record_id"], "PROVENANCE_FIELDS_NOT_RECORDED",
+                                              "not recorded: " + ", ".join(v["missing_expected"]),
+                                              [f"memory:{v['record_id']}"]))
+        if not v["event_time"]:
+            b["limitations"].append(_cm_limit("m", v["record_id"], "EVENT_TIME_NOT_RECORDED",
+                                              "no event time: the record could not be checked against the "
+                                              "request's decision time", [f"memory:{v['record_id']}"]))
+    insufficient = [v for v in kept if v["standing"] == INSUFFICIENTLY_SUPPORTED]
+    withheld = [x for x in b["excluded"] if x["reason"] in WITHHELD_FOR_REQUEST]
+    if insufficient or withheld or b["not_entitled"]:
+        b["retrieval_status"] = PARTIAL
+    elif kept:
+        b["retrieval_status"] = RETRIEVED
+    else:
+        b["retrieval_status"] = NO_MEMORY_IN_SCOPE if b["in_scope_count"] == 0 else NO_RELEVANT_MEMORY
+    if not kept:
+        b["missing"].append({"item": ",".join(sc["entitled"]),
+                             "why": "no record in scope" if b["in_scope_count"] == 0 else "no relevant record"})
+    for t in b["not_entitled"]:
+        b["missing"].append({"item": t["record_type"], "why": "NOT_ENTITLED"})
+    stage("structured_response", {"records": len(kept)},
+          {"retrieval_status": b["retrieval_status"], "insufficiently_supported": len(insufficient),
+           "disagreements": len(b["disagreements"])})
+    return _cm_finish(gateway, b)
+
+
+def _cm_answers(b):
+    """The four question answers for one bundle (METRICS.yaml questions)."""
+    st = b["retrieval_status"]
+    recs = b["records"]
+    integrity = [x for x in b["excluded"] if x["reason"] == "INSTRUCTION_SHAPED_CONTENT"]
+    one = "REQUEST_INCOMPLETE" if st == INVALID_REQUEST else "REQUEST_COMPLETE"
+    if st == INVALID_REQUEST:
+        two = INCONCLUSIVE
+    elif st in (ACCESS_DENIED, STORAGE_UNAVAILABLE):
+        two = st
+    elif recs:
+        two = "RELEVANT_MEMORY_FOUND"
+    else:
+        two = NO_MEMORY_IN_SCOPE if b["in_scope_count"] == 0 else NO_RELEVANT_MEMORY
+    checked = len(recs) + len(integrity)
+    bad = sum(v["standing"] == INSUFFICIENTLY_SUPPORTED for v in recs) + len(integrity)
+    three = "NOTHING_TO_VALIDATE" if st in FAILED_RETRIEVAL or not checked else \
+        "ALL_ATTRIBUTABLE" if not bad else "NONE_ATTRIBUTABLE" if bad == checked else "PARTLY_ATTRIBUTABLE"
+    four = "UNAVAILABLE" if st in FAILED_RETRIEVAL else "PARTIAL" if st == PARTIAL else \
+        "COMPLETE" if st == RETRIEVED else "NOTHING_RETURNABLE"
+    return {"CM-1": one, "CM-2": two, "CM-3": three, "CM-4": four}
+
+
+def _cm_finish(gateway, b):
+    pkg = _cm_pkg()
+    b["label"] = pkg["retrieval_status"][b["retrieval_status"]]
+    b["answers"] = _cm_answers(b)
+    if b["retrieval_status"] in (NO_MEMORY_IN_SCOPE, NO_RELEVANT_MEMORY):
+        b["limitations"].append(_cm_limit("m", "memory", "ABSENCE_NOT_EVIDENCE",
+                                          "no relevant record was found; that is not evidence that no such event "
+                                          "occurred"))
+    for t in b["not_entitled"]:
+        b["limitations"].append(_cm_limit("m", t["record_type"], "NOT_ENTITLED", t["detail"]))
+    b["buckets"] = {k: [v["record_id"] for v in b["records"] if v["standing"] == s] for k, s in (
+        ("established", ESTABLISHED), ("verified_pending", VERIFIED_NOT_VALIDATED),
+        ("unverified", UNVERIFIED_OBSERVATION), ("insufficiently_supported", INSUFFICIENTLY_SUPPORTED))}
+    req = b["request"]
+    reason = (f"for {req.get('requesting_cop')}: returned {b['source_references'][:20]}; excluded "
+              f"{len(b['excluded'])}; not entitled {[t['record_type'] for t in b['not_entitled']]}")[:600]
+    logged = None
+    if gateway is not None and hasattr(gateway, "log"):
+        try:
+            gateway.log(CM, req.get("case_id"), req.get("tenant_id"), "retrieve",
+                        ",".join((b["scope"] or {}).get("entitled") or []), b["bundle_id"], b["retrieval_status"],
+                        reason)
+            logged = "cop_memory_access_log"
+        except Exception as e:                                    # the log shares the failing store
+            logged = None
+            b["limitations"].append(_cm_limit("m", "consumption_record", "NOT_LOGGED",
+                                              f"the retrieval could not be logged: {type(e).__name__}"))
+    b["consumption_record"] = {"logged_to": logged, "operation": "retrieve", "cop": CM, "outcome": b["retrieval_status"],
+                               "delivered_to": req.get("requesting_cop"), "record_ids": [v["record_id"] for v in b["records"]]}
+    b["stages"].append({"stage": "consumption_record", "input": {"bundle_id": b["bundle_id"]},
+                        "output": b["consumption_record"], "failure": None if logged or gateway is None else "NOT_LOGGED"})
+    return b
+
+
+def runtime_request(cop, case, run_id=None, memory_types=None, purpose=None):
+    """The request the runtime makes for a COP: only identifiers the case and run already hold."""
+    return {"requesting_cop": cop, "tenant_id": case.tenant_id, "case_id": case.case_id,
+            "behavioural_question": BY_KEY[cop].behavioural_question if cop in BY_KEY else None,
+            "agent_scope": case.agent_scope, "session_id": case.session_id, "run_id": run_id,
+            "memory_types": list(memory_types) if memory_types else None, "as_of": case.computed_at,
+            "session_scope": "any", "purpose": purpose}
+
+
+def bundle_view(b):
+    """A bundle without record payloads (they travel in the memory view's buckets)."""
+    out = {k: v for k, v in b.items() if k != "records"}
+    out["records"] = [{k: v for k, v in r.items() if k != "payload"} for r in b["records"]]
+    return out
+
+
+def memory_buckets(b, shape):
+    """The memory view a COP already consumes, built from its bundle: the gateway's three buckets in the gateway's
+    order, keeping only the records the bundle returns with that standing (D-CM18)."""
+    by = {v["record_id"]: v for v in b["records"]}
+    out = {}
+    for k in ("established", "verified_pending", "unverified", "insufficiently_supported"):
+        out[k] = [shape(by[i]) for i in sorted(b["buckets"][k], key=lambda i: (by[i]["created_at"] or "", i))]
+    return out
+
+
+def assess_context_memory(bundles):
+    """{requester: bundle} -> {question_id: {assessment, answer}}. Each question's answer is that of the request
+    that sets the COP label (the worst retrieval status, METRICS.yaml label_order); every request's answers are in
+    its basis."""
+    pkg = _cm_pkg()
+    order = pkg["label_order"]
+    if not bundles:
+        lead = None
+    else:
+        lead = min(bundles, key=lambda r: (order.index(bundles[r]["label"]), r))
+    out = {}
+    for qid in CM_QUESTIONS:
+        q = pkg["questions"][qid]
+        per = {r: {"answer": b["answers"][qid], "retrieval_status": b["retrieval_status"], "bundle_id": b["bundle_id"]}
+               for r, b in sorted(bundles.items())}
+        outcome = bundles[lead]["answers"][qid] if lead else INCONCLUSIVE
+        refs = sorted({x for b in bundles.values() for x in b["source_references"]})
+        basis = {"per_request": per, "lead_request": lead}
+        if lead:
+            lb = bundles[lead]
+            basis.update({"CM-1": lambda: {"request": lb["request"], "missing": lb["missing"] if lb["retrieval_status"]
+                                           == INVALID_REQUEST else []},
+                          "CM-2": lambda: {"scope": lb["scope"], "returned": lb["source_references"],
+                                           "excluded": [{k: x.get(k) for k in ("record_id", "reason", "detail",
+                                                                               "duplicate_of")} for x in lb["excluded"]],
+                                           "not_entitled": lb["not_entitled"], "denied": lb["denied"],
+                                           "storage_error": lb["storage_error"], "absence_is_evidence": False},
+                          "CM-3": lambda: {"records": [{k: v[k] for k in ("record_id", "validation_status", "standing",
+                                                                         "provenance_status", "missing_required",
+                                                                         "missing_expected", "status_problem",
+                                                                         "independent_of_requester", "may_corroborate",
+                                                                         "cycle", "session_relation")}
+                                                       for v in lb["records"]],
+                                           "disagreements": lb["disagreements"]},
+                          "CM-4": lambda: {"retrieval_status": lb["retrieval_status"], "buckets": lb["buckets"],
+                                           "missing": lb["missing"], "retrieved_at": lb["retrieved_at"],
+                                           "package_version": lb["package_version"]}}[qid]())
+        a = {"question": q["question"].strip(), "presence": {"status": "PRESENT" if lead else "ABSENT", "items": [],
+                                                              "fields": {}},
+             "reliability": {"status": "RELIABLE", "checks": [], "blocking_checks": [], "verified_checks": []},
+             "findings": [], "sufficiency": {"status": "SUFFICIENT" if lead else "INSUFFICIENT",
+                                             "reasons": [] if lead else [{"code": "NO_REQUEST", "requirement": None,
+                                                                          "detail": "no COP requested memory"}],
+                                             "not_assessed": [], "missing_requirements": []},
+             "evidence_used": refs}
+        ans = {"outcome": outcome, "sufficiency": a["sufficiency"]["status"], "basis": basis, "findings": [],
+               "not_assessed": [], "evidence_refs": refs}
+        if outcome not in q["outcomes"] and outcome != INCONCLUSIVE:
+            raise ValueError(f"{qid}: outcome {outcome} is not in METRICS.yaml")
+        out[qid] = {"assessment": a, "answer": ans}
+    return out
+
+
+def _explain_cm(qid, ans):
+    o, b = ans["outcome"], ans["basis"]
+    per = "; ".join(f"{r} {x['answer']}" for r, x in b["per_request"].items())
+    return f"{o} ({per})" if per else o
+
+
+def decide_context_memory(questions, bundles):
+    """The COP reading from its requests (INTERPRETATION.md): the worst retrieval label across them. Action NONE;
+    nothing is judged about what the records say. Decided by the package; no model."""
+    from . import decision as D
+    from ..specs import consumers
+    pkg = _cm_pkg()
+    order = pkg["label_order"]
+    labels = [b["label"] for b in bundles.values()]
+    label = min(labels, key=order.index) if labels else INCONCLUSIVE
+    trace = {}
+    for qid, q in questions.items():
+        a, an = q["assessment"], q["answer"]
+        trace[qid] = {"question": a["question"], "answer": an["outcome"], "sufficiency": a["sufficiency"]["status"],
+                      "explanation": _explain_cm(qid, an), "basis": an["basis"], "metrics": [], "checks_consumed": [],
+                      "raw_evidence_refs": an["evidence_refs"][:20],
+                      "sufficiency_reasons": a["sufficiency"]["reasons"], "not_assessed": [],
+                      "drives_label": qid in ("CM-2", "CM-4")}
+    lims = [x for b in bundles.values() for x in b["limitations"]]
+    for m, e in pkg["mapping"].items():
+        note = " ".join((e.get("note") or "").split())
+        if "NOT_CALCULATED" in note:
+            lims.append(D.limitation(D.NOT_CALCULATED, "CM-2", m, D.NOT_CALCULATED, note))
+    for m, v in pkg["not_calculated"].items():
+        if m not in pkg["mapping"]:
+            lims.append(D.limitation(D.NOT_CALCULATED, "CM-2", m, D.NOT_CALCULATED, " ".join(v.split())))
+    lims.append(D.limitation(D.LIMIT_NOT_APPROVED, "CM-4", "confidence", "UNCALIBRATED_CONFIDENCE",
+                             "the confidence is the previous rule's CONTEXT_OK constant, not calibrated (U-CM6)"))
+    lims.append(D.limitation(D.MISSING_EVIDENCE, "CM-2", "semantic_relevance", "SEMANTIC_RETRIEVAL_UNAVAILABLE",
+                             "no approved semantic-search capability: relevance is deterministic matching only (U-CM4)"))
+    status = {r: {"retrieval_status": b["retrieval_status"], "label": b["label"], "bundle_id": b["bundle_id"],
+                  "returned": [v["record_id"] for v in b["records"]], "excluded": len(b["excluded"]),
+                  "disagreements": len(b["disagreements"])} for r, b in sorted(bundles.items())}
+    head = (f"{label}: " + "; ".join(f"{r} {s['retrieval_status']} ({len(s['returned'])} returned, {s['excluded']} "
+                                     f"excluded)" for r, s in status.items())
+            + "; retrieval only, nothing interpreted")[:400]
+    contrary = [f"{r}: {d['record_type']} records about {d['session_id']} disagree; returned unresolved"
+                for r, b in bundles.items() for d in b["disagreements"]]
+    return {"label": label, "confidence": pkg["confidence"].get(label, 0.0), "severity": pkg["severity"].get(label, "NONE"),
+            "action": pkg["responses"].get(label, "NONE"), "action_reason": "", "rationale_head": head,
+            "recipients": [r for r in consumers(CM) if r in bundles], "drivers": ["CM-2", "CM-4"],
+            "contrary": contrary, "questions": trace, "limitations": lims, "decided": True, "memory_payload": None,
+            "retrieval_status": status, "decision": label}

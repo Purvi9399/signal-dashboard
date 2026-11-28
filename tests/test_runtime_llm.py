@@ -21,7 +21,9 @@ RECORD_FIELDS = ("invocation_id", "cop", "case_id", "purpose", "provider", "mode
 
 # Risk Mitigation's package decides every reading without the model (COP 8, packages/risk_mitigation/DECISIONS.md,
 # D-RK9), so its provider wiring cannot be exercised here; test_risk_mitigation_does_not_reach_the_provider checks it.
-MODEL_PATH_COPS = [c for c in LLM_COPS if c != "risk_mitigation"]
+# Context & Memory is retrieval only and decides every reading without the model (COP 12,
+# packages/context_memory/DECISIONS.md D-CM10); test_context_memory_does_not_reach_the_provider checks it.
+MODEL_PATH_COPS = [c for c in LLM_COPS if c not in ("risk_mitigation", "context_memory")]
 
 
 def rt_with(provider, budget=None, case="llm-case"):
@@ -219,5 +221,16 @@ def test_risk_mitigation_does_not_reach_the_provider():
         seen.append((c, purpose))
         return FX.plan("look", [], [], []) if purpose == "plan" else FX.inconclusive("stop", ["x"])
     rt, r, f = one("risk_mitigation", FixtureProvider(script))
+    assert seen == [] and r["llm_invocations"] == []
+    assert f["cop_specific"]["stop_reason"] == "decided_by_package_without_model"
+
+
+def test_context_memory_does_not_reach_the_provider():
+    seen = []
+
+    def script(c, purpose, payload, n):
+        seen.append((c, purpose))
+        return FX.plan("look", [], [], []) if purpose == "plan" else FX.inconclusive("stop", ["x"])
+    rt, r, f = one("context_memory", FixtureProvider(script))
     assert seen == [] and r["llm_invocations"] == []
     assert f["cop_specific"]["stop_reason"] == "decided_by_package_without_model"

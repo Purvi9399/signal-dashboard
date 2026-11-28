@@ -57,14 +57,17 @@ SPECS = [
       consumes_decisions_from=("runtime_monitoring",),
       active=True),
 
+    # Retrieval only since 2026-11-28 (purvi): a memory retrieval and routing COP. The previous question and labels
+    # (CONTEXT_OK, STALE, CONTRADICTORY, CONTEXT_LOSS, PRECEDENT_FOUND) are kept in
+    # cops/packages/context_memory/METRICS.yaml previous_contract and are never produced.
     S(key="context_memory", name="Context & Memory",
-      behavioural_question="Is the current context internally consistent, relevant to the task, and supported by useful precedent?",
+      behavioural_question="What previously recorded information is relevant to the requesting COP's current question, and can that information be retrieved reliably with its provenance intact?",
       metric_keys=(),
       missing_metrics=("compaction_count", "context_loss_after_compaction", "session_reset",
                        "precedent_match", "context_consistency"),
       downstream_cops=("behavior_analytics",),
       permitted_actions=("NONE", "WATCH"),
-      interpretations=("CONTEXT_OK", "STALE", "CONTRADICTORY", "CONTEXT_LOSS", "PRECEDENT_FOUND")),
+      interpretations=("NO_RELEVANT_MEMORY", "MEMORY_RETURNED", "MEMORY_PARTIAL", "MEMORY_UNAVAILABLE")),
 
     S(key="interaction_discovery", name="Interaction Discovery",
       behavioural_question="Who or what is interacting with whom, through what route, and how is the activity propagating?",
