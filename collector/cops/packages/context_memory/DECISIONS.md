@@ -104,3 +104,25 @@ finding, which still exercises BA's contract for that input.
 | U-CM7 | The required and expected provenance fields (D-CM13) and event identity keys (D-CM14) are this package's | as METRICS.yaml | approve or amend |
 | U-CM8 | No retrieval limit is approved | nothing truncated unless the request names max_results (NO_APPROVED_LIMIT) | approve a default limit |
 | U-CM9 | A COP's own validated record counts as precedent in the shared VS-01 memory item (`support._memory`) and triage | unchanged; this package marks it OWN_EARLIER_OUTPUT, may_corroborate false | have VS-01 read may_corroborate |
+
+## Conditional acceptance and decisions (purvi, 2026-11-28)
+
+A-CM1: Context & Memory is conditionally accepted; the retrieval-only implementation is approved. Ground truth for
+the changes below was written first (GROUND_TRUTH.yaml: the scenarios added at the end and `superseded:`).
+
+| # | Decision | Implementation |
+|---|---|---|
+| P-CM1 | Approved: remove Behavior Analytics' obsolete dependency on the retired labels | the Context & Memory → Behavior Analytics edge is removed from `specs` (it served only the retired detector). Context & Memory has no current-cycle consumer. In a case it serves one bundle to every other COP of the case that has a memory policy (D-CM21). Behavior Analytics reads memory through the shared retrieval interface and never needs a Context & Memory label (packages/behavior_analytics/DECISIONS.md A-BA1) |
+| U-CM1 | The retrieval-only question and the label migration are approved | as built |
+| U-CM2 | Context-loss detection stays unassigned; no overlapping role is introduced | no COP detects it; compaction_count is still computed |
+| U-CM3 | Any new retrieval metric must be derived from actual audit records (`cop_memory_access_log`), not estimates | none added; precedent_match, memory_retrieval_success_rate and memory_staleness_rate stay NOT_CALCULATED |
+| U-CM4 | Semantic search stays deferred | UNAVAILABLE |
+| U-CM5 | Deterministic classification approved, provided profile and runtime compatibility tests pass | moved from `profiles.LLM_COPS` to `DETERMINISTIC_COPS`; its prompt, LLM tool list and ContextDetail are retired |
+| U-CM6 | Confidence stays uncalibrated | 0.7, UNCALIBRATED_CONFIDENCE |
+| U-CM7 | The provenance and event-identity rules are approved provisionally | as METRICS.yaml |
+| U-CM8 | The default retrieval limit stays configurable and unresolved | NO_APPROVED_LIMIT |
+| U-CM9 | A COP's own historical outputs never independently corroborate its present finding in VS-01 | `support._memory` counts only established records owned by another COP; the memory view carries `owner_cop` and `may_corroborate`. A record of the COP's own is neutral, named as its own earlier output. Triage's confidence basis is unchanged (outside VS-01) |
+
+| # | Decision | Alternatives | Why |
+|---|---|---|---|
+| D-CM21 | With no consumer edge, Context & Memory's case requests are one per other COP of the case run that has a memory policy (`graph._tool_ctx` passes the case order). Run on its own it has no request and is INCONCLUSIVE (no COP requested memory) | no requests in the case graph; every COP with a policy | the bundles describe what this case's COPs can retrieve, without an edge that would make any COP depend on this COP's label |

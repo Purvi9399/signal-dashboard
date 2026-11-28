@@ -90,3 +90,19 @@ Ground truth was not edited. Each correction is marked in the harness.
 `docs/cops/cops_topology.json`: `reads_decisions_from` for this COP corrected from [] to runtime_monitoring,
 context_memory, workflow_orchestration (specs.CONSUMES); a runtime_monitoring → behavior_analytics link and an
 anomaly_detection → behavior_analytics `feedback` link added (specs.CONSUMES and specs.FEEDBACK).
+
+## Decisions of 2026-11-28 (purvi, with the Context & Memory conditional acceptance)
+
+Ground truth for these was written first (GROUND_TRUTH.yaml: the scenarios added at the end and `superseded:`).
+
+| # | Decision | Implementation |
+|---|---|---|
+| A-BA1 | P-CM1 approved: Behavior Analytics no longer depends on Context & Memory's retired CONTEXT_LOSS and CONTRADICTORY labels and never reads a memory-retrieval outcome as a context-integrity finding | the Context & Memory → Behavior Analytics edge is removed from `specs` (it existed only for the retired detector); BA-4 (`cop_package._ba_upstream`, METRICS.yaml `upstream`) and the legacy rule (`rules._behavior_analytics_legacy`) read Workflow Orchestration only. Verified DRIFTING or UNEXPECTED_BRANCH from Workflow Orchestration still gives CONTEXT_ALTERED and DRIFTING. Memory is still read through the shared retrieval interface (`tools._memory_lookup`), context only (D-BA10) |
+| U-BA1 | Keep the package-level event deduplication (D-BA3); audit the shared-metric impact without changing `signal_metrics` | audit recorded below; `signal_metrics` unchanged |
+| U-BA2 | Stalls and approval patterns stay observational | unchanged (STALL_NOT_LABELLED) |
+| U-BA3 | Keep the recurrence and worsening logic; no window is invented | unchanged |
+| U-BA4, U-BA7 | Peer cohorts and exploration_rate are deferred | unchanged; OVER_EXPLORING stays unreachable |
+| U-BA5 | A verified STABLE observation is written as contextual baseline memory, never self-validated | the rule sets `remember_quiet: verified_only` for STABLE; `graph.validate_memory_update` writes it only when the finding verified, as a VERIFIED behaviour_baseline record with `memory_payload.memory_use: contextual_baseline`. An unverified STABLE is not written. Only an independent reviewer can validate it |
+| U-BA6 | Confidence stays uncalibrated | unchanged (UNCALIBRATED_CONFIDENCE) |
+| U-BA8 | The Risk Mitigation and Workflow Orchestration connections (P-BA1) stay unwired; Governance Intelligence is recorded as a future context-only consumer | CONNECTIONS.md |
+| U-BA9 | Correct the registry typo after checking every reference | `metric_registry.json` id behavior_investigation_priority with `source_spelling: behavior_investigation_prioritya`; METRICS.yaml and the catalogue test follow |

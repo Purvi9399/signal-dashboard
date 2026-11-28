@@ -429,3 +429,53 @@ scenarios:
   authority:
     description: every scenario's action is within this COP's authority and nothing is enforced
     checks: []
+
+  # ---- added 2026-11-28 after purvi's conditional acceptance (A-CM1: P-CM1 and U-CM1..U-CM9 decided); written
+  # before the code that implements them
+
+  case_requesters:
+    description: >-
+      runtime_monitoring, anomaly_detection, context_memory and behavior_analytics in one case on Behavior Analytics'
+      isolated-anomaly world, ad_val_m1 and ba_val_b1 in the store. With the Context & Memory -> Behavior Analytics
+      edge removed (P-CM1), Context & Memory serves one bundle to every other COP of the case that has a memory policy
+      (runtime_monitoring, anomaly_detection, behavior_analytics), each under that COP's own policy; no COP consumes
+      its finding
+    cops: [runtime_monitoring, anomaly_detection, context_memory, behavior_analytics]
+    cop_label: [MEMORY_RETURNED]
+    checks: [bundles_for_case_cops, finding_not_consumed, decided_without_model, no_model_call, no_memory_written,
+             no_retired_label, ba_label_unchanged]
+
+  deterministic_classification:
+    description: >-
+      U-CM5 approved: Context & Memory is in profiles.DETERMINISTIC_COPS, not LLM_COPS; its profile is deterministic
+      with no prompt; its rule and tool are unchanged
+    checks: [classified_deterministic]
+
+  vs01_own_output:
+    description: >-
+      U-CM9: Recovery & Resilience reads RECOVERED in a second case (session c10z) after a reviewer validated the
+      RECOVERED recovery_outcome it wrote for session c10a. That record is the COP's own earlier output, so VS-01's
+      validated_memory item does not support the present finding (neutral, basis names own earlier output); the label
+      is RECOVERED either way
+    cops: [runtime_monitoring, recovery_resilience]
+    cop_label: [RECOVERED]
+    checks: [vs01_own_output_not_support, own_record_still_retrieved]
+
+  vs01_other_cop_record:
+    description: >-
+      U-CM9 positive control, on support's validated_memory evaluator directly: an established record with the same
+      label owned by another COP supports; the identical record owned by the assessed COP is neutral; a VERIFIED or
+      UNVALIDATED record never supports
+    checks: [vs01_other_cop_supports]
+
+# Expectations superseded by purvi's decisions (A-CM1, 2026-11-28). The replaced expectations are kept above as
+# written and reported as SUPERSEDED by the harness.
+superseded:
+  topology:
+    reason: >-
+      P-CM1 approved (purvi 2026-11-28): the Context & Memory -> Behavior Analytics current-cycle edge existed only for
+      the retired detector and is removed. Context & Memory consumes runtime_monitoring and has no current-cycle
+      consumer; Behavior Analytics consumes runtime_monitoring and workflow_orchestration; no edge is added, no cycle
+      introduced; the topology document agrees
+    replaces: [topology_unchanged, no_same_cycle_cycle]
+    checks: [topology_reconciled, no_cycle]

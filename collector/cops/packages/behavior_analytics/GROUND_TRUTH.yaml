@@ -23,7 +23,8 @@
 #     timestamps is INCONCLUSIVE (MISSING_TIMESTAMPS); NO_CURRENT_PATTERN when nothing deviates now; nothing is
 #     called persistent (PERSISTENCE_NOT_ASSESSED);
 #   - BA-4: a verified substantive Context & Memory CONTEXT_LOSS or CONTRADICTORY, or Workflow Orchestration
-#     DRIFTING or UNEXPECTED_BRANCH, is CONTEXT_ALTERED; otherwise NO_ALTERATION_SHOWN;
+#     DRIFTING or UNEXPECTED_BRANCH, is CONTEXT_ALTERED; otherwise NO_ALTERATION_SHOWN (as first built; since
+#     P-CM1, 2026-11-28, Workflow Orchestration only: see the scenarios added at the end and superseded:);
 #   - labels: RETRY_AFTER_FAILURE POOR_RECOVERY (MEDIUM, 0.8); REPEATED_ACTIONS LOOPING (severity from the worst
 #     deviating state, 0.75); else CONTEXT_ALTERED DRIFTING (LOW, 0.6); else STABLE (NONE, 0.75); BA-1 unanswered
 #     INCONCLUSIVE (0.0); confidence scaled by min(1, evidence_conf / 0.9); WATCH for every label but STABLE, which
@@ -291,3 +292,106 @@ scenarios:
     cop_label: [LOOPING]
     confidence: any
     checks: [action_within_authority, nothing_enforced]
+
+  # ---- added 2026-11-28 after purvi's decisions on Context & Memory (P-CM1) and U-BA1..U-BA9; written before the
+  # code that implements them. BA-4 now reads only Workflow Orchestration: a verified substantive DRIFTING or
+  # UNEXPECTED_BRANCH is CONTEXT_ALTERED. Context & Memory is no longer consumed, and no memory record (of any type,
+  # including context_integrity_finding written under Context & Memory's previous contract) is a ground. A verified
+  # STABLE is written as a VERIFIED behaviour_baseline record marked contextual (U-BA5); nothing validates itself.
+
+  drifting_from_workflow:
+    description: >-
+      s1 as normal_stable, run on its own with a verified substantive Workflow Orchestration finding DRIFTING as
+      upstream (synthetic)
+    questions: {BA-1: NO_PATTERN, BA-2: WITHIN_USUAL_RANGE, BA-3: NO_CURRENT_PATTERN, BA-4: CONTEXT_ALTERED}
+    cop_label: [DRIFTING]
+    confidence: any
+    checks: [decision_contract_valid, verified, action_watch, severity_low, workflow_upstream_used, legacy_agrees]
+
+  unverified_workflow:
+    description: as drifting_from_workflow, with the Workflow Orchestration finding unverified
+    questions: {BA-1: NO_PATTERN, BA-2: WITHIN_USUAL_RANGE, BA-3: NO_CURRENT_PATTERN, BA-4: NO_ALTERATION_SHOWN}
+    cop_label: [STABLE]
+    confidence: any
+    checks: [decision_contract_valid, verified, unverified_workflow_listed_not_used, legacy_agrees]
+
+  retired_context_label_ignored:
+    description: >-
+      s1 as normal_stable, run on its own with a verified substantive Context & Memory finding carrying the retired
+      label CONTEXT_LOSS (synthetic): it is not read
+    questions: {BA-1: NO_PATTERN, BA-2: WITHIN_USUAL_RANGE, BA-3: NO_CURRENT_PATTERN, BA-4: NO_ALTERATION_SHOWN}
+    cop_label: [STABLE]
+    confidence: any
+    checks: [decision_contract_valid, verified, context_memory_not_read, same_as_without_upstream, legacy_agrees]
+
+  memory_never_a_finding:
+    description: >-
+      the isolated_anomaly world and the normal_stable world, each with a validated LOOPING behaviour_baseline and a
+      validated context_integrity_finding CONTEXT_LOSS for an earlier session in memory: the records are listed as
+      context and change no answer, label, severity, confidence or action
+    questions: {BA-1: REPEATED_ACTIONS, BA-2: WITHIN_USUAL_RANGE, BA-3: ISOLATED, BA-4: NO_ALTERATION_SHOWN}
+    cop_label: [LOOPING]
+    confidence: 0.75
+    checks: [same_without_memory, stable_world_same_without_memory, retired_record_context_only]
+
+  stable_baseline_written:
+    description: >-
+      the normal_stable world: the verified STABLE reading is written as a VERIFIED behaviour_baseline record whose
+      payload marks it contextual; Behavior Analytics cannot validate it (feedback from cop:behavior_analytics is
+      denied); a later case of the same agent lists nothing as a precedent from it (it is not VALIDATED) and reads the
+      same as without it
+    questions: {BA-1: NO_PATTERN, BA-2: WITHIN_USUAL_RANGE, BA-3: NO_CURRENT_PATTERN, BA-4: NO_ALTERATION_SHOWN}
+    cop_label: [STABLE]
+    confidence: 0.75
+    checks: [stable_written_verified, stable_payload_contextual, no_self_validation, later_case_unchanged]
+
+  stable_unverified_not_written:
+    description: >-
+      the normal_stable world; the shared memory step (graph.validate_memory_update) is given that same STABLE finding
+      with verified false: only a verified STABLE is written, an unverified one is not (no UNVALIDATED STABLE record)
+    questions: {BA-1: any, BA-2: any, BA-3: any, BA-4: any}
+    cop_label: [STABLE]
+    confidence: any
+    checks: [unverified_stable_not_written]
+
+  registry_typo_corrected:
+    description: >-
+      U-BA9: the registry metric behavior_investigation_priority (source spelling behavior_investigation_prioritya
+      kept as source_spelling) is mapped under its corrected name; no reference to the misspelling remains outside
+      the recorded source spelling and the decision history; it is still NOT_CALCULATED
+    questions: {BA-1: any, BA-2: any, BA-3: any, BA-4: any}
+    cop_label: [STABLE]
+    confidence: any
+    checks: [typo_corrected_everywhere]
+
+# Expectations superseded by purvi's decisions (2026-11-28: P-CM1 and U-BA5). The replaced expectations are kept above
+# as written and reported as SUPERSEDED by the harness.
+superseded:
+  normal_stable:
+    reason: >-
+      U-BA5 approved (purvi 2026-11-28): a verified STABLE observation is written as contextual baseline memory
+      (VERIFIED, never self-validated). The first build did not write STABLE
+    replaces: [stable_not_written]
+    checks: [stable_written_verified]
+  drifting_context:
+    reason: >-
+      P-CM1 approved (purvi 2026-11-28): Behavior Analytics no longer reads Context & Memory's retired CONTEXT_LOSS
+      and CONTRADICTORY labels; a Context & Memory finding is not consumed. The first build read a verified CONTEXT_LOSS
+      as altered context (DRIFTING)
+    replaces: [BA-4, cop_label, action_watch, severity_low, context_upstream_used]
+    questions: {BA-4: NO_ALTERATION_SHOWN}
+    cop_label: [STABLE]
+    checks: [context_memory_not_read]
+  unverified_context:
+    reason: >-
+      P-CM1: a Context & Memory finding is not read whether verified or not, so it is no longer listed as an
+      unverified upstream
+    replaces: [unverified_listed_not_used]
+    checks: [context_memory_not_read]
+  topology:
+    reason: >-
+      P-CM1: the Context & Memory -> Behavior Analytics edge is removed. Behavior Analytics consumes
+      runtime_monitoring and workflow_orchestration; the feedback edge from Anomaly Detection and the consumers
+      Anomaly Detection and Recovery & Resilience are unchanged; the topology document agrees
+    replaces: [topology_matches]
+    checks: [topology_matches, context_memory_edge_removed]
