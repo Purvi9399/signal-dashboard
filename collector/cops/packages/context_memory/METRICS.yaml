@@ -1,0 +1,285 @@
+# Context & Memory: machine-readable question contract.
+# Loaded by collector/cops/runtime/cop_package.py and validated by tests/test_cop_package_context_memory.py. The
+# Markdown files beside it explain this file; where they differ, this file is what the runtime uses.
+#
+# Build order: the twelfth COP packaged (COP 12 of the per-COP verification, purvi 2026-11-28). The workbook and
+# docs/cops/cop_catalogue.json number Context & Memory 4; their numbering is not a build order.
+#
+# Responsibility (purvi, 2026-11-28, D-CM1): a dedicated memory retrieval and routing COP. It answers "What
+# previously recorded information is relevant to the requesting COP's current question, and can that information be
+# retrieved reliably with its provenance intact?" It retrieves and organizes recorded history for the requesting COP
+# and never interprets it as a governance finding. The previous contract (context-loss and contradiction detection)
+# is kept for comparison in `previous_contract` below and in DECISIONS.md.
+
+cop: context_memory
+contract: cop_metrics/1
+version: 2026-11-28.1
+
+sources:
+  questions: >-
+    The workbook's canonical questions are kept in previous_contract.questions (COPS- implementation 1.xlsx, sheet
+    COMPLETE_DELEGATION_DATA, rows 67 to 75; behavioural question row 67 column 2: "Is the agent operating with
+    accurate, relevant and consistent context?"). CM-1 to CM-4 are the functional responsibilities purvi set for the
+    retrieval-only scope (2026-11-28, item 4); they are not replacement canonical questions. previous_contract.
+    question_migration says, for each canonical question, which part is retained by CM-1 to CM-4 and which part is
+    retired because it is a behavioural judgement (D-CM2, U-CM1).
+  inputs: >-
+    Workbook agents-harness row 8: inputs "Current context, retrieved memories, prior decisions, precedent, session
+    state"; tools "MemoryManager, history retrieval, session-state lookup, decision-history lookup"; authority
+    "Retrieve, summarize, record, flag inconsistency. No policy/action authority simply from memory"; validation
+    "Check provenance, freshness, relevance and contradictions"; downstream "Supports Runtime, Incident, Policy,
+    Governance Intelligence, Behavior Analytics". many-to-many mapping row 9: action WATCH; feeds Workflow
+    Orchestration, Behavior Analytics, Recovery & Resilience. Sheet1 row 66: "LLM. Examines context snapshots,
+    instruction changes and previous validated records"; row 102: tools get_context_snapshots,
+    compare_instruction_versions, verify_context_provenance.
+  metric_mapping: >-
+    COPS_METRIC_MAPPING.md, sha256 5bd3c16f1ba26b297644259faaedfe75c1f219980e5c046a9bb56308c38e951e
+    (collector/metric_registry.json, consumers = context_memory: 15 metrics, matching workbook row 77; 5 category E
+    IMPLEMENTED_EXISTING, 1 category S IMPLEMENTED in the opt-in catalogue with no approved threshold, 9
+    NOT_IMPLEMENTED: 1 category S, 5 category M, 4 category Q). Every one is kept visible below with its standing
+    under the retrieval-only responsibility (D-CM9).
+  memory: >-
+    collector/cops/runtime/memory.py MemoryGateway (read, the only retrieval path; include_excluded lists the records
+    the gateway withholds) and POLICIES (the requesting COP's reads and scope are the authorization rule). Nothing
+    else stores memory. cop_memory_access_log is the audit trail.
+  labels: >-
+    cops/specs.py interpretations, migrated (D-CM5): NO_RELEVANT_MEMORY, MEMORY_RETURNED, MEMORY_PARTIAL,
+    MEMORY_UNAVAILABLE. The previous labels CONTEXT_OK, STALE, CONTRADICTORY, CONTEXT_LOSS and PRECEDENT_FOUND are
+    retired, never produced, and not reused with another meaning. permitted_actions NONE, WATCH; this package
+    proposes NONE only (D-CM8).
+
+# Each registry metric, with its standing under the retrieval-only responsibility. No question reads a metric:
+# retrieval rests on memory records and their provenance, not on telemetry measures (D-CM9).
+mapping:
+  insights.retry:
+    used_by: []
+    note: >-
+      NO_LONGER_APPLICABLE to the retrieval-only responsibility. Computed (category E, approved threshold) and judged
+      by the COPs that read it; Context & Memory read it to judge whether context loss caused repeated failures, a
+      behavioural judgement this package no longer makes.
+  insights.failed:
+    used_by: []
+    note: >-
+      NO_LONGER_APPLICABLE. Computed and judged by the COPs that read it (category E); not a retrieval measure.
+  insights.repetition:
+    used_by: []
+    note: >-
+      NO_LONGER_APPLICABLE. Computed and judged by the COPs that read it (category E); not a retrieval measure.
+  telemetry.turn_linkage:
+    used_by: []
+    note: >-
+      NO_LONGER_APPLICABLE. Computed and judged by Runtime Monitoring and others (category E). Retrieval links records
+      by their recorded identifiers, not by turn linkage.
+  telemetry.unknown_share:
+    used_by: []
+    note: >-
+      NO_LONGER_APPLICABLE. Computed (category E); describes this session's metric coverage, not recorded memory.
+  compaction_count:
+    used_by: []
+    note: >-
+      NO_LONGER_APPLICABLE. IMPLEMENTED catalogue metric (state NO_THRESHOLD), still computed by signal_metrics and
+      available to whichever COP is given context-loss detection (U-CM2). Not read by retrieval.
+  context_loss_after_compaction:
+    used_by: []
+    note: >-
+      NO_LONGER_APPLICABLE and NOT_CALCULATED. Registry category M, NOT_IMPLEMENTED: a model judgement of context
+      loss. Detecting context loss is outside the retrieval-only responsibility (D-CM1); its owner is open (U-CM2).
+  session_reset:
+    used_by: []
+    note: >-
+      NO_LONGER_APPLICABLE and NOT_CALCULATED. Registry category S, NOT_IMPLEMENTED ("definition to confirm"). A reset
+      is a session event, not recorded COP memory.
+  precedent_match:
+    used_by: []
+    note: >-
+      NOT_CALCULATED. Registry category Q, NOT_IMPLEMENTED: its definition is an open question. CM-2 reports which
+      validated precedents match the request deterministically (identifiers, types, time) without a match score;
+      no score is approximated (U-CM3).
+  context_consistency:
+    used_by: []
+    note: >-
+      NO_LONGER_APPLICABLE and NOT_CALCULATED. Registry category M, NOT_IMPLEMENTED: a model judgement of the agent's
+      responses against its instructions. Not retrieval (U-CM2).
+  context_relevance_score:
+    used_by: []
+    note: >-
+      NO_LONGER_APPLICABLE and NOT_CALCULATED. Registry category M, NOT_IMPLEMENTED: a judgement of the agent's prompt
+      context, not of recorded memory. Record relevance is decided by deterministic matching (CM-2, D-CM12).
+  memory_retrieval_success_rate:
+    used_by: []
+    note: >-
+      NOT_CALCULATED. Registry category Q, NOT_IMPLEMENTED; the registry asks whether agent memory (not collected) or
+      COPS memory (cop_memory_access_log) is meant. If COPS memory is meant, every retrieval outcome this package
+      produces is written to cop_memory_access_log and the rate could be computed from it; no formula is approved
+      (U-CM3).
+  memory_staleness_rate:
+    used_by: []
+    note: >-
+      NOT_CALCULATED. Registry category Q, NOT_IMPLEMENTED, same open question. Expired records are withheld by the
+      gateway and listed as EXPIRED; no staleness rate is computed (U-CM3).
+  memory_decision_consistency:
+    used_by: []
+    note: >-
+      NO_LONGER_APPLICABLE and NOT_CALCULATED. Registry category Q, NOT_IMPLEMENTED. Whether memory and decisions are
+      consistent is a judgement; this package reports records that disagree, unresolved (D-CM15).
+  context_completeness_score:
+    used_by: []
+    note: >-
+      NO_LONGER_APPLICABLE and NOT_CALCULATED. Registry category M, NOT_IMPLEMENTED: a model judgement of the agent's
+      context. Not retrieval.
+
+# cops/specs.py missing_metrics (the previous contract's). None is computed or approximated; all are NOT_CALCULATED.
+not_calculated:
+  compaction_count: >-
+    In specs.missing_metrics, although the opt-in catalogue computes it (NO_THRESHOLD). Not read by retrieval.
+  context_loss_after_compaction: NOT_CALCULATED. Context-loss detection is retired from this COP (D-CM1, U-CM2).
+  session_reset: NOT_CALCULATED. A session event, not recorded memory.
+  precedent_match: NOT_CALCULATED. No approved definition (U-CM3).
+  context_consistency: NOT_CALCULATED. A behavioural judgement, retired from this COP (U-CM2).
+
+# Current-cycle input (specs.CONSUMES). Retrieval does not depend on telemetry: Runtime Monitoring's reading is
+# recorded as context only (D-CM16). Context & Memory reads no other COP's finding.
+upstream:
+  runtime_monitoring: {context: [SUFFICIENT, DEGRADED, INSUFFICIENT]}
+
+# The request contract (CM-1). Supplied by the runtime for its requests; never invented by this package.
+request:
+  required: [requesting_cop, tenant_id, case_id, behavioural_question]
+  optional: [question_id, agent_scope, session_id, run_id, requested_tenant, memory_types, as_of, since, until,
+             session_scope, entities, max_results, purpose]
+  session_scopes: [any, same_session, cross_session]
+
+# Provenance each retrieved record is checked for (CM-3, D-CM13). A record missing a required field, or whose status
+# is not supported by its own provenance, is INSUFFICIENTLY_SUPPORTED: returned apart and never presented as
+# evidence. A record missing an expected field keeps its standing and carries the gap as a limitation.
+provenance:
+  required: [record_id, owner_cop, record_type, tenant_id, validation_status, created_at, provenance.case_id]
+  expected: [provenance.finding_id, provenance.session_id, provenance.evaluated_at, provenance.run_id,
+             provenance.lineage, provenance.verifier_registry, provenance.metric_version, agent_scope, expires_at]
+  status_support:
+    VALIDATED: provenance.feedback with outcome VALIDATED from an independent reviewer (memory.independent_reviewer)
+    VERIFIED: provenance.verified is not false
+    UNVALIDATED: none
+  statuses: [VALIDATED, VERIFIED, UNVALIDATED, REJECTED, EXPIRED]
+
+# Duplicate representations of one event (D-CM14): records of the same type from the same producer that name the same
+# event identity in their payload. Records without one of these keys are never merged.
+event_identity_keys: [event_ref, source_event_id, tool_use_id]
+
+# What each standing may be used for by the requesting COP (D-CM11). The requesting COP interprets; this package
+# never does.
+standing:
+  ESTABLISHED: validated by an independent reviewer; a precedent the requesting COP may compare against
+  VERIFIED_NOT_VALIDATED: passed the producing COP's blocking verifiers; context, not precedent
+  UNVERIFIED_OBSERVATION: recorded without verification; never evidence
+  INSUFFICIENTLY_SUPPORTED: provenance cannot be established; never evidence
+
+questions:
+  CM-1:
+    question: What historical information is requested?
+    fields: [requesting_cop, behavioural_question, question_id, tenant_id, agent_scope, case_id, session_id, run_id,
+             memory_types, as_of, since, until, session_scope, entities, max_results]
+    requires: []
+    verified: []
+    blocking: []
+    outcomes: [REQUEST_COMPLETE, REQUEST_INCOMPLETE]
+  CM-2:
+    question: What relevant memory is available within the authorized scope?
+    fields: [record_id, record_type, owner_cop, tenant_id, agent_scope, validation_status, created_at, expires_at,
+             payload, provenance]
+    requires: []
+    verified: []
+    blocking: []
+    depends_on: [CM-1]
+    outcomes: [RELEVANT_MEMORY_FOUND, NO_RELEVANT_MEMORY, NO_MEMORY_IN_SCOPE, ACCESS_DENIED, STORAGE_UNAVAILABLE]
+  CM-3:
+    question: Is the retrieved memory sufficiently attributable, valid and usable?
+    fields: [record_id, owner_cop, tenant_id, agent_scope, validation_status, created_at, provenance.case_id,
+             provenance.finding_id, provenance.session_id, provenance.evaluated_at, provenance.run_id,
+             provenance.lineage, provenance.feedback, provenance.verified]
+    requires: []
+    verified: []
+    blocking: []
+    depends_on: [CM-2]
+    outcomes: [ALL_ATTRIBUTABLE, PARTLY_ATTRIBUTABLE, NONE_ATTRIBUTABLE, NOTHING_TO_VALIDATE]
+  CM-4:
+    question: What information can be returned to the requesting COP, and what remains missing or unavailable?
+    fields: [records, excluded, missing, limitations, retrieved_at, versions]
+    requires: []
+    verified: []
+    blocking: []
+    depends_on: [CM-1, CM-2, CM-3]
+    outcomes: [COMPLETE, PARTIAL, NOTHING_RETURNABLE, UNAVAILABLE]
+
+# Retrieval status of one request (CM-4 with CM-2) -> the COP label. Across requests in one case the worst applies:
+# MEMORY_UNAVAILABLE, then MEMORY_PARTIAL, then MEMORY_RETURNED, then NO_RELEVANT_MEMORY.
+retrieval_status:
+  RETRIEVED: MEMORY_RETURNED
+  PARTIAL: MEMORY_PARTIAL
+  NO_RELEVANT_MEMORY: NO_RELEVANT_MEMORY
+  NO_MEMORY_IN_SCOPE: NO_RELEVANT_MEMORY
+  ACCESS_DENIED: MEMORY_UNAVAILABLE
+  STORAGE_UNAVAILABLE: MEMORY_UNAVAILABLE
+  INVALID_REQUEST: MEMORY_UNAVAILABLE
+label_order: [MEMORY_UNAVAILABLE, MEMORY_PARTIAL, MEMORY_RETURNED, NO_RELEVANT_MEMORY]
+
+severity: {MEMORY_RETURNED: NONE, MEMORY_PARTIAL: NONE, NO_RELEVANT_MEMORY: NONE, MEMORY_UNAVAILABLE: NONE,
+           INCONCLUSIVE: NONE}
+# The previous rule's CONTEXT_OK constant, kept and uncalibrated (U-CM6). Retrieval itself is deterministic.
+confidence: {MEMORY_RETURNED: 0.7, MEMORY_PARTIAL: 0.7, NO_RELEVANT_MEMORY: 0.7, MEMORY_UNAVAILABLE: 0.7,
+             INCONCLUSIVE: 0.0}
+responses: {MEMORY_RETURNED: NONE, MEMORY_PARTIAL: NONE, NO_RELEVANT_MEMORY: NONE, MEMORY_UNAVAILABLE: NONE,
+            INCONCLUSIVE: NONE}
+
+# No model: every retrieval operation is deterministic (D-CM10). No approved semantic-search capability or retrieval
+# contract exists in this repository, so semantic retrieval is UNAVAILABLE rather than approximated.
+model_role: none
+
+operations:
+  validate_request: {by: deterministic, code: collector/cops/runtime/cop_package.py:cm_request}
+  determine_scope: {by: deterministic, code: collector/cops/runtime/cop_package.py:cm_scope}
+  memory_lookup: {by: deterministic, code: collector/cops/runtime/memory.py:MemoryGateway.read}
+  access_validation: {by: deterministic, code: collector/cops/runtime/memory.py:MemoryGateway.read}
+  provenance_validation: {by: deterministic, code: collector/cops/runtime/cop_package.py:cm_provenance}
+  relevance_filtering: {by: deterministic, code: collector/cops/runtime/cop_package.py:cm_relevance}
+  structured_response: {by: deterministic, code: collector/cops/runtime/cop_package.py:retrieve_memory}
+  consumption_record: {by: deterministic, code: collector/cops/runtime/memory.py:MemoryGateway.log}
+  decide_label: {by: deterministic, code: collector/cops/runtime/cop_package.py:decide_context_memory}
+  verify_finding: {by: deterministic, code: collector/cops/runtime/verifiers.py}
+  authority_check: {by: deterministic, code: collector/cops/authority.py:check}
+  decision_record: {by: deterministic, code: collector/cops/runtime/decision.py:build}
+# Semantic (embedding or model) relevance: not available. Listed so its absence is explicit.
+unavailable_operations:
+  semantic_relevance: no approved semantic-search capability or retrieval contract exists (U-CM4)
+
+# The previous contract, kept for comparison (D-CM2). Nothing below is executed.
+previous_contract:
+  behavioural_question: Is the current context internally consistent, relevant to the task, and supported by useful precedent?
+  workbook_question: Is the agent operating with accurate, relevant and consistent context?
+  labels: [CONTEXT_OK, STALE, CONTRADICTORY, CONTEXT_LOSS, PRECEDENT_FOUND]
+  rule: >-
+    cops/runtime/rules.py context_memory before 2026-11-28 (kept as rules._context_memory_previous_contract, not
+    called): no context snapshots INCONCLUSIVE MISSING_DEPENDENCY; a breach of a constraint no longer in the active
+    context CONTEXT_LOSS 0.8 MEDIUM WATCH; a constraint whose text changed across snapshots CONTRADICTORY 0.7 LOW
+    WATCH; a snapshot whose hash does not match STALE 0.6 LOW WATCH; else CONTEXT_OK 0.7 NONE. LLM COP
+    (profiles.LLM_COPS) with tools get_context_snapshots, compare_instruction_versions, inspect_context_references,
+    verify_context_provenance; required artifact context_snapshots; wrote context_integrity_finding.
+  questions:
+    row_67: Does the agent have the relevant context needed for its current task?
+    row_69: Has important context been lost, altered or made stale through compaction, session resets or context changes?
+    row_71: Are retrieved memories and previous decisions relevant and consistent with the current situation?
+    row_73: Does an applicable historical precedent exist, and is the agent using it appropriately?
+    row_75: Are contradictions, missing memories or unreliable context affecting the agent's decisions?
+  question_migration:
+    row_67: RETIRED. Whether the agent has the context it needs is a judgement of the agent's context, not retrieval.
+    row_69: RETIRED. Context-loss detection (U-CM2).
+    row_71: >-
+      PART RETAINED. Relevance of recorded memories to the requesting COP's question is CM-2 (deterministic
+      matching); whether they are consistent with the current situation is RETIRED: records that disagree are
+      returned with their statuses, unresolved (D-CM15).
+    row_73: >-
+      PART RETAINED. Whether an applicable validated precedent exists is CM-2 and CM-3 (standing ESTABLISHED);
+      whether the agent uses it appropriately is RETIRED.
+    row_75: >-
+      PART RETAINED. Missing or unavailable memory is CM-4. Whether contradictions or unreliable context affect the
+      agent's decisions is RETIRED.
