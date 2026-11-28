@@ -493,6 +493,13 @@ def _memory(ctx, comp, cls, label):
     est = mv.get("established") or []
     if not est:
         return UNKNOWN("no validated precedent")
+    # U-CM9 (purvi 2026-11-28, packages/context_memory/DECISIONS.md A-CM1): a COP's own historical output never
+    # independently corroborates its present finding. A record without owner_cop is treated as the COP's own.
+    own = [r for r in est if r.get("owner_cop", ctx.get("cop")) == ctx.get("cop")]
+    est = [r for r in est if r not in own]
+    if not est:
+        return _item("neutral", basis=f"{len(own)} validated record(s), all the COP's own earlier output: not "
+                                      f"independent corroboration", refs=[f"memory:{r['record_id']}" for r in own])
     same = [r for r in est if (r.get("payload") or {}).get("label") == label]
     if same:
         return _item("supports", 1.0, 1.0, f"{len(same)} validated record(s) with the same reading",

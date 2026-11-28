@@ -1,8 +1,8 @@
 """
 Deterministic readings for all eighteen COPs.
 
-For the eight deterministic COPs these ARE the governing decision. For the
-ten LLM COPs they are the computational baseline: recorded beside the model's
+For the nine deterministic COPs these ARE the governing decision. For the
+nine LLM COPs they are the computational baseline: recorded beside the model's
 finding, never substituted for it silently, and never counted as a verifier
 of it (the verifiers in verifiers.py check claims against data instead).
 
@@ -51,12 +51,13 @@ DETERMINISTIC_TOOLS = {
     "recovery_resilience": ("get_recovery_records", "validate_checkpoints", "assess_recovery_questions"),
     "audit_traceability": ("reconstruct_trace", "check_decision_linkage", "assess_audit_questions"),
     "agent_lifecycle_management": ("get_agent_registry", "detect_configuration_changes"),
+    # retrieval only (packages/context_memory), deterministic since U-CM5; the previous four snapshot tools are kept
+    # for comparison
+    "context_memory": ("assess_context_memory_questions",),
     # LLM COPs: the tools their computational baseline reads, so it is
     # computed from the same sources the model can ask for.
     "workflow_orchestration": ("get_task_milestones", "analyse_execution_transitions"),
     "anomaly_detection": ("assess_anomaly_questions",),
-    # retrieval only (packages/context_memory): the previous four snapshot tools are kept for comparison
-    "context_memory": ("assess_context_memory_questions",),
     "incident_response": ("check_exposure", "assess_incident_questions"),
     "classification_tagging": ("query_taxonomy", "inspect_event_metadata", "assess_classification_questions"),
     "risk_mitigation": ("read_risk_register", "calculate_risk_components", "assess_risk_questions"),
@@ -536,7 +537,8 @@ def _ba_questions(ctx, f):
     f["cop_specific"].update(questions=q, drivers=d["drivers"], contrary=d["contrary"], limitations=lims,
                              recipients=d["recipients"], memory_payload=d["memory_payload"],
                              decided_without_model=d["decided"], decision=d["decision"],
-                             behaviour_status=d["behaviour_status"], legacy_reading=legacy)
+                             behaviour_status=d["behaviour_status"], legacy_reading=legacy,
+                             **({"remember_quiet": d["remember_quiet"]} if d.get("remember_quiet") else {}))
     claims = [tclaim(t, "assess_behaviour_questions", f"questions.{qid}.answer.outcome", x["answer"],
                      f"{qid} answered {x['answer']}: {x['explanation']}"[:240]).to_dict() for qid, x in q.items()]
     why = "; ".join(f"{x} {q[x]['answer']}" for x in q)
@@ -558,16 +560,15 @@ def _behavior_analytics_legacy(ctx, keys):
     judged = [e for e in (rep, retry, failed, stalled, m.get("oversight.fast_approvals"))
               if e is not None and e.state in ("NORMAL",) + ATTENTION_STATES]
     claims, used = [], []
-    loss = verified(up, "context_memory", "CONTEXT_LOSS", "CONTRADICTORY")
+    # Context & Memory's retired CONTEXT_LOSS / CONTRADICTORY are no longer read (P-CM1, purvi 2026-11-28): Workflow
+    # Orchestration's verified DRIFTING / UNEXPECTED_BRANCH is the only altered-context input
     drift = verified(up, "workflow_orchestration", "DRIFTING", "UNEXPECTED_BRANCH")
     loops = [e for e in (rep, retry) if e is not None and e.state in HOT]
     scale = min(1.0, evidence_conf(up) / 0.9)
-    if loss or drift:
-        src = loss or drift
-        cop = "context_memory" if loss else "workflow_orchestration"
-        used.append({"cop": cop, "label": src["label"], "finding_id": src.get("finding_id"),
+    if drift:
+        used.append({"cop": "workflow_orchestration", "label": drift["label"], "finding_id": drift.get("finding_id"),
                      "counted_as": "behavioural input (authorised read of integrity finding)"})
-        claims.append(uclaim(cop, src))
+        claims.append(uclaim("workflow_orchestration", drift))
     if retry is not None and retry.state in HOT and failed is not None and failed.state in HOT:
         claims += [mclaim(retry), mclaim(failed)]
         if seq.get("failed_calls") is not None:
@@ -581,11 +582,10 @@ def _behavior_analytics_legacy(ctx, keys):
         return F("LOOPING", 0.75 * scale, "WATCH", "the same calls repeat within turns",
                  "; ".join(f"{e.metric_id}={e.value}" for e in loops), claims,
                  max((SEV[e.state] for e in loops), key=RANK.get), upstream_used=used)
-    if loss or drift:
+    if drift:
         return F("DRIFTING", 0.6 * scale, "WATCH",
                  "an upstream integrity finding shows the agent working from altered context",
-                 f"{(loss or drift)['label']} from {'context_memory' if loss else 'workflow_orchestration'}",
-                 claims, "LOW", upstream_used=used)
+                 f"{drift['label']} from workflow_orchestration", claims, "LOW", upstream_used=used)
     if not judged:
         return F(INCONCLUSIVE, 0.0, "WATCH", "no behavioural measure could be judged",
                  "unknown or not applicable: " + ", ".join(

@@ -31,7 +31,8 @@ sources:
     IMPLEMENTED_EXISTING; 4 category S and 3 category H IMPLEMENTED in the opt-in catalogue with no approved
     threshold; 10 NOT_IMPLEMENTED: 1 category S, 6 category H, 1 category M, 1 category Q, 1 category O). The
     document lists the metrics per COP, not per question: each is assigned to the question its meaning answers
-    (D-BA2). behavior_investigation_prioritya is spelled as in the registry (a suspected typo, U-BA9).
+    (D-BA2). behavior_investigation_priority is spelled behavior_investigation_prioritya in the document; the
+    registry id was corrected by U-BA9 (purvi 2026-11-28) and keeps that spelling as source_spelling.
   rule: >-
     cops/runtime/rules.py behavior_analytics (no RuleInterpreter method), wrapped by _with_pattern_persistence,
     in this order: insights.retry and insights.failed both EXCEPTION or CRITICAL is POOR_RECOVERY 0.8 MEDIUM
@@ -147,11 +148,12 @@ mapping:
     note: >-
       NOT_CALCULATED. Registry category Q, NOT_IMPLEMENTED. Missing input (row 187 column 5): operating-context
       metadata and comparable historical execution records.
-  behavior_investigation_prioritya:
+  behavior_investigation_priority:
     used_by: [BA-4]
     note: >-
       NOT_CALCULATED as a metric. Registry category O, NOT_IMPLEMENTED: a decision field of the consuming COP, not
-      a calculated metric (registry note). Spelled as in the registry (U-BA9).
+      a calculated metric (registry note). Registry id corrected from the source spelling
+      behavior_investigation_prioritya (U-BA9, purvi 2026-11-28).
 
 # cops/specs.py missing_metrics for this COP. None is computed or approximated.
 not_calculated:
@@ -173,7 +175,8 @@ not_calculated:
 # Detection's earlier-cycle verified finding is context for persistence and never an occurrence (D-BA9).
 upstream:
   runtime_monitoring: {quality: [INSUFFICIENT, PARTIAL], quiet: [SUFFICIENT]}
-  context_memory: {altered: [CONTEXT_LOSS, CONTRADICTORY], quiet: [CONTEXT_OK]}
+  # context_memory: {altered: [CONTEXT_LOSS, CONTRADICTORY], quiet: [CONTEXT_OK]} removed by P-CM1 (2026-11-28,
+  # DECISIONS.md A-BA1): the edge is gone and a retrieval outcome is never a context-integrity finding
   workflow_orchestration: {altered: [DRIFTING, UNEXPECTED_BRANCH], quiet: [NORMAL]}
 feedback:
   anomaly_detection: {context: [ANOMALOUS], quiet: [NORMAL]}
@@ -261,7 +264,7 @@ questions:
       - {metric: behavior_model_variation, kind: OPTIONAL}
       - {metric: behavior_task_variation, kind: OPTIONAL}
       - {metric: behavior_context_variation, kind: OPTIONAL}
-      - {metric: behavior_investigation_prioritya, kind: OPTIONAL}
+      - {metric: behavior_investigation_priority, kind: OPTIONAL}
     verified: []
     blocking: []
     outcomes: [CONTEXT_ALTERED, NO_ALTERATION_SHOWN]

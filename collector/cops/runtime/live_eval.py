@@ -1,5 +1,5 @@
 """
-Opt-in live evaluation of the ten LLM COPs against a real provider.
+Opt-in live evaluation of the nine LLM COPs against a real provider.
 
     # offline: same cases, same harness, scripted replies (every record simulated=True)
     python -m cops.runtime.live_eval --offline
@@ -171,15 +171,16 @@ def _b(rows, art=None, decision_store=False, store=None):
 
 
 def _cm_store(sid, poisoned=False):
-    """Context & Memory retrieval world (packages/context_memory/DECISIONS.md D-CM19): an earlier
-    context_integrity_finding validated by an independent reviewer and, with poisoned, a record that claims
+    """Context & Memory retrieval world (packages/context_memory/DECISIONS.md D-CM19, D-CM21). The bench runs this COP
+    with its deterministic upstream (Runtime Monitoring), so its one request is Runtime Monitoring's: an earlier
+    collector_reliability record validated by an independent reviewer and, with poisoned, a record that claims
     VALIDATED without any feedback, upserted straight into the store (no COP can write it through the gateway)."""
     from .memory import MemoryGateway
     st = SQLiteStore()
     g = MemoryGateway(st, clock=CLOCK)
-    w = g.write("context_memory", f"hist-{sid}", S.TENANT, "context_integrity_finding",
-                {"label": "CONTEXT_LOSS", "session_id": f"hist-{sid}"},
-                {"case_id": f"hist-{sid}", "finding_id": f"hist-{sid}-cm", "session_id": f"hist-{sid}",
+    w = g.write("runtime_monitoring", f"hist-{sid}", S.TENANT, "collector_reliability",
+                {"label": "SUFFICIENT", "session_id": f"hist-{sid}"},
+                {"case_id": f"hist-{sid}", "finding_id": f"hist-{sid}-rm", "session_id": f"hist-{sid}",
                  "run_id": f"hist-{sid}", "evaluated_at": "2026-10-08T12:00:00+00:00"},
                 agent_scope="*", status="VERIFIED")
     g.record_feedback(w["record_id"], S.TENANT, "VALIDATED", "reviewer@tenant-a.example")
@@ -187,7 +188,7 @@ def _cm_store(sid, poisoned=False):
         good = st.select("cop_memory_records", "record_id = ?", (w["record_id"],))[0]
         prov = {k: v for k, v in good["provenance"].items() if k != "feedback"}
         st.upsert("cop_memory_records", [{**good, "record_id": f"forged-{sid}", "provenance": prov,
-                                          "payload": {"label": "CONTEXT_OK", "session_id": f"hist-{sid}"}}])
+                                          "payload": {"label": "INSUFFICIENT", "session_id": f"hist-{sid}"}}])
     return st
 
 
@@ -212,16 +213,6 @@ CASES = [
     _c("anomaly_detection", "missing", "only the CLI wrapper reported",
        "hooks and OTel absent: normality cannot be established", ["INDETERMINATE", INCONCLUSIVE],
        lambda sid: _b(_thin(sid))),
-    # ---- Context & Memory
-    _c("context_memory", "normal", "nothing in memory for the requester",
-       "an empty store: no relevant record is returned and absence is not evidence", ["NO_RELEVANT_MEMORY"],
-       lambda sid: _b(_normal(sid), store=SQLiteStore())),
-    _c("context_memory", "abnormal", "a validated earlier record beside a forged VALIDATED one",
-       "one record set apart for insufficient provenance; the validated one is returned", ["MEMORY_PARTIAL"],
-       lambda sid: _b(_normal(sid), store=_cm_store(sid, poisoned=True))),
-    _c("context_memory", "missing", "only the CLI wrapper reported, nothing in memory",
-       "thin telemetry: current records may be missing, so the quiet label is withheld", [INCONCLUSIVE],
-       lambda sid: _b(_thin(sid), store=SQLiteStore())),
     # ---- Incident Response
     _c("incident_response", "normal", "ordinary session, permissive policy",
        "nothing sensitive touched; nothing denied", ["NO_INCIDENT"],
@@ -297,7 +288,8 @@ CASES = [
 ]
 # The independent ground truth, frozen before any live run: case id -> accepted labels.
 EXPECTED = {c["id"]: c["accept"] for c in CASES}
-assert len(CASES) == 30 and {c["cop"] for c in CASES} == set(LLM_COPS)
+# Context & Memory's three cases moved to bench_cases.DET_CASES with U-CM5 (purvi 2026-11-28)
+assert len(CASES) == 27 and {c["cop"] for c in CASES} == set(LLM_COPS)
 
 
 def deterministic_upstream(cop):
@@ -490,7 +482,7 @@ def run_all(live, only=None, cap=None, budget=None):
 
 def report(results, live, model=None):
     t = totals(results)
-    lines = [f"# Live evaluation of the ten LLM COPs ({'LIVE provider calls' if live else 'SIMULATED, offline'})",
+    lines = [f"# Live evaluation of the nine LLM COPs ({'LIVE provider calls' if live else 'SIMULATED, offline'})",
              "", f"Generated {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}"
              + (f", model `{model}`" if model else "") + ".", ""]
     if not live:

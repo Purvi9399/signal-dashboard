@@ -21,9 +21,9 @@ RECORD_FIELDS = ("invocation_id", "cop", "case_id", "purpose", "provider", "mode
 
 # Risk Mitigation's package decides every reading without the model (COP 8, packages/risk_mitigation/DECISIONS.md,
 # D-RK9), so its provider wiring cannot be exercised here; test_risk_mitigation_does_not_reach_the_provider checks it.
-# Context & Memory is retrieval only and decides every reading without the model (COP 12,
-# packages/context_memory/DECISIONS.md D-CM10); test_context_memory_does_not_reach_the_provider checks it.
-MODEL_PATH_COPS = [c for c in LLM_COPS if c not in ("risk_mitigation", "context_memory")]
+# Context & Memory is retrieval only and, since U-CM5 (purvi 2026-11-28, packages/context_memory/DECISIONS.md
+# A-CM1), a deterministic COP; test_context_memory_does_not_reach_the_provider checks it.
+MODEL_PATH_COPS = [c for c in LLM_COPS if c != "risk_mitigation"]
 
 
 def rt_with(provider, budget=None, case="llm-case"):
@@ -59,8 +59,10 @@ def no_model_conclusion(cop, f):
     return f["label"] == "INCONCLUSIVE" and f["status"] == "INCONCLUSIVE" and not f["verified"]
 
 
-def test_allocation_is_fixed_ten_and_eight():
-    assert len(LLM_COPS) == 10 and len(DETERMINISTIC_COPS) == 8
+def test_allocation_is_fixed_nine_and_nine():
+    # ten and eight until U-CM5 (purvi 2026-11-28) moved Context & Memory to the deterministic COPs
+    assert len(LLM_COPS) == 9 and len(DETERMINISTIC_COPS) == 9
+    assert "context_memory" in DETERMINISTIC_COPS and "context_memory" not in LLM_COPS
     assert set(LLM_COPS) | set(DETERMINISTIC_COPS) == set(BY_KEY)
     p = build_profiles()
     assert all(p[k].classification == "llm" for k in LLM_COPS)
@@ -70,9 +72,9 @@ def test_allocation_is_fixed_ten_and_eight():
 def test_prompts_tools_and_schemas_differ_per_cop():
     p = build_profiles()
     prompts = [PROMPTS[k] for k in LLM_COPS]
-    assert len(set(prompts)) == 10
-    assert len({p[k].tools for k in LLM_COPS}) == 10
-    assert len({p[k].detail_schema for k in LLM_COPS}) == 10
+    assert len(set(prompts)) == 9
+    assert len({p[k].tools for k in LLM_COPS}) == 9
+    assert len({p[k].detail_schema for k in LLM_COPS}) == 9
 
 
 @pytest.mark.parametrize("cop", MODEL_PATH_COPS)

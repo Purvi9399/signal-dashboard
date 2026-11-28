@@ -1343,16 +1343,16 @@ def t_assess_recovery_questions(case, a, ctx):
 
 
 def t_assess_context_memory_questions(case, a, ctx):
-    """Context & Memory's four questions: one retrieval per current-cycle consumer of this COP (specs.consumers),
-    each under that consumer's own memory policy (cop_package.retrieve_memory). Retrieval only; nothing is
-    interpreted (packages/context_memory/DECISIONS.md)."""
-    from ..specs import consumers
+    """Context & Memory's four questions: one retrieval per other COP of this case run that has a memory policy
+    (D-CM21; no COP consumes this COP's finding since P-CM1), each under that COP's own memory policy
+    (cop_package.retrieve_memory). Retrieval only; nothing is interpreted (packages/context_memory/DECISIONS.md)."""
+    from .memory import POLICIES
     bundles = {}
-    for r in consumers(cop_package.CM):
+    for r in [c for c in (ctx.get("case_cops") or []) if c != cop_package.CM and c in POLICIES and c in BY_KEY]:
         req = {"requesting_cop": r, "tenant_id": ctx["tenant_id"], "case_id": ctx["case_id"],
                "behavioural_question": BY_KEY[r].behavioural_question, "agent_scope": ctx.get("agent_scope"),
                "session_id": case.session_id, "run_id": ctx.get("run_id"), "memory_types": None,
-               "as_of": case.computed_at, "purpose": f"current-cycle bundle for {r}"}
+               "as_of": case.computed_at, "purpose": f"case bundle for {r}", "exclude_own_current": True}
         bundles[r] = cop_package.retrieve_memory(ctx.get("memory"), req)
     q = cop_package.assess_context_memory(bundles)
     return {"questions": q, "bundles": {r: cop_package.bundle_view(b) for r, b in bundles.items()},

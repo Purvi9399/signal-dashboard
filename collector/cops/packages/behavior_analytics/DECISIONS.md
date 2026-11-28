@@ -106,3 +106,35 @@ Ground truth for these was written first (GROUND_TRUTH.yaml: the scenarios added
 | U-BA6 | Confidence stays uncalibrated | unchanged (UNCALIBRATED_CONFIDENCE) |
 | U-BA8 | The Risk Mitigation and Workflow Orchestration connections (P-BA1) stay unwired; Governance Intelligence is recorded as a future context-only consumer | CONNECTIONS.md |
 | U-BA9 | Correct the registry typo after checking every reference | `metric_registry.json` id behavior_investigation_priority with `source_spelling: behavior_investigation_prioritya`; METRICS.yaml and the catalogue test follow |
+
+### U-BA1 audit: shared-metric impact of duplicate telemetry (signal_metrics unchanged)
+
+`insights.retry` is read raw by Anomaly Detection and Recovery & Resilience as well as this COP; `insights.failed`
+by Recovery & Resilience; `insights.repetition` by Workflow Orchestration, Anomaly Detection and Workload
+Optimization; `insights.stalled` by Workflow Orchestration and Resource Management (`specs` metric_keys). Only this
+COP recounts by tool_use_id (D-BA3). Measured offline on the harness world repeated_telemetry (one failing step seen
+by three collectors, synthetic, no model): the raw `insights.retry` is 2 EXCEPTION for one event; this COP recounts
+0 and reads STABLE; Anomaly Detection sees a deviation and needs its model (INCONCLUSIVE `llm_unavailable` offline),
+where one genuine failing step is decided NORMAL without a model; Recovery & Resilience reads INCONCLUSIVE in both
+(no recovery record), so it is not changed by the duplicate here. No change is made to `signal_metrics` or another
+COP; a central recount would change accepted COPs' readings and needs its own decision.
+
+### Changed contracts and test expectations (2026-11-28)
+
+| Contract or test | Before | Now | Reason |
+|---|---|---|---|
+| `specs.SPEC_CONSUMES["behavior_analytics"]` | runtime_monitoring, context_memory, workflow_orchestration | runtime_monitoring, workflow_orchestration | A-BA1 |
+| METRICS.yaml `upstream.context_memory` | altered [CONTEXT_LOSS, CONTRADICTORY], quiet [CONTEXT_OK] | removed | A-BA1 |
+| `rules._behavior_analytics_legacy` | read a verified CONTEXT_LOSS / CONTRADICTORY as DRIFTING | reads Workflow Orchestration DRIFTING / UNEXPECTED_BRANCH only | A-BA1 |
+| `decide_behavior_analytics` / rule `cop_specific` | STABLE carried no memory instruction | STABLE carries `remember_quiet: verified_only`; payload `memory_use: contextual_baseline` | U-BA5 |
+| `graph.validate_memory_update` | a quiet label was written only with `remember_quiet` true | `verified_only` writes the quiet label only when verified; otherwise not written | U-BA5 |
+| `metric_registry.json` | id behavior_investigation_prioritya, `suspected_typo_of` | id behavior_investigation_priority, `source_spelling: behavior_investigation_prioritya` | U-BA9 |
+| METRICS.yaml mapping and requirements, SPEC.md | behavior_investigation_prioritya | behavior_investigation_priority | U-BA9 |
+| `docs/cops/cops_topology.json` | reads_decisions_from included context_memory; link context_memory → behavior_analytics | removed | A-BA1 |
+| harness | 358 expectations | 424 met, 8 superseded (normal_stable stable_not_written; drifting_context BA-4, cop_label, action_watch, severity_low, context_upstream_used; unverified_context unverified_listed_not_used; topology topology_matches, replaced by itself and context_memory_edge_removed) | A-BA1, U-BA5 |
+| harness scenarios added | | drifting_from_workflow, unverified_workflow, retired_context_label_ignored, memory_never_a_finding, stable_baseline_written, stable_unverified_not_written, registry_typo_corrected | |
+| `tests/test_cop_package_behavior_analytics.py` | topology asserted context_memory upstream; harness test asserted no superseded row | upstream (runtime_monitoring, workflow_orchestration); harness test pins 424 and the 8 superseded rows | |
+| `tests/test_runtime_graph.py` | test_behavior_analytics_consumes_context_integrity_finding (CM CONTEXT_LOSS → DRIFTING) | test_behavior_analytics_consumes_workflow_drift_not_context_memory (WO DRIFTING → DRIFTING; CM CONTEXT_LOSS ignored) | A-BA1 |
+| `tests/test_cop_influence.py` | CM_LOSS upstream in the Anomaly Detection feedback tests | WO_DRIFT upstream; the same assertions hold | A-BA1 |
+| `tests/test_metric_catalogue.py` | `suspected_typo_of` on behavior_investigation_prioritya | the corrected id and its `source_spelling` | U-BA9 |
+

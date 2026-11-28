@@ -120,6 +120,7 @@ class Runtime:
     live_session: bool = False     # whether intervention could still apply to the session
     pending_operations: list = field(default_factory=list)  # tool calls awaiting a decision (live only)
     run_id: str = "eval"
+    case_order: Any = None         # the COPs of the case run (run_case), for Context & Memory's requests (D-CM21)
 
     def __post_init__(self):
         assert self.mode in MODES, self.mode
@@ -210,7 +211,8 @@ def _events(rt, cop, picture=None):
 
 def _tool_ctx(rt, state):
     return {"case_id": rt.case.case_id, "tenant_id": rt.case.tenant_id, "run_id": rt.run_id,
-            "agent_scope": rt.case.agent_scope, "upstream": state.get("upstream") or {}}
+            "agent_scope": rt.case.agent_scope, "upstream": state.get("upstream") or {},
+            "case_cops": list(rt.case_order or [])}
 
 
 def _fallback_action(spec):
@@ -280,8 +282,11 @@ def retrieve_memory(state):
     if b["retrieval_status"] in (STORAGE_UNAVAILABLE, INVALID_REQUEST):
         return {"memory_view": {"available": False, "unavailable": b["storage_error"] or b["retrieval_status"],
                                 "retrieval": bundle_view(b)}}
+    # owner_cop and independence added for VS-01 (U-CM9, 2026-11-28): a COP's own record never corroborates it
     shape = lambda v: {"record_id": v["record_id"], "record_type": v["record_type"], "status": v["validation_status"],
-                       "payload": v["payload"], "from_case": v["case_id"]}
+                       "payload": v["payload"], "from_case": v["case_id"], "owner_cop": v["owner_cop"],
+                       "independent_of_requester": v["independent_of_requester"],
+                       "may_corroborate": v["may_corroborate"]}
     k = memory_buckets(b, shape)
     return {"memory_view": {"available": True, **k, "excluded": b["gateway_excluded"],
                             "retrieval": bundle_view(b)}}
@@ -371,7 +376,7 @@ def _gate_required(rt, cop, out, upstream=None):
 @timed("computational_baseline")
 def computational_baseline(state):
     """Deterministic reading. For the eight deterministic COPs it is the
-    decision; for the ten LLM COPs it is recorded beside the model's finding
+    decision; for the nine LLM COPs it is recorded beside the model's finding
     as a separately labelled baseline and never substituted for it."""
     rt = _rt(state)
     cop = state["cop"]
@@ -1168,6 +1173,9 @@ def validate_memory_update(state):
         # Context & Memory retrieves; it keeps no competing record of what it returned (D-CM20)
         return {"memory_write": {"written": False, "reason": f"{cop} writes no memory (retrieval only)"}}
     remember = (f.get("cop_specific") or {}).get("remember_quiet")   # a quiet label that explains a deviation
+    if remember == "verified_only" and f["label"] == quiet and not f["verified"]:
+        # Behavior Analytics' STABLE baseline (U-BA5, 2026-11-28): kept only once verified, never as an observation
+        return {"memory_write": {"written": False, "reason": f"{f['label']} is remembered only when verified"}}
     if f["status"] == SUBSTANTIVE and (f["label"] != quiet or remember):
         status, label = (VERIFIED if f["verified"] else UNVALIDATED), f["label"]
     elif f["status"] == REJECTED:
@@ -1431,6 +1439,7 @@ def run_case(rt, cops=None, checkpointer=None, thread_id=None, history=None):
     FEEDBACK edges and never enters the current cycle's findings."""
     register(rt)
     graph, order = build_case_graph(cops, checkpointer)
+    rt.case_order = list(order)
     cfg = {"configurable": {"thread_id": thread_id or rt.case.case_id}, "recursion_limit": 200}
     out = graph.invoke({"case_id": rt.case.case_id, "order": order, "findings": {}, "results": {},
                         "consumption": [], "history": dict(history or {})}, cfg)
@@ -1439,7 +1448,8 @@ def run_case(rt, cops=None, checkpointer=None, thread_id=None, history=None):
 
 def resume_case(rt, decision, cops=None, checkpointer=None, thread_id=None):
     register(rt)
-    graph, _ = build_case_graph(cops, checkpointer)
+    graph, _order = build_case_graph(cops, checkpointer)
+    rt.case_order = list(_order)
     cfg = {"configurable": {"thread_id": thread_id or rt.case.case_id}, "recursion_limit": 200}
     return _shape(graph.invoke(Command(resume=decision), cfg))
 
@@ -1448,7 +1458,8 @@ def recover_case(rt, cops=None, checkpointer=None, thread_id=None):
     """Continue a case whose process died mid-run, from its last checkpoint.
     COPs that finished before the failure are not run again."""
     register(rt)
-    graph, _ = build_case_graph(cops, checkpointer)
+    graph, _order = build_case_graph(cops, checkpointer)
+    rt.case_order = list(_order)
     cfg = {"configurable": {"thread_id": thread_id or rt.case.case_id}, "recursion_limit": 200}
     return _shape(graph.invoke(None, cfg))
 
@@ -1463,6 +1474,7 @@ def _shape(out):
 def run_cop(rt, cop, upstream=None, checkpointer=None, thread_id=None, history=None):
     """One COP on its own (tests, and the per-COP evaluation cases)."""
     register(rt)
+    rt.case_order = [cop]
     g = build_cop_graph(checkpointer)
     cfg = {"configurable": {"thread_id": thread_id or f"{rt.case.case_id}:{cop}"}, "recursion_limit": 100}
     fb, fb_view = prior_feedback(cop, history, rt.run_id)

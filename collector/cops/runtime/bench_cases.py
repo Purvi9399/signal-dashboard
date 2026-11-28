@@ -16,7 +16,8 @@ any of these cases was run. It is never shown to a COP.
 
 from . import synthetic as S
 from .evaluation import _estate, allow_all, c05_art, spike_session, sensitive_session, recovery_session
-from .live_eval import _c, _b, _normal, _thin, _failing_loop, INCONCLUSIVE
+from .live_eval import _c, _b, _normal, _thin, _failing_loop, _cm_store, INCONCLUSIVE
+from .persistence import SQLiteStore
 from .profiles import DETERMINISTIC_COPS
 
 
@@ -140,9 +141,20 @@ DET_CASES = [
     _c("audit_traceability", "missing", "only the CLI wrapper reported",
        "attribution cannot be assessed on thin telemetry", [INCONCLUSIVE],
        lambda sid: _b(_thin(sid))),
+    # ---- Context & Memory: what earlier memory can be retrieved for the case's requesters, with provenance intact?
+    # (deterministic since U-CM5, purvi 2026-11-28; moved from live_eval.CASES)
+    _c("context_memory", "normal", "nothing in memory for the requester",
+       "an empty store: no relevant record is returned and absence is not evidence", ["NO_RELEVANT_MEMORY"],
+       lambda sid: _b(_normal(sid), store=SQLiteStore())),
+    _c("context_memory", "abnormal", "a validated earlier record beside a forged VALIDATED one",
+       "one record set apart for insufficient provenance; the validated one is returned", ["MEMORY_PARTIAL"],
+       lambda sid: _b(_normal(sid), store=_cm_store(sid, poisoned=True))),
+    _c("context_memory", "missing", "only the CLI wrapper reported, nothing in memory",
+       "thin telemetry: current records may be missing, so the quiet label is withheld", [INCONCLUSIVE],
+       lambda sid: _b(_thin(sid), store=SQLiteStore())),
 ]
 DET_EXPECTED = {c["id"]: c["accept"] for c in DET_CASES}
-assert len(DET_CASES) == 24 and {c["cop"] for c in DET_CASES} == set(DETERMINISTIC_COPS)
+assert len(DET_CASES) == 27 and {c["cop"] for c in DET_CASES} == set(DETERMINISTIC_COPS)
 
 
 # ====================================================================== fleet scenarios

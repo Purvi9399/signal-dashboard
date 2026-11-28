@@ -32,7 +32,9 @@ precedent?", labels CONTEXT_OK, STALE, CONTRADICTORY, CONTEXT_LOSS, PRECEDENT_FO
 
 ## Workflow (D-CM7)
 
-`cop_package.retrieve_memory(gateway, request)`. Each stage is written to `bundle.stages` with its input, output and
+`cop_package.retrieve_memory(gateway, request)`. In a case run the requests are one per other COP of the case with a
+memory policy (D-CM21); since P-CM1 (2026-11-28) no COP consumes this COP's finding, and since U-CM5 it is a
+deterministic COP (`profiles.DETERMINISTIC_COPS`). Each stage is written to `bundle.stages` with its input, output and
 failure.
 
 | Stage | Code | Fails as |
@@ -42,7 +44,7 @@ failure.
 | memory lookup | `MemoryGateway.read(..., include_excluded=True)` as the requester | STORAGE_UNAVAILABLE (no gateway, or the store raised) |
 | access validation | the gateway's tenant, type, agent-scope, expiry and rejection rules | ACCESS_DENIED (cross-tenant request); EXPIRED, REJECTED listed |
 | provenance validation | `cm_provenance`, `tools.scan` | INSUFFICIENTLY_SUPPORTED records; INSTRUCTION_SHAPED_CONTENT withheld |
-| relevance filtering | `cm_relevance`, duplicates by event identity, ranking, max_results | FUTURE_EVENT, OUTSIDE_TIME_RANGE, OUT_OF_SESSION_SCOPE, NOT_RELEVANT, DUPLICATE_OF, LIMIT_REACHED |
+| relevance filtering | `cm_relevance`, duplicates by event identity, ranking, max_results | OWN_CURRENT_OUTPUT (D-CM22), FUTURE_EVENT, OUTSIDE_TIME_RANGE, OUT_OF_SESSION_SCOPE, NOT_RELEVANT, DUPLICATE_OF, LIMIT_REACHED |
 | structured response | the bundle (`cm_bundle/1`) | |
 | consumption record | `MemoryGateway.log` (one `cop_memory_access_log` row) | NOT_LOGGED limitation |
 

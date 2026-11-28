@@ -10,7 +10,7 @@ from cops.packages.context_memory import harness as H
 from cops.runtime import cop_package as P, evidence_assessment as EA, graph as G, triage as TR
 from cops.runtime.memory import MemoryGateway, MemoryAccessDenied, POLICIES
 from cops.runtime.persistence import SQLiteStore
-from cops.runtime.profiles import LLM_COPS, LLM_TOOLS
+from cops.runtime.profiles import DETERMINISTIC_COPS, LLM_COPS, LLM_TOOLS, build_profiles
 from cops.runtime.requirements import REQUIREMENTS
 from cops.runtime.rules import DETERMINISTIC_TOOLS, RULES
 from cops.runtime.tools import TOOLS, _memory_lookup
@@ -47,7 +47,10 @@ def test_package_registered_and_decided_without_model():
     assert COP in EA.PACKAGED
     assert DETERMINISTIC_TOOLS[COP] == ("assess_context_memory_questions",)
     assert "assess_context_memory_questions" in TOOLS and COP in RULES
-    assert COP in LLM_COPS and LLM_TOOLS[COP] == ("assess_context_memory_questions",)
+    # deterministic since U-CM5 (purvi 2026-11-28, DECISIONS.md A-CM1): no prompt, no model tools, no detail schema
+    assert COP in DETERMINISTIC_COPS and COP not in LLM_COPS and COP not in LLM_TOOLS
+    p = build_profiles()[COP]
+    assert p.classification == "deterministic" and p.prompt is None and p.detail_schema is None
     assert EA.load_package(COP)["model_role"] == "none"
     assert COP not in REQUIREMENTS
 
@@ -82,6 +85,10 @@ def test_previous_contract_kept():
 def test_harness_meets_every_expectation(bench):
     assert bench["failed"] == [], [(r["scenario"], r["expectation"], str(r["got"])[:200]) for r in bench["failed"]]
     assert len(bench["expectations"]) >= 300
+    # 2026-11-28: the topology expectations are superseded by P-CM1 (GROUND_TRUTH.yaml superseded), with a reason
+    assert [(x["scenario"], x["expectation"]) for x in bench["superseded"]] == [
+        ("topology", "topology_unchanged"), ("topology", "no_same_cycle_cycle")]
+    assert all(x["status"] == "SUPERSEDED" and x["reason"] for x in bench["superseded"])
 
 
 def test_every_ground_truth_check_is_defined():
@@ -212,10 +219,29 @@ def test_ba_reads_new_labels_as_context(bench):
     r = bench["results"]["runtime_ba_precedent"]
     ba = r["out"]["results"]["behavior_analytics"]["finding"]
     assert ba["cop_specific"]["questions"]["BA-4"]["answer"] == "NO_ALTERATION_SHOWN"
+    assert "context_memory" not in ba["cop_specific"]["questions"]["BA-4"]["basis"]["upstream"]
 
 
-def test_topology_unchanged():
+def test_topology_reconciled():
+    # P-CM1 (purvi 2026-11-28): the Context & Memory -> Behavior Analytics edge is removed; until then consumers()
+    # was ["behavior_analytics"]
     assert CONSUMES[COP] == ("runtime_monitoring",)
-    assert list(consumers(COP)) == ["behavior_analytics"]
+    assert list(consumers(COP)) == [] and not any(COP in v for v in CONSUMES.values())
     assert COP not in FEEDBACK and not any(COP in v for v in FEEDBACK.values())
     assert POLICIES[COP]["writes"] == ("context_integrity_finding",)
+    assert H._topology_reconciled(None)[0] and H._no_cycle(None)[0]
+
+
+def test_case_requesters_and_own_current_output(bench):
+    # D-CM21: one bundle per other COP of the case with a memory policy; D-CM22: never its own output of this run
+    r = bench["results"]["case_requesters"]
+    assert set(r["out"]["results"]["context_memory"]["finding"]["cop_specific"]["bundles"]) == {
+        "runtime_monitoring", "anomaly_detection", "behavior_analytics"}
+    b = bench["results"]["own_current_output"]["bundle"]
+    assert [x["reason"] for x in b["excluded"]] == ["OWN_CURRENT_OUTPUT"]
+
+
+def test_vs01_never_counts_own_earlier_output(bench):
+    # U-CM9: a COP's own validated record is neutral in VS-01; another COP's same-label record supports
+    assert H._vs01_own_output_not_support(bench["results"]["vs01_own_output"])[0]
+    assert H._vs01_other_cop_supports(None)[0]

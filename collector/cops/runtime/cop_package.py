@@ -5463,8 +5463,8 @@ def _ba2(a, s, states, pkg, sessions, events, cfg):
 
 
 def _ba_upstream(upstream, pkg):
-    """Context & Memory and Workflow Orchestration, the authorised integrity reads (D-BA8), and Runtime Monitoring's
-    evidence quality."""
+    """Workflow Orchestration, the authorised integrity read (D-BA8; Context & Memory removed by P-CM1, A-BA1), and
+    Runtime Monitoring's evidence quality."""
     from ..specs import CONSUMES
     out = {}
     for k in CONSUMES[BA]:
@@ -5676,11 +5676,16 @@ def decide_behavior_analytics(questions, evidence_scale=1.0):
                              if m["metric"] in pkg["pattern_metrics"]},
            "decided_by": "package",
            "precedents_read": [p["record_id"] for p in (ans["BA-3"].get("basis") or {}).get("precedents", [])]}
+    # U-BA5 (purvi 2026-11-28, DECISIONS.md): a verified STABLE observation is kept as contextual baseline memory.
+    # graph.validate_memory_update writes it only when verified, as VERIFIED; only an independent reviewer validates.
+    if label == "STABLE":
+        pay["memory_use"] = "contextual_baseline"
     return {"label": label, "confidence": conf, "severity": sev, "action": action,
             "action_reason": reason if label != "STABLE" else "", "rationale_head": reason,
             "recipients": list(consumers(BA)) if label != INCONCLUSIVE else [], "drivers": drivers,
             "contrary": contrary, "questions": trace, "limitations": _ba_limitations(ans), "decided": True,
-            "memory_payload": pay, "behaviour_status": status, "decision": label}
+            "memory_payload": pay, "behaviour_status": status, "decision": label,
+            "remember_quiet": "verified_only" if label == "STABLE" else None}
 
 
 # ---------------------------------------------------------------- Context & Memory (COP 12, retrieval only)
@@ -5991,6 +5996,14 @@ def retrieve_memory(gateway, request, retrieved_at=None):
     b["excluded"] += held
     kept = []
     for v in views:
+        if req.get("exclude_own_current") and v["cycle"] == "CURRENT_CYCLE" and v["owner_cop"] == req["requesting_cop"]:
+            # Context & Memory's case bundle (D-CM22): the requester's own output of this run and case is not served
+            # back; it holds it already. A working memory view does not set the flag and keeps it (CURRENT_CYCLE)
+            b["excluded"].append({"record_id": v["record_id"], "record_type": v["record_type"],
+                                  "owner_cop": v["owner_cop"], "validation_status": v["validation_status"],
+                                  "reason": "OWN_CURRENT_OUTPUT", "detail": "written by the requester in this same "
+                                  "run and case", "event_time": v["event_time"]})
+            continue
         why, basis = cm_relevance(v, req)
         if why:
             b["excluded"].append({"record_id": v["record_id"], "record_type": v["record_type"],

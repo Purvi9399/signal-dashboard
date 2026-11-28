@@ -2,10 +2,10 @@
  "scenario": "consultation",
  "version": "activation-scenario-1",
  "case_id": "case:tenant-a:dbg-consult",
- "investigation_id": "88586638-7b55-5d1e",
+ "investigation_id": "80d02d74-740b-5b85",
  "session_id": "dbg-consult",
  "tenant_id": "tenant-a",
- "mapping_version": "map-4d9303c348c9f5cf",
+ "mapping_version": "map-ee3421ccb5d0de7b",
  "simulated": {
   "session_rows": "synthetic, collector schema fields",
   "estate": "synthetic: 7 earlier ordinary debugging sessions",
@@ -46,34 +46,34 @@
  "chain_verified": true,
  "records": [
   {
-   "record_id": "9943be1d-0330-5982-817e-6c774e856e19",
+   "record_id": "5a01bc4d-4229-5ffd-9492-c7ea47ad0f49",
    "seq": 1,
    "case_id": "case:tenant-a:dbg-consult",
-   "investigation_id": "88586638-7b55-5d1e",
+   "investigation_id": "80d02d74-740b-5b85",
    "cop": "runtime_monitoring",
    "transition": "CANDIDATE",
    "reasons": [
-    "policy runtime_monitoring@1#05d90513af in mapping map-4d9303c348c9f5cf"
+    "policy runtime_monitoring@1#05d90513af in mapping map-ee3421ccb5d0de7b"
    ],
-   "mapping_version": "map-4d9303c348c9f5cf",
+   "mapping_version": "map-ee3421ccb5d0de7b",
    "policy_id": "runtime_monitoring@1#05d90513af",
    "evidence": [],
    "prev_record_id": null,
    "decision_id": null,
    "detail": {},
-   "at": "2026-11-13T23:27:13.403+00:00"
+   "at": "2026-11-28T14:32:26.158+00:00"
   },
   {
-   "record_id": "15d71cb6-8c2f-5842-a73c-d8d05f95e624",
+   "record_id": "29a5b891-4131-53cb-ab4a-0a5121508511",
    "seq": 2,
    "case_id": "case:tenant-a:dbg-consult",
-   "investigation_id": "88586638-7b55-5d1e",
+   "investigation_id": "80d02d74-740b-5b85",
    "cop": "runtime_monitoring",
    "transition": "ELIGIBLE",
    "reasons": [
     "9 observables in the case"
    ],
-   "mapping_version": "map-4d9303c348c9f5cf",
+   "mapping_version": "map-ee3421ccb5d0de7b",
    "policy_id": "runtime_monitoring@1#05d90513af",
    "evidence": [
     {
@@ -95,36 +95,36 @@
      "refs": []
     }
    ],
-   "prev_record_id": "9943be1d-0330-5982-817e-6c774e856e19",
+   "prev_record_id": "5a01bc4d-4229-5ffd-9492-c7ea47ad0f49",
    "decision_id": null,
    "detail": {
     "missing_evidence": "ACTIVATE_TO_ASSESS"
    },
-   "at": "2026-11-13T23:27:13.403+00:00"
+   "at": "2026-11-28T14:32:26.158+00:00"
   },
   {
-   "record_id": "b2387cfe-9bf0-5c09-bca5-73b3a4f669eb",
+   "record_id": "353c9826-0267-5b74-9f8f-e34e9b8315d2",
    "seq": 3,
    "case_id": "case:tenant-a:dbg-consult",
-   "investigation_id": "88586638-7b55-5d1e",
+   "investigation_id": "80d02d74-740b-5b85",
    "cop": "behavior_analytics",
    "transition": "CANDIDATE",
    "reasons": [
-    "policy behavior_analytics@1#cadc46f0dc in mapping map-4d9303c348c9f5cf"
+    "policy behavior_analytics@1#df20805abf in mapping map-ee3421ccb5d0de7b"
    ],
-   "mapping_version": "map-4d9303c348c9f5cf",
-   "policy_id": "behavior_analytics@1#cadc46f0dc",
+   "mapping_version": "map-ee3421ccb5d0de7b",
+   "policy_id": "behavior_analytics@1#df20805abf",
    "evidence": [],
-   "prev_record_id": "15d71cb6-8c2f-5842-a73c-d8d05f95e624",
+   "prev_record_id": "29a5b891-4131-53cb-ab4a-0a5121508511",
    "decision_id": null,
    "detail": {},
-   "at": "2026-11-13T23:27:13.403+00:00"
+   "at": "2026-11-28T14:32:26.158+00:00"
   },
   {
-   "record_id": "7669d142-195e-5075-bf37-72a158a496bc",
+   "record_id": "7ebe994d-135a-5bf9-a100-9341b3aca6fb",
    "seq": 4,
    "case_id": "case:tenant-a:dbg-consult",
-   "investigation_id": "88586638-7b55-5d1e",
+   "investigation_id": "80d02d74-740b-5b85",
    "cop": "behavior_analytics",
    "transition": "NOT_ELIGIBLE",
    "reasons": [
@@ -132,8 +132,8 @@
     "insights.failed=0 is NORMAL (needs >= EXCEPTION)",
     "insights.repetition=0 is NORMAL (needs >= EXCEPTION)"
    ],
-   "mapping_version": "map-4d9303c348c9f5cf",
-   "policy_id": "behavior_analytics@1#cadc46f0dc",
+   "mapping_version": "map-ee3421ccb5d0de7b",
+   "policy_id": "behavior_analytics@1#df20805abf",
    "evidence": [
     {
      "metric": "insights.failed",
@@ -154,36 +154,36 @@
      "refs": []
     }
    ],
-   "prev_record_id": "b2387cfe-9bf0-5c09-bca5-73b3a4f669eb",
+   "prev_record_id": "353c9826-0267-5b74-9f8f-e34e9b8315d2",
    "decision_id": null,
    "detail": {
     "missing_evidence": "REPORT_UNKNOWN"
    },
-   "at": "2026-11-13T23:27:13.403+00:00"
+   "at": "2026-11-28T14:32:26.158+00:00"
   },
   {
-   "record_id": "c574cb11-2de2-5f04-b904-56a7f6fdde6f",
+   "record_id": "f04abebf-2bb7-5437-a994-f7f26ad243ed",
    "seq": 5,
    "case_id": "case:tenant-a:dbg-consult",
-   "investigation_id": "88586638-7b55-5d1e",
+   "investigation_id": "80d02d74-740b-5b85",
    "cop": "anomaly_detection",
    "transition": "CANDIDATE",
    "reasons": [
-    "policy anomaly_detection@1#c33f5fba76 in mapping map-4d9303c348c9f5cf"
+    "policy anomaly_detection@1#c33f5fba76 in mapping map-ee3421ccb5d0de7b"
    ],
-   "mapping_version": "map-4d9303c348c9f5cf",
+   "mapping_version": "map-ee3421ccb5d0de7b",
    "policy_id": "anomaly_detection@1#c33f5fba76",
    "evidence": [],
-   "prev_record_id": "7669d142-195e-5075-bf37-72a158a496bc",
+   "prev_record_id": "7ebe994d-135a-5bf9-a100-9341b3aca6fb",
    "decision_id": null,
    "detail": {},
-   "at": "2026-11-13T23:27:13.403+00:00"
+   "at": "2026-11-28T14:32:26.158+00:00"
   },
   {
-   "record_id": "69f17a0a-ff65-5bf0-ad36-ad386067b463",
+   "record_id": "b1266c8f-2362-5c93-9a09-48aeecc1b3d9",
    "seq": 6,
    "case_id": "case:tenant-a:dbg-consult",
-   "investigation_id": "88586638-7b55-5d1e",
+   "investigation_id": "80d02d74-740b-5b85",
    "cop": "anomaly_detection",
    "transition": "NOT_ELIGIBLE",
    "reasons": [
@@ -193,7 +193,7 @@
     "access.first_seen_mcp=0 is NORMAL (needs >= EXCEPTION)",
     "path.transition_novelty=0.333 is WARNING (needs >= EXCEPTION)"
    ],
-   "mapping_version": "map-4d9303c348c9f5cf",
+   "mapping_version": "map-ee3421ccb5d0de7b",
    "policy_id": "anomaly_detection@1#c33f5fba76",
    "evidence": [
     {
@@ -227,42 +227,42 @@
      "refs": []
     }
    ],
-   "prev_record_id": "c574cb11-2de2-5f04-b904-56a7f6fdde6f",
+   "prev_record_id": "f04abebf-2bb7-5437-a994-f7f26ad243ed",
    "decision_id": null,
    "detail": {
     "missing_evidence": "REPORT_UNKNOWN"
    },
-   "at": "2026-11-13T23:27:13.404+00:00"
+   "at": "2026-11-28T14:32:26.158+00:00"
   },
   {
-   "record_id": "31ee96c5-f209-5573-86d4-dc7e5c327ac8",
+   "record_id": "0c9215b0-5afb-515c-aed5-e3d4dbda0e12",
    "seq": 7,
    "case_id": "case:tenant-a:dbg-consult",
-   "investigation_id": "88586638-7b55-5d1e",
+   "investigation_id": "80d02d74-740b-5b85",
    "cop": "recovery_resilience",
    "transition": "CANDIDATE",
    "reasons": [
-    "policy recovery_resilience@1#c89326d33e in mapping map-4d9303c348c9f5cf"
+    "policy recovery_resilience@1#c89326d33e in mapping map-ee3421ccb5d0de7b"
    ],
-   "mapping_version": "map-4d9303c348c9f5cf",
+   "mapping_version": "map-ee3421ccb5d0de7b",
    "policy_id": "recovery_resilience@1#c89326d33e",
    "evidence": [],
-   "prev_record_id": "69f17a0a-ff65-5bf0-ad36-ad386067b463",
+   "prev_record_id": "b1266c8f-2362-5c93-9a09-48aeecc1b3d9",
    "decision_id": null,
    "detail": {},
-   "at": "2026-11-13T23:27:13.404+00:00"
+   "at": "2026-11-28T14:32:26.158+00:00"
   },
   {
-   "record_id": "8422b341-dcc9-549c-a495-da559c9fae77",
+   "record_id": "57c651ba-9ed7-5f43-b5ff-e5317287c691",
    "seq": 8,
    "case_id": "case:tenant-a:dbg-consult",
-   "investigation_id": "88586638-7b55-5d1e",
+   "investigation_id": "80d02d74-740b-5b85",
    "cop": "recovery_resilience",
    "transition": "ELIGIBLE",
    "reasons": [
     "insights.reverted=2 is WARNING (needs >= WARNING)"
    ],
-   "mapping_version": "map-4d9303c348c9f5cf",
+   "mapping_version": "map-ee3421ccb5d0de7b",
    "policy_id": "recovery_resilience@1#c89326d33e",
    "evidence": [
     {
@@ -287,27 +287,27 @@
      ]
     }
    ],
-   "prev_record_id": "31ee96c5-f209-5573-86d4-dc7e5c327ac8",
+   "prev_record_id": "0c9215b0-5afb-515c-aed5-e3d4dbda0e12",
    "decision_id": null,
    "detail": {
     "missing_evidence": "REPORT_UNKNOWN"
    },
-   "at": "2026-11-13T23:27:13.404+00:00"
+   "at": "2026-11-28T14:32:26.158+00:00"
   },
   {
-   "record_id": "91e863d3-2784-5a22-806d-27e246c3dc25",
+   "record_id": "93f5ead0-4963-5809-91f0-01062bd62b1c",
    "seq": 9,
    "case_id": "case:tenant-a:dbg-consult",
-   "investigation_id": "88586638-7b55-5d1e",
+   "investigation_id": "80d02d74-740b-5b85",
    "cop": "recovery_resilience",
    "transition": "ACTIVATED",
    "reasons": [
     "wave 0; concurrent with runtime_monitoring"
    ],
-   "mapping_version": "map-4d9303c348c9f5cf",
+   "mapping_version": "map-ee3421ccb5d0de7b",
    "policy_id": "recovery_resilience@1#c89326d33e",
    "evidence": [],
-   "prev_record_id": "8422b341-dcc9-549c-a495-da559c9fae77",
+   "prev_record_id": "57c651ba-9ed7-5f43-b5ff-e5317287c691",
    "decision_id": null,
    "detail": {
     "wave": 0,
@@ -315,22 +315,22 @@
      "runtime_monitoring"
     ]
    },
-   "at": "2026-11-13T23:27:13.404+00:00"
+   "at": "2026-11-28T14:32:26.158+00:00"
   },
   {
-   "record_id": "8acdb896-383d-5e3a-aeac-b53cc517ce46",
+   "record_id": "eab05305-010e-5eb7-8b9c-d582487cbf74",
    "seq": 10,
    "case_id": "case:tenant-a:dbg-consult",
-   "investigation_id": "88586638-7b55-5d1e",
+   "investigation_id": "80d02d74-740b-5b85",
    "cop": "runtime_monitoring",
    "transition": "ACTIVATED",
    "reasons": [
     "wave 0; concurrent with recovery_resilience"
    ],
-   "mapping_version": "map-4d9303c348c9f5cf",
+   "mapping_version": "map-ee3421ccb5d0de7b",
    "policy_id": "runtime_monitoring@1#05d90513af",
    "evidence": [],
-   "prev_record_id": "91e863d3-2784-5a22-806d-27e246c3dc25",
+   "prev_record_id": "93f5ead0-4963-5809-91f0-01062bd62b1c",
    "decision_id": null,
    "detail": {
     "wave": 0,
@@ -338,23 +338,23 @@
      "recovery_resilience"
     ]
    },
-   "at": "2026-11-13T23:27:13.404+00:00"
+   "at": "2026-11-28T14:32:26.158+00:00"
   },
   {
-   "record_id": "2e5afeb8-1416-5294-acf2-d19dfce32e81",
+   "record_id": "91c3e68b-db37-5b66-b82f-fd1b0f10093f",
    "seq": 11,
    "case_id": "case:tenant-a:dbg-consult",
-   "investigation_id": "88586638-7b55-5d1e",
+   "investigation_id": "80d02d74-740b-5b85",
    "cop": "recovery_resilience",
    "transition": "COMPLETED",
    "reasons": [
     "INCONCLUSIVE (MISSING_DEPENDENCY)"
    ],
-   "mapping_version": "map-4d9303c348c9f5cf",
+   "mapping_version": "map-ee3421ccb5d0de7b",
    "policy_id": "recovery_resilience@1#c89326d33e",
    "evidence": [],
-   "prev_record_id": "8acdb896-383d-5e3a-aeac-b53cc517ce46",
-   "decision_id": "263ce4b0-eb0d-570f-96b2-e2f8632003d3",
+   "prev_record_id": "eab05305-010e-5eb7-8b9c-d582487cbf74",
+   "decision_id": "35574459-65ad-58ad-85ac-3379d80edb9d",
    "detail": {
     "label": "INCONCLUSIVE",
     "status": "MISSING_DEPENDENCY",
@@ -364,26 +364,26 @@
     "authority_stage": "AUTHORISED_DRY_RUN",
     "execution_status": "NOT_EXECUTED_DRY_RUN",
     "finding_id": "74947af1-28d9-51bd-918e-90f92b442fe4",
-    "run_id": "route:88586638-7b55-5d1e:root:recovery_resilience:070a1939-1718:r1",
+    "run_id": "route:80d02d74-740b-5b85:root:recovery_resilience:070a1939-1718:r1",
     "consultation": "{\"not_referred\": [], \"resolution\": {\"admitted\": [\"behavior_analytics\"], \"component_changes\": [], \"limit_hit\": [], \"reason\": \"answers were admitted (behavior_analytics) but the reading is still INCONCLUSIVE INSUFFICIENT_EVIDENCE; unknown 1.0 -> 1.0\", \"status\": \"UNRESOLVED\", \"still_uncertain\": true, \"support_direction\": \"level\"}, \"responses\": [{\"delivered_as\": \"evidence\", \"receiver\": \"behavior_analytics\", \"referral_id\": \"c6fd9822-01ab-52e1-8881-4cfb22f2aabe\", \"status\": \"ANSWERED_VERIFIED\"}], \"runs\": 5, \"spent_usd\": 0.0, \"via\": \"referrals.run_investigation\"}"
    },
-   "at": "2026-11-13T23:27:13.506+00:00"
+   "at": "2026-11-28T14:32:26.949+00:00"
   },
   {
-   "record_id": "6b327241-9f1a-5736-b506-219a1e6d5642",
+   "record_id": "28648304-39e2-555b-bc9a-e3a365ef154a",
    "seq": 12,
    "case_id": "case:tenant-a:dbg-consult",
-   "investigation_id": "88586638-7b55-5d1e",
+   "investigation_id": "80d02d74-740b-5b85",
    "cop": "runtime_monitoring",
    "transition": "COMPLETED",
    "reasons": [
     "SUFFICIENT (SUBSTANTIVE)"
    ],
-   "mapping_version": "map-4d9303c348c9f5cf",
+   "mapping_version": "map-ee3421ccb5d0de7b",
    "policy_id": "runtime_monitoring@1#05d90513af",
    "evidence": [],
-   "prev_record_id": "2e5afeb8-1416-5294-acf2-d19dfce32e81",
-   "decision_id": "2175edaa-949f-5c2c-8a28-f7bf24b12198",
+   "prev_record_id": "91c3e68b-db37-5b66-b82f-fd1b0f10093f",
+   "decision_id": "85172c10-3e20-525c-817e-9c636033793f",
    "detail": {
     "label": "SUFFICIENT",
     "status": "SUBSTANTIVE",
@@ -393,17 +393,17 @@
     "authority_stage": "NO_ACTION_PROPOSED",
     "execution_status": "NOT_EXECUTED_NO_ACTION",
     "finding_id": "b5f27839-847c-5019-a962-7db95011416e",
-    "run_id": "route:88586638-7b55-5d1e",
+    "run_id": "route:80d02d74-740b-5b85",
     "consultation": null
    },
-   "at": "2026-11-13T23:27:13.506+00:00"
+   "at": "2026-11-28T14:32:26.949+00:00"
   }
  ],
  "mapping": {
-  "active_version": "map-4d9303c348c9f5cf",
+  "active_version": "map-ee3421ccb5d0de7b",
   "versions": [
    {
-    "version": "map-4d9303c348c9f5cf",
+    "version": "map-ee3421ccb5d0de7b",
     "label": "first slice: RM, BA, AD, R&R",
     "status": "APPROVED",
     "parent": null,
@@ -413,19 +413,19 @@
     "reason": "first slice of the activation contract",
     "history": [
      {
-      "at": "2026-11-13T23:27:12.661+00:00",
+      "at": "2026-11-28T14:32:21.172+00:00",
       "event": "proposed",
       "by": "cops-maintainer@tenant-a.example",
       "kind": "human",
       "errors": []
      },
      {
-      "at": "2026-11-13T23:27:12.661+00:00",
+      "at": "2026-11-28T14:32:21.173+00:00",
       "event": "approved",
       "by": "cops-owner@tenant-a.example"
      },
      {
-      "at": "2026-11-13T23:27:12.662+00:00",
+      "at": "2026-11-28T14:32:21.173+00:00",
       "event": "activated"
      }
     ]
@@ -433,7 +433,7 @@
   ]
  },
  "replay": {
-  "pinned_version": "map-4d9303c348c9f5cf",
+  "pinned_version": "map-ee3421ccb5d0de7b",
   "identical": true
  }
 }

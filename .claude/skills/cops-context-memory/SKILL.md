@@ -25,9 +25,10 @@ risk. The previous contract is kept for comparison (`METRICS.yaml previous_contr
   identity keys, standings, questions CM-1 to CM-4, `retrieval_status` to label, `label_order`, severity,
   confidence, responses, `model_role: none`, `operations` (all deterministic), `unavailable_operations`, the
   15-metric mapping (none read) and `previous_contract`.
-- **Explanations:** `SPEC.md`, `INTERPRETATION.md`, `MEMORY.md`, `CONNECTIONS.md`, `DECISIONS.md` (D-CM1 to D-CM20,
-  P-CM1, P-CM2, U-CM1 to U-CM9).
-- **Ground truth:** `GROUND_TRUTH.yaml` (35 scenarios, fixture records in its header). The harness is
+- **Explanations:** `SPEC.md`, `INTERPRETATION.md`, `MEMORY.md`, `CONNECTIONS.md`, `DECISIONS.md` (D-CM1 to D-CM22,
+  P-CM1, P-CM2, U-CM1 to U-CM9, A-CM1 with every changed contract and test expectation).
+- **Ground truth:** `GROUND_TRUTH.yaml` (41 scenarios, fixture records in its header; `superseded:` keeps
+  the replaced topology expectations with their reason). The harness is
   `harness.py`; `harness.RECORDS` and `harness.seed` build the fixtures.
 - **Retrieval:** `collector/cops/runtime/cop_package.py`, Context & Memory section: `cm_request`, `cm_scope`,
   `cm_provenance`, `cm_relevance`, `retrieve_memory`, `_cm_finish`, `runtime_request`, `bundle_view`,
@@ -45,12 +46,15 @@ risk. The previous contract is kept for comparison (`METRICS.yaml previous_contr
 3. Retrieval writes no memory record and changes no stored record. Every retrieval writes one access-log row.
 4. A record's `validation_status` is returned unchanged. Standing comes only from status and provenance; a payload
    field never sets either. Missing provenance is named, never filled in.
-5. Only ESTABLISHED records of another COP may corroborate. A requester's own record is OWN_EARLIER_OUTPUT.
+5. Only ESTABLISHED records of another COP may corroborate, in the bundle and in VS-01 (`support._memory`, U-CM9).
+   A requester's own record is OWN_EARLIER_OUTPUT; its own output of this same run is excluded OWN_CURRENT_OUTPUT
+   (D-CM22).
 6. Missing memory is never evidence of absence. Storage failure, denial and invalid requests are MEMORY_UNAVAILABLE,
    never NO_RELEVANT_MEMORY.
 7. Relevance is deterministic. Do not add model or semantic retrieval without an approved contract (U-CM4).
-8. Never produce CONTEXT_OK, STALE, CONTRADICTORY, CONTEXT_LOSS or PRECEDENT_FOUND. Do not add an adapter that would
-   fabricate them for Behavior Analytics (D-CM6, P-CM1).
+8. Never produce CONTEXT_OK, STALE, CONTRADICTORY, CONTEXT_LOSS or PRECEDENT_FOUND. No COP consumes this COP's
+   finding (P-CM1); do not add an edge or an adapter. In a case it serves the other COPs of the case (D-CM21).
+11. It is a deterministic COP (`profiles.DETERMINISTIC_COPS`, U-CM5): no prompt, no model tools.
 9. Action NONE, severity NONE. Nothing is enforced.
 10. Never edit GROUND_TRUTH.yaml to match an output, and never weaken another COP's accepted ground truth.
 
@@ -65,9 +69,10 @@ A change to retrieval reaches every COP's memory reads, so then run every accept
 evaluation and the bench, sequentially. After the evaluation and bench, restore `docs/cops/evaluation/RESULTS.md`,
 `results.json` and `test_bench_results.json` with git checkout.
 
-## Open decisions
+## Decisions (purvi 2026-11-28, DECISIONS.md A-CM1)
 
-U-CM1 (workbook questions), U-CM2 (owner of context-loss detection), U-CM3 (memory Q metrics), U-CM4 (semantic
-retrieval), U-CM5 (LLM_COPS allocation), U-CM6 (confidence), U-CM7 (provenance fields and event identity keys),
-U-CM8 (retrieval limit), U-CM9 (own precedent in VS-01). Proposals P-CM1 (BA-4 migration) and P-CM2 (workbook
-recipients).
+P-CM1 approved (edge to Behavior Analytics removed). U-CM1 retrieval-only questions and labels approved; U-CM2
+context-loss detection unassigned, no overlapping role; U-CM3 new retrieval metrics only from `cop_memory_access_log`;
+U-CM4 semantic search deferred; U-CM5 deterministic; U-CM6 confidence uncalibrated; U-CM7 provenance and event
+identity rules provisional; U-CM8 retrieval limit configurable and unresolved; U-CM9 own outputs never corroborate in
+VS-01. Open: P-CM2 (workbook recipients).

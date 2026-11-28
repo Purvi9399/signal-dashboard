@@ -30,13 +30,14 @@ def test_only_the_target_cop_is_an_llm_cop_in_its_case(cop):
     assert cops[-1] == cop and set(cops[:-1]) <= set(DETERMINISTIC_COPS)
 
 
-def test_offline_run_of_all_thirty_cases_is_simulated_and_verifiable():
+def test_offline_run_of_all_twenty_seven_cases_is_simulated_and_verifiable():
+    # thirty until U-CM5 (purvi 2026-11-28) moved Context & Memory's three cases to bench_cases.DET_CASES
     res = L.run_all(live=False)
-    assert len(res) == 30 and not any(r.get("error") for r in res)
+    assert len(res) == 27 and not any(r.get("error") for r in res)
     assert L.verify_records(res, live=False) == []
     assert L.verify_records(res, live=True)                 # the same records could never pass as live
     t = L.totals(res)
-    assert t["simulated_calls"] == t["llm_calls"] > 0 and t["ran"] == 30
+    assert t["simulated_calls"] == t["llm_calls"] > 0 and t["ran"] == 27
     assert all(r["other_llm_calls"] == 0 for r in res)
     assert all(not str(r["execution_status"]).startswith("EXECUTED") for r in res)     # dry run throughout
     # missing-evidence cases never publish the quiet label, whatever the script says
@@ -69,7 +70,7 @@ def test_live_run_is_refused_without_every_precondition(monkeypatch, tmp_path):
 def test_total_cap_stops_scheduling_cases(monkeypatch):
     monkeypatch.setattr(L, "AnthropicProvider", lambda: L.offline_provider())
     res = L.run_all(live=True, cap=0.10)                    # below one investigation's own cap
-    assert all(r.get("skipped") for r in res) and len(res) == 30
+    assert all(r.get("skipped") for r in res) and len(res) == 27
 
 
 def test_deterministic_cops_make_no_model_calls():
@@ -79,11 +80,10 @@ def test_deterministic_cops_make_no_model_calls():
     # Anomaly Detection's package decides a session with no deviation without the model (D-AD1), and
     # Classification & Tagging's an event with one candidate family or none (COP 7, D-CT4), and Risk
     # Mitigation's every reading (COP 8, D-RK9), and Incident Response's every reading but an intervention incident
-    # (COP 9, D-IR11), and Context & Memory's every reading: retrieval only (COP 12, D-CM10)
+    # (COP 9, D-IR11). Context & Memory is deterministic since U-CM5 (2026-11-28) and is checked with them above
     decided = {k for k in LLM_COPS if (out["cops"][k].get("cop_specific") or {}).get("stop_reason")
                == "decided_by_package_without_model"}
-    assert decided == {"anomaly_detection", "classification_tagging", "risk_mitigation", "incident_response",
-                       "context_memory"}
+    assert decided == {"anomaly_detection", "classification_tagging", "risk_mitigation", "incident_response"}
     assert all(out["cops"][k]["llm_calls"] == 0 for k in decided)
     assert all(out["cops"][k]["llm_calls"] >= 1 for k in set(LLM_COPS) - decided)
 

@@ -392,7 +392,7 @@ def test_bench_routing_is_reported_not_forced(tmp_path):
     from cops.runtime import test_bench as TB
     cases = TB.run_deterministic()
     tiers = [c["trace"]["triage"]["routing"]["tier"] for c in cases]
-    assert len(tiers) == 24 and set(tiers) <= set(T.TIERS)
+    assert len(tiers) == 27 and set(tiers) <= set(T.TIERS)      # 24 until U-CM5 (2026-11-28) added Context & Memory
     for c in cases:
         t = c["trace"]["triage"]
         if t["outcome"] == "PASS":

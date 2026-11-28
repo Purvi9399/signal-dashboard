@@ -20,7 +20,9 @@ unchanged.
 - rewrite a record, change its status, timestamps, payload or provenance;
 - create, merge or delete a record (duplicates are listed DUPLICATE_OF, each with its own status);
 - validate a record (only `MemoryGateway.record_feedback` from an independent reviewer does);
-- treat a record as verification of the COP that produced it;
+- treat a record as verification of the COP that produced it (VS-01 counts only another COP's established record,
+  U-CM9);
+- serve a requester its own output of this same run and case (OWN_CURRENT_OUTPUT, D-CM22);
 - change another COP's decision.
 
 The harness checks the store before and after every package scenario (`store_unchanged`) and the runtime

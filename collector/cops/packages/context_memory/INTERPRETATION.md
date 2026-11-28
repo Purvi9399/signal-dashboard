@@ -20,9 +20,10 @@ apart, NOTHING_TO_VALIDATE when nothing was checked.
 
 ## The COP in a case
 
-`rules.context_memory` runs `assess_context_memory_questions`: one request per current-cycle consumer
-(`specs.consumers("context_memory")`, today Behavior Analytics), each under that consumer's own memory policy. The COP
-label is the worst request label (`label_order`: MEMORY_UNAVAILABLE, MEMORY_PARTIAL, MEMORY_RETURNED,
+`rules.context_memory` runs `assess_context_memory_questions`: one request per other COP of the case run that has a
+memory policy (D-CM21; since P-CM1 no COP consumes this COP's finding), each under that COP's own memory policy. Run
+on its own it has no request and is INCONCLUSIVE. A requester is never served its own output of this same run and
+case (OWN_CURRENT_OUTPUT, D-CM22). The COP label is the worst request label (`label_order`: MEMORY_UNAVAILABLE, MEMORY_PARTIAL, MEMORY_RETURNED,
 NO_RELEVANT_MEMORY). Severity NONE and action NONE for every label. Confidence is 0.7, the previous rule's
 CONTEXT_OK constant, uncalibrated (U-CM6). The shared precheck still withholds the quiet NO_RELEVANT_MEMORY when
 Runtime Monitoring verifies telemetry INSUFFICIENT (D-CM16).
@@ -51,6 +52,12 @@ Runtime Monitoring verifies telemetry INSUFFICIENT (D-CM16).
 
 ## Operations
 
-Every operation is deterministic (`METRICS.yaml operations`). No model is called: the COP stays in
-`profiles.LLM_COPS` (the fixed allocation) and is decided without a model in every reading (U-CM5). Semantic
-relevance is UNAVAILABLE.
+Every operation is deterministic (`METRICS.yaml operations`). No model is called. Since U-CM5 (purvi 2026-11-28) the
+COP is in `profiles.DETERMINISTIC_COPS`: no prompt, no model tools, no detail schema. Semantic relevance is
+UNAVAILABLE (U-CM4).
+
+## VS-01
+
+In graded verification support (`support._memory`), only an established record owned by another COP can support a
+finding. A COP's own earlier output, even VALIDATED by a reviewer, is neutral: "own earlier output, not independent
+corroboration" (U-CM9).

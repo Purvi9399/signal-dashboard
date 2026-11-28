@@ -146,7 +146,8 @@ upstream:
 request:
   required: [requesting_cop, tenant_id, case_id, behavioural_question]
   optional: [question_id, agent_scope, session_id, run_id, requested_tenant, memory_types, as_of, since, until,
-             session_scope, entities, max_results, purpose]
+             session_scope, entities, max_results, purpose, exclude_own_current]
+  # exclude_own_current: set only by Context & Memory's case bundle (D-CM22); a working memory view leaves it unset
   session_scopes: [any, same_session, cross_session]
 
 # Provenance each retrieved record is checked for (CM-3, D-CM13). A record missing a required field, or whose status

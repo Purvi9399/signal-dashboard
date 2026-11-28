@@ -132,8 +132,10 @@ def test_workload_recommendation_is_advisory_only(attributed):
 
 # ---------------------------------------------------------------- Anomaly Detection -> Behavior Analytics (earlier cycle)
 
-CM_LOSS = {"finding_id": "f-cm", "cop": "context_memory", "label": "CONTEXT_LOSS", "status": "SUBSTANTIVE",
-           "verified": True, "lineage": ["tool_call:x"], "claims": []}
+# Workflow Orchestration's verified DRIFTING is Behavior Analytics' altered-context input. Until P-CM1 (purvi
+# 2026-11-28) these tests used Context & Memory's retired CONTEXT_LOSS, which Behavior Analytics no longer reads.
+WO_DRIFT = {"finding_id": "f-wo", "cop": "workflow_orchestration", "label": "DRIFTING", "status": "SUBSTANTIVE",
+            "verified": True, "lineage": ["tool_call:x"], "claims": []}
 
 
 def ba(case_id, upstream=None, history=None):
@@ -145,8 +147,8 @@ def ba(case_id, upstream=None, history=None):
 
 def test_verified_earlier_anomaly_marks_a_recurring_pattern():
     hist = {"anomaly_detection": earlier("anomaly_detection", "ANOMALOUS")}
-    without = ba("inf-ba-0", {"context_memory": CM_LOSS})
-    f = ba("inf-ba-1", {"context_memory": CM_LOSS}, hist)
+    without = ba("inf-ba-0", {"workflow_orchestration": WO_DRIFT})
+    f = ba("inf-ba-1", {"workflow_orchestration": WO_DRIFT}, hist)
     p = f["cop_specific"]["pattern_persistence"]
     assert f["label"] == "DRIFTING" and p["status"] == "RECURRING"
     assert p["earlier_finding"]["run_id"] == "eval-earlier-cycle" and p["baseline_updated"] is False
@@ -162,10 +164,10 @@ def test_earlier_anomaly_absent_now_is_not_recurring():
 
 
 def test_unverified_or_quiet_earlier_anomaly_is_not_pattern_evidence():
-    unv = ba("inf-ba-3", {"context_memory": CM_LOSS},
+    unv = ba("inf-ba-3", {"workflow_orchestration": WO_DRIFT},
              {"anomaly_detection": earlier("anomaly_detection", "ANOMALOUS", verified=False)})
     assert unv["cop_specific"]["pattern_persistence"]["status"] == "NO_VERIFIED_HISTORY"
-    quiet = ba("inf-ba-4", {"context_memory": CM_LOSS}, {"anomaly_detection": earlier("anomaly_detection", "NORMAL")})
+    quiet = ba("inf-ba-4", {"workflow_orchestration": WO_DRIFT}, {"anomaly_detection": earlier("anomaly_detection", "NORMAL")})
     assert quiet["cop_specific"]["pattern_persistence"]["status"] == "NO_EARLIER_DEVIATION"
 
 
@@ -182,9 +184,9 @@ def ir_rule(rt, st):
 
 
 def test_incident_rule_counts_classification_and_resource_findings():
-    up = {"classification_tagging": {**CM_LOSS, "finding_id": "f-ct", "cop": "classification_tagging",
+    up = {"classification_tagging": {**WO_DRIFT, "finding_id": "f-ct", "cop": "classification_tagging",
                                      "label": "SECURITY"},
-          "resource_management": {**CM_LOSS, "finding_id": "f-rm", "cop": "resource_management",
+          "resource_management": {**WO_DRIFT, "finding_id": "f-rm", "cop": "resource_management",
                                   "label": "EXCESSIVE"}}
     rt, st = ir_state("inf-ir-1", up)
     f = ir_rule(rt, st)

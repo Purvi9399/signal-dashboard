@@ -56,8 +56,16 @@ python3 -m pytest tests/test_cop_package_behavior_analytics.py tests/test_cop_in
 Then every accepted COP harness, the full suite, the evaluation and the bench, sequentially. After the evaluation
 and bench, restore `docs/cops/evaluation/RESULTS.md`, `results.json` and `test_bench_results.json` with git checkout.
 
-## Open decisions
+## Decisions of 2026-11-28 (purvi; DECISIONS.md A-BA1, U-BA1..U-BA9)
 
-U-BA1 (dedupe in signal_metrics), U-BA2 (stall and approval labels), U-BA3 (window and persistence threshold), U-BA4
-(peer cohorts), U-BA5 (write STABLE), U-BA6 (confidence calibration), U-BA7 (exploration_rate), U-BA8 (P-BA1
-downstream edges), U-BA9 (registry typo behavior_investigation_prioritya).
+- P-CM1 / A-BA1: no Context & Memory upstream. BA-4 reads Workflow Orchestration only; retired CONTEXT_LOSS /
+  CONTRADICTORY are never read. Retrieved memory is context; it never establishes a finding.
+- U-BA1 package-level event recount kept; shared metrics in signal_metrics unchanged (impact audited in DECISIONS.md).
+- U-BA2 stalls and approval patterns observational. U-BA3 recurrence and worsening unchanged, no invented windows.
+- U-BA4 peer cohorts, U-BA7 exploration_rate deferred. U-BA6 confidence uncalibrated.
+- U-BA5 a verified STABLE is written as a VERIFIED behaviour_baseline with `memory_use: contextual_baseline`
+  (`remember_quiet: verified_only`); an unverified STABLE is not written; only an independent reviewer validates.
+- U-BA8 Risk Mitigation and Workflow Orchestration downstream edges deferred; Governance Intelligence recorded as a
+  future context-only consumer (CONNECTIONS.md).
+- U-BA9 registry id behavior_investigation_priority, source spelling behavior_investigation_prioritya kept as
+  `source_spelling`.

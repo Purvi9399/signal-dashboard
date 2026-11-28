@@ -92,16 +92,21 @@ def test_anomaly_baseline_changes_with_runtime_monitoring_verdict():
     assert b["finding"]["label"] == "INDETERMINATE" and b["finding"]["verified"]
 
 
-def test_behavior_analytics_consumes_context_integrity_finding():
+def test_behavior_analytics_consumes_workflow_drift_not_context_memory():
+    # until P-CM1 (purvi 2026-11-28) this test fed Context & Memory's CONTEXT_LOSS, then read DRIFTING; Behavior
+    # Analytics now reads altered context from Workflow Orchestration only, and ignores any Context & Memory finding
     rows = E._estate(S.normal_session("n9", 9))
     plain = pub(det("behavior_analytics", rows, "n9"))
-    cm = {"finding_id": "f-cm", "cop": "context_memory", "label": "CONTEXT_LOSS", "status": "SUBSTANTIVE",
+    wo = {"finding_id": "f-wo", "cop": "workflow_orchestration", "label": "DRIFTING", "status": "SUBSTANTIVE",
           "verified": True, "lineage": ["tool_call:x"], "claims": []}
-    fed = pub(det("behavior_analytics", rows, "n9", upstream={"context_memory": cm}))
-    unverified = pub(det("behavior_analytics", rows, "n9", upstream={"context_memory": {**cm, "verified": False}}))
+    fed = pub(det("behavior_analytics", rows, "n9", upstream={"workflow_orchestration": wo}))
+    unverified = pub(det("behavior_analytics", rows, "n9", upstream={"workflow_orchestration": {**wo, "verified": False}}))
+    cm = {**wo, "finding_id": "f-cm", "cop": "context_memory", "label": "CONTEXT_LOSS"}
+    retired = pub(det("behavior_analytics", rows, "n9", upstream={"context_memory": cm}))
     assert plain["label"] == "STABLE"
-    assert fed["label"] == "DRIFTING" and fed["upstream_used"][0]["cop"] == "context_memory"
+    assert fed["label"] == "DRIFTING" and fed["upstream_used"][0]["cop"] == "workflow_orchestration"
     assert unverified["label"] == "STABLE"                  # unverified upstream is not evidence
+    assert retired["label"] == "STABLE" and not any(u["cop"] == "context_memory" for u in retired["upstream_used"])
 
 
 PE_RULES = [{"id": "P-read", "action": "read", "resource_pattern": "*", "effect": "allow"},

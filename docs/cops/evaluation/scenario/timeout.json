@@ -89,7 +89,7 @@
  "trace": [
   {
    "seq": 1,
-   "at": "2026-11-20T12:00:14.205+00:00",
+   "at": "2026-11-28T14:34:44.663+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "session_start",
@@ -97,7 +97,7 @@
   },
   {
    "seq": 2,
-   "at": "2026-11-20T12:00:14.205+00:00",
+   "at": "2026-11-28T14:34:44.663+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "user_prompt",
@@ -105,7 +105,7 @@
   },
   {
    "seq": 3,
-   "at": "2026-11-20T12:00:14.205+00:00",
+   "at": "2026-11-28T14:34:44.663+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "model_usage",
@@ -113,7 +113,7 @@
   },
   {
    "seq": 4,
-   "at": "2026-11-20T12:00:14.205+00:00",
+   "at": "2026-11-28T14:34:44.663+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -121,7 +121,7 @@
   },
   {
    "seq": 5,
-   "at": "2026-11-20T12:00:14.205+00:00",
+   "at": "2026-11-28T14:34:44.663+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -129,7 +129,7 @@
   },
   {
    "seq": 6,
-   "at": "2026-11-20T12:00:14.205+00:00",
+   "at": "2026-11-28T14:34:44.663+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -142,7 +142,7 @@
   },
   {
    "seq": 7,
-   "at": "2026-11-20T12:00:14.205+00:00",
+   "at": "2026-11-28T14:34:44.663+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -155,7 +155,7 @@
   },
   {
    "seq": 8,
-   "at": "2026-11-20T12:00:14.205+00:00",
+   "at": "2026-11-28T14:34:44.663+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -168,7 +168,7 @@
   },
   {
    "seq": 9,
-   "at": "2026-11-20T12:00:14.205+00:00",
+   "at": "2026-11-28T14:34:44.663+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -181,7 +181,7 @@
   },
   {
    "seq": 10,
-   "at": "2026-11-20T12:00:14.205+00:00",
+   "at": "2026-11-28T14:34:44.663+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "tool_call",
@@ -194,14 +194,14 @@
   },
   {
    "seq": 11,
-   "at": "2026-11-20T12:00:14.205+00:00",
+   "at": "2026-11-28T14:34:44.663+00:00",
    "stage": "agent_event",
    "source": "synthetic coding agent",
    "event": "session_end"
   },
   {
    "seq": 12,
-   "at": "2026-11-20T12:00:14.206+00:00",
+   "at": "2026-11-28T14:34:44.663+00:00",
    "stage": "telemetry_ingested",
    "collectors": [
     "otel"
@@ -213,7 +213,7 @@
   },
   {
    "seq": 13,
-   "at": "2026-11-20T12:00:14.337+00:00",
+   "at": "2026-11-28T14:34:44.822+00:00",
    "stage": "initial_finding",
    "cop": "anomaly_detection",
    "run_key": "root:anomaly_detection:dfed4c22-efc8:r0",
@@ -225,7 +225,7 @@
   },
   {
    "seq": 14,
-   "at": "2026-11-20T12:00:14.337+00:00",
+   "at": "2026-11-28T14:34:44.822+00:00",
    "stage": "vs01_initial",
    "decision": "SUPPORTED",
    "support": 0.6909,
@@ -241,6 +241,12 @@
      "direction": "supports",
      "contribution": 0.3273,
      "basis": "attention state observed (claimed severity NONE): insights.token_outlier=CRITICAL (40.0), path.transition_novelty=EXCEPTION (0.667), insights.retry=EXCEPTION (4), insights.repetition=EXCEPTION (4)"
+    },
+    {
+     "name": "legitimacy_context",
+     "direction": "neutral",
+     "contribution": 0.0,
+     "basis": "not every deviation has checkable context: nothing explains the anomaly away"
     },
     {
      "name": "versioned_baseline",
@@ -270,7 +276,7 @@
   },
   {
    "seq": 15,
-   "at": "2026-11-20T12:00:14.337+00:00",
+   "at": "2026-11-28T14:34:44.822+00:00",
    "stage": "handling_quotient_initial",
    "quotient": 0.895,
    "tier": "autonomous",
@@ -279,11 +285,11 @@
   },
   {
    "seq": 16,
-   "at": "2026-11-20T12:00:14.337+00:00",
+   "at": "2026-11-28T14:34:44.822+00:00",
    "stage": "request_for_support",
    "investigation_event": {
     "seq": 3,
-    "at": "2026-11-20T12:00:14.337+00:00",
+    "at": "2026-11-28T14:34:44.822+00:00",
     "kind": "referral_requested",
     "cop": "anomaly_detection",
     "referral_id": "c3e0b49d-043e-54b7-bb83-002b3cb03618",
@@ -295,11 +301,11 @@
   },
   {
    "seq": 17,
-   "at": "2026-11-20T12:00:14.337+00:00",
+   "at": "2026-11-28T14:34:44.822+00:00",
    "stage": "request_for_support",
    "investigation_event": {
     "seq": 4,
-    "at": "2026-11-20T12:00:14.337+00:00",
+    "at": "2026-11-28T14:34:44.822+00:00",
     "kind": "referral_requested",
     "cop": "anomaly_detection",
     "referral_id": "4a01eef8-394b-595b-bd13-a09bbb6100d3",
@@ -311,11 +317,11 @@
   },
   {
    "seq": 18,
-   "at": "2026-11-20T12:00:14.337+00:00",
+   "at": "2026-11-28T14:34:44.823+00:00",
    "stage": "receiver_investigating",
    "investigation_event": {
     "seq": 5,
-    "at": "2026-11-20T12:00:14.337+00:00",
+    "at": "2026-11-28T14:34:44.823+00:00",
     "kind": "referral_dispatched",
     "cop": "anomaly_detection",
     "referral_id": "c3e0b49d-043e-54b7-bb83-002b3cb03618",
@@ -326,11 +332,11 @@
   },
   {
    "seq": 19,
-   "at": "2026-11-20T12:00:14.432+00:00",
+   "at": "2026-11-28T14:34:44.926+00:00",
    "stage": "receiver_answered",
    "investigation_event": {
     "seq": 9,
-    "at": "2026-11-20T12:00:14.432+00:00",
+    "at": "2026-11-28T14:34:44.926+00:00",
     "kind": "referral_answered",
     "cop": "runtime_monitoring",
     "referral_id": "c3e0b49d-043e-54b7-bb83-002b3cb03618",
@@ -352,7 +358,7 @@
   },
   {
    "seq": 20,
-   "at": "2026-11-20T12:00:14.432+00:00",
+   "at": "2026-11-28T14:34:44.926+00:00",
    "stage": "referral_response",
    "referral_id": "c3e0b49d-043e-54b7-bb83-002b3cb03618",
    "receiver": "runtime_monitoring",
@@ -388,11 +394,11 @@
   },
   {
    "seq": 21,
-   "at": "2026-11-20T12:00:14.432+00:00",
+   "at": "2026-11-28T14:34:44.926+00:00",
    "stage": "receiver_investigating",
    "investigation_event": {
     "seq": 10,
-    "at": "2026-11-20T12:00:14.432+00:00",
+    "at": "2026-11-28T14:34:44.926+00:00",
     "kind": "referral_dispatched",
     "cop": "anomaly_detection",
     "referral_id": "4a01eef8-394b-595b-bd13-a09bbb6100d3",
@@ -403,11 +409,11 @@
   },
   {
    "seq": 22,
-   "at": "2026-11-20T12:00:14.456+00:00",
+   "at": "2026-11-28T14:34:45.085+00:00",
    "stage": "request_for_support",
    "investigation_event": {
     "seq": 13,
-    "at": "2026-11-20T12:00:14.456+00:00",
+    "at": "2026-11-28T14:34:45.085+00:00",
     "kind": "referral_requested",
     "cop": "behavior_analytics",
     "referral_id": "f07eb10d-947c-51cb-8907-54c6b3957d5c",
@@ -419,11 +425,11 @@
   },
   {
    "seq": 23,
-   "at": "2026-11-20T12:00:14.456+00:00",
+   "at": "2026-11-28T14:34:45.085+00:00",
    "stage": "request_for_support",
    "investigation_event": {
     "seq": 14,
-    "at": "2026-11-20T12:00:14.456+00:00",
+    "at": "2026-11-28T14:34:45.085+00:00",
     "kind": "referral_requested",
     "cop": "behavior_analytics",
     "referral_id": "0af8a479-cbe0-5dc2-9e42-8e78d6b5cb52",
@@ -435,24 +441,11 @@
   },
   {
    "seq": 24,
-   "at": "2026-11-20T12:00:14.456+00:00",
-   "stage": "referral_not_opened",
-   "investigation_event": {
-    "seq": 15,
-    "at": "2026-11-20T12:00:14.456+00:00",
-    "kind": "referral_not_opened",
-    "cop": "behavior_analytics",
-    "receiver": "context_memory",
-    "reason": "context_memory is outside the referral scope enabled for milestone 1"
-   }
-  },
-  {
-   "seq": 25,
-   "at": "2026-11-20T12:00:14.457+00:00",
+   "at": "2026-11-28T14:34:45.086+00:00",
    "stage": "referral_failure_reused",
    "investigation_event": {
-    "seq": 16,
-    "at": "2026-11-20T12:00:14.457+00:00",
+    "seq": 15,
+    "at": "2026-11-28T14:34:45.086+00:00",
     "kind": "referral_failure_reused",
     "cop": "behavior_analytics",
     "referral_id": "f07eb10d-947c-51cb-8907-54c6b3957d5c",
@@ -462,12 +455,12 @@
    }
   },
   {
-   "seq": 26,
-   "at": "2026-11-20T12:00:14.457+00:00",
+   "seq": 25,
+   "at": "2026-11-28T14:34:45.086+00:00",
    "stage": "receiver_investigating",
    "investigation_event": {
-    "seq": 17,
-    "at": "2026-11-20T12:00:14.457+00:00",
+    "seq": 16,
+    "at": "2026-11-28T14:34:45.086+00:00",
     "kind": "referral_dispatched",
     "cop": "behavior_analytics",
     "referral_id": "0af8a479-cbe0-5dc2-9e42-8e78d6b5cb52",
@@ -477,15 +470,15 @@
    }
   },
   {
-   "seq": 27,
-   "at": "2026-11-20T12:00:14.499+00:00",
+   "seq": 26,
+   "at": "2026-11-28T14:34:45.131+00:00",
    "stage": "request_for_support",
    "investigation_event": {
-    "seq": 20,
-    "at": "2026-11-20T12:00:14.499+00:00",
+    "seq": 19,
+    "at": "2026-11-28T14:34:45.131+00:00",
     "kind": "referral_requested",
     "cop": "workflow_orchestration",
-    "referral_id": "f9790984-ee76-5009-a5db-60a8db2dd5de",
+    "referral_id": "943f94df-e3cb-5edd-96e3-350ef8f88a87",
     "receiver": "runtime_monitoring",
     "reason": "telemetry_reliability assumed",
     "round": 1,
@@ -493,27 +486,27 @@
    }
   },
   {
-   "seq": 28,
-   "at": "2026-11-20T12:00:14.499+00:00",
+   "seq": 27,
+   "at": "2026-11-28T14:34:45.131+00:00",
    "stage": "referral_failure_reused",
    "investigation_event": {
-    "seq": 21,
-    "at": "2026-11-20T12:00:14.499+00:00",
+    "seq": 20,
+    "at": "2026-11-28T14:34:45.131+00:00",
     "kind": "referral_failure_reused",
     "cop": "workflow_orchestration",
-    "referral_id": "f9790984-ee76-5009-a5db-60a8db2dd5de",
+    "referral_id": "943f94df-e3cb-5edd-96e3-350ef8f88a87",
     "receiver": "runtime_monitoring",
     "status": "TIMED_OUT",
     "from_referral": "c3e0b49d-043e-54b7-bb83-002b3cb03618"
    }
   },
   {
-   "seq": 29,
-   "at": "2026-11-20T12:00:14.500+00:00",
+   "seq": 28,
+   "at": "2026-11-28T14:34:45.132+00:00",
    "stage": "receiver_answered",
    "investigation_event": {
-    "seq": 23,
-    "at": "2026-11-20T12:00:14.500+00:00",
+    "seq": 22,
+    "at": "2026-11-28T14:34:45.132+00:00",
     "kind": "referral_answered",
     "cop": "workflow_orchestration",
     "referral_id": "0af8a479-cbe0-5dc2-9e42-8e78d6b5cb52",
@@ -534,12 +527,12 @@
    }
   },
   {
-   "seq": 30,
-   "at": "2026-11-20T12:00:14.500+00:00",
+   "seq": 29,
+   "at": "2026-11-28T14:34:45.132+00:00",
    "stage": "reassessment_started",
    "investigation_event": {
-    "seq": 24,
-    "at": "2026-11-20T12:00:14.500+00:00",
+    "seq": 23,
+    "at": "2026-11-28T14:34:45.132+00:00",
     "kind": "reassessment_started",
     "cop": "behavior_analytics",
     "round": 1,
@@ -553,12 +546,12 @@
    }
   },
   {
-   "seq": 31,
-   "at": "2026-11-20T12:00:14.528+00:00",
+   "seq": 30,
+   "at": "2026-11-28T14:34:45.331+00:00",
    "stage": "receiver_answered",
    "investigation_event": {
-    "seq": 27,
-    "at": "2026-11-20T12:00:14.528+00:00",
+    "seq": 26,
+    "at": "2026-11-28T14:34:45.331+00:00",
     "kind": "referral_answered",
     "cop": "behavior_analytics",
     "referral_id": "4a01eef8-394b-595b-bd13-a09bbb6100d3",
@@ -579,8 +572,8 @@
    }
   },
   {
-   "seq": 32,
-   "at": "2026-11-20T12:00:14.528+00:00",
+   "seq": 31,
+   "at": "2026-11-28T14:34:45.331+00:00",
    "stage": "referral_response",
    "referral_id": "4a01eef8-394b-595b-bd13-a09bbb6100d3",
    "receiver": "behavior_analytics",
@@ -624,12 +617,12 @@
    ]
   },
   {
-   "seq": 33,
-   "at": "2026-11-20T12:00:14.529+00:00",
+   "seq": 32,
+   "at": "2026-11-28T14:34:45.331+00:00",
    "stage": "reassessment_started",
    "investigation_event": {
-    "seq": 28,
-    "at": "2026-11-20T12:00:14.529+00:00",
+    "seq": 27,
+    "at": "2026-11-28T14:34:45.331+00:00",
     "kind": "reassessment_started",
     "cop": "anomaly_detection",
     "round": 1,
@@ -643,8 +636,8 @@
    }
   },
   {
-   "seq": 34,
-   "at": "2026-11-20T12:00:14.640+00:00",
+   "seq": 33,
+   "at": "2026-11-28T14:34:45.468+00:00",
    "stage": "revised_evidence_score",
    "round": 1,
    "decision": "SUPPORTED",
@@ -675,8 +668,8 @@
    ]
   },
   {
-   "seq": 35,
-   "at": "2026-11-20T12:00:14.641+00:00",
+   "seq": 34,
+   "at": "2026-11-28T14:34:45.469+00:00",
    "stage": "investigation_final",
    "tier": "human",
    "routing_reason": "referral limit hit (runtime_monitoring TIMED_OUT: INSUFFICIENT (SUBSTANTIVE); not_delivered); quotient 0.906 in the autonomous band of anomaly_detection (autonomous >= 0.8, assisted >= 0.6, specialist >= 0.35)",
@@ -692,8 +685,8 @@
    "reassessed": true
   },
   {
-   "seq": 36,
-   "at": "2026-11-20T12:00:14.659+00:00",
+   "seq": 35,
+   "at": "2026-11-28T14:34:45.495+00:00",
    "stage": "final_action",
    "typed_action": "ALERT",
    "triage_selected": "ALERT",
@@ -704,8 +697,8 @@
    "support": 0.6909
   },
   {
-   "seq": 37,
-   "at": "2026-11-20T12:00:14.659+00:00",
+   "seq": 36,
+   "at": "2026-11-28T14:34:45.495+00:00",
    "stage": "authority_check",
    "authorised": true,
    "checks": [
@@ -726,8 +719,8 @@
    "execution_status": "AWAITING_APPROVAL"
   },
   {
-   "seq": 38,
-   "at": "2026-11-20T12:00:14.662+00:00",
+   "seq": 37,
+   "at": "2026-11-28T14:34:45.498+00:00",
    "stage": "approval_requested",
    "approval_id": "f2e7f43b-b971-58c3-9d33-73519cc297fc",
    "typed_action": "ALERT",
@@ -736,8 +729,8 @@
    ]
   },
   {
-   "seq": 39,
-   "at": "2026-11-20T12:00:14.663+00:00",
+   "seq": 38,
+   "at": "2026-11-28T14:34:45.500+00:00",
    "stage": "approval_decided",
    "approval_id": "f2e7f43b-b971-58c3-9d33-73519cc297fc",
    "decision": "approve",
@@ -745,8 +738,8 @@
    "note": "checked the failing runs"
   },
   {
-   "seq": 40,
-   "at": "2026-11-20T12:00:14.777+00:00",
+   "seq": 39,
+   "at": "2026-11-28T14:34:45.597+00:00",
    "stage": "action_execution",
    "execution_status": "EXECUTED_SANDBOX",
    "gateway_action_id": "2acf2ff9-72ee-5fb1-a442-13adaa5505f2",
@@ -763,19 +756,19 @@
    "detail": "sandbox gateway: ALERT -> VERIFIED"
   },
   {
-   "seq": 41,
-   "at": "2026-11-20T12:00:14.778+00:00",
+   "seq": 40,
+   "at": "2026-11-28T14:34:45.597+00:00",
    "stage": "outcome_confirmation",
    "gateway_state": "VERIFIED",
-   "observed": "endpoint returned 200 for ack 7ec1f482-a260-4036-93f7-195ed23fab62",
+   "observed": "endpoint returned 200 for ack 8c01b009-a5a5-4adc-a46d-689c36c7bbf4",
    "alerts_at_endpoint": [
     "2acf2ff9-72ee-5fb1-a442-13adaa5505f2"
    ],
    "review_task_state": null
   },
   {
-   "seq": 42,
-   "at": "2026-11-20T12:00:14.782+00:00",
+   "seq": 41,
+   "at": "2026-11-28T14:34:45.605+00:00",
    "stage": "feedback_persisted",
    "execution_entry": {
     "feedback_id": "429006c1-5782-5f01-9b35-615a00baecfa",
@@ -793,11 +786,11 @@
     "applied_to_memory": true
    },
    "ineligible_because": [],
-   "memory_record_id": "f8d389ef-c594-5239-97f0-e2d69e12943a"
+   "memory_record_id": "544d74ce-0d9b-506c-88fd-d02e29e46a13"
   },
   {
-   "seq": 43,
-   "at": "2026-11-20T12:00:14.783+00:00",
+   "seq": 42,
+   "at": "2026-11-28T14:34:45.606+00:00",
    "stage": "restart_check",
    "ledger": [
     [
@@ -824,8 +817,8 @@
    ]
   },
   {
-   "seq": 44,
-   "at": "2026-11-20T12:00:14.785+00:00",
+   "seq": 43,
+   "at": "2026-11-28T14:34:45.609+00:00",
    "stage": "run_details",
    "runs": [
     {
@@ -1064,6 +1057,8 @@
         "required": "all",
         "source": "telemetry",
         "defines_attention": true,
+        "explainable": true,
+        "warning_is_partial": true,
         "tools": [],
         "metrics": [
          "insights.token_outlier",
@@ -1089,6 +1084,25 @@
          "retrievable_with": []
         },
         "contribution": 0.3273
+       },
+       {
+        "name": "legitimacy_context",
+        "kind": "legitimacy",
+        "relevance": "direct",
+        "weight": 1.0,
+        "required": null,
+        "source": "legitimacy_context",
+        "tools": [],
+        "metrics": [],
+        "item": {
+         "direction": "neutral",
+         "strength": 0.0,
+         "reliability": 1.0,
+         "basis": "not every deviation has checkable context: nothing explains the anomaly away",
+         "refs": [],
+         "applicable": false,
+         "retrievable_with": []
+        }
        },
        {
         "name": "versioned_baseline",
@@ -1298,11 +1312,11 @@
        "requested_by": "rules",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 29.319,
+       "latency_ms": 41.299,
        "purpose": null,
        "result": {
         "truncated": true,
-        "bytes": 32976,
+        "bytes": 34697,
         "preview": "{\"questions\": {\"AD-1\": {\"assessment\": {\"cop\": \"anomaly_detection\", \"question_id\": \"AD-1\", \"question\": \"Is the agent repeating actions, retrying operations or failing unusually often?\", \"presence\": {\"status\": \"PRESENT\", \"items\": [{\"requirement\": \"insights.repetition\", \"kind\": \"REQUIRED\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 4, \"metric_state\": \"EXCEPTION\", \"features\": {\"by_tool\": {\"Bash\": 4}}, \"evidence_refs\": [\"observable:ca1-6\", \"observable:ca1-7\", \"observable:ca1-8\", \"observable:ca1-9\"]}, {\"requirement\": \"insights.retry\", \"kind\": \"REQUIRED_WHEN_APPLICABLE\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 4, \"metric_state\": \"EXCEPTION\", \"features\": {\"distinct_commands\": 1}, \"evidence_refs\": [\"observable:ca1-6\", \"observable:ca1-7\", \"observable:ca1-8\", \"observable:ca1-9\"]}, {\"requirement\": \"insights.failed\", \"kind\": \"REQUIRED\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 5, \"metric_state\": \"EXCEPTION\", \"features\": {\"failure_rate\": 0.714}, \"evidence_refs\": [\"observable:ca1-5\", \"observable:ca1-6\", \"observable:ca1-7\", \"observable:ca1-8\", \"observable:ca1-9\"]}, {\"requirement\": \"telemetry.turn_linkage\", \"kind\": \"REQUIRED_WHEN_APPLICABLE\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 1.0, \"metric_state\": \"NORMAL\", \"features\": {\"steps\": 8, \"without_turn\": 0}, \"evidence_refs\": []}], \"fields\": {\"session_id\": {\"rows_with_value\": 10, \"rows\": 10, \"status\": \"PRESENT\"}, \"turn_id\": {\"rows_with_value\": 10, \"rows\": 10, \"status\": \"PRESENT\"}, \"tool_use_id\": {\"rows_with_value\": 7, \"rows\": 10, \"status\": \"PARTIAL\"}, \"tool_name\": {\"rows_with_value\": 7, \"rows\": 10, \"status\": \"PARTIAL\"}, \"tool_arguments\": {\"rows_with_value\": 7, \"rows\": 10, \"status\": \"PARTIAL\"}, \"tool_result\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"success\": {\"rows_with_value\": 7, \"rows\": 10, \"status\": \"PARTIAL\"}, \"status\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"error_type\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"error_message\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"exit_code\": {\"rows_with_value\": 5, \"rows\": 10, \"status\": \"PARTIAL\"}, \"loop_count\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"turn_count\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"command\": {\"rows_with_value\": 5, \"rows\": 10, \"status\": \"PARTIAL\"}}}, \"reliability\": {\"status\": \"RELIABLE\", \"checks\": [{\"check\": \"CONFLICTING_SOURCES\", \"value\": null, \"evidence_refs\": [], \"evidence\": {\"collectors\": [\"otel\"], \"rows\": 10, \"cross_checked\": 0, \"disagreed\": 0}, \"outcome\": \"COMPARISON_NOT_POSSIBLE\", \"detail\": \"only one source (otel) observed this activity\", \"source\": \"telemetry.source_agreement\", \"metric_value\": null}, {\"check\": \"CONFLICTING_ACTION_SOURCES\", \"value\": null, \"evidence_refs\": [], \"evidence\": {\"collectors\": [\"otel\"], \"rows\": 7, \"cross_checked\": 0, \"disagreed\": 0}, \"outcome\": \"COMPARISON_NOT_POSSIBLE\", \"detail\": \"only one source (otel) observed this activity\", \"source\": \"collectors_agree on action rows\"}, {\"check\": \"UNVERIFIABLE_PROVENANCE\", \"outcome\": \"EVIDENCE_MISSING\", \"detail\": \"raw_ref was not read for this session\", \"source\": \"audit_source_provenance_completeness\", \"evidence_refs\": []}, {\"check\": \"UNVERIFIABLE_PROVENANCE\", \"outcome\": \"NOT_EXECUTED\", \"detail\": \"the raw event store was not supplied, so no row was linked to a source event\", \"source\": \"source_events\", \"evidence_refs\": [], \"not_executed_because\": \"RAW_STORE_NOT_SUPPLIED\"}, {\"check\": \"INCOMPARABLE_TIMESTAMPS\", \"outcome\": \"EVIDENCE_MISSING\", \"detail\": \"no row carries occurred_at, captured_at and ingested_at\", \"source\": \"audit_timestamp_integrity\", \"evidence_refs\": []}, {\"check\": \"TIMESTAMP_ORDER\", \"outcome\": \"EVIDENCE_MISSING\", \"detail\": \"no row carries occurred_at, captured_at and ingested_at\", \"source\": \"audit_timestamp_integrity\", \"evidence_refs\": []}, {\"check\": \"INGEST_LATENCY\", \"outcome\": \"EVIDENCE_MISSING\", \"detail\": \"basis absent: ingest\", \"source\": \"event_freshness_live\", \"evidence_refs\": []}, {\"check\": \"STALE\", \"value\": 1688401.0, \"limit\": null, \"limit_ke"
        }
       },
@@ -1315,7 +1329,7 @@
        "requested_by": "llm",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 0.142,
+       "latency_ms": 0.13,
        "purpose": "raw token deviation against comparable sessions",
        "result": {
         "quantity": "tokens",
@@ -1335,7 +1349,7 @@
        "requested_by": "llm",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 0.097,
+       "latency_ms": 0.287,
        "purpose": "which baseline version the outlier is against",
        "result": {
         "metric_id": "insights.token_outlier",
@@ -1357,7 +1371,7 @@
        "requested_by": "llm",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 0.113,
+       "latency_ms": 0.129,
        "purpose": "does action count rise with tokens",
        "result": {
         "quantity": "actions",
@@ -1375,7 +1389,7 @@
        "requested_by": "llm",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 0.087,
+       "latency_ms": 0.124,
        "purpose": "is the sequence itself unusual",
        "result": {
         "calls": 7,
@@ -1424,7 +1438,7 @@
         "calculate_deviation",
         "analyse_tool_call_sequence"
        ],
-       "latency_ms": 1.003,
+       "latency_ms": 0.9,
        "cost_usd": null,
        "cost_basis": "unpriced"
       },
@@ -1453,7 +1467,7 @@
         "calculate_deviation",
         "analyse_tool_call_sequence"
        ],
-       "latency_ms": 2.249,
+       "latency_ms": 2.454,
        "cost_usd": null,
        "cost_basis": "unpriced"
       },
@@ -1484,7 +1498,7 @@
         "calculate_deviation",
         "analyse_tool_call_sequence"
        ],
-       "latency_ms": 2.448,
+       "latency_ms": 2.31,
        "cost_usd": null,
        "cost_basis": "unpriced"
       }
@@ -2003,25 +2017,25 @@
       }
      },
      "node_timings": {
-      "receive_case": 0.007,
-      "load_inputs": 0.005,
-      "validate_evidence": 0.109,
-      "retrieve_memory": 1.614,
-      "computational_baseline": 42.885,
-      "evidence_precheck": 0.054,
-      "llm_plan_investigation": 1.61,
-      "validate_tool_request": 0.008,
-      "execute_authorised_tool": 0.213,
-      "validate_tool_result": 0.003,
-      "llm_assess_evidence": 3.098,
-      "formulate_finding": 0.086,
-      "independent_verify": 11.634,
-      "grade_and_route": 0.197,
-      "authority_check": 0.087,
-      "execute_action": 0.035,
+      "receive_case": 0.006,
+      "load_inputs": 0.003,
+      "validate_evidence": 0.361,
+      "retrieve_memory": 3.381,
+      "computational_baseline": 51.987,
+      "evidence_precheck": 0.07,
+      "llm_plan_investigation": 1.517,
+      "validate_tool_request": 0.01,
+      "execute_authorised_tool": 0.27,
+      "validate_tool_result": 0.004,
+      "llm_assess_evidence": 2.902,
+      "formulate_finding": 0.1,
+      "independent_verify": 31.803,
+      "grade_and_route": 0.223,
+      "authority_check": 0.088,
+      "execute_action": 0.029,
       "record_decision": 0.021,
-      "validate_memory_update": 3.591,
-      "persist_and_publish": 26.769
+      "validate_memory_update": 5.993,
+      "persist_and_publish": 23.941
      }
     },
     {
@@ -2471,7 +2485,7 @@
        "requested_by": "rules",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 0.07,
+       "latency_ms": 0.089,
        "purpose": null,
        "result": {
         "rows_by_collector": {
@@ -2486,7 +2500,7 @@
        "requested_by": "rules",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 0.04,
+       "latency_ms": 0.066,
        "purpose": null,
        "result": {
         "tool": "claude-code",
@@ -2509,7 +2523,7 @@
        "requested_by": "rules",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 14.341,
+       "latency_ms": 22.085,
        "purpose": null,
        "result": {
         "truncated": true,
@@ -3002,19 +3016,19 @@
       }
      },
      "node_timings": {
-      "receive_case": 0.007,
+      "receive_case": 0.01,
       "load_inputs": 0.002,
-      "validate_evidence": 0.101,
-      "retrieve_memory": 2.146,
-      "computational_baseline": 24.021,
-      "evidence_precheck": 0.062,
-      "independent_verify": 10.108,
-      "grade_and_route": 0.182,
-      "authority_check": 0.097,
-      "execute_action": 0.037,
-      "record_decision": 0.022,
-      "validate_memory_update": 5.673,
-      "persist_and_publish": 32.203
+      "validate_evidence": 0.154,
+      "retrieve_memory": 2.591,
+      "computational_baseline": 34.129,
+      "evidence_precheck": 0.112,
+      "independent_verify": 12.597,
+      "grade_and_route": 0.242,
+      "authority_check": 0.162,
+      "execute_action": 0.053,
+      "record_decision": 0.031,
+      "validate_memory_update": 3.649,
+      "persist_and_publish": 26.974
      }
     },
     {
@@ -3035,9 +3049,73 @@
       "status": "SUBSTANTIVE",
       "confidence": 0.8,
       "verified": true,
-      "rationale": "retry=4, failed=5",
+      "rationale": "POOR_RECOVERY from BA-1 RETRY_AFTER_FAILURE; BA-2 OUTSIDE_USUAL_RANGE; BA-3 ISOLATED; BA-4 NO_ALTERATION_SHOWN; scope: this execution only: no earlier ordered session of this agent deviated on the same metric; nothing enforced by this COP; legacy reading: POOR_RECOVERY (retry=4, failed=5)",
       "severity": "MEDIUM",
       "claims": [
+       {
+        "statement": "BA-1 answered RETRY_AFTER_FAILURE: failed commands reissued and failing again: insights.retry 4 EXCEPTION over distinct events (raw 4 EXCEPTION); insights.failed 5 EXCEPTION over distinct events (raw 5 EXCEPTION)",
+        "kind": "tool_observation",
+        "metric_id": null,
+        "asserted_state": null,
+        "asserted_value": "RETRY_AFTER_FAILURE",
+        "tool_call_id": "3be8509c-b778-5903-a88e-a3c3f2cc59fd",
+        "result_field": "questions.BA-1.answer.outcome",
+        "record_id": null,
+        "upstream_cop": null,
+        "upstream_label": null,
+        "evidence_refs": [
+         "tool:3be8509c-b778-5903-a88e-a3c3f2cc59fd"
+        ],
+        "origin": "computational"
+       },
+       {
+        "statement": "BA-2 answered OUTSIDE_USUAL_RANGE: outside the estate's usual range: insights.token_outlier, path.transition_novelty",
+        "kind": "tool_observation",
+        "metric_id": null,
+        "asserted_state": null,
+        "asserted_value": "OUTSIDE_USUAL_RANGE",
+        "tool_call_id": "3be8509c-b778-5903-a88e-a3c3f2cc59fd",
+        "result_field": "questions.BA-2.answer.outcome",
+        "record_id": null,
+        "upstream_cop": null,
+        "upstream_label": null,
+        "evidence_refs": [
+         "tool:3be8509c-b778-5903-a88e-a3c3f2cc59fd"
+        ],
+        "origin": "computational"
+       },
+       {
+        "statement": "BA-3 answered ISOLATED: this execution only: no earlier ordered session of this agent deviated on the same metric: insights.retry: ISOLATED (7 earlier observed, deviations in none); insights.failed: ISOLATED (7 earlier observed, deviations ",
+        "kind": "tool_observation",
+        "metric_id": null,
+        "asserted_state": null,
+        "asserted_value": "ISOLATED",
+        "tool_call_id": "3be8509c-b778-5903-a88e-a3c3f2cc59fd",
+        "result_field": "questions.BA-3.answer.outcome",
+        "record_id": null,
+        "upstream_cop": null,
+        "upstream_label": null,
+        "evidence_refs": [
+         "tool:3be8509c-b778-5903-a88e-a3c3f2cc59fd"
+        ],
+        "origin": "computational"
+       },
+       {
+        "statement": "BA-4 answered NO_ALTERATION_SHOWN: no verified upstream finding shows altered context",
+        "kind": "tool_observation",
+        "metric_id": null,
+        "asserted_state": null,
+        "asserted_value": "NO_ALTERATION_SHOWN",
+        "tool_call_id": "3be8509c-b778-5903-a88e-a3c3f2cc59fd",
+        "result_field": "questions.BA-4.answer.outcome",
+        "record_id": null,
+        "upstream_cop": null,
+        "upstream_label": null,
+        "evidence_refs": [
+         "tool:3be8509c-b778-5903-a88e-a3c3f2cc59fd"
+        ],
+        "origin": "computational"
+       },
        {
         "statement": "insights.retry is EXCEPTION (value 4, threshold 2)",
         "kind": "metric_state",
@@ -3101,6 +3179,7 @@
       "lineage": [
        "insights.failed",
        "insights.retry",
+       "tool_call:3be8509c-b778-5903-a88e-a3c3f2cc59fd",
        "tool_call:ec7b5129-5758-5c0e-bbeb-efa58ea54bd8"
       ],
       "baseline": null
@@ -3112,15 +3191,15 @@
       "label_class": "attention",
       "assessed": "finding",
       "decision": "SUPPORTED",
-      "basis": "support 0.4471 >= supported_min 0.2647, corroborated by 2 sources, against 0 <= 0.1",
+      "basis": "support 0.6105 >= supported_min 0.2368, corroborated by 2 sources, against 0 <= 0.1",
       "limitations": [],
-      "score": 0.4471,
+      "score": 0.6105,
       "against": 0,
-      "unknown": 0.5529,
+      "unknown": 0.3895,
       "dimensions": {
-       "relevance": 0.6667,
-       "reliability": 0.9667,
-       "completeness": 0.7059,
+       "relevance": 0.75,
+       "reliability": 0.975,
+       "completeness": 0.8421,
        "consistency": 1.0,
        "corroboration": 2
       },
@@ -3129,13 +3208,13 @@
        "telemetry"
       ],
       "thresholds": {
-       "total_weight": 4.25,
+       "total_weight": 4.75,
        "required_weight": 1.0,
        "primary_weight": 1.0,
        "smallest_corroborating_weight": 0.25,
-       "supported_min": 0.2647,
-       "provisional_min": 0.1412,
-       "reject_min": 0.1412,
+       "supported_min": 0.2368,
+       "provisional_min": 0.1263,
+       "reject_min": 0.1263,
        "max_against_supported": 0.1,
        "min_corroboration_supported": 2,
        "derivation": {
@@ -3218,11 +3297,6 @@
       "required_unknown": [],
       "unknown_items": [
        {
-        "component": "upstream:context_memory",
-        "basis": "context_memory finding absent",
-        "retrievable_with": []
-       },
-       {
         "component": "upstream:workflow_orchestration",
         "basis": "workflow_orchestration finding absent",
         "retrievable_with": []
@@ -3262,7 +3336,7 @@
          "applicable": true,
          "retrievable_with": []
         },
-        "contribution": 0.2118
+        "contribution": 0.1895
        },
        {
         "name": "tool:compute_sequence_statistics",
@@ -3286,7 +3360,7 @@
          "applicable": true,
          "retrievable_with": []
         },
-        "contribution": 0.2353
+        "contribution": 0.2105
        },
        {
         "name": "tool:compare_behaviour_history",
@@ -3313,25 +3387,31 @@
         "contribution": 0.0
        },
        {
-        "name": "upstream:context_memory",
-        "kind": "upstream",
-        "relevance": "supporting",
-        "weight": 0.5,
+        "name": "tool:assess_behaviour_questions",
+        "kind": "record",
+        "relevance": "direct",
+        "weight": 1.0,
         "required": null,
-        "source": "upstream:context_memory",
-        "upstream": "context_memory",
-        "tools": [],
+        "source": "measurement_tool",
+        "tools": [
+         "assess_behaviour_questions"
+        ],
         "metrics": [],
         "item": {
-         "direction": "unknown",
-         "strength": 0.0,
+         "direction": "supports",
+         "strength": 1.0,
          "reliability": 1.0,
-         "basis": "context_memory finding absent",
-         "refs": [],
+         "basis": "cited and checked by SC-01: BA-1 answered RETRY_AFTER_FAILURE: failed commands reissued and failing again: insights.retry 4 EXCEPTION over distinct events (raw 4 EXCEPT",
+         "refs": [
+          "tool:3be8509c-b778-5903-a88e-a3c3f2cc59fd",
+          "tool:3be8509c-b778-5903-a88e-a3c3f2cc59fd",
+          "tool:3be8509c-b778-5903-a88e-a3c3f2cc59fd",
+          "tool:3be8509c-b778-5903-a88e-a3c3f2cc59fd"
+         ],
          "applicable": true,
          "retrievable_with": []
         },
-        "contribution": 0.0
+        "contribution": 0.2105
        },
        {
         "name": "upstream:workflow_orchestration",
@@ -3432,14 +3512,6 @@
         "status": null
        },
        {
-        "item": "finding:context_memory",
-        "kind": "UPSTREAM",
-        "role": "context",
-        "state": "MISSING_AND_UNAVAILABLE",
-        "label": null,
-        "status": null
-       },
-       {
         "item": "finding:workflow_orchestration",
         "kind": "UPSTREAM",
         "role": "context",
@@ -3459,12 +3531,6 @@
        },
        {
         "code": "MISSING_DEPENDENCY",
-        "item": "finding:context_memory",
-        "gates": "none",
-        "detail": "upstream context_memory is absent; it is context only and supports nothing"
-       },
-       {
-        "code": "MISSING_DEPENDENCY",
         "item": "finding:workflow_orchestration",
         "gates": "none",
         "detail": "upstream workflow_orchestration is absent; it is context only and supports nothing"
@@ -3474,14 +3540,6 @@
      "upstream_view": [
       {
        "cop": "runtime_monitoring",
-       "present": false,
-       "verified": false,
-       "status": null,
-       "label": null,
-       "finding_id": null
-      },
-      {
-       "cop": "context_memory",
        "present": false,
        "verified": false,
        "status": null,
@@ -3505,7 +3563,7 @@
        "requested_by": "rules",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 0.124,
+       "latency_ms": 0.204,
        "purpose": null,
        "result": {
         "calls": 7,
@@ -3537,7 +3595,7 @@
        "requested_by": "rules",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 1.363,
+       "latency_ms": 3.527,
        "purpose": null,
        "result": {
         "history": {
@@ -3558,6 +3616,21 @@
          }
         },
         "validated_baselines": []
+       }
+      },
+      {
+       "tool_call_id": "3be8509c-b778-5903-a88e-a3c3f2cc59fd",
+       "tool": "assess_behaviour_questions",
+       "args": {},
+       "requested_by": "rules",
+       "status": "OK",
+       "rejection_reason": null,
+       "latency_ms": 36.242,
+       "purpose": null,
+       "result": {
+        "truncated": true,
+        "bytes": 45950,
+        "preview": "{\"questions\": {\"BA-1\": {\"assessment\": {\"cop\": \"behavior_analytics\", \"question_id\": \"BA-1\", \"question\": \"What are the agent's typical action sequences, tool-use patterns and execution behaviours?\", \"presence\": {\"status\": \"PARTIAL\", \"items\": [{\"requirement\": \"insights.repetition\", \"kind\": \"REQUIRED\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 4, \"metric_state\": \"EXCEPTION\", \"features\": {\"by_tool\": {\"Bash\": 4}}, \"evidence_refs\": [\"observable:ca1-6\", \"observable:ca1-7\", \"observable:ca1-8\", \"observable:ca1-9\"]}, {\"requirement\": \"insights.retry\", \"kind\": \"REQUIRED_WHEN_APPLICABLE\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 4, \"metric_state\": \"EXCEPTION\", \"features\": {\"distinct_commands\": 1}, \"evidence_refs\": [\"observable:ca1-6\", \"observable:ca1-7\", \"observable:ca1-8\", \"observable:ca1-9\"]}, {\"requirement\": \"insights.failed\", \"kind\": \"REQUIRED\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 5, \"metric_state\": \"EXCEPTION\", \"features\": {\"failure_rate\": 0.714}, \"evidence_refs\": [\"observable:ca1-5\", \"observable:ca1-6\", \"observable:ca1-7\", \"observable:ca1-8\", \"observable:ca1-9\"]}, {\"requirement\": \"insights.stalled\", \"kind\": \"REQUIRED\", \"state\": \"MISSING_DATA\", \"reason\": \"basis absent: wrapper\", \"value\": 0, \"metric_state\": \"UNKNOWN\", \"features\": {\"max_hung_s\": 0, \"reason\": \"basis absent: wrapper\"}, \"evidence_refs\": []}, {\"requirement\": \"insights.reverted\", \"kind\": \"OPTIONAL\", \"state\": \"NOT_APPLICABLE\", \"reason\": \"did not arise: effects\", \"value\": null, \"metric_state\": \"NOT_APPLICABLE\", \"features\": {\"reason\": \"did not arise: effects\"}, \"evidence_refs\": []}, {\"requirement\": \"insights.blocked\", \"kind\": \"OPTIONAL\", \"state\": \"MISSING_DATA\", \"reason\": \"basis absent: our_rules\", \"value\": 0, \"metric_state\": \"UNKNOWN\", \"features\": {\"rules\": {}, \"reason\": \"basis absent: our_rules\"}, \"evidence_refs\": []}, {\"requirement\": \"interaction.subagent_lanes\", \"kind\": \"OPTIONAL\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 0, \"metric_state\": \"NORMAL\", \"features\": {\"lanes\": []}, \"evidence_refs\": []}, {\"requirement\": \"interaction.mcp_servers\", \"kind\": \"OPTIONAL\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 0, \"metric_state\": \"NORMAL\", \"features\": {\"servers\": {}}, \"evidence_refs\": []}, {\"requirement\": \"telemetry.turn_linkage\", \"kind\": \"OPTIONAL\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 1.0, \"metric_state\": \"NORMAL\", \"features\": {\"steps\": 8, \"without_turn\": 0}, \"evidence_refs\": []}, {\"requirement\": \"telemetry.lane_linkage\", \"kind\": \"OPTIONAL\", \"state\": \"NOT_APPLICABLE\", \"reason\": \"did not arise: subagents\", \"value\": null, \"metric_state\": \"NOT_APPLICABLE\", \"features\": {\"reason\": \"did not arise: subagents\"}, \"evidence_refs\": []}, {\"requirement\": \"telemetry.unknown_share\", \"kind\": \"OPTIONAL\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 0.25, \"metric_state\": \"WARNING\", \"features\": {\"unknown\": [\"insights.stalled\", \"insights.outside\", \"insights.blocked\", \"insights.lockfile\", \"insights.unattributed\"]}, \"evidence_refs\": []}, {\"requirement\": \"behavior_action_sequence_frequency\", \"kind\": \"OPTIONAL\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 4, \"metric_state\": \"NO_THRESHOLD\", \"features\": {\"top\": {\"TEST>TEST>TEST\": 3, \"PROMPT>LOOK>CHANGE\": 1, \"LOOK>CHANGE>TEST\": 1, \"CHANGE>TEST>TEST\": 1}, \"availability\": \"CALCULATED\"}, \"evidence_refs\": []}, {\"requirement\": \"behavior_tool_usage_distribution\", \"kind\": \"OPTIONAL\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 0.714, \"metric_state\": \"NO_THRESHOLD\", \"features\": {\"shares\": {\"Bash\": 0.714, \"Read\": 0.143, \"Edit\": 0.143}, \"tools\": 3, \"availability\": \"CALCULATED\"}, \"evidence_refs\": []}, {\"requirement\": \"behavior_tool_transition_frequency\", \"kind\": \"OPTIONAL\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 3, \"metric_state\": \"NO_THRESHOLD\", \"features\": {\"top\": {\"Bash>Bash\": 4, \"Read>Edit\": 1, \"Edit>Bash\": 1}, \"availability\": \"CALCULATED\"}, \"evidence_refs\": []}, {\"requirement\": \"behavior_execution_pattern_frequency\", \"kind\": \"OPTIONAL\", \"state\": \"NOT_CALCULATED\", \"reason\": \"not calculated by signal_metrics.py\", \"value\": null, \"metric_state\": null"
        }
       }
      ],
@@ -3656,7 +3729,7 @@
        "check_id": "VS-01",
        "result": "PASS",
        "reason_code": "SUPPORTED",
-       "detail": "support 0.4471 >= supported_min 0.2647, corroborated by 2 sources, against 0 <= 0.1",
+       "detail": "support 0.6105 >= supported_min 0.2368, corroborated by 2 sources, against 0 <= 0.1",
        "effect": "BLOCKS_FINDING",
        "subject": ""
       },
@@ -3701,7 +3774,7 @@
       "evidence_support": {
        "score": 4,
        "meaning": "strong support with bounded, named limitations",
-       "rule": "SUPPORTED: support 0.4471 >= supported_min 0.2647, corroborated by 2 sources, against 0 <= 0.1",
+       "rule": "SUPPORTED: support 0.6105 >= supported_min 0.2368, corroborated by 2 sources, against 0 <= 0.1",
        "reading": "POOR_RECOVERY",
        "candidate_verification": "VERIFIED",
        "provisional": false,
@@ -3711,23 +3784,24 @@
          "evidence": [
           "attention state observed (claimed severity MEDIUM): insights.repetition=EXCEPTION (4), insights.retry=EXCEPTION (4), insights.failed=EXCEPTION (5); unknown: insights.stalled"
          ],
-         "contribution": 0.2118
+         "contribution": 0.1895
         },
         {
          "kind": "tool:compute_sequence_statistics",
          "evidence": [
           "cited and checked by SC-01: 5 failed calls in the sequence"
          ],
-         "contribution": 0.2353
+         "contribution": 0.2105
+        },
+        {
+         "kind": "tool:assess_behaviour_questions",
+         "evidence": [
+          "cited and checked by SC-01: BA-1 answered RETRY_AFTER_FAILURE: failed commands reissued and failing again: insights.retry 4 EXCEPTION over distinct events (raw 4 EXCEPT"
+         ],
+         "contribution": 0.2105
         }
        ],
        "limiting": [
-        {
-         "kind": "unknown",
-         "item": "upstream:context_memory",
-         "detail": "context_memory finding absent",
-         "material": false
-        },
         {
          "kind": "unknown",
          "item": "upstream:workflow_orchestration",
@@ -3748,14 +3822,14 @@
        },
        "verification_support": {
         "decision": "SUPPORTED",
-        "basis": "support 0.4471 >= supported_min 0.2647, corroborated by 2 sources, against 0 <= 0.1",
-        "score": 0.4471,
+        "basis": "support 0.6105 >= supported_min 0.2368, corroborated by 2 sources, against 0 <= 0.1",
+        "score": 0.6105,
         "against": 0,
-        "unknown": 0.5529,
+        "unknown": 0.3895,
         "dimensions": {
-         "relevance": 0.6667,
-         "reliability": 0.9667,
-         "completeness": 0.7059,
+         "relevance": 0.75,
+         "reliability": 0.975,
+         "completeness": 0.8421,
          "consistency": 1.0,
          "corroboration": 2
         },
@@ -3806,7 +3880,7 @@
          "value": 1.0,
          "weight": 0.1,
          "contribution": 0.1,
-         "basis": "2 of 2 tools returned OK"
+         "basis": "3 of 3 tools returned OK"
         },
         "authority": {
          "value": 1.0,
@@ -3824,7 +3898,7 @@
          "value": 0.45,
          "weight": 0.05,
          "contribution": 0.0225,
-         "basis": "evidence ceiling 0.9; 0 of 3 upstream verified"
+         "basis": "evidence ceiling 0.9; 0 of 2 upstream verified"
         },
         "validated_history": {
          "value": 0.5,
@@ -3917,11 +3991,6 @@
         },
         {
          "item": "finding:runtime_monitoring",
-         "kind": "UPSTREAM",
-         "state": "MISSING_AND_UNAVAILABLE"
-        },
-        {
-         "item": "finding:context_memory",
          "kind": "UPSTREAM",
          "state": "MISSING_AND_UNAVAILABLE"
         },
@@ -4065,28 +4134,28 @@
       }
      },
      "node_timings": {
-      "receive_case": 0.016,
+      "receive_case": 0.013,
       "load_inputs": 0.004,
-      "validate_evidence": 0.101,
-      "retrieve_memory": 2.146,
-      "computational_baseline": 1.691,
-      "evidence_precheck": 0.062,
-      "independent_verify": 0.422,
-      "grade_and_route": 0.187,
-      "authority_check": 0.079,
-      "execute_action": 0.057,
-      "record_decision": 0.018,
-      "validate_memory_update": 2.561,
-      "persist_and_publish": 2.723
+      "validate_evidence": 0.177,
+      "retrieve_memory": 4.502,
+      "computational_baseline": 68.662,
+      "evidence_precheck": 0.059,
+      "independent_verify": 29.168,
+      "grade_and_route": 0.169,
+      "authority_check": 0.124,
+      "execute_action": 0.028,
+      "record_decision": 0.015,
+      "validate_memory_update": 3.586,
+      "persist_and_publish": 32.142
      }
     },
     {
      "record_version": "decision-record-1",
-     "decision_id": "29ddc69d-f1ab-52ef-aaed-9cd3822c3f63",
-     "run_key": "ref:workflow_orchestration:dfed4c22-efc8/2252d54b-8467:r0",
+     "decision_id": "f7b960d7-c990-501f-a10f-52be3e0fe1d5",
+     "run_key": "ref:workflow_orchestration:dfed4c22-efc8/61aed4b1-6218:r0",
      "cop": "workflow_orchestration",
      "case_id": "scn-timeout",
-     "run_id": "eval-scn-timeout:ref:workflow_orchestration:dfed4c22-efc8/2252d54b-8467:r0",
+     "run_id": "eval-scn-timeout:ref:workflow_orchestration:dfed4c22-efc8/61aed4b1-6218:r0",
      "session_id": "ca1",
      "tenant_id": "tenant-a",
      "decided_at": "2026-10-29T00:00:00Z",
@@ -4493,7 +4562,7 @@
        "requested_by": "rules",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 0.099,
+       "latency_ms": 0.13,
        "purpose": null,
        "result": {
         "objective": "make tests/test_api.py pass",
@@ -4516,7 +4585,7 @@
        "requested_by": "rules",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 0.092,
+       "latency_ms": 0.138,
        "purpose": null,
        "result": {
         "transitions": {
@@ -4548,7 +4617,7 @@
        "requested_by": "llm",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 0.098,
+       "latency_ms": 0.12,
        "purpose": "is the objective reached",
        "result": {
         "objective": "make tests/test_api.py pass",
@@ -4571,7 +4640,7 @@
        "requested_by": "llm",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 0.092,
+       "latency_ms": 0.117,
        "purpose": "is the agent cycling",
        "result": {
         "transitions": {
@@ -4619,7 +4688,7 @@
         "compare_workflow_failures",
         "retrieve_trace_window"
        ],
-       "latency_ms": 1.152,
+       "latency_ms": 0.938,
        "cost_usd": null,
        "cost_basis": "unpriced"
       },
@@ -4646,7 +4715,7 @@
         "compare_workflow_failures",
         "retrieve_trace_window"
        ],
-       "latency_ms": 2.317,
+       "latency_ms": 3.067,
        "cost_usd": null,
        "cost_basis": "unpriced"
       }
@@ -5154,25 +5223,25 @@
       }
      },
      "node_timings": {
-      "receive_case": 0.006,
-      "load_inputs": 0.003,
-      "validate_evidence": 0.08,
-      "retrieve_memory": 2.335,
-      "computational_baseline": 0.335,
-      "evidence_precheck": 1.08,
-      "llm_plan_investigation": 1.855,
-      "validate_tool_request": 0.01,
-      "execute_authorised_tool": 0.206,
-      "validate_tool_result": 0.004,
-      "llm_assess_evidence": 2.999,
-      "formulate_finding": 0.093,
-      "independent_verify": 0.389,
-      "grade_and_route": 0.179,
-      "authority_check": 0.088,
-      "execute_action": 0.047,
-      "record_decision": 0.022,
-      "validate_memory_update": 4.009,
-      "persist_and_publish": 7.433
+      "receive_case": 0.009,
+      "load_inputs": 0.004,
+      "validate_evidence": 0.119,
+      "retrieve_memory": 3.635,
+      "computational_baseline": 0.488,
+      "evidence_precheck": 0.089,
+      "llm_plan_investigation": 1.938,
+      "validate_tool_request": 0.014,
+      "execute_authorised_tool": 0.265,
+      "validate_tool_result": 0.006,
+      "llm_assess_evidence": 3.831,
+      "formulate_finding": 0.132,
+      "independent_verify": 0.492,
+      "grade_and_route": 0.26,
+      "authority_check": 0.125,
+      "execute_action": 0.076,
+      "record_decision": 0.032,
+      "validate_memory_update": 3.65,
+      "persist_and_publish": 5.375
      }
     },
     {
@@ -5193,9 +5262,73 @@
       "status": "SUBSTANTIVE",
       "confidence": 0.8,
       "verified": true,
-      "rationale": "retry=4, failed=5",
+      "rationale": "POOR_RECOVERY from BA-1 RETRY_AFTER_FAILURE; BA-2 OUTSIDE_USUAL_RANGE; BA-3 ISOLATED; BA-4 NO_ALTERATION_SHOWN; scope: this execution only: no earlier ordered session of this agent deviated on the same metric; nothing enforced by this COP; legacy reading: POOR_RECOVERY (retry=4, failed=5)",
       "severity": "MEDIUM",
       "claims": [
+       {
+        "statement": "BA-1 answered RETRY_AFTER_FAILURE: failed commands reissued and failing again: insights.retry 4 EXCEPTION over distinct events (raw 4 EXCEPTION); insights.failed 5 EXCEPTION over distinct events (raw 5 EXCEPTION)",
+        "kind": "tool_observation",
+        "metric_id": null,
+        "asserted_state": null,
+        "asserted_value": "RETRY_AFTER_FAILURE",
+        "tool_call_id": "5f7b02e9-238e-5de3-a1d7-e3bc9f520219",
+        "result_field": "questions.BA-1.answer.outcome",
+        "record_id": null,
+        "upstream_cop": null,
+        "upstream_label": null,
+        "evidence_refs": [
+         "tool:5f7b02e9-238e-5de3-a1d7-e3bc9f520219"
+        ],
+        "origin": "computational"
+       },
+       {
+        "statement": "BA-2 answered OUTSIDE_USUAL_RANGE: outside the estate's usual range: insights.token_outlier, path.transition_novelty",
+        "kind": "tool_observation",
+        "metric_id": null,
+        "asserted_state": null,
+        "asserted_value": "OUTSIDE_USUAL_RANGE",
+        "tool_call_id": "5f7b02e9-238e-5de3-a1d7-e3bc9f520219",
+        "result_field": "questions.BA-2.answer.outcome",
+        "record_id": null,
+        "upstream_cop": null,
+        "upstream_label": null,
+        "evidence_refs": [
+         "tool:5f7b02e9-238e-5de3-a1d7-e3bc9f520219"
+        ],
+        "origin": "computational"
+       },
+       {
+        "statement": "BA-3 answered ISOLATED: this execution only: no earlier ordered session of this agent deviated on the same metric: insights.retry: ISOLATED (7 earlier observed, deviations in none); insights.failed: ISOLATED (7 earlier observed, deviations ",
+        "kind": "tool_observation",
+        "metric_id": null,
+        "asserted_state": null,
+        "asserted_value": "ISOLATED",
+        "tool_call_id": "5f7b02e9-238e-5de3-a1d7-e3bc9f520219",
+        "result_field": "questions.BA-3.answer.outcome",
+        "record_id": null,
+        "upstream_cop": null,
+        "upstream_label": null,
+        "evidence_refs": [
+         "tool:5f7b02e9-238e-5de3-a1d7-e3bc9f520219"
+        ],
+        "origin": "computational"
+       },
+       {
+        "statement": "BA-4 answered NO_ALTERATION_SHOWN: no verified upstream finding shows altered context",
+        "kind": "tool_observation",
+        "metric_id": null,
+        "asserted_state": null,
+        "asserted_value": "NO_ALTERATION_SHOWN",
+        "tool_call_id": "5f7b02e9-238e-5de3-a1d7-e3bc9f520219",
+        "result_field": "questions.BA-4.answer.outcome",
+        "record_id": null,
+        "upstream_cop": null,
+        "upstream_label": null,
+        "evidence_refs": [
+         "tool:5f7b02e9-238e-5de3-a1d7-e3bc9f520219"
+        ],
+        "origin": "computational"
+       },
        {
         "statement": "insights.retry is EXCEPTION (value 4, threshold 2)",
         "kind": "metric_state",
@@ -5241,13 +5374,13 @@
         "metric_id": null,
         "asserted_state": null,
         "asserted_value": 5,
-        "tool_call_id": "d2bc647e-acf8-54f1-8074-3b4cb41c8a6a",
+        "tool_call_id": "9391e379-ec47-5f4c-b68c-b047f3b7a520",
         "result_field": "failed_calls",
         "record_id": null,
         "upstream_cop": null,
         "upstream_label": null,
         "evidence_refs": [
-         "tool:d2bc647e-acf8-54f1-8074-3b4cb41c8a6a"
+         "tool:9391e379-ec47-5f4c-b68c-b047f3b7a520"
         ],
         "origin": "computational"
        }
@@ -5259,7 +5392,8 @@
       "lineage": [
        "insights.failed",
        "insights.retry",
-       "tool_call:d2bc647e-acf8-54f1-8074-3b4cb41c8a6a"
+       "tool_call:5f7b02e9-238e-5de3-a1d7-e3bc9f520219",
+       "tool_call:9391e379-ec47-5f4c-b68c-b047f3b7a520"
       ],
       "baseline": null
      },
@@ -5270,15 +5404,15 @@
       "label_class": "attention",
       "assessed": "finding",
       "decision": "SUPPORTED",
-      "basis": "support 0.5177 >= supported_min 0.2647, corroborated by 3 sources, against 0 <= 0.1",
+      "basis": "support 0.6737 >= supported_min 0.2368, corroborated by 3 sources, against 0 <= 0.1",
       "limitations": [],
-      "score": 0.5177,
+      "score": 0.6737,
       "against": 0,
-      "unknown": 0.4823,
+      "unknown": 0.3263,
       "dimensions": {
-       "relevance": 0.7143,
-       "reliability": 0.9143,
-       "completeness": 0.8235,
+       "relevance": 0.7778,
+       "reliability": 0.9333,
+       "completeness": 0.9474,
        "consistency": 1.0,
        "corroboration": 3
       },
@@ -5288,13 +5422,13 @@
        "upstream:workflow_orchestration"
       ],
       "thresholds": {
-       "total_weight": 4.25,
+       "total_weight": 4.75,
        "required_weight": 1.0,
        "primary_weight": 1.0,
        "smallest_corroborating_weight": 0.25,
-       "supported_min": 0.2647,
-       "provisional_min": 0.1412,
-       "reject_min": 0.1412,
+       "supported_min": 0.2368,
+       "provisional_min": 0.1263,
+       "reject_min": 0.1263,
        "max_against_supported": 0.1,
        "min_corroboration_supported": 2,
        "derivation": {
@@ -5377,11 +5511,6 @@
       "required_unknown": [],
       "unknown_items": [
        {
-        "component": "upstream:context_memory",
-        "basis": "context_memory finding absent",
-        "retrievable_with": []
-       },
-       {
         "component": "validated_memory",
         "basis": "no validated precedent",
         "retrievable_with": []
@@ -5416,7 +5545,7 @@
          "applicable": true,
          "retrievable_with": []
         },
-        "contribution": 0.2118
+        "contribution": 0.1895
        },
        {
         "name": "tool:compute_sequence_statistics",
@@ -5435,12 +5564,12 @@
          "reliability": 1.0,
          "basis": "cited and checked by SC-01: 5 failed calls in the sequence",
          "refs": [
-          "tool:d2bc647e-acf8-54f1-8074-3b4cb41c8a6a"
+          "tool:9391e379-ec47-5f4c-b68c-b047f3b7a520"
          ],
          "applicable": true,
          "retrievable_with": []
         },
-        "contribution": 0.2353
+        "contribution": 0.2105
        },
        {
         "name": "tool:compare_behaviour_history",
@@ -5459,7 +5588,7 @@
          "reliability": 1.0,
          "basis": "compare_behaviour_history read but not cited for POOR_RECOVERY",
          "refs": [
-          "tool:68cf297c-263d-52a3-900a-8b4eaa2ba141"
+          "tool:e4651094-931c-5e3d-a86e-e3e572c50e34"
          ],
          "applicable": true,
          "retrievable_with": []
@@ -5467,25 +5596,31 @@
         "contribution": 0.0
        },
        {
-        "name": "upstream:context_memory",
-        "kind": "upstream",
-        "relevance": "supporting",
-        "weight": 0.5,
+        "name": "tool:assess_behaviour_questions",
+        "kind": "record",
+        "relevance": "direct",
+        "weight": 1.0,
         "required": null,
-        "source": "upstream:context_memory",
-        "upstream": "context_memory",
-        "tools": [],
+        "source": "measurement_tool",
+        "tools": [
+         "assess_behaviour_questions"
+        ],
         "metrics": [],
         "item": {
-         "direction": "unknown",
-         "strength": 0.0,
+         "direction": "supports",
+         "strength": 1.0,
          "reliability": 1.0,
-         "basis": "context_memory finding absent",
-         "refs": [],
+         "basis": "cited and checked by SC-01: BA-1 answered RETRY_AFTER_FAILURE: failed commands reissued and failing again: insights.retry 4 EXCEPTION over distinct events (raw 4 EXCEPT",
+         "refs": [
+          "tool:5f7b02e9-238e-5de3-a1d7-e3bc9f520219",
+          "tool:5f7b02e9-238e-5de3-a1d7-e3bc9f520219",
+          "tool:5f7b02e9-238e-5de3-a1d7-e3bc9f520219",
+          "tool:5f7b02e9-238e-5de3-a1d7-e3bc9f520219"
+         ],
          "applicable": true,
          "retrievable_with": []
         },
-        "contribution": 0.0
+        "contribution": 0.2105
        },
        {
         "name": "upstream:workflow_orchestration",
@@ -5508,7 +5643,7 @@
          "applicable": true,
          "retrievable_with": []
         },
-        "contribution": 0.0706
+        "contribution": 0.0632
        },
        {
         "name": "validated_memory",
@@ -5588,14 +5723,6 @@
         "status": null
        },
        {
-        "item": "finding:context_memory",
-        "kind": "UPSTREAM",
-        "role": "context",
-        "state": "MISSING_AND_UNAVAILABLE",
-        "label": null,
-        "status": null
-       },
-       {
         "item": "finding:workflow_orchestration",
         "kind": "UPSTREAM",
         "role": "context",
@@ -5612,26 +5739,12 @@
         "item": "finding:runtime_monitoring",
         "gates": "none",
         "detail": "upstream runtime_monitoring is absent; it is context only and supports nothing"
-       },
-       {
-        "code": "MISSING_DEPENDENCY",
-        "item": "finding:context_memory",
-        "gates": "none",
-        "detail": "upstream context_memory is absent; it is context only and supports nothing"
        }
       ]
      },
      "upstream_view": [
       {
        "cop": "runtime_monitoring",
-       "present": false,
-       "verified": false,
-       "status": null,
-       "label": null,
-       "finding_id": null
-      },
-      {
-       "cop": "context_memory",
        "present": false,
        "verified": false,
        "status": null,
@@ -5649,13 +5762,13 @@
      ],
      "tool_calls": [
       {
-       "tool_call_id": "d2bc647e-acf8-54f1-8074-3b4cb41c8a6a",
+       "tool_call_id": "9391e379-ec47-5f4c-b68c-b047f3b7a520",
        "tool": "compute_sequence_statistics",
        "args": {},
        "requested_by": "rules",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 0.135,
+       "latency_ms": 0.211,
        "purpose": null,
        "result": {
         "calls": 7,
@@ -5681,13 +5794,13 @@
        }
       },
       {
-       "tool_call_id": "68cf297c-263d-52a3-900a-8b4eaa2ba141",
+       "tool_call_id": "e4651094-931c-5e3d-a86e-e3e572c50e34",
        "tool": "compare_behaviour_history",
        "args": {},
        "requested_by": "rules",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 1.524,
+       "latency_ms": 4.935,
        "purpose": null,
        "result": {
         "history": {
@@ -5708,6 +5821,21 @@
          }
         },
         "validated_baselines": []
+       }
+      },
+      {
+       "tool_call_id": "5f7b02e9-238e-5de3-a1d7-e3bc9f520219",
+       "tool": "assess_behaviour_questions",
+       "args": {},
+       "requested_by": "rules",
+       "status": "OK",
+       "rejection_reason": null,
+       "latency_ms": 36.486,
+       "purpose": null,
+       "result": {
+        "truncated": true,
+        "bytes": 46066,
+        "preview": "{\"questions\": {\"BA-1\": {\"assessment\": {\"cop\": \"behavior_analytics\", \"question_id\": \"BA-1\", \"question\": \"What are the agent's typical action sequences, tool-use patterns and execution behaviours?\", \"presence\": {\"status\": \"PARTIAL\", \"items\": [{\"requirement\": \"insights.repetition\", \"kind\": \"REQUIRED\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 4, \"metric_state\": \"EXCEPTION\", \"features\": {\"by_tool\": {\"Bash\": 4}}, \"evidence_refs\": [\"observable:ca1-6\", \"observable:ca1-7\", \"observable:ca1-8\", \"observable:ca1-9\"]}, {\"requirement\": \"insights.retry\", \"kind\": \"REQUIRED_WHEN_APPLICABLE\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 4, \"metric_state\": \"EXCEPTION\", \"features\": {\"distinct_commands\": 1}, \"evidence_refs\": [\"observable:ca1-6\", \"observable:ca1-7\", \"observable:ca1-8\", \"observable:ca1-9\"]}, {\"requirement\": \"insights.failed\", \"kind\": \"REQUIRED\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 5, \"metric_state\": \"EXCEPTION\", \"features\": {\"failure_rate\": 0.714}, \"evidence_refs\": [\"observable:ca1-5\", \"observable:ca1-6\", \"observable:ca1-7\", \"observable:ca1-8\", \"observable:ca1-9\"]}, {\"requirement\": \"insights.stalled\", \"kind\": \"REQUIRED\", \"state\": \"MISSING_DATA\", \"reason\": \"basis absent: wrapper\", \"value\": 0, \"metric_state\": \"UNKNOWN\", \"features\": {\"max_hung_s\": 0, \"reason\": \"basis absent: wrapper\"}, \"evidence_refs\": []}, {\"requirement\": \"insights.reverted\", \"kind\": \"OPTIONAL\", \"state\": \"NOT_APPLICABLE\", \"reason\": \"did not arise: effects\", \"value\": null, \"metric_state\": \"NOT_APPLICABLE\", \"features\": {\"reason\": \"did not arise: effects\"}, \"evidence_refs\": []}, {\"requirement\": \"insights.blocked\", \"kind\": \"OPTIONAL\", \"state\": \"MISSING_DATA\", \"reason\": \"basis absent: our_rules\", \"value\": 0, \"metric_state\": \"UNKNOWN\", \"features\": {\"rules\": {}, \"reason\": \"basis absent: our_rules\"}, \"evidence_refs\": []}, {\"requirement\": \"interaction.subagent_lanes\", \"kind\": \"OPTIONAL\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 0, \"metric_state\": \"NORMAL\", \"features\": {\"lanes\": []}, \"evidence_refs\": []}, {\"requirement\": \"interaction.mcp_servers\", \"kind\": \"OPTIONAL\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 0, \"metric_state\": \"NORMAL\", \"features\": {\"servers\": {}}, \"evidence_refs\": []}, {\"requirement\": \"telemetry.turn_linkage\", \"kind\": \"OPTIONAL\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 1.0, \"metric_state\": \"NORMAL\", \"features\": {\"steps\": 8, \"without_turn\": 0}, \"evidence_refs\": []}, {\"requirement\": \"telemetry.lane_linkage\", \"kind\": \"OPTIONAL\", \"state\": \"NOT_APPLICABLE\", \"reason\": \"did not arise: subagents\", \"value\": null, \"metric_state\": \"NOT_APPLICABLE\", \"features\": {\"reason\": \"did not arise: subagents\"}, \"evidence_refs\": []}, {\"requirement\": \"telemetry.unknown_share\", \"kind\": \"OPTIONAL\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 0.25, \"metric_state\": \"WARNING\", \"features\": {\"unknown\": [\"insights.stalled\", \"insights.outside\", \"insights.blocked\", \"insights.lockfile\", \"insights.unattributed\"]}, \"evidence_refs\": []}, {\"requirement\": \"behavior_action_sequence_frequency\", \"kind\": \"OPTIONAL\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 4, \"metric_state\": \"NO_THRESHOLD\", \"features\": {\"top\": {\"TEST>TEST>TEST\": 3, \"PROMPT>LOOK>CHANGE\": 1, \"LOOK>CHANGE>TEST\": 1, \"CHANGE>TEST>TEST\": 1}, \"availability\": \"CALCULATED\"}, \"evidence_refs\": []}, {\"requirement\": \"behavior_tool_usage_distribution\", \"kind\": \"OPTIONAL\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 0.714, \"metric_state\": \"NO_THRESHOLD\", \"features\": {\"shares\": {\"Bash\": 0.714, \"Read\": 0.143, \"Edit\": 0.143}, \"tools\": 3, \"availability\": \"CALCULATED\"}, \"evidence_refs\": []}, {\"requirement\": \"behavior_tool_transition_frequency\", \"kind\": \"OPTIONAL\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 3, \"metric_state\": \"NO_THRESHOLD\", \"features\": {\"top\": {\"Bash>Bash\": 4, \"Read>Edit\": 1, \"Edit>Bash\": 1}, \"availability\": \"CALCULATED\"}, \"evidence_refs\": []}, {\"requirement\": \"behavior_execution_pattern_frequency\", \"kind\": \"OPTIONAL\", \"state\": \"NOT_CALCULATED\", \"reason\": \"not calculated by signal_metrics.py\", \"value\": null, \"metric_state\": null"
        }
       }
      ],
@@ -5806,7 +5934,7 @@
        "check_id": "VS-01",
        "result": "PASS",
        "reason_code": "SUPPORTED",
-       "detail": "support 0.5177 >= supported_min 0.2647, corroborated by 3 sources, against 0 <= 0.1",
+       "detail": "support 0.6737 >= supported_min 0.2368, corroborated by 3 sources, against 0 <= 0.1",
        "effect": "BLOCKS_FINDING",
        "subject": ""
       },
@@ -5851,7 +5979,7 @@
       "evidence_support": {
        "score": 4,
        "meaning": "strong support with bounded, named limitations",
-       "rule": "SUPPORTED: support 0.5177 >= supported_min 0.2647, corroborated by 3 sources, against 0 <= 0.1",
+       "rule": "SUPPORTED: support 0.6737 >= supported_min 0.2368, corroborated by 3 sources, against 0 <= 0.1",
        "reading": "POOR_RECOVERY",
        "candidate_verification": "VERIFIED",
        "provisional": false,
@@ -5861,30 +5989,31 @@
          "evidence": [
           "attention state observed (claimed severity MEDIUM): insights.repetition=EXCEPTION (4), insights.retry=EXCEPTION (4), insights.failed=EXCEPTION (5); unknown: insights.stalled"
          ],
-         "contribution": 0.2118
+         "contribution": 0.1895
         },
         {
          "kind": "tool:compute_sequence_statistics",
          "evidence": [
           "cited and checked by SC-01: 5 failed calls in the sequence"
          ],
-         "contribution": 0.2353
+         "contribution": 0.2105
+        },
+        {
+         "kind": "tool:assess_behaviour_questions",
+         "evidence": [
+          "cited and checked by SC-01: BA-1 answered RETRY_AFTER_FAILURE: failed commands reissued and failing again: insights.retry 4 EXCEPTION over distinct events (raw 4 EXCEPT"
+         ],
+         "contribution": 0.2105
         },
         {
          "kind": "upstream:workflow_orchestration",
          "evidence": [
           "verified workflow_orchestration reads STALLED (PROVISIONALLY_SUPPORTED)"
          ],
-         "contribution": 0.0706
+         "contribution": 0.0632
         }
        ],
        "limiting": [
-        {
-         "kind": "unknown",
-         "item": "upstream:context_memory",
-         "detail": "context_memory finding absent",
-         "material": false
-        },
         {
          "kind": "unknown",
          "item": "validated_memory",
@@ -5899,14 +6028,14 @@
        },
        "verification_support": {
         "decision": "SUPPORTED",
-        "basis": "support 0.5177 >= supported_min 0.2647, corroborated by 3 sources, against 0 <= 0.1",
-        "score": 0.5177,
+        "basis": "support 0.6737 >= supported_min 0.2368, corroborated by 3 sources, against 0 <= 0.1",
+        "score": 0.6737,
         "against": 0,
-        "unknown": 0.4823,
+        "unknown": 0.3263,
         "dimensions": {
-         "relevance": 0.7143,
-         "reliability": 0.9143,
-         "completeness": 0.8235,
+         "relevance": 0.7778,
+         "reliability": 0.9333,
+         "completeness": 0.9474,
          "consistency": 1.0,
          "corroboration": 3
         },
@@ -5926,7 +6055,7 @@
       },
       "llm_assessment": null,
       "perceived_handling_quotient": {
-       "value": 0.865,
+       "value": 0.869,
        "version": "triage-1",
        "components": {
         "evidence_strength": {
@@ -5957,7 +6086,7 @@
          "value": 1.0,
          "weight": 0.1,
          "contribution": 0.1,
-         "basis": "2 of 2 tools returned OK"
+         "basis": "3 of 3 tools returned OK"
         },
         "authority": {
          "value": 1.0,
@@ -5972,10 +6101,10 @@
          "basis": "WATCH: reversible"
         },
         "upstream_reliability": {
-         "value": 0.6,
+         "value": 0.675,
          "weight": 0.05,
-         "contribution": 0.03,
-         "basis": "evidence ceiling 0.9; 1 of 3 upstream verified"
+         "contribution": 0.0338,
+         "basis": "evidence ceiling 0.9; 1 of 2 upstream verified"
         },
         "validated_history": {
          "value": 0.5,
@@ -6009,7 +6138,7 @@
       "routing": {
        "tier": "autonomous",
        "band_from_quotient": "autonomous",
-       "primary_reason": "quotient 0.865 in the autonomous band of behavior_analytics (autonomous >= 0.75, assisted >= 0.55, specialist >= 0.3)",
+       "primary_reason": "quotient 0.869 in the autonomous band of behavior_analytics (autonomous >= 0.75, assisted >= 0.55, specialist >= 0.3)",
        "rules_fired": [
         "R5 quotient band"
        ],
@@ -6021,7 +6150,7 @@
        "supporting_metrics": {
         "score": 4,
         "confidence": 0.8,
-        "quotient": 0.865,
+        "quotient": 0.869,
         "contradictions": "none",
         "completeness": 0.75,
         "action_reversibility": "reversible",
@@ -6068,11 +6197,6 @@
         },
         {
          "item": "finding:runtime_monitoring",
-         "kind": "UPSTREAM",
-         "state": "MISSING_AND_UNAVAILABLE"
-        },
-        {
-         "item": "finding:context_memory",
          "kind": "UPSTREAM",
          "state": "MISSING_AND_UNAVAILABLE"
         },
@@ -6217,18 +6341,18 @@
      },
      "node_timings": {
       "receive_case": 0.005,
-      "load_inputs": 0.004,
-      "validate_evidence": 0.081,
-      "retrieve_memory": 2.291,
-      "computational_baseline": 1.858,
-      "evidence_precheck": 0.072,
-      "independent_verify": 0.467,
-      "grade_and_route": 0.172,
+      "load_inputs": 0.003,
+      "validate_evidence": 0.094,
+      "retrieve_memory": 5.571,
+      "computational_baseline": 79.615,
+      "evidence_precheck": 0.066,
+      "independent_verify": 36.798,
+      "grade_and_route": 0.202,
       "authority_check": 0.084,
-      "execute_action": 0.047,
-      "record_decision": 0.028,
-      "validate_memory_update": 2.931,
-      "persist_and_publish": 4.365
+      "execute_action": 0.034,
+      "record_decision": 0.021,
+      "validate_memory_update": 5.109,
+      "persist_and_publish": 57.261
      }
     },
     {
@@ -6462,6 +6586,8 @@
         "required": "all",
         "source": "telemetry",
         "defines_attention": true,
+        "explainable": true,
+        "warning_is_partial": true,
         "tools": [],
         "metrics": [
          "insights.token_outlier",
@@ -6487,6 +6613,25 @@
          "retrievable_with": []
         },
         "contribution": 0.3273
+       },
+       {
+        "name": "legitimacy_context",
+        "kind": "legitimacy",
+        "relevance": "direct",
+        "weight": 1.0,
+        "required": null,
+        "source": "legitimacy_context",
+        "tools": [],
+        "metrics": [],
+        "item": {
+         "direction": "neutral",
+         "strength": 0.0,
+         "reliability": 1.0,
+         "basis": "not every deviation has checkable context: nothing explains the anomaly away",
+         "refs": [],
+         "applicable": false,
+         "retrievable_with": []
+        }
        },
        {
         "name": "versioned_baseline",
@@ -6690,11 +6835,11 @@
        "requested_by": "rules",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 19.992,
+       "latency_ms": 33.803,
        "purpose": null,
        "result": {
         "truncated": true,
-        "bytes": 33188,
+        "bytes": 34909,
         "preview": "{\"questions\": {\"AD-1\": {\"assessment\": {\"cop\": \"anomaly_detection\", \"question_id\": \"AD-1\", \"question\": \"Is the agent repeating actions, retrying operations or failing unusually often?\", \"presence\": {\"status\": \"PRESENT\", \"items\": [{\"requirement\": \"insights.repetition\", \"kind\": \"REQUIRED\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 4, \"metric_state\": \"EXCEPTION\", \"features\": {\"by_tool\": {\"Bash\": 4}}, \"evidence_refs\": [\"observable:ca1-6\", \"observable:ca1-7\", \"observable:ca1-8\", \"observable:ca1-9\"]}, {\"requirement\": \"insights.retry\", \"kind\": \"REQUIRED_WHEN_APPLICABLE\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 4, \"metric_state\": \"EXCEPTION\", \"features\": {\"distinct_commands\": 1}, \"evidence_refs\": [\"observable:ca1-6\", \"observable:ca1-7\", \"observable:ca1-8\", \"observable:ca1-9\"]}, {\"requirement\": \"insights.failed\", \"kind\": \"REQUIRED\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 5, \"metric_state\": \"EXCEPTION\", \"features\": {\"failure_rate\": 0.714}, \"evidence_refs\": [\"observable:ca1-5\", \"observable:ca1-6\", \"observable:ca1-7\", \"observable:ca1-8\", \"observable:ca1-9\"]}, {\"requirement\": \"telemetry.turn_linkage\", \"kind\": \"REQUIRED_WHEN_APPLICABLE\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 1.0, \"metric_state\": \"NORMAL\", \"features\": {\"steps\": 8, \"without_turn\": 0}, \"evidence_refs\": []}], \"fields\": {\"session_id\": {\"rows_with_value\": 10, \"rows\": 10, \"status\": \"PRESENT\"}, \"turn_id\": {\"rows_with_value\": 10, \"rows\": 10, \"status\": \"PRESENT\"}, \"tool_use_id\": {\"rows_with_value\": 7, \"rows\": 10, \"status\": \"PARTIAL\"}, \"tool_name\": {\"rows_with_value\": 7, \"rows\": 10, \"status\": \"PARTIAL\"}, \"tool_arguments\": {\"rows_with_value\": 7, \"rows\": 10, \"status\": \"PARTIAL\"}, \"tool_result\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"success\": {\"rows_with_value\": 7, \"rows\": 10, \"status\": \"PARTIAL\"}, \"status\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"error_type\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"error_message\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"exit_code\": {\"rows_with_value\": 5, \"rows\": 10, \"status\": \"PARTIAL\"}, \"loop_count\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"turn_count\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"command\": {\"rows_with_value\": 5, \"rows\": 10, \"status\": \"PARTIAL\"}}}, \"reliability\": {\"status\": \"RELIABLE\", \"checks\": [{\"check\": \"CONFLICTING_SOURCES\", \"value\": null, \"evidence_refs\": [], \"evidence\": {\"collectors\": [\"otel\"], \"rows\": 10, \"cross_checked\": 0, \"disagreed\": 0}, \"outcome\": \"COMPARISON_NOT_POSSIBLE\", \"detail\": \"only one source (otel) observed this activity\", \"source\": \"telemetry.source_agreement\", \"metric_value\": null}, {\"check\": \"CONFLICTING_ACTION_SOURCES\", \"value\": null, \"evidence_refs\": [], \"evidence\": {\"collectors\": [\"otel\"], \"rows\": 7, \"cross_checked\": 0, \"disagreed\": 0}, \"outcome\": \"COMPARISON_NOT_POSSIBLE\", \"detail\": \"only one source (otel) observed this activity\", \"source\": \"collectors_agree on action rows\"}, {\"check\": \"UNVERIFIABLE_PROVENANCE\", \"outcome\": \"EVIDENCE_MISSING\", \"detail\": \"raw_ref was not read for this session\", \"source\": \"audit_source_provenance_completeness\", \"evidence_refs\": []}, {\"check\": \"UNVERIFIABLE_PROVENANCE\", \"outcome\": \"NOT_EXECUTED\", \"detail\": \"the raw event store was not supplied, so no row was linked to a source event\", \"source\": \"source_events\", \"evidence_refs\": [], \"not_executed_because\": \"RAW_STORE_NOT_SUPPLIED\"}, {\"check\": \"INCOMPARABLE_TIMESTAMPS\", \"outcome\": \"EVIDENCE_MISSING\", \"detail\": \"no row carries occurred_at, captured_at and ingested_at\", \"source\": \"audit_timestamp_integrity\", \"evidence_refs\": []}, {\"check\": \"TIMESTAMP_ORDER\", \"outcome\": \"EVIDENCE_MISSING\", \"detail\": \"no row carries occurred_at, captured_at and ingested_at\", \"source\": \"audit_timestamp_integrity\", \"evidence_refs\": []}, {\"check\": \"INGEST_LATENCY\", \"outcome\": \"EVIDENCE_MISSING\", \"detail\": \"basis absent: ingest\", \"source\": \"event_freshness_live\", \"evidence_refs\": []}, {\"check\": \"STALE\", \"value\": 1688401.0, \"limit\": null, \"limit_ke"
        }
       },
@@ -6707,7 +6852,7 @@
        "requested_by": "llm",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 0.154,
+       "latency_ms": 0.18,
        "purpose": "raw token deviation against comparable sessions",
        "result": {
         "quantity": "tokens",
@@ -6727,7 +6872,7 @@
        "requested_by": "llm",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 0.199,
+       "latency_ms": 0.286,
        "purpose": "which baseline version the outlier is against",
        "result": {
         "metric_id": "insights.token_outlier",
@@ -6749,7 +6894,7 @@
        "requested_by": "llm",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 0.184,
+       "latency_ms": 0.152,
        "purpose": "does action count rise with tokens",
        "result": {
         "quantity": "actions",
@@ -6767,7 +6912,7 @@
        "requested_by": "llm",
        "status": "OK",
        "rejection_reason": null,
-       "latency_ms": 0.096,
+       "latency_ms": 0.43,
        "purpose": "is the sequence itself unusual",
        "result": {
         "calls": 7,
@@ -6816,7 +6961,7 @@
         "calculate_deviation",
         "analyse_tool_call_sequence"
        ],
-       "latency_ms": 0.998,
+       "latency_ms": 0.944,
        "cost_usd": null,
        "cost_basis": "unpriced"
       },
@@ -6845,7 +6990,7 @@
         "calculate_deviation",
         "analyse_tool_call_sequence"
        ],
-       "latency_ms": 2.552,
+       "latency_ms": 2.284,
        "cost_usd": null,
        "cost_basis": "unpriced"
       },
@@ -6876,7 +7021,7 @@
         "calculate_deviation",
         "analyse_tool_call_sequence"
        ],
-       "latency_ms": 2.716,
+       "latency_ms": 2.347,
        "cost_usd": null,
        "cost_basis": "unpriced"
       }
@@ -7389,25 +7534,25 @@
       }
      },
      "node_timings": {
-      "receive_case": 0.008,
+      "receive_case": 0.006,
       "load_inputs": 0.004,
-      "validate_evidence": 0.154,
-      "retrieve_memory": 1.818,
-      "computational_baseline": 32.114,
-      "evidence_precheck": 0.067,
-      "llm_plan_investigation": 1.754,
-      "validate_tool_request": 0.01,
-      "execute_authorised_tool": 0.296,
-      "validate_tool_result": 0.004,
-      "llm_assess_evidence": 3.369,
-      "formulate_finding": 0.135,
-      "independent_verify": 14.486,
-      "grade_and_route": 0.178,
-      "authority_check": 0.084,
-      "execute_action": 0.036,
-      "record_decision": 0.023,
-      "validate_memory_update": 3.402,
-      "persist_and_publish": 28.855
+      "validate_evidence": 0.357,
+      "retrieve_memory": 4.845,
+      "computational_baseline": 44.443,
+      "evidence_precheck": 0.083,
+      "llm_plan_investigation": 1.565,
+      "validate_tool_request": 0.011,
+      "execute_authorised_tool": 0.612,
+      "validate_tool_result": 0.005,
+      "llm_assess_evidence": 2.824,
+      "formulate_finding": 0.088,
+      "independent_verify": 34.882,
+      "grade_and_route": 0.208,
+      "authority_check": 0.098,
+      "execute_action": 0.048,
+      "record_decision": 0.024,
+      "validate_memory_update": 4.94,
+      "persist_and_publish": 23.341
      }
     }
    ],
@@ -7642,6 +7787,8 @@
        "required": "all",
        "source": "telemetry",
        "defines_attention": true,
+       "explainable": true,
+       "warning_is_partial": true,
        "tools": [],
        "metrics": [
         "insights.token_outlier",
@@ -7667,6 +7814,25 @@
         "retrievable_with": []
        },
        "contribution": 0.3273
+      },
+      {
+       "name": "legitimacy_context",
+       "kind": "legitimacy",
+       "relevance": "direct",
+       "weight": 1.0,
+       "required": null,
+       "source": "legitimacy_context",
+       "tools": [],
+       "metrics": [],
+       "item": {
+        "direction": "neutral",
+        "strength": 0.0,
+        "reliability": 1.0,
+        "basis": "not every deviation has checkable context: nothing explains the anomaly away",
+        "refs": [],
+        "applicable": false,
+        "retrievable_with": []
+       }
       },
       {
        "name": "versioned_baseline",
@@ -7870,11 +8036,11 @@
       "requested_by": "rules",
       "status": "OK",
       "rejection_reason": null,
-      "latency_ms": 19.992,
+      "latency_ms": 33.803,
       "purpose": null,
       "result": {
        "truncated": true,
-       "bytes": 33188,
+       "bytes": 34909,
        "preview": "{\"questions\": {\"AD-1\": {\"assessment\": {\"cop\": \"anomaly_detection\", \"question_id\": \"AD-1\", \"question\": \"Is the agent repeating actions, retrying operations or failing unusually often?\", \"presence\": {\"status\": \"PRESENT\", \"items\": [{\"requirement\": \"insights.repetition\", \"kind\": \"REQUIRED\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 4, \"metric_state\": \"EXCEPTION\", \"features\": {\"by_tool\": {\"Bash\": 4}}, \"evidence_refs\": [\"observable:ca1-6\", \"observable:ca1-7\", \"observable:ca1-8\", \"observable:ca1-9\"]}, {\"requirement\": \"insights.retry\", \"kind\": \"REQUIRED_WHEN_APPLICABLE\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 4, \"metric_state\": \"EXCEPTION\", \"features\": {\"distinct_commands\": 1}, \"evidence_refs\": [\"observable:ca1-6\", \"observable:ca1-7\", \"observable:ca1-8\", \"observable:ca1-9\"]}, {\"requirement\": \"insights.failed\", \"kind\": \"REQUIRED\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 5, \"metric_state\": \"EXCEPTION\", \"features\": {\"failure_rate\": 0.714}, \"evidence_refs\": [\"observable:ca1-5\", \"observable:ca1-6\", \"observable:ca1-7\", \"observable:ca1-8\", \"observable:ca1-9\"]}, {\"requirement\": \"telemetry.turn_linkage\", \"kind\": \"REQUIRED_WHEN_APPLICABLE\", \"state\": \"PRESENT\", \"reason\": \"\", \"value\": 1.0, \"metric_state\": \"NORMAL\", \"features\": {\"steps\": 8, \"without_turn\": 0}, \"evidence_refs\": []}], \"fields\": {\"session_id\": {\"rows_with_value\": 10, \"rows\": 10, \"status\": \"PRESENT\"}, \"turn_id\": {\"rows_with_value\": 10, \"rows\": 10, \"status\": \"PRESENT\"}, \"tool_use_id\": {\"rows_with_value\": 7, \"rows\": 10, \"status\": \"PARTIAL\"}, \"tool_name\": {\"rows_with_value\": 7, \"rows\": 10, \"status\": \"PARTIAL\"}, \"tool_arguments\": {\"rows_with_value\": 7, \"rows\": 10, \"status\": \"PARTIAL\"}, \"tool_result\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"success\": {\"rows_with_value\": 7, \"rows\": 10, \"status\": \"PARTIAL\"}, \"status\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"error_type\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"error_message\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"exit_code\": {\"rows_with_value\": 5, \"rows\": 10, \"status\": \"PARTIAL\"}, \"loop_count\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"turn_count\": {\"rows_with_value\": 0, \"rows\": 10, \"status\": \"ABSENT\"}, \"command\": {\"rows_with_value\": 5, \"rows\": 10, \"status\": \"PARTIAL\"}}}, \"reliability\": {\"status\": \"RELIABLE\", \"checks\": [{\"check\": \"CONFLICTING_SOURCES\", \"value\": null, \"evidence_refs\": [], \"evidence\": {\"collectors\": [\"otel\"], \"rows\": 10, \"cross_checked\": 0, \"disagreed\": 0}, \"outcome\": \"COMPARISON_NOT_POSSIBLE\", \"detail\": \"only one source (otel) observed this activity\", \"source\": \"telemetry.source_agreement\", \"metric_value\": null}, {\"check\": \"CONFLICTING_ACTION_SOURCES\", \"value\": null, \"evidence_refs\": [], \"evidence\": {\"collectors\": [\"otel\"], \"rows\": 7, \"cross_checked\": 0, \"disagreed\": 0}, \"outcome\": \"COMPARISON_NOT_POSSIBLE\", \"detail\": \"only one source (otel) observed this activity\", \"source\": \"collectors_agree on action rows\"}, {\"check\": \"UNVERIFIABLE_PROVENANCE\", \"outcome\": \"EVIDENCE_MISSING\", \"detail\": \"raw_ref was not read for this session\", \"source\": \"audit_source_provenance_completeness\", \"evidence_refs\": []}, {\"check\": \"UNVERIFIABLE_PROVENANCE\", \"outcome\": \"NOT_EXECUTED\", \"detail\": \"the raw event store was not supplied, so no row was linked to a source event\", \"source\": \"source_events\", \"evidence_refs\": [], \"not_executed_because\": \"RAW_STORE_NOT_SUPPLIED\"}, {\"check\": \"INCOMPARABLE_TIMESTAMPS\", \"outcome\": \"EVIDENCE_MISSING\", \"detail\": \"no row carries occurred_at, captured_at and ingested_at\", \"source\": \"audit_timestamp_integrity\", \"evidence_refs\": []}, {\"check\": \"TIMESTAMP_ORDER\", \"outcome\": \"EVIDENCE_MISSING\", \"detail\": \"no row carries occurred_at, captured_at and ingested_at\", \"source\": \"audit_timestamp_integrity\", \"evidence_refs\": []}, {\"check\": \"INGEST_LATENCY\", \"outcome\": \"EVIDENCE_MISSING\", \"detail\": \"basis absent: ingest\", \"source\": \"event_freshness_live\", \"evidence_refs\": []}, {\"check\": \"STALE\", \"value\": 1688401.0, \"limit\": null, \"limit_ke"
       }
      },
@@ -7887,7 +8053,7 @@
       "requested_by": "llm",
       "status": "OK",
       "rejection_reason": null,
-      "latency_ms": 0.154,
+      "latency_ms": 0.18,
       "purpose": "raw token deviation against comparable sessions",
       "result": {
        "quantity": "tokens",
@@ -7907,7 +8073,7 @@
       "requested_by": "llm",
       "status": "OK",
       "rejection_reason": null,
-      "latency_ms": 0.199,
+      "latency_ms": 0.286,
       "purpose": "which baseline version the outlier is against",
       "result": {
        "metric_id": "insights.token_outlier",
@@ -7929,7 +8095,7 @@
       "requested_by": "llm",
       "status": "OK",
       "rejection_reason": null,
-      "latency_ms": 0.184,
+      "latency_ms": 0.152,
       "purpose": "does action count rise with tokens",
       "result": {
        "quantity": "actions",
@@ -7947,7 +8113,7 @@
       "requested_by": "llm",
       "status": "OK",
       "rejection_reason": null,
-      "latency_ms": 0.096,
+      "latency_ms": 0.43,
       "purpose": "is the sequence itself unusual",
       "result": {
        "calls": 7,
@@ -7996,7 +8162,7 @@
        "calculate_deviation",
        "analyse_tool_call_sequence"
       ],
-      "latency_ms": 0.998,
+      "latency_ms": 0.944,
       "cost_usd": null,
       "cost_basis": "unpriced"
      },
@@ -8025,7 +8191,7 @@
        "calculate_deviation",
        "analyse_tool_call_sequence"
       ],
-      "latency_ms": 2.552,
+      "latency_ms": 2.284,
       "cost_usd": null,
       "cost_basis": "unpriced"
      },
@@ -8056,7 +8222,7 @@
        "calculate_deviation",
        "analyse_tool_call_sequence"
       ],
-      "latency_ms": 2.716,
+      "latency_ms": 2.347,
       "cost_usd": null,
       "cost_basis": "unpriced"
      }
@@ -8502,7 +8668,7 @@
       "decision": "approve",
       "reviewer": "reviewer@tenant-a.example",
       "note": "checked the failing runs",
-      "at": "2026-11-20T12:00:14Z"
+      "at": "2026-11-28T14:34:45Z"
      },
      "execution_status": "EXECUTED_SANDBOX",
      "execution_outcome": {
@@ -8579,7 +8745,7 @@
        "decision": "approve",
        "reviewer": "reviewer@tenant-a.example",
        "note": "checked the failing runs",
-       "at": "2026-11-20T12:00:14Z"
+       "at": "2026-11-28T14:34:45Z"
       },
       "external_effect": false,
       "simulated": true,
@@ -8603,13 +8769,13 @@
      }
     },
     "node_timings": {
-     "grade_and_route": 0.227,
-     "authority_check": 0.102,
-     "await_approval": 0.584,
-     "execute_action": 64.72,
-     "record_decision": 0.036,
-     "validate_memory_update": 3.377,
-     "persist_and_publish": 30.738
+     "grade_and_route": 0.254,
+     "authority_check": 0.107,
+     "await_approval": 0.689,
+     "execute_action": 28.723,
+     "record_decision": 0.038,
+     "validate_memory_update": 6.941,
+     "persist_and_publish": 43.915
     }
    },
    "baseline_session_ids": [

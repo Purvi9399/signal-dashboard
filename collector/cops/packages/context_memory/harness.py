@@ -13,7 +13,8 @@ from datetime import datetime, timezone
 
 import yaml
 
-from ...runtime import evaluation as E, graph as G, rules as RU, synthetic as S
+from ...runtime import evaluation as E, graph as G, rules as RU, synthetic as S, support as SUP
+from ...runtime import profiles as PR
 from ...runtime import cop_package as C
 from ...runtime.contracts import VALIDATED, REJECTED_RECORD
 from ...runtime.cop_package import DECIDED_WITHOUT_MODEL
@@ -38,6 +39,11 @@ UNVALIDATED = "UNVALIDATED"
 def truth():
     with open(os.path.join(HERE, "GROUND_TRUTH.yaml")) as f:
         return yaml.safe_load(f)["scenarios"]
+
+
+def superseded():
+    with open(os.path.join(HERE, "GROUND_TRUTH.yaml")) as f:
+        return yaml.safe_load(f).get("superseded") or {}
 
 
 def day(d):
@@ -185,6 +191,11 @@ def _runtime(name, t):
     elif name == "previous_contract_world":
         rows, art = E.compaction_session("s1", 9)
         rows = E._estate(rows)
+    elif name == "case_requesters":
+        rows = BAH.ISOLATED()
+        res["ids"] = seed(store, ["ad_val_m1", "ba_val_b1"], name)
+    elif name == "vs01_own_output":
+        return _vs01_own_output(name, t, store, res)
     else:
         raise KeyError(name)
     before = snapshot(store)
@@ -208,10 +219,32 @@ def _runtime(name, t):
     return res
 
 
+def _rr_world(store, sid):
+    """Evaluation C10's passing world (a verified restore of ckpt-1) for session sid, on the given store."""
+    rec = S.recovery_record("ckpt-1", {"files": {"app.py": "v41"}, "db_schema": 12}, 3, 3)
+    return E.make_runtime(f"cm-vs01-{sid}", sid, E._estate(E.recovery_session(sid, 9)), {"recovery_records": [rec]},
+                          None, store=store)
+
+
+def _vs01_own_output(name, t, store, res):
+    """U-CM9: Recovery & Resilience's own RECOVERED record, validated by a reviewer, read back in a second case."""
+    rt1 = _rr_world(store, "c10a")
+    first = G.run_case(rt1, cops=list(t["cops"]))["results"][RR]
+    w = first["memory_write"]
+    rt1.memory.record_feedback(w["record_id"], TENANT, VALIDATED, REVIEWER, "fixture: restore confirmed")
+    before = snapshot(store)
+    rt2 = _rr_world(store, "c10z")
+    out = G.run_case(rt2, cops=list(t["cops"]))
+    r = out["results"][RR]
+    res.update(out=out, rt=rt2, before=before, after=snapshot(store), ids={"rr_c10a": w["record_id"]},
+               target={"finding": r["finding"], "result": r}, first=first)
+    return res
+
+
 def run_scenario(name, t):
     if t.get("cops"):
         return _runtime(name, t)
-    if name in ("topology", "authority"):
+    if name in ("topology", "authority", "deterministic_classification", "vs01_other_cop_record"):
         return {"scenario": name, "kind": "structure"}
     inner = SQLiteStore()
     ids = seed(inner, t.get("store") or [], name)
@@ -377,6 +410,86 @@ def _topology(r):
 def _cycle_free(r):
     o = topological_order()
     return o.index(RM) < o.index(COP) < o.index(BA) and BA not in CONSUMES[COP], o
+
+
+def _topology_reconciled(r):
+    """P-CM1: no Context & Memory -> Behavior Analytics edge in specs or in the topology document; nothing added."""
+    d = json.load(open(os.path.join(HERE, "..", "..", "..", "..", "docs", "cops", "cops_topology.json")))
+    links = {(x["from"], x["to"]) for x in d["cop_links"] if COP in (x["from"], x["to"])}
+    entry = next(c for c in d["cops"] if c["id"] == COP)
+    ba = next(c for c in d["cops"] if c["id"] == BA)
+    fb = [k for k, v in FEEDBACK.items() if k == COP or COP in v]
+    ok = (tuple(CONSUMES[COP]) == (RM,) and list(consumers(COP)) == [] and not fb and links == {(RM, COP)}
+          and tuple(CONSUMES[BA]) == (RM, WO) and ba["reads_decisions_from"] == [RM, WO]
+          and entry["reads_decisions_from"] == [RM] and entry["downstream"] == []
+          and entry["example_response"]["downstream"] == []
+          and entry["question"] == BY_KEY[COP].behavioural_question
+          and tuple(entry["interpretations"]) == tuple(BY_KEY[COP].interpretations))
+    return ok, {"consumes": CONSUMES[COP], "consumers": consumers(COP), "ba_consumes": CONSUMES[BA],
+                "feedback": fb, "links": sorted(links)}
+
+
+def _no_cycle(r):
+    o = topological_order()
+    return o.index(RM) < o.index(COP) and all(COP not in CONSUMES[k] for k in CONSUMES), o
+
+
+def _bundles_for_case_cops(r):
+    b = _cs(r).get("bundles") or {}
+    got = {k: sorted(_key(r, v["record_id"]) for v in x.get("records", [])) for k, x in b.items()}
+    ok = (set(b) == {RM, AD, BA} and all(x["request"]["requesting_cop"] == k for k, x in b.items())
+          and "ad_val_m1" in got[AD] and "ba_val_b1" in got[BA] and "ad_val_m1" not in got[BA]
+          and got[RM] == [] and all(x["contract"] == C.CM_BUNDLE for x in b.values())
+          and {k for k in b if _retrieve_rows(r, k)} == {RM, AD, BA})
+    return ok, got
+
+
+def _finding_not_consumed(r):
+    takers = [k for k in CONSUMES if COP in CONSUMES[k]]
+    ups = {k: sorted(u["cop"] for u in (v.get("upstream") or [])) for k, v in r["out"]["results"].items()}
+    return not takers and all(COP not in u for u in ups.values()), {"takers": takers, "upstream": ups}
+
+
+def _classified_deterministic(r):
+    p = PR.build_profiles()[COP]
+    ok = (COP in PR.DETERMINISTIC_COPS and COP not in PR.LLM_COPS and p.classification == "deterministic"
+          and p.prompt is None and p.detail_schema is None and COP not in PR.LLM_TOOLS and COP not in PR.PROMPTS
+          and RU.DETERMINISTIC_TOOLS[COP] == ("assess_context_memory_questions",) and COP in RU.RULES
+          and len(PR.LLM_COPS) == 9 and len(PR.DETERMINISTIC_COPS) == 9)
+    return ok, (p.classification, len(PR.LLM_COPS), len(PR.DETERMINISTIC_COPS))
+
+
+def _vs01_item(f):
+    comps = (f.get("verification_support") or {}).get("components") or []
+    return next((c["item"] for c in comps if c["name"] == "validated_memory"), None)
+
+
+def _vs01_own_output_not_support(r):
+    it = _vs01_item(r["target"]["finding"])
+    return (it is not None and it["direction"] == "neutral" and "own earlier output" in it["basis"]
+            and r["target"]["finding"]["label"] == "RECOVERED"), it
+
+
+def _own_record_still_retrieved(r):
+    """The own record is still returned to its owner (as own earlier output), only never as corroboration."""
+    rid = _id(r, "rr_c10a")
+    rows = _retrieve_rows(r, RR)
+    stored = r["store"].select("cop_memory_records", "record_id = ?", (rid,))[0]
+    logged = any(f"memory:{rid}" in x["reason"] for x in rows)
+    return logged and stored["validation_status"] == VALIDATED, {"logged": logged,
+                                                                 "status": stored["validation_status"]}
+
+
+def _vs01_other_cop_supports(r):
+    rec = lambda owner, status="VALIDATED": {"record_id": f"{owner}-{status}", "owner_cop": owner, "status": status,
+                                              "payload": {"label": "RECOVERED"}}
+    ctx = lambda est: {"cop": RR, "memory_view": {"established": est}}
+    other = SUP._memory(ctx([rec(IR)]), None, None, "RECOVERED")
+    own = SUP._memory(ctx([rec(RR)]), None, None, "RECOVERED")
+    none = SUP._memory(ctx([]), None, None, "RECOVERED")
+    ok = (other["direction"] == "supports" and own["direction"] == "neutral" and "own earlier output" in own["basis"]
+          and none["direction"] == "unknown")
+    return ok, {"other": other["direction"], "own": (own["direction"], own["basis"]), "none": none["direction"]}
 
 
 CHECKS = {
@@ -560,6 +673,15 @@ CHECKS = {
         (_ba(r)["label"], _ba_q(_ba(r), "BA-4").get("answer"))),
     "topology_unchanged": _topology,
     "no_same_cycle_cycle": _cycle_free,
+    # ---- acceptance follow-up (purvi 2026-11-28: P-CM1, U-CM5, U-CM9, D-CM21, D-CM22)
+    "topology_reconciled": _topology_reconciled,
+    "no_cycle": _no_cycle,
+    "bundles_for_case_cops": _bundles_for_case_cops,
+    "finding_not_consumed": _finding_not_consumed,
+    "classified_deterministic": _classified_deterministic,
+    "vs01_own_output_not_support": _vs01_own_output_not_support,
+    "own_record_still_retrieved": _own_record_still_retrieved,
+    "vs01_other_cop_supports": _vs01_other_cop_supports,
 }
 
 
@@ -586,11 +708,12 @@ def evaluate(name, t, res):
         for k, want in (t.get("excluded") or {}).items():
             got = next((x["reason"] for x in b["excluded"] if x["record_id"] == res["ids"][k]), None)
             add(f"excluded:{k}", want, got, got == want)
+    tgt = res.get("cop") or res.get("target")
     if "cop_label" in t:
-        lab = _f(res)["label"]
+        lab = tgt["finding"]["label"]
         add("cop_label", t["cop_label"], lab, lab in t["cop_label"])
     if "confidence" in t:
-        add("confidence", t["confidence"], _f(res)["confidence"], _f(res)["confidence"] == t["confidence"])
+        add("confidence", t["confidence"], tgt["finding"]["confidence"], tgt["finding"]["confidence"] == t["confidence"])
     for c in t.get("checks", []):
         try:
             ok, detail = CHECKS[c](res)
@@ -601,13 +724,23 @@ def evaluate(name, t, res):
 
 
 def run_all(only=None):
-    T = truth()
-    results, rows = {}, []
+    T, SUPD = truth(), superseded()
+    results, rows, replaced = {}, [], []
     for name, t in T.items():
         if only and name not in only:
             continue
         results[name] = run_scenario(name, t)
-        rows += evaluate(name, t, results[name])
+        got = evaluate(name, t, results[name])
+        sup = SUPD.get(name)
+        if sup:
+            out = set(sup["replaces"])
+            replaced += [dict(r, status="SUPERSEDED", reason=" ".join(sup["reason"].split()))
+                         for r in got if r["expectation"] in out]
+            got = [r for r in got if r["expectation"] not in out]
+            got += [dict(r, replacement=True) for r in evaluate(name, {k: v for k, v in sup.items()
+                                                                     if k not in ("reason", "replaces")},
+                                                                results[name])]
+        rows += got
     # the authority scenario covers every runtime scenario in which this COP ran (GROUND_TRUTH.yaml authority)
     for name, res in results.items():
         if "cop" not in res:
@@ -617,13 +750,13 @@ def run_all(only=None):
             rows.append({"scenario": "authority", "expectation": f"{c}:{name}", "expected": True, "got": detail,
                          "ok": bool(ok)})
     return {"expectations": rows, "passed": sum(r["ok"] for r in rows), "failed": [r for r in rows if not r["ok"]],
-            "results": results}
+            "superseded": replaced, "results": results}
 
 
 if __name__ == "__main__":
     only = [a for a in sys.argv[1:] if not a.endswith(".json")] or None
     out = run_all(only)
-    print(f"{out['passed']} of {len(out['expectations'])} expectations met")
+    print(f"{out['passed']} of {len(out['expectations'])} expectations met; {len(out['superseded'])} superseded")
     for r in out["failed"]:
         print(f"  FAIL {r['scenario']} {r['expectation']}: expected {r['expected']}, got {str(r['got'])[:300]}")
     js = [a for a in sys.argv[1:] if a.endswith(".json")]

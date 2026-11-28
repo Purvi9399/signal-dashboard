@@ -61,7 +61,12 @@ def test_tool_registered_last():
 
 def test_harness_meets_ground_truth(bench):
     assert bench["failed"] == [], bench["failed"][:3]
-    assert bench["superseded"] == []
+    # 2026-11-28: 8 of the first build's expectations are superseded by purvi's decisions P-CM1 and U-BA5, each with
+    # its reason (GROUND_TRUTH.yaml superseded); every other expectation still holds
+    assert bench["passed"] == len(bench["expectations"]) == 424 and len(bench["superseded"]) == 8
+    assert all(x["status"] == "SUPERSEDED" and x["reason"] for x in bench["superseded"])
+    assert {x["scenario"] for x in bench["superseded"]} == {"normal_stable", "drifting_context", "unverified_context",
+                                                            "topology"}
 
 
 # ---------------------------------------------------------------- event identity
@@ -159,7 +164,8 @@ def test_recovery_resilience_label_unchanged_by_a_pattern():
 # ---------------------------------------------------------------- topology and authority
 
 def test_topology():
-    assert CONSUMES[COP] == ("runtime_monitoring", "context_memory", "workflow_orchestration")
+    # context_memory removed by P-CM1 (purvi 2026-11-28, DECISIONS.md A-BA1)
+    assert CONSUMES[COP] == ("runtime_monitoring", "workflow_orchestration")
     assert FEEDBACK[COP] == ("anomaly_detection",) and ("anomaly_detection", COP) in FEEDBACK_VERIFIED_ONLY
     assert set(consumers(COP)) == {"anomaly_detection", "recovery_resilience"}
     assert H._topology_matches(None)[0] and H._p_ba1_not_wired(None)[0]

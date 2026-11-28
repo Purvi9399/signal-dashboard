@@ -3,10 +3,11 @@ Eighteen COP profiles on one harness.
 
 A profile is everything that makes one COP itself beyond its spec: whether a
 model investigates or rules decide, the tool allowlist, the prompt (for the
-ten LLM COPs), the typed detail its finding must carry, the actions that need
+nine LLM COPs), the typed detail its finding must carry, the actions that need
 a person's approval in supervised mode, and the working-state fields it keeps.
 
-The allocation of LLM versus deterministic COPs is fixed for this phase.
+The allocation of LLM versus deterministic COPs is fixed for this phase. Context & Memory moved
+to the deterministic COPs by purvi's decision U-CM5 (2026-11-28): nine LLM COPs, nine deterministic.
 """
 
 from dataclasses import dataclass, field
@@ -19,12 +20,15 @@ from .memory import POLICIES
 from .rules import DETERMINISTIC_TOOLS
 from .llm import LLMBudget
 
-LLM_COPS = ("workflow_orchestration", "anomaly_detection", "context_memory", "incident_response",
+LLM_COPS = ("workflow_orchestration", "anomaly_detection", "incident_response",
             "classification_tagging", "risk_mitigation", "governance_intelligence",
             "workload_optimization", "knowledge_policy_management", "governance_architecture")
 DETERMINISTIC_COPS = ("runtime_monitoring", "interaction_discovery", "policy_enforcement",
                       "resource_management", "behavior_analytics", "recovery_resilience",
-                      "audit_traceability", "agent_lifecycle_management")
+                      "audit_traceability", "agent_lifecycle_management",
+                      # deterministic since U-CM5 (purvi 2026-11-28): retrieval needs no model
+                      # (packages/context_memory/DECISIONS.md A-CM1)
+                      "context_memory")
 
 # Actions that wait for a person in supervised mode. Everything that changes
 # what an agent may do, or starts a workflow, or tells it what to do.
@@ -48,13 +52,6 @@ class AnomalyDetail(D):
     deviating_quantities: list[str] = Field(default_factory=list)
     alternative_explanations_considered: list[str] = Field(default_factory=list)
     telemetry_quality: Optional[str] = None
-
-
-class ContextDetail(D):
-    # retrieval only (packages/context_memory): which records were returned and which were set apart, never a reading
-    returned_records: list[str] = Field(default_factory=list)
-    excluded_records: list[str] = Field(default_factory=list)
-    retrieval_status: Optional[str] = None
 
 
 class IncidentDetail(D):
@@ -164,15 +161,6 @@ which you ruled out and how. Runtime Monitoring's evidence status bounds what yo
 quiet metrics on insufficient telemetry are not normality. Unusual is not prohibited; permission
 is Policy Enforcement's question.""",
 
-    "context_memory": """You are the Context & Memory COP, a memory retrieval and routing COP.
-Question: what previously recorded information is relevant to the requesting COP's current question,
-and can that information be retrieved reliably with its provenance intact?
-Every reading is decided by the package without a model (packages/context_memory): retrieval, access
-control, provenance, relevance and duplicate handling are deterministic. You never invent a record,
-change a record's status, manufacture a citation, override access control, promote an unverified
-record, or draw a governance conclusion (context loss, contradiction, drift, anomaly, violation,
-incident or risk) from what a record says.""",
-
     "incident_response": """You are the Incident Response COP.
 Question: do the current verified findings constitute an actionable incident, and what should
 happen now?
@@ -256,7 +244,6 @@ LLM_TOOLS = {
     "anomaly_detection": ("retrieve_trace_window", "compare_versioned_baseline",
                           "find_similar_validated_cases", "calculate_deviation",
                           "analyse_tool_call_sequence"),
-    "context_memory": ("assess_context_memory_questions",),
     "incident_response": ("get_incident_evidence", "get_verified_findings", "check_exposure",
                           "check_approval_requirements", "get_incident_outcomes"),
     "classification_tagging": ("query_taxonomy", "compare_validated_examples", "inspect_event_metadata"),
@@ -274,7 +261,7 @@ LLM_TOOLS = {
 
 DETAILS = {
     "workflow_orchestration": WorkflowDetail, "anomaly_detection": AnomalyDetail,
-    "context_memory": ContextDetail, "incident_response": IncidentDetail,
+    "incident_response": IncidentDetail,
     "classification_tagging": ClassificationDetail, "risk_mitigation": RiskDetail,
     "governance_intelligence": GovIntelDetail, "workload_optimization": WorkloadDetail,
     "knowledge_policy_management": PolicyDetail, "governance_architecture": ArchitectureDetail,

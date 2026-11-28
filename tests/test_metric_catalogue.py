@@ -459,7 +459,9 @@ def test_code_only_pairs_are_kept_apart_and_typos_kept_as_written():
     for p in REG["code_only_pairs"]:
         assert p["cop"] not in BY_ID[p["metric"]]["consumers"]
     assert BY_ID["telemetry.unknown_shared"]["suspected_typo_of"] == "telemetry.unknown_share"
-    assert "suspected_typo_of" in BY_ID["behavior_investigation_prioritya"]
+    # corrected by purvi's decision U-BA9 (2026-11-28); the mapping document's spelling is kept as source_spelling
+    assert "behavior_investigation_prioritya" not in BY_ID
+    assert BY_ID["behavior_investigation_priority"]["source_spelling"] == "behavior_investigation_prioritya"
 
 
 def test_every_unbuilt_metric_says_what_it_needs():

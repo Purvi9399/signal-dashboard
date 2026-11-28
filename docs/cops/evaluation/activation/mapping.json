@@ -1,7 +1,7 @@
 {
  "bundle": {
   "contract": "cops-activation/1",
-  "version": "map-4d9303c348c9f5cf",
+  "version": "map-ee3421ccb5d0de7b",
   "label": "first slice: RM, BA, AD, R&R",
   "parent": null,
   "metrics": [
@@ -984,12 +984,11 @@
     "missing_evidence": "REPORT_UNKNOWN",
     "depends_on": [
      "runtime_monitoring",
-     "context_memory",
      "workflow_orchestration"
     ],
     "rationale": "one failed test run followed by a rerun is ordinary debugging (retry=1 is WARNING); behaviour is investigated from EXCEPTION up",
     "version": "1",
-    "policy_id": "behavior_analytics@1#cadc46f0dc"
+    "policy_id": "behavior_analytics@1#df20805abf"
    },
    {
     "cop": "anomaly_detection",
@@ -1113,10 +1112,10 @@
   ]
  },
  "registry": {
-  "active_version": "map-4d9303c348c9f5cf",
+  "active_version": "map-ee3421ccb5d0de7b",
   "versions": [
    {
-    "version": "map-4d9303c348c9f5cf",
+    "version": "map-ee3421ccb5d0de7b",
     "label": "first slice: RM, BA, AD, R&R",
     "status": "APPROVED",
     "parent": null,
@@ -1126,19 +1125,19 @@
     "reason": "first slice of the activation contract",
     "history": [
      {
-      "at": "2026-11-13T23:27:12.661+00:00",
+      "at": "2026-11-28T14:32:21.172+00:00",
       "event": "proposed",
       "by": "cops-maintainer@tenant-a.example",
       "kind": "human",
       "errors": []
      },
      {
-      "at": "2026-11-13T23:27:12.661+00:00",
+      "at": "2026-11-28T14:32:21.173+00:00",
       "event": "approved",
       "by": "cops-owner@tenant-a.example"
      },
      {
-      "at": "2026-11-13T23:27:12.662+00:00",
+      "at": "2026-11-28T14:32:21.173+00:00",
       "event": "activated"
      }
     ]

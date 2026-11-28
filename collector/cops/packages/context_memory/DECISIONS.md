@@ -126,4 +126,36 @@ the changes below was written first (GROUND_TRUTH.yaml: the scenarios added at t
 | # | Decision | Alternatives | Why |
 |---|---|---|---|
 | D-CM21 | With no consumer edge, Context & Memory's case requests are one per other COP of the case run that has a memory policy (`graph._tool_ctx` passes the case order). Run on its own it has no request and is INCONCLUSIVE (no COP requested memory) | no requests in the case graph; every COP with a policy | the bundles describe what this case's COPs can retrieve, without an edge that would make any COP depend on this COP's label |
-| D-CM22 | A requester is never served its own output of the same run and case (OWN_CURRENT_OUTPUT, excluded; it does not make a request PARTIAL). Another COP's current-cycle record is still returned, marked CURRENT_CYCLE | return it marked CURRENT_CYCLE | with D-CM21 a COP that ran earlier in the case would be handed back what it just wrote; it already holds it and it can never corroborate itself. Ground truth own_current_output was written before the code |
+| D-CM22 | In Context & Memory's case bundle (request `exclude_own_current`, set by `tools.t_assess_context_memory_questions`) a requester is never served its own output of the same run and case (OWN_CURRENT_OUTPUT, excluded; it does not make a request PARTIAL). Another COP's current-cycle record is still returned, marked CURRENT_CYCLE. A COP's working memory view (`graph.retrieve_memory`, `tools._memory_lookup`) does not set the flag and is unchanged | exclude in every retrieval (first form of this decision); return it marked CURRENT_CYCLE | with D-CM21 a COP that ran earlier in the case would be handed back what it just wrote; it already holds it and it can never corroborate itself. Ground truth own_current_output was written before the code. The first form, applied to every retrieval, removed Runtime Monitoring's own current-cycle record from its working view on a re-run in the same run (tests/test_cop_package_runtime_monitoring.py::test_rm_reads_memory_but_its_decision_does_not_use_it, accepted COP 1); the ground truth was revised and own_current_output_working_view added before the code was changed |
+
+### Changed contracts and test expectations (2026-11-28)
+
+| Contract or test | Before | Now | Reason |
+|---|---|---|---|
+| `specs.SPEC_CONSUMES["behavior_analytics"]` | (runtime_monitoring, context_memory, workflow_orchestration) | (runtime_monitoring, workflow_orchestration) | P-CM1 |
+| `specs` Context & Memory `downstream_cops` | (behavior_analytics,) | () | P-CM1 |
+| `docs/cops/cops_topology.json` | link context_memory → behavior_analytics; C&M downstream [behavior_analytics]; BA reads_decisions_from includes context_memory | link removed; C&M downstream []; BA reads [runtime_monitoring, workflow_orchestration] | P-CM1 |
+| `profiles` | 10 LLM COPs, 8 deterministic; C&M prompt, LLM_TOOLS entry, ContextDetail | 9 and 9; C&M deterministic, no prompt, no detail schema | U-CM5 |
+| `live_eval.CASES` / `bench_cases.DET_CASES` | 30 / 24 cases | 27 / 27 cases: the three C&M cases moved, ids and expectations unchanged | U-CM5 |
+| `live_eval._cm_store` | earlier records for Behavior Analytics | an RM collector_reliability record validated by a reviewer, and with `poisoned` a forged copy without feedback | D-CM21: in the bench case C&M runs with Runtime Monitoring only |
+| `tools.t_assess_context_memory_questions` | one request per `specs.consumers(context_memory)` | one request per other COP of the case run with a memory policy (`ctx["case_cops"]`, set by `graph.run_case`, `resume_case`, `recover_case`, `run_cop`) | D-CM21 |
+| `cop_package.retrieve_memory` | the requester's own current-cycle record was returned | excluded OWN_CURRENT_OUTPUT when the request sets `exclude_own_current` (only Context & Memory's case bundle does); a working memory view is unchanged | D-CM22 (revised before acceptance, ground truth f1a6b11) |
+| `docs/cops/evaluation/activation/*.json` (activation-router recordings) | mapping map-4d9303c348c9f5cf; Behavior Analytics policy depends_on included context_memory | regenerated with `cops.runtime.activation_scenario`: map-ee3421ccb5d0de7b, depends_on [runtime_monitoring, workflow_orchestration]; every eligibility and label unchanged | P-CM1 (the policy's depends_on is read from specs.CONSUMES) |
+| `docs/cops/evaluation/scenario/*.json` (scenario traces) | each variant held a `referral_not_opened` event for Behavior Analytics → Context & Memory | regenerated with `cops.runtime.scenario`: that event is gone (the VS-01 component upstream:context_memory no longer exists); every summary identical | P-CM1 |
+| evaluation D-CM | "nothing new is stored": 1 record in the store | 2: the earlier record, unchanged, and Behavior Analytics' VERIFIED contextual STABLE baseline; retrieval itself stores nothing | U-BA5 |
+| `tests/test_runtime_triage.py::test_bench_routing_is_reported_not_forced` | 24 deterministic bench cases | 27 | U-CM5 |
+| `graph.retrieve_memory` view | record_id, record_type, status, payload, from_case | adds owner_cop, independent_of_requester, may_corroborate | U-CM9 |
+| `support._memory` (VS-01 validated_memory) | any established record with the same label supports | only records owned by another COP; the COP's own are neutral ("own earlier output") | U-CM9 |
+| harness `topology` | topology_unchanged, no_same_cycle_cycle | superseded by topology_reconciled, no_cycle (GROUND_TRUTH.yaml `superseded`) | P-CM1 |
+| harness | 337 expectations | 369 met, 2 superseded: scenarios case_requesters, deterministic_classification, vs01_own_output, vs01_other_cop_record, own_current_output, own_current_output_working_view added | |
+| `tests/test_cop_package_context_memory.py` | test_topology_unchanged; registration asserted `COP in LLM_COPS` | test_topology_reconciled; registration asserts the deterministic profile; added test_case_requesters_and_own_current_output, test_vs01_never_counts_own_earlier_output; the harness test pins the superseded rows | |
+| `tests/test_runtime_llm.py` | test_allocation_is_fixed_ten_and_eight; 10 prompts, tools, schemas; MODEL_PATH_COPS excluded C&M | test_allocation_is_fixed_nine_and_nine; 9; MODEL_PATH_COPS excludes only Risk Mitigation. test_context_memory_does_not_reach_the_provider kept | U-CM5 |
+| `tests/test_runtime_live_eval.py` | 30 cases; decided-without-model set included C&M | 27; C&M checked with the deterministic COPs | U-CM5 |
+| `tests/test_runtime_live_path.py` | parametrized over 10 LLM COPs | over 9 (one case fewer) | U-CM5 |
+| `tests/test_runtime_graph.py`, `tests/test_cop_influence.py` | Behavior Analytics fed a synthetic Context & Memory CONTEXT_LOSS | fed Workflow Orchestration DRIFTING; a Context & Memory CONTEXT_LOSS is asserted ignored | P-CM1 |
+
+Unchanged: `rules._context_memory_previous_contract` (kept, never called); `memory.POLICIES["context_memory"]`; the
+retrieval bundle contract `cm_bundle/1`; the retired labels (never produced); triage's `confidence_basis` and
+`validated_history` component (they use the COP's own validated history for calibration notes and autonomy, not as
+VS-01 corroboration; recorded as a remaining limitation).
+

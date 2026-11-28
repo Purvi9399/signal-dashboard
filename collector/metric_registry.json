@@ -3568,13 +3568,13 @@
    "why_not_built": "definition to confirm: which pattern distribution"
   },
   {
-   "id": "behavior_investigation_prioritya",
+   "id": "behavior_investigation_priority",
    "consumers": [
     "behavior_analytics"
    ],
    "category": "O",
-   "suspected_typo_of": "behavior_investigation_priority",
-   "confirmation": "suspected typo; awaiting purvi's confirmation; kept as written",
+   "source_spelling": "behavior_investigation_prioritya",
+   "confirmation": "typo corrected by purvi's decision U-BA9 (2026-11-28); the mapping document's spelling is kept as source_spelling",
    "status": "NOT_IMPLEMENTED",
    "proposal": "BA's own output; also looks like a typo",
    "note": "a decision field of the consuming COP, not a calculated metric"

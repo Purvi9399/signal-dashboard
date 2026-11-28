@@ -1004,7 +1004,12 @@ def demo_cm(ctx):
     after = [dict(r) for r in store.select("cop_memory_records", "record_id = ?", (rec["record_id"],))]
     return {**summarise(o2, rt2), "first": summarise(o1, rt1)["cops"]["context_memory"],
             "validated_record": rec["record_id"], "record_unchanged": before == after,
-            "records_total": len(list(store.select("cop_memory_records", "1 = 1", ())))}
+            "records_total": len(list(store.select("cop_memory_records", "1 = 1", ()))),
+            # U-BA5 (purvi 2026-11-28): Behavior Analytics' verified STABLE is now kept as a VERIFIED contextual baseline
+            "records_other_than_ba_baseline": len([r for r in store.select("cop_memory_records", "1 = 1", ())
+                                                    if not (r["owner_cop"] == "behavior_analytics"
+                                                            and r["payload"].get("memory_use") == "contextual_baseline"
+                                                            and r["validation_status"] == "VERIFIED")])}
 
 
 def demo_ir(ctx):
@@ -1401,8 +1406,11 @@ SCENARIOS = [
                  and r["standing"] == "ESTABLISHED" and r["cycle"] == "PREVIOUS_CYCLE" and r["label"] == "CONTEXT_LOSS"
                  for r in v["cops"]["context_memory"]["cop_specific"]["bundles"]["behavior_analytics"]["records"]),
              v["cops"]["context_memory"]["cop_specific"]["bundles"]["behavior_analytics"]["records"])),
+         # U-BA5 (2026-11-28): Behavior Analytics' verified STABLE baseline is the one record a COP adds; retrieval
+         # stores nothing (until then records_total == 1)
          ("second: the record is unchanged and nothing new is stored", lambda v: (
-             v["record_unchanged"] and v["records_total"] == 1, (v["record_unchanged"], v["records_total"]))),
+             v["record_unchanged"] and v["records_other_than_ba_baseline"] == 1
+             and v["records_total"] == 2, (v["record_unchanged"], v["records_total"]))),
          ("second: Behavior Analytics reads the record as context, not a current context loss", lambda v: (
              v["cops"]["behavior_analytics"]["label"] != "DRIFTING", v["cops"]["behavior_analytics"]["label"])),
      ]},

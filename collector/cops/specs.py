@@ -65,7 +65,9 @@ SPECS = [
       metric_keys=(),
       missing_metrics=("compaction_count", "context_loss_after_compaction", "session_reset",
                        "precedent_match", "context_consistency"),
-      downstream_cops=("behavior_analytics",),
+      # No current-cycle consumer since P-CM1 (2026-11-28): the edge to behavior_analytics served the retired
+      # detector only. Every COP reads memory through the retrieval contract instead.
+      downstream_cops=(),
       permitted_actions=("NONE", "WATCH"),
       interpretations=("NO_RELEVANT_MEMORY", "MEMORY_RETURNED", "MEMORY_PARTIAL", "MEMORY_UNAVAILABLE")),
 
@@ -235,7 +237,8 @@ SPEC_CONSUMES = {
     "agent_lifecycle_management":  ("runtime_monitoring", "interaction_discovery"),
     "context_memory":              ("runtime_monitoring",),
     "workflow_orchestration":      ("runtime_monitoring",),
-    "behavior_analytics":          ("runtime_monitoring", "context_memory", "workflow_orchestration"),
+    # context_memory removed (P-CM1, purvi 2026-11-28): it fed only the retired CONTEXT_LOSS / CONTRADICTORY read
+    "behavior_analytics":          ("runtime_monitoring", "workflow_orchestration"),
     "anomaly_detection":           ("runtime_monitoring", "behavior_analytics"),
     "resource_management":         ("runtime_monitoring",),
     "workload_optimization":       ("runtime_monitoring", "resource_management"),
